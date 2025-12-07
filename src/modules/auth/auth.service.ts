@@ -1,0 +1,285 @@
+import { Injectable, UnauthorizedException, BadRequestException, ConflictException, } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, MoreThan } from 'typeorm';
+import { v4 as uuidv4 } from 'uuid';
+import * as crypto from 'crypto';
+
+import { UsersService } from '../users/users.service';
+import { User } from '../users/entities/user.entity';
+import { RefreshToken } from '../users/entities/refresh-token.entity';
+import { PasswordResetToken } from '../users/entities/password-reset-token.entity';
+import { RegisterDto, LoginDto } from './dto';
+import { JWT_REFRESH_EXPIRES_IN } from '../../config/jwt.config';
+
+export interface TokenResponse {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+}
+
+export interface AuthResponse {
+  user: Partial<User>;
+  tokens: TokenResponse;
+}
+
+@Injectable()
+export class AuthService {
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+    @InjectRepository(RefreshToken)
+    private readonly refreshTokenRepository: Repository<RefreshToken>,
+    @InjectRepository(PasswordResetToken)
+    private readonly passwordResetTokenRepository: Repository<PasswordResetToken>,
+  ) { }
+
+  /**
+   Register a new user
+   */
+  async register(registerDto: RegisterDto): Promise<AuthResponse> {
+    const existingUser = await this.usersService.findByEmail(registerDto.email);
+    if (existingUser) {
+      throw new ConflictException('Email already exists');
+    }
+
+    const user = await this.usersService.create({
+      email: registerDto.email,
+      password: registerDto.password,
+      firstName: registerDto.firstName,
+      lastName: registerDto.lastName,
+    });
+
+    const tokens = await this.generateTokens(user);
+
+    return {
+      user: this.sanitizeUser(user),
+      tokens,
+    };
+  }
+
+  /**
+   Login with email and password
+   */
+  async login(
+    loginDto: LoginDto,
+    userAgent?: string,
+    ipAddress?: string,
+  ): Promise<AuthResponse> {
+    const user = await this.usersService.findByEmail(loginDto.email);
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const isPasswordValid = await this.usersService.verifyPassword(
+      user,
+      loginDto.password,
+    );
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const tokens = await this.generateTokens(user, userAgent, ipAddress, loginDto.rememberMe);
+
+    return {
+      user: this.sanitizeUser(user),
+      tokens,
+    };
+  }
+
+  /**
+   Login/Register with Google OAuth
+   */
+  async googleLogin(profile: {
+    googleId: string;
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    avatar?: string;
+  }): Promise<AuthResponse> {
+    const user = await this.usersService.findOrCreateFromGoogle(profile);
+    const tokens = await this.generateTokens(user);
+
+    return {
+      user: this.sanitizeUser(user),
+      tokens,
+    };
+  }
+
+  /**
+   Refresh access token using refresh token
+   */
+  async refreshTokens(refreshTokenValue: string): Promise<TokenResponse> {
+    const refreshToken = await this.refreshTokenRepository.findOne({
+      where: {
+        token: refreshTokenValue,
+        isRevoked: false,
+        expiresAt: MoreThan(new Date()),
+      },
+      relations: ['user'],
+    });
+
+    if (!refreshToken) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    // Revoke old refresh token
+    refreshToken.isRevoked = true;
+    await this.refreshTokenRepository.save(refreshToken);
+
+    // Generate new tokens
+    return this.generateTokens(refreshToken.user);
+  }
+
+  /**
+   Logout - revoke refresh token
+   */
+  async logout(refreshTokenValue: string): Promise<void> {
+    const refreshToken = await this.refreshTokenRepository.findOne({
+      where: { token: refreshTokenValue },
+    });
+
+    if (refreshToken) {
+      refreshToken.isRevoked = true;
+      await this.refreshTokenRepository.save(refreshToken);
+    }
+  }
+
+  /**
+   Logout from all devices - revoke all refresh tokens
+   */
+  async logoutAll(userId: string): Promise<void> {
+    await this.refreshTokenRepository.update(
+      { userId, isRevoked: false },
+      { isRevoked: true },
+    );
+  }
+
+  /**
+   Request password reset
+   */
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) {
+      // Don't reveal if email exists or not for security
+      return {
+        message: 'If the email exists, a password reset link will be sent.',
+      };
+    }
+
+    // Invalidate any existing reset tokens
+    await this.passwordResetTokenRepository.update(
+      { userId: user.id, isUsed: false },
+      { isUsed: true },
+    );
+
+    // Generate reset token
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1); // Token expires in 1 hour
+
+    const resetToken = this.passwordResetTokenRepository.create({
+      token,
+      userId: user.id,
+      expiresAt,
+    });
+
+    await this.passwordResetTokenRepository.save(resetToken);
+
+    // TODO: Send email with reset link
+    // For now, just log the reset link
+    const resetLink = `${this.configService.get('FRONTEND_URL', 'http://localhost:3000')}/reset-password?token=${token}`;
+    console.log('='.repeat(50));
+    console.log('Password Reset Link (for development):');
+    console.log(resetLink);
+    console.log('='.repeat(50));
+
+    return {
+      message: 'If the email exists, a password reset link will be sent.',
+    };
+  }
+
+  /**
+   Reset password with token
+   */
+  async resetPassword(
+    token: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
+    const resetToken = await this.passwordResetTokenRepository.findOne({
+      where: {
+        token,
+        isUsed: false,
+        expiresAt: MoreThan(new Date()),
+      },
+      relations: ['user'],
+    });
+
+    if (!resetToken) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    // Update password
+    await this.usersService.updatePassword(resetToken.userId, newPassword);
+
+    // Invalidate the reset token
+    resetToken.isUsed = true;
+    await this.passwordResetTokenRepository.save(resetToken);
+
+    // Revoke all refresh tokens for security
+    await this.logoutAll(resetToken.userId);
+
+    return { message: 'Password has been reset successfully' };
+  }
+
+  /**
+   Generate access and refresh tokens
+   */
+  private async generateTokens(
+    user: User,
+    userAgent?: string,
+    ipAddress?: string,
+    rememberMe?: boolean,
+  ): Promise<TokenResponse> {
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+    };
+
+    const accessToken = this.jwtService.sign(payload);
+
+    // Calculate refresh token expiry
+    const refreshExpiresIn = rememberMe ? 30 : 7; // 30 days if remember me, else 7 days
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + refreshExpiresIn);
+
+    // Create refresh token
+    const refreshTokenValue = uuidv4();
+    const refreshToken = this.refreshTokenRepository.create({
+      token: refreshTokenValue,
+      userId: user.id,
+      expiresAt,
+      userAgent,
+      ipAddress,
+    });
+
+    await this.refreshTokenRepository.save(refreshToken);
+
+    return {
+      accessToken,
+      refreshToken: refreshTokenValue,
+      expiresIn: 15 * 60,
+    };
+  }
+
+  /**
+   Remove sensitive fields from user object
+   */
+  private sanitizeUser(user: User): Partial<User> {
+    const { passwordHash, ...sanitizedUser } = user;
+    return sanitizedUser;
+  }
+}
