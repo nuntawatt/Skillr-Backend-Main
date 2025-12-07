@@ -11,7 +11,7 @@ import { User } from '../users/entities/user.entity';
 import { RefreshToken } from '../users/entities/refresh-token.entity';
 import { PasswordResetToken } from '../users/entities/password-reset-token.entity';
 import { RegisterDto, LoginDto } from './dto';
-import { JWT_REFRESH_EXPIRES_IN } from '../../config/jwt.config';
+// import { JWT_REFRESH_EXPIRES_IN } from '../../config/jwt.config';
 
 export interface TokenResponse {
   accessToken: string;
@@ -36,9 +36,7 @@ export class AuthService {
     private readonly passwordResetTokenRepository: Repository<PasswordResetToken>,
   ) { }
 
-  /**
-   Register a new user
-   */
+  // Register a new user
   async register(registerDto: RegisterDto): Promise<AuthResponse> {
     const existingUser = await this.usersService.findByEmail(registerDto.email);
     if (existingUser) {
@@ -60,14 +58,8 @@ export class AuthService {
     };
   }
 
-  /**
-   Login with email and password
-   */
-  async login(
-    loginDto: LoginDto,
-    userAgent?: string,
-    ipAddress?: string,
-  ): Promise<AuthResponse> {
+  // Login with email and password
+  async login(loginDto: LoginDto, userAgent?: string, ipAddress?: string): Promise<AuthResponse> {
     const user = await this.usersService.findByEmail(loginDto.email);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -89,9 +81,7 @@ export class AuthService {
     };
   }
 
-  /**
-   Login/Register with Google OAuth
-   */
+  // Login - Register with Google OAuth
   async googleLogin(profile: {
     googleId: string;
     email: string;
@@ -108,9 +98,7 @@ export class AuthService {
     };
   }
 
-  /**
-   Refresh access token using refresh token
-   */
+  // Refresh access token using refresh token
   async refreshTokens(refreshTokenValue: string): Promise<TokenResponse> {
     const refreshToken = await this.refreshTokenRepository.findOne({
       where: {
@@ -125,17 +113,13 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
-    // Revoke old refresh token
     refreshToken.isRevoked = true;
     await this.refreshTokenRepository.save(refreshToken);
 
-    // Generate new tokens
     return this.generateTokens(refreshToken.user);
   }
 
-  /**
-   Logout - revoke refresh token
-   */
+  // Logout
   async logout(refreshTokenValue: string): Promise<void> {
     const refreshToken = await this.refreshTokenRepository.findOne({
       where: { token: refreshTokenValue },
@@ -147,9 +131,7 @@ export class AuthService {
     }
   }
 
-  /**
-   Logout from all devices - revoke all refresh tokens
-   */
+  // Logout from all devices 
   async logoutAll(userId: string): Promise<void> {
     await this.refreshTokenRepository.update(
       { userId, isRevoked: false },
@@ -157,19 +139,15 @@ export class AuthService {
     );
   }
 
-  /**
-   Request password reset
-   */
+  // Forgot password
   async forgotPassword(email: string): Promise<{ message: string }> {
     const user = await this.usersService.findByEmail(email);
     if (!user) {
-      // Don't reveal if email exists or not for security
       return {
         message: 'If the email exists, a password reset link will be sent.',
       };
     }
 
-    // Invalidate any existing reset tokens
     await this.passwordResetTokenRepository.update(
       { userId: user.id, isUsed: false },
       { isUsed: true },
@@ -201,9 +179,7 @@ export class AuthService {
     };
   }
 
-  /**
-   Reset password with token
-   */
+  // Reset password
   async resetPassword(
     token: string,
     newPassword: string,
@@ -221,10 +197,7 @@ export class AuthService {
       throw new BadRequestException('Invalid or expired reset token');
     }
 
-    // Update password
     await this.usersService.updatePassword(resetToken.userId, newPassword);
-
-    // Invalidate the reset token
     resetToken.isUsed = true;
     await this.passwordResetTokenRepository.save(resetToken);
 
@@ -234,9 +207,7 @@ export class AuthService {
     return { message: 'Password has been reset successfully' };
   }
 
-  /**
-   Generate access and refresh tokens
-   */
+  // Generate access and refresh tokens
   private async generateTokens(
     user: User,
     userAgent?: string,
@@ -252,7 +223,7 @@ export class AuthService {
     const accessToken = this.jwtService.sign(payload);
 
     // Calculate refresh token expiry
-    const refreshExpiresIn = rememberMe ? 30 : 7; // 30 days if remember me, else 7 days
+    const refreshExpiresIn = rememberMe ? 30 : 7;
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + refreshExpiresIn);
 
@@ -275,9 +246,7 @@ export class AuthService {
     };
   }
 
-  /**
-   Remove sensitive fields from user object
-   */
+  // Remove sensitive fields from user object
   private sanitizeUser(user: User): Partial<User> {
     const { passwordHash, ...sanitizedUser } = user;
     return sanitizedUser;
