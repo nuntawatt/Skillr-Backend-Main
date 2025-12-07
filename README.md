@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-  <h1 align="center">NextJS<span style="color:#22c55e;" text-5xl></span></h1>
+  <h1 align="center" style="color:#22c55e;" text-5xl>NextJS</h1><br>
 </p>
 
 ## Project setup
