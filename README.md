@@ -47,6 +47,6 @@ $ mau deploy
 
 # API..
 ```bash
-รอให้เสร็จครบของ Auth จะทำ Route .. 
+รอให้เสร็จครบของระบบ Auth จะแสดง Route ^ _ ^
 ```
 
