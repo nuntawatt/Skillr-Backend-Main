@@ -1,5 +1,5 @@
 <h1 align="center">
-  Skillr<span style="color:#22c55e;" text-5xl></span>
+  Project Skillr - Backend Developer<span style="color:#22c55e;" text-5xl></span>
 </h1><br>
 
 <p align="center">
