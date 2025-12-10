@@ -11,6 +11,6 @@ export const getDatabaseConfig = (
     url: databaseUrl,
     entities: [__dirname + '/../**/*.entity{.ts,.js}'],
     synchronize: configService.get<string>('NODE_ENV') !== 'production',
-    logging: false, // Set to true if you need SQL query logs
+    logging: false, // Set to true if you need SQL query log
   };
 };

@@ -9,18 +9,17 @@ import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
-    // Configuration
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
     }),
-    // Database
+    
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: getDatabaseConfig,
       inject: [ConfigService],
     }),
-    // Feature Modules
+    
     UsersModule,
     AuthModule,
   ],

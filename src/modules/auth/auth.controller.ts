@@ -49,7 +49,7 @@ export class AuthController {
   @Get('google')
   @UseGuards(GoogleAuthGuard)
   async googleAuth() {
-    // Guard redirects to Google
+    ;
   }
 
   // Google OAuth - Callback
@@ -117,7 +117,7 @@ export class AuthController {
     return this.authService.googleLogin(profile);
   }
 
-  // Refresh tokens
+  // Refresh token
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refreshTokens(

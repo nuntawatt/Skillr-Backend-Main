@@ -30,7 +30,7 @@ export class UsersController {
     return result;
   }
 
-  // Get all users (Admin only)
+  // Get all users (Admin)
   @Get()
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -38,7 +38,7 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
-  // Get user by ID (Admin only)
+  // Get user by ID (Admin)
   @Get(':id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -51,7 +51,7 @@ export class UsersController {
     return result;
   }
 
-  // Delete user (Admin only)
+  // Delete user (Admin)
   @Delete(':id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -68,7 +68,7 @@ export class UsersController {
 export class AdminUsersController {
   constructor(private readonly usersService: UsersService) { }
 
-  // Update user role (Admin only)
+  // Update user role (Admin)
   @Patch(':id/role')
   async updateRole(
     @Param('id') id: string,

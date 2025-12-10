@@ -10,12 +10,12 @@ export interface JwtPayload { sub: string; email: string; role: string; }
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(
     private readonly configService: ConfigService,
-    private readonly usersService: UsersService,
+    private readonly usersService: UsersService
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_ACCESS_SECRET', 'default-secret'),
+      secretOrKey: configService.get<string>('JWT_ACCESS_SECRET', 'default-secret')
     });
   }
 
@@ -25,12 +25,6 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       throw new UnauthorizedException('User not found');
     }
 
-    return {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      firstName: user.firstName,
-      lastName: user.lastName,
-    };
+    return { id: user.id, email: user.email, role: user.role, firstName: user.firstName, lastName: user.lastName };
   }
 }

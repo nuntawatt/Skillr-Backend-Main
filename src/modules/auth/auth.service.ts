@@ -54,7 +54,7 @@ export class AuthService {
 
     return {
       user: this.sanitizeUser(user),
-      tokens,
+      tokens
     };
   }
 
@@ -63,6 +63,7 @@ export class AuthService {
     const user = await this.usersService.findByEmail(loginDto.email);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
+
     }
 
     const isPasswordValid = await this.usersService.verifyPassword(
@@ -156,7 +157,7 @@ export class AuthService {
     // Generate reset token
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 1); // Token expires in 1 hour
+    expiresAt.setHours(expiresAt.getHours() + 1);
 
     const resetToken = this.passwordResetTokenRepository.create({
       token,
@@ -166,20 +167,13 @@ export class AuthService {
 
     await this.passwordResetTokenRepository.save(resetToken);
 
-    // TODO: Send email with reset link
-    // For now, just log the reset link
-    const resetLink = `${this.configService.get('FRONTEND_URL', 'http://localhost:3000')}/reset-password?token=${token}`;
-    console.log('='.repeat(50));
-    console.log('Password Reset Link (for development):');
-    console.log(resetLink);
-    console.log('='.repeat(50));
-
     return {
       message: 'If the email exists, a password reset link will be sent.',
     };
   }
 
-  // Reset password
+  
+
   async resetPassword(
     token: string,
     newPassword: string,
@@ -201,12 +195,12 @@ export class AuthService {
     resetToken.isUsed = true;
     await this.passwordResetTokenRepository.save(resetToken);
 
-    // Revoke all refresh tokens for security
     await this.logoutAll(resetToken.userId);
 
     return { message: 'Password has been reset successfully' };
   }
 
+  
   // Generate access and refresh tokens
   private async generateTokens(
     user: User,
@@ -222,7 +216,6 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload);
 
-    // Calculate refresh token expiry
     const refreshExpiresIn = rememberMe ? 30 : 7;
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + refreshExpiresIn);
@@ -246,7 +239,7 @@ export class AuthService {
     };
   }
 
-  // Remove sensitive fields from user object
+  // Remove sensitive fields user object
   private sanitizeUser(user: User): Partial<User> {
     const { passwordHash, ...sanitizedUser } = user;
     return sanitizedUser;

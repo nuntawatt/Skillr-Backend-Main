@@ -9,7 +9,6 @@ async function bootstrap() {
     logger: ['log', 'error', 'warn'],
   });
 
-  // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -21,15 +20,9 @@ async function bootstrap() {
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.use(cookieParser());
 
-  // CORS configuration (uncomment when connecting frontend)
-  // app.enableCors({
-  //   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  //   credentials: true,
-  // });
-
   app.setGlobalPrefix('api');
 
-  const port = process.env.PORT ?? 3001;
+  const port = process.env.PORT ?? 3000;
   await app.listen(port);
 
   logger.log(`Application is running on http://localhost:${port}/api`);
