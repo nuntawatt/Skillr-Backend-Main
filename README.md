@@ -110,42 +110,6 @@ npm install @nestjs/swagger swagger-ui-express
 
 ---
 
-## ⚙️ Environment Variables
-
-Create a `.env` file in the root directory:
-
-```env
-# Application
-NODE_ENV=development
-PORT=3000
-
-# Database (Option 1: Connection URL)
-DATABASE_URL=postgresql://username:password@localhost:5432/skillr
-
-# Database (Option 2: Individual settings)
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=postgres
-DB_PASS=password
-DB_NAME=skillr
-DB_LOG=false
-
-# JWT Configuration
-JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-JWT_ACCESS_EXPIRES_IN=15m
-JWT_REFRESH_EXPIRES_IN=7d
-
-# Google OAuth (Optional)
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
-
-# Frontend URL (for OAuth redirects)
-FRONTEND_URL=http://localhost:3000
-```
-
----
-
 ## 🏃 Running the App
 
 ```bash
