@@ -172,10 +172,10 @@ POST /auth/register
 Content-Type: application/json
 
 {
-  "email": "user@example.com",
-  "password": "password123",
   "firstName": "John",
-  "lastName": "Doe"
+  "lastName": "Doe",
+  "email": "user@example.com",
+  "password": "password123"
 }
 ```
 
