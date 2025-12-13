@@ -26,6 +26,7 @@
 ---
 
 ## Tech Stack
+<a id="tech-stack"></a>
 
 | Technology | Purpose |
 |------------|---------|
@@ -38,10 +39,11 @@
 | **Passport** | Authentication Strategies |
 
 ---
+<a id="project-structure"></a>
 
 ## 📁 Project Structure
 
-```
+ิ```
 src/
 ├── main.ts                      # Application entry point
 ├── app.module.ts                # Root module
@@ -78,7 +80,10 @@ src/
 
 ---
 
+<a id="installation"></a>
+
 ## Installation
+
 
 ### Prerequisites
 
@@ -107,6 +112,8 @@ npm install class-validator class-transformer
 npm install argon2 uuid
 npm install @nestjs/swagger swagger-ui-express
 ```
+<a id="running-the-app"></a>
+
 ---
 
 ## Running the App
@@ -125,6 +132,8 @@ npm run start:debug
 
 ---
 
+<a id="database-migrations"></a>
+
 ## Database Migrations
 
 ```bash
@@ -141,6 +150,8 @@ npx typeorm migration:revert -d src/config/typeorm.config.ts
 > ⚠️ **Production Note**: Always set `synchronize: false` in production and use migrations.
 
 ---
+
+<a id="api-documentation"></a>
 
 ## API Documentation
 
@@ -485,6 +496,8 @@ Content-Type: application/json
 | `admin` | Full system access |
 
 ---
+
+<a id="testing"></a>
 
 ## Testing
 
