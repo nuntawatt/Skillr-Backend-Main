@@ -12,7 +12,7 @@
 
 ---
 
-## 📚 Table of Contents
+## Table of Contents
 
 - [Tech Stack](#-tech-stack)
 - [Project Structure](#-project-structure)
@@ -25,7 +25,7 @@
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 | Technology | Purpose |
 |------------|---------|
@@ -78,7 +78,7 @@ src/
 
 ---
 
-## 🚀 Installation
+## Installation
 
 ### Prerequisites
 
@@ -110,7 +110,7 @@ npm install @nestjs/swagger swagger-ui-express
 
 ---
 
-## 🏃 Running the App
+## Running the App
 
 ```bash
 # Development mode
@@ -126,7 +126,7 @@ npm run start:debug
 
 ---
 
-## 🗃 Database Migrations
+## Database Migrations
 
 ```bash
 # Generate a new migration
@@ -143,7 +143,7 @@ npx typeorm migration:revert -d src/config/typeorm.config.ts
 
 ---
 
-## 📖 API Documentation
+## API Documentation
 
 ### Base URL
 
@@ -153,7 +153,7 @@ http://localhost:3000
 
 ---
 
-### 🔐 Authentication APIs
+### Authentication APIs
 
 #### Register User
 ```http
@@ -340,7 +340,7 @@ Content-Type: application/json
 
 ---
 
-### 👤 User APIs
+### User APIs
 
 #### Get Current User Profile
 ```http
@@ -394,7 +394,7 @@ Content-Type: application/json
 
 ---
 
-### 🔒 Admin APIs
+### Admin APIs
 
 #### Get All Users (Admin Only)
 ```http
@@ -477,7 +477,7 @@ Content-Type: application/json
 
 ---
 
-## 🔑 User Roles
+## User Roles
 
 | Role | Description |
 |------|-------------|
@@ -487,7 +487,7 @@ Content-Type: application/json
 
 ---
 
-## 🧪 Testing
+## Testing
 
 ```bash
 # Unit tests
@@ -505,256 +505,243 @@ npm run test:watch
 
 ---
 
-## 📝 API Endpoints Summary
+## API Endpoints Summary
 
 ### Authentication (`/auth`)
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| `POST` | `/auth/register` | Register new user | ❌ |
-| `POST` | `/auth/login` | Login with email/password | ❌ |
-| `GET` | `/auth/google` | Initiate Google OAuth | ❌ |
-| `GET` | `/auth/google/callback` | Google OAuth callback | ❌ |
-| `POST` | `/auth/google/token` | Exchange Google token | ❌ |
-| `POST` | `/auth/refresh` | Refresh access token | ❌ |
-| `POST` | `/auth/logout` | Logout user | ✅ |
-| `POST` | `/auth/forgot-password` | Request password reset | ❌ |
-| `POST` | `/auth/reset-password` | Reset password with token | ❌ |
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `POST` | `/auth/register` | สมัครสมาชิกใหม่ | No |
+| `POST` | `/auth/login` | ล็อกอิน | No |
+| `GET` | `/auth/google` | เริ่ม Google OAuth | No |
+| `GET` | `/auth/google/callback` | Google OAuth callback | No |
+| `POST` | `/auth/google/token` | แลกเปลี่ยน Google token | No |
+| `POST` | `/auth/refresh` | รีเฟรช access token | No |
+| `POST` | `/auth/logout` | ออกจากระบบ | Yes |
+| `POST` | `/auth/forgot-password` | ขอรีเซ็ตรหัสผ่าน | No |
+| `POST` | `/auth/reset-password` | รีเซ็ตรหัสผ่านด้วย token | No |
 
 ### Users (`/users`)
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| `GET` | `/users/me` | Get current user profile | ✅ |
-| `PATCH` | `/users/me` | Update current user profile | ✅ |
-| `GET` | `/users` | Get all users | ✅ Admin |
-| `GET` | `/users/:id` | Get user by ID | ✅ Admin |
-| `DELETE` | `/users/:id` | Delete user | ✅ Admin |
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `GET` | `/users/me` | ดูโปรไฟล์ตัวเอง | Yes |
+| `PATCH` | `/users/me` | แก้ไขโปรไฟล์ตัวเอง | Yes |
+| `GET` | `/users` | ดูผู้ใช้ทั้งหมด | Yes (Admin) |
+| `GET` | `/users/:id` | ดูผู้ใช้ตาม ID | Yes (Admin) |
+| `DELETE` | `/users/:id` | ลบผู้ใช้ | Yes (Admin) |
 
 ### Admin (`/admin`)
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| `PATCH` | `/admin/users/:id/role` | Update user role | ✅ Admin |
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `PATCH` | `/admin/users/:id/role` | เปลี่ยนบทบาทผู้ใช้ | Yes (Admin) |
 
 ### Students (`/students`)
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| `POST` | `/students` | Create student profile | ✅ |
-| `GET` | `/students` | Get all students | ✅ Admin |
-| `GET` | `/students/:id` | Get student by ID | ✅ |
-| `GET` | `/students/user/:userId` | Get student by user ID | ✅ |
-| `PATCH` | `/students/:id` | Update student profile | ✅ |
-| `DELETE` | `/students/:id` | Delete student profile | ✅ Admin |
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `POST` | `/students` | สร้างโปรไฟล์นักเรียน | Yes |
+| `GET` | `/students` | ดูนักเรียนทั้งหมด | Yes (Admin) |
+| `GET` | `/students/:id` | ดูข้อมูลนักเรียนตาม ID | Yes |
+| `GET` | `/students/user/:userId` | ดูโปรไฟล์นักเรียนจาก userId | Yes |
+| `PATCH` | `/students/:id` | อัปเดตโปรไฟล์นักเรียน | Yes |
+| `DELETE` | `/students/:id` | ลบนักเรียน | Yes (Admin) |
 
 ### Instructors (`/instructors`)
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| `POST` | `/instructors` | Create instructor profile | ✅ |
-| `GET` | `/instructors` | Get all instructors | ❌ |
-| `GET` | `/instructors/:id` | Get instructor by ID | ❌ |
-| `GET` | `/instructors/user/:userId` | Get instructor by user ID | ✅ |
-| `PATCH` | `/instructors/:id` | Update instructor profile | ✅ Instructor |
-| `PATCH` | `/instructors/:id/verify` | Verify instructor | ✅ Admin |
-| `DELETE` | `/instructors/:id` | Delete instructor profile | ✅ Admin |
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `POST` | `/instructors` | สร้างโปรไฟล์ผู้สอน | Yes |
+| `GET` | `/instructors` | ดูผู้สอนทั้งหมด | No |
+| `GET` | `/instructors/:id` | ดูผู้สอนตาม ID | No |
+| `GET` | `/instructors/user/:userId` | ดูผู้สอนจาก userId | Yes |
+| `PATCH` | `/instructors/:id` | อัปเดตโปรไฟล์ผู้สอน | Yes (Instructor) |
+| `PATCH` | `/instructors/:id/verify` | ยืนยันผู้สอน | Yes (Admin) |
+| `DELETE` | `/instructors/:id` | ลบผู้สอน | Yes (Admin) |
 
 ### Courses (`/courses`)
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| `POST` | `/courses` | Create new course | ✅ Instructor |
-| `GET` | `/courses` | Get all published courses | ❌ |
-| `GET` | `/courses/:id` | Get course by ID | ❌ |
-| `GET` | `/courses/instructor/:instructorId` | Get courses by instructor | ❌ |
-| `PATCH` | `/courses/:id` | Update course | ✅ Instructor |
-| `PATCH` | `/courses/:id/status` | Update course status | ✅ Instructor |
-| `DELETE` | `/courses/:id` | Delete course | ✅ Instructor |
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `POST` | `/courses` | สร้างคอร์สใหม่ | Yes (Instructor) |
+| `GET` | `/courses` | ดูคอร์สทั้งหมด | No |
+| `GET` | `/courses/:id` | ดูรายละเอียดคอร์ส | NO |
+| `GET` | `/courses/instructor/:instructorId` | ดูคอร์สตามผู้สอน | No |
+| `PATCH` | `/courses/:id` | อัปเดตคอร์ส | Yes (Instructor) |
+| `PATCH` | `/courses/:id/status` | อัปเดตสถานะคอร์ส | Yes (Instructor) |
+| `DELETE` | `/courses/:id` | ลบคอร์ส | Yes (Instructor) |
 
 ### Lessons (`/lessons`)
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| `POST` | `/lessons` | Create new lesson | ✅ Instructor |
-| `GET` | `/lessons` | Get all lessons | ✅ |
-| `GET` | `/lessons/:id` | Get lesson by ID | ✅ |
-| `GET` | `/lessons/course/:courseId` | Get lessons by course | ✅ |
-| `PATCH` | `/lessons/:id` | Update lesson | ✅ Instructor |
-| `PATCH` | `/lessons/:id/order` | Reorder lesson | ✅ Instructor |
-| `DELETE` | `/lessons/:id` | Delete lesson | ✅ Instructor |
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `POST` | `/lessons` | สร้างบทเรียนใหม่ | Yes (Instructor) |
+| `GET` | `/lessons` | ดูบทเรียนทั้งหมด | Yes |
+| `GET` | `/lessons/:id` | ดูบทเรียนตาม ID | Yes |
+| `GET` | `/lessons/course/:courseId` | ดูบทเรียนตามคอร์ส | Yes |
+| `PATCH` | `/lessons/:id` | อัปเดตบทเรียน | Yes (Instructor) |
+| `PATCH` | `/lessons/:id/order` | เปลี่ยนลำดับบทเรียน | Yes (Instructor) |
+| `DELETE` | `/lessons/:id` | ลบบทเรียน | Yes (Instructor) |
 
 ### Content (`/content`)
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| `POST` | `/content` | Create content item | ✅ Instructor |
-| `GET` | `/content` | Get all content | ✅ |
-| `GET` | `/content/:id` | Get content by ID | ✅ |
-| `GET` | `/content/lesson/:lessonId` | Get content by lesson | ✅ |
-| `PATCH` | `/content/:id` | Update content | ✅ Instructor |
-| `DELETE` | `/content/:id` | Delete content | ✅ Instructor |
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `POST` | `/content` | สร้างคอนเทนต์ | Yes (Instructor) |
+| `GET` | `/content` | ดูคอนเทนต์ทั้งหมด | Yes |
+| `GET` | `/content/:id` | ดูคอนเทนต์ตาม ID | Yes |
+| `GET` | `/content/lesson/:lessonId` | ดูคอนเทนต์ตามบทเรียน | Yes |
+| `PATCH` | `/content/:id` | อัปเดตคอนเทนต์ | Yes (Instructor) |
+| `DELETE` | `/content/:id` | ลบคอนเทนต์ | Yes (Instructor) |
 
 ### Assignments (`/assignments`)
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| `POST` | `/assignments` | Create assignment | ✅ Instructor |
-| `GET` | `/assignments` | Get all assignments | ✅ |
-| `GET` | `/assignments/:id` | Get assignment by ID | ✅ |
-| `GET` | `/assignments/course/:courseId` | Get assignments by course | ✅ |
-| `PATCH` | `/assignments/:id` | Update assignment | ✅ Instructor |
-| `DELETE` | `/assignments/:id` | Delete assignment | ✅ Instructor |
-| `POST` | `/assignments/:id/submit` | Submit assignment | ✅ Student |
-| `GET` | `/assignments/:id/submissions` | Get all submissions | ✅ Instructor |
-| `POST` | `/assignments/submissions/:submissionId/grade` | Grade submission | ✅ Instructor |
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `POST` | `/assignments` | สร้างการบ้าน | Yes (Instructor) |
+| `GET` | `/assignments` | ดูการบ้านทั้งหมด | Yes |
+| `GET` | `/assignments/:id` | ดูการบ้าน | Yes |
+| `GET` | `/assignments/course/:courseId` | ดูการบ้านตามคอร์ส | Yes |
+| `PATCH` | `/assignments/:id` | อัปเดตการบ้าน | Yes (Instructor) |
+| `DELETE` | `/assignments/:id` | ลบการบ้าน | Yes (Instructor) |
+| `POST` | `/assignments/:id/submit` | ส่งการบ้าน | Yes (Student) |
+| `GET` | `/assignments/:id/submissions` | ดูงานส่ง | Yes (Instructor) |
+| `POST` | `/assignments/submissions/:submissionId/grade` | ให้คะแนน | Yes (Instructor) |
 
 ### Learning / Quizzes (`/learning`)
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| `POST` | `/learning/quizzes` | Create quiz | ✅ Instructor |
-| `GET` | `/learning/quizzes` | Get all quizzes | ✅ |
-| `GET` | `/learning/quizzes/:id` | Get quiz by ID | ✅ |
-| `GET` | `/learning/quizzes/lesson/:lessonId` | Get quizzes by lesson | ✅ |
-| `PATCH` | `/learning/quizzes/:id` | Update quiz | ✅ Instructor |
-| `DELETE` | `/learning/quizzes/:id` | Delete quiz | ✅ Instructor |
-| `POST` | `/learning/quizzes/:id/start` | Start quiz attempt | ✅ Student |
-| `POST` | `/learning/quizzes/:id/submit` | Submit quiz answers | ✅ Student |
-| `GET` | `/learning/quizzes/:id/attempts` | Get quiz attempts | ✅ |
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `POST` | `/learning/quizzes` | สร้างแบบทดสอบ | Yes Instructor |
+| `GET` | `/learning/quizzes` | ดูแบบทดสอบทั้งหมด | Yes |
+| `GET` | `/learning/quizzes/:id` | ดูแบบทดสอบ | Yes |
+| `GET` | `/learning/quizzes/lesson/:lessonId` | ดูแบบทดสอบตามบทเรียน | Yes |
+| `PATCH` | `/learning/quizzes/:id` | อัปเดตแบบทดสอบ | Yes (Instructor) |
+| `DELETE` | `/learning/quizzes/:id` | ลบแบบทดสอบ | Yes (Instructor) |
+| `POST` | `/learning/quizzes/:id/start` | เริ่มทำแบบทดสอบ | Yes (Student) |
+| `POST` | `/learning/quizzes/:id/submit` | ส่งคำตอบ | Yes (Student) |
+| `GET` | `/learning/quizzes/:id/attempts` | ดูประวัติทำแบบทดสอบ | Yes |
 
 ### Enrollments (`/enrollments`)
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| `POST` | `/enrollments` | Enroll in course | ✅ Student |
-| `GET` | `/enrollments` | Get all enrollments | ✅ Admin |
-| `GET` | `/enrollments/:id` | Get enrollment by ID | ✅ |
-| `GET` | `/enrollments/student/:studentId` | Get enrollments by student | ✅ |
-| `GET` | `/enrollments/course/:courseId` | Get enrollments by course | ✅ Instructor |
-| `PATCH` | `/enrollments/:id/status` | Update enrollment status | ✅ |
-| `PATCH` | `/enrollments/:id/progress` | Update progress | ✅ Student |
-| `DELETE` | `/enrollments/:id` | Cancel enrollment | ✅ |
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `POST` | `/enrollments` | ลงทะเบียนเรียน | Yes (Student) |
+| `GET` | `/enrollments` | ดูการลงทะเบียนทั้งหมด | Yes (Admin) |
+| `GET` | `/enrollments/:id` | ดูข้อมูลการลงทะเบียน | Yes |
+| `GET` | `/enrollments/student/:studentId` | ดูตามนักเรียน | Yes |
+| `GET` | `/enrollments/course/:courseId` | ดูตามคอร์ส | Yes (Instructor) |
+| `PATCH` | `/enrollments/:id/status` | อัปเดตสถานะ | Yes |
+| `PATCH` | `/enrollments/:id/progress` | อัปเดตความคืบหน้า | Yes (Student) |
+| `DELETE` | `/enrollments/:id` | ยกเลิกการลงทะเบียน | Yes |
 
 ### Payments (`/payments`)
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| `POST` | `/payments` | Create payment | ✅ |
-| `GET` | `/payments` | Get all payments | ✅ Admin |
-| `GET` | `/payments/:id` | Get payment by ID | ✅ |
-| `GET` | `/payments/user/:userId` | Get payments by user | ✅ |
-| `GET` | `/payments/enrollment/:enrollmentId` | Get payments by enrollment | ✅ |
-| `PATCH` | `/payments/:id/status` | Update payment status | ✅ Admin |
-| `POST` | `/payments/:id/refund` | Process refund | ✅ Admin |
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `POST` | `/payments` | สร้างข้อมูลการชำระเงิน | Yes |
+| `GET` | `/payments` | ดูการชำระเงินทั้งหมด | Yes (Admin) |
+| `GET` | `/payments/:id` | ดูข้อมูลการชำระเงิน | Yes |
+| `GET` | `/payments/user/:userId` | ดูการชำระเงินตามผู้ใช้ | Yes |
+| `GET` | `/payments/enrollment/:enrollmentId` | ดูตามการลงทะเบียน | Yes |
+| `PATCH` | `/payments/:id/status` | อัปเดตสถานะ | Yes (Admin) |
+| `POST` | `/payments/:id/refund` | คืนเงิน | Yes (Admin) |
 
 ### Activities (`/activities`)
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| `POST` | `/activities` | Create activity | ✅ Instructor/Admin |
-| `GET` | `/activities` | Get all activities | ❌ |
-| `GET` | `/activities/:id` | Get activity by ID | ❌ |
-| `GET` | `/activities/upcoming` | Get upcoming activities | ❌ |
-| `PATCH` | `/activities/:id` | Update activity | ✅ Instructor |
-| `DELETE` | `/activities/:id` | Delete activity | ✅ Admin |
-| `POST` | `/activities/:id/register` | Register for activity | ✅ |
-| `DELETE` | `/activities/:id/register` | Cancel registration | ✅ |
-| `GET` | `/activities/:id/registrations` | Get activity registrations | ✅ Instructor |
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `POST` | `/activities` | สร้างกิจกรรม | Yes (Instructor/Admin) |
+| `GET` | `/activities` | ดูกิจกรรมทั้งหมด | No |
+| `GET` | `/activities/:id` | ดูกิจกรรม | No |
+| `GET` | `/activities/upcoming` | ดูกิจกรรมที่กำลังจะมาถึง | No |
+| `PATCH` | `/activities/:id` | อัปเดตกิจกรรม | Yes (Instructor) |
+| `DELETE` | `/activities/:id` | ลบกิจกรรม | Yes Admin |
+| `POST` | `/activities/:id/register` | ลงทะเบียนเข้าร่วม | Yes |
+| `DELETE` | `/activities/:id/register` | ยกเลิกการลงทะเบียน | Yes |
+| `GET` | `/activities/:id/registrations` | ดูผู้ลงทะเบียน | Yes (Instructor) |
 
 ### Notifications (`/notifications`)
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| `POST` | `/notifications` | Create notification | ✅ Admin |
-| `GET` | `/notifications` | Get user notifications | ✅ |
-| `GET` | `/notifications/unread` | Get unread count | ✅ |
-| `GET` | `/notifications/:id` | Get notification by ID | ✅ |
-| `PATCH` | `/notifications/:id/read` | Mark as read | ✅ |
-| `PATCH` | `/notifications/read-all` | Mark all as read | ✅ |
-| `DELETE` | `/notifications/:id` | Delete notification | ✅ |
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `POST` | `/notifications` | สร้างการแจ้งเตือน | Yes (Admin) |
+| `GET` | `/notifications` | ดูแจ้งเตือนของผู้ใช้ | Yes |
+| `GET` | `/notifications/unread` | ดูจำนวนที่ยังไม่อ่าน | Yes |
+| `GET` | `/notifications/:id` | ดูแจ้งเตือนตาม ID | Yes |
+| `PATCH` | `/notifications/:id/read` | ทำเป็นอ่านแล้ว | Yes |
+| `PATCH` | `/notifications/read-all` | ทำอ่านทั้งหมด | Yes |
+| `DELETE` | `/notifications/:id` | ลบแจ้งเตือน | Yes |
 
 ---
 
-## 📊 Enums Reference
+## Enums Reference
 
 ### CourseStatus
 | Value | Description |
 |-------|-------------|
-| `draft` | Course in development |
-| `published` | Course is live |
-| `archived` | Course is archived |
+| `draft` | คอร์สกำลังพัฒนา |
+| `published` | คอร์สเผยแพร่แล้ว |
+| `archived` | คอร์สถูกเก็บถาวร |
 
 ### ContentType
 | Value | Description |
 |-------|-------------|
-| `video` | Video content |
-| `document` | Document/PDF |
-| `image` | Image file |
-| `audio` | Audio file |
-| `embed` | Embedded content |
-| `text` | Text content |
+| `video` | วิดีโอ |
+| `document` | เอกสาร/PDF |
+| `image` | รูปภาพ |
+| `audio` | ไฟล์เสียง |
+| `embed` | เนื้อหาฝังตัว |
+| `text` | ข้อความ |
 
 ### QuestionType
 | Value | Description |
 |-------|-------------|
-| `multiple_choice` | Multiple choice question |
-| `true_false` | True/False question |
-| `short_answer` | Short answer question |
+| `multiple_choice` | คำถามหลายตัวเลือก |
+| `true_false` | คำถามจริง/เท็จ |
+| `short_answer` | คำถามตอบสั้น |
 
 ### EnrollmentStatus
 | Value | Description |
 |-------|-------------|
-| `pending` | Awaiting payment |
-| `active` | Currently enrolled |
-| `completed` | Course completed |
-| `cancelled` | Enrollment cancelled |
+| `pending` | รอการชำระเงิน |
+| `active` | กำลังเรียนอยู่ |
+| `completed` | เรียนจบแล้ว |
+| `cancelled` | ยกเลิกแล้ว |
 
 ### PaymentStatus
 | Value | Description |
 |-------|-------------|
-| `pending` | Payment pending |
-| `completed` | Payment successful |
-| `failed` | Payment failed |
-| `refunded` | Payment refunded |
-| `cancelled` | Payment cancelled |
+| `pending` | รอดำเนินการ |
+| `completed` | ชำระเงินสำเร็จ |
+| `failed` | ชำระเงินล้มเหลว |
+| `refunded` | คืนเงินแล้ว |
+| `cancelled` | ยกเลิกแล้ว |
 
 ### PaymentMethod
 | Value | Description |
 |-------|-------------|
-| `qr` | QR Code payment |
-| `card` | Credit/Debit card |
-| `manual` | Manual/Bank transfer |
-| `bank_transfer` | Direct bank transfer |
+| `qr` | ชำระผ่าน QR Code |
+| `card` | บัตรเครดิต/เดบิต |
+| `manual` | โอนเงินด้วยตนเอง |
+| `bank_transfer` | โอนผ่านธนาคาร |
 
 ### ActivityType
 | Value | Description |
 |-------|-------------|
-| `workshop` | Workshop |
-| `webinar` | Webinar |
-| `meetup` | Meetup |
-| `hackathon` | Hackathon |
-| `other` | Other activity |
+| `workshop` | เวิร์คช็อป |
+| `webinar` | เว็บบินาร์ |
+| `meetup` | พบปะ |
+| `hackathon` | แฮกกาธอน |
+| `other` | อื่นๆ |
 
 ### NotificationType
 | Value | Description |
 |-------|-------------|
-| `info` | Informational |
-| `success` | Success message |
-| `warning` | Warning message |
-| `error` | Error message |
+| `info` | ข้อมูลทั่วไป |
+| `success` | แจ้งเตือนสำเร็จ |
+| `warning` | แจ้งเตือนระวัง |
+| `error` | แจ้งเตือนข้อผิดพลาด |
 
 ---
-
----
-
-## 📄 License
-
-This project is [UNLICENSED](LICENSE).
-
----
-
-<p align="center">
-  Made with ❤️ by Skillr Team
-</p>
-
