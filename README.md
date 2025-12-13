@@ -43,7 +43,7 @@
 
 ## 📁 Project Structure
 
-ิ```
+```
 src/
 ├── main.ts                      # Application entry point
 ├── app.module.ts                # Root module
