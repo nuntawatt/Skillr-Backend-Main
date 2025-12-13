@@ -14,14 +14,14 @@
 
 ## Table of Contents
 
-- [Tech Stack](#-tech-stack)
-- [Project Structure](#-project-structure)
-- [Installation](#-installation)
-- [Environment Variables](#-environment-variables)
-- [Running the App](#-running-the-app)
-- [Database Migrations](#-database-migrations)
-- [API Documentation](#-api-documentation)
-- [Testing](#-testing)
+ - [Tech Stack](#tech-stack)
+ - [Project Structure](#project-structure)
+ - [Installation](#installation)
+ - [Environment Variables](#environment-variables)
+ - [Running the App](#running-the-app)
+ - [Database Migrations](#database-migrations)
+ - [API Documentation](#api-documentation)
+ - [Testing](#testing)
 
 ---
 
@@ -107,7 +107,6 @@ npm install class-validator class-transformer
 npm install argon2 uuid
 npm install @nestjs/swagger swagger-ui-express
 ```
-
 ---
 
 ## Running the App
