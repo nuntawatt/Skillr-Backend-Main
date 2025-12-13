@@ -17,12 +17,13 @@
  - [Tech Stack](#tech-stack)
  - [Project Structure](#project-structure)
  - [Installation](#installation)
- - [Environment Variables](#environment-variables)
  - [Running the App](#running-the-app)
  - [Database Migrations](#database-migrations)
  - [API Documentation](#api-documentation)
  - [Testing](#testing)
-
+ - [API Endpoints Summary](#api-endpoints-summary)
+ - [Enums Reference](#enums-reference)
+ 
 ---
 
 ## Tech Stack
@@ -517,6 +518,8 @@ npm run test:watch
 
 ---
 
+<a id="api-endpoints-summary"></a>
+
 ## API Endpoints Summary
 
 ### Authentication (`/auth`)
@@ -687,6 +690,7 @@ npm run test:watch
 | `DELETE` | `/notifications/:id` | ลบแจ้งเตือน | Yes |
 
 ---
+<a id="enums-reference"></a>
 
 ## Enums Reference
 
