@@ -11,7 +11,7 @@ export class NotificationsController {
   findAll(@Request() req, @Query('unreadOnly') unreadOnly?: string) {
     return this.notificationsService.findByUser(
       req.user.id,
-      unreadOnly === 'true',
+      unreadOnly === 'true'
     );
   }
 

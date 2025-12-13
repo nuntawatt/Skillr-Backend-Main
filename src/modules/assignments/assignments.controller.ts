@@ -50,7 +50,7 @@ export class AssignmentsController {
   submit(
     @Param('id') id: string,
     @Body() submitDto: SubmitAssignmentDto,
-    @Request() req,
+    @Request() req
   ) {
     return this.assignmentsService.submit(id, req.user.id, submitDto);
   }
@@ -69,7 +69,7 @@ export class AssignmentsController {
   @Roles(UserRole.INSTRUCTOR, UserRole.ADMIN)
   gradeSubmission(
     @Param('submissionId') submissionId: string,
-    @Body() gradeDto: GradeSubmissionDto,
+    @Body() gradeDto: GradeSubmissionDto
   ) {
     return this.assignmentsService.gradeSubmission(submissionId, gradeDto);
   }

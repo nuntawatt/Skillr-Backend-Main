@@ -8,23 +8,18 @@ export class NotificationsService {
   constructor(
     @InjectRepository(Notification)
     private readonly notificationRepository: Repository<Notification>,
-  ) {}
+  ) { }
 
   async create(
     userId: string,
     title: string,
     message: string,
     type: NotificationType = NotificationType.INFO,
-    data?: Record<string, any>,
-  ): Promise<Notification> {
-    const notification = this.notificationRepository.create({
-      userId,
-      title,
-      message,
-      type,
-      data,
-    });
-    
+    data?: Record<string, any>
+  ):
+    Promise<Notification> {
+    const notification = this.notificationRepository.create({ userId, title, message, type, data });
+
     return this.notificationRepository.save(notification);
   }
 
@@ -32,11 +27,11 @@ export class NotificationsService {
     const query = this.notificationRepository.createQueryBuilder('notification')
       .where('notification.userId = :userId', { userId })
       .orderBy('notification.createdAt', 'DESC');
-    
+
     if (unreadOnly) {
       query.andWhere('notification.isRead = :isRead', { isRead: false });
     }
-    
+
     return query.getMany();
   }
 
@@ -51,43 +46,41 @@ export class NotificationsService {
     const notification = await this.notificationRepository.findOne({
       where: { id },
     });
-    
+
     if (!notification) {
       throw new NotFoundException(`Notification with ID ${id} not found`);
     }
-    
+
     if (notification.userId !== userId) {
       throw new ForbiddenException('You can only mark your own notifications as read');
     }
-    
+
     notification.isRead = true;
     notification.readAt = new Date();
-    
+
     return this.notificationRepository.save(notification);
   }
 
   async markAllAsRead(userId: string): Promise<{ updated: number }> {
     const result = await this.notificationRepository.update(
       { userId, isRead: false },
-      { isRead: true, readAt: new Date() },
+      { isRead: true, readAt: new Date() }
     );
-    
+
     return { updated: result.affected || 0 };
   }
 
   async remove(id: string, userId: string): Promise<void> {
-    const notification = await this.notificationRepository.findOne({
-      where: { id },
-    });
-    
+    const notification = await this.notificationRepository.findOne({ where: { id } });
+
     if (!notification) {
       throw new NotFoundException(`Notification with ID ${id} not found`);
     }
-    
+
     if (notification.userId !== userId) {
       throw new ForbiddenException('You can only delete your own notifications');
     }
-    
+
     await this.notificationRepository.remove(notification);
   }
 
@@ -98,7 +91,7 @@ export class NotificationsService {
       'Enrollment Successful',
       `You have successfully enrolled in ${courseName}`,
       NotificationType.SUCCESS,
-      { type: 'enrollment' },
+      { type: 'enrollment' }
     );
   }
 
@@ -108,7 +101,7 @@ export class NotificationsService {
       'Payment Confirmed',
       `Your payment of ${amount} for ${courseName} has been confirmed`,
       NotificationType.SUCCESS,
-      { type: 'payment' },
+      { type: 'payment' }
     );
   }
 
@@ -118,7 +111,7 @@ export class NotificationsService {
       'Assignment Due Soon',
       `Assignment "${assignmentTitle}" is due on ${dueDate.toLocaleDateString()}`,
       NotificationType.WARNING,
-      { type: 'assignment_due' },
+      { type: 'assignment_due' }
     );
   }
 }

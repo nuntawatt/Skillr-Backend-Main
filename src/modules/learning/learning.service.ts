@@ -16,7 +16,7 @@ export class LearningService {
     @InjectRepository(Question)
     private readonly questionRepository: Repository<Question>,
     @InjectRepository(QuizAttempt)
-    private readonly attemptRepository: Repository<QuizAttempt>,
+    private readonly attemptRepository: Repository<QuizAttempt>
   ) {}
 
   async createQuiz(createQuizDto: CreateQuizDto): Promise<Quiz> {
@@ -25,7 +25,7 @@ export class LearningService {
       description: createQuizDto.description,
       lessonId: createQuizDto.lessonId,
       timeLimit: createQuizDto.timeLimit,
-      passingScore: createQuizDto.passingScore,
+      passingScore: createQuizDto.passingScore
     });
     
     const savedQuiz = await this.quizRepository.save(quiz);
@@ -59,7 +59,7 @@ export class LearningService {
   async findOneQuiz(id: string): Promise<Quiz> {
     const quiz = await this.quizRepository.findOne({
       where: { id },
-      relations: ['questions', 'lesson'],
+      relations: ['questions', 'lesson']
     });
     if (!quiz) {
       throw new NotFoundException(`Quiz with ID ${id} not found`);
@@ -85,7 +85,7 @@ export class LearningService {
     const attempt = this.attemptRepository.create({
       quizId: quiz.id,
       userId,
-      startedAt: new Date(),
+      startedAt: new Date()
     });
     
     return this.attemptRepository.save(attempt);
@@ -118,7 +118,7 @@ export class LearningService {
       attempt = this.attemptRepository.create({
         quizId,
         userId,
-        startedAt: new Date(),
+        startedAt: new Date()
       });
     }
     
@@ -133,7 +133,7 @@ export class LearningService {
   async getAttempts(quizId: string, userId: string): Promise<QuizAttempt[]> {
     return this.attemptRepository.find({
       where: { quizId, userId },
-      order: { startedAt: 'DESC' },
+      order: { startedAt: 'DESC' }
     });
   }
 }

@@ -11,7 +11,6 @@ import { User } from '../users/entities/user.entity';
 import { RefreshToken } from '../users/entities/refresh-token.entity';
 import { PasswordResetToken } from '../users/entities/password-reset-token.entity';
 import { RegisterDto, LoginDto } from './dto';
-// import { JWT_REFRESH_EXPIRES_IN } from '../../config/jwt.config';
 
 export interface TokenResponse {
   accessToken: string;
@@ -44,10 +43,10 @@ export class AuthService {
     }
 
     const user = await this.usersService.create({
-      email: registerDto.email,
-      password: registerDto.password,
       firstName: registerDto.firstName,
       lastName: registerDto.lastName,
+      email: registerDto.email,
+      password: registerDto.password
     });
 
     const tokens = await this.generateTokens(user);
@@ -172,17 +171,13 @@ export class AuthService {
     };
   }
 
-  
-
-  async resetPassword(
-    token: string,
-    newPassword: string,
-  ): Promise<{ message: string }> {
+  async resetPassword(token: string, newPassword: string,):
+    Promise<{ message: string }> {
     const resetToken = await this.passwordResetTokenRepository.findOne({
       where: {
         token,
         isUsed: false,
-        expiresAt: MoreThan(new Date()),
+        expiresAt: MoreThan(new Date())
       },
       relations: ['user'],
     });
@@ -192,22 +187,23 @@ export class AuthService {
     }
 
     await this.usersService.updatePassword(resetToken.userId, newPassword);
+
     resetToken.isUsed = true;
     await this.passwordResetTokenRepository.save(resetToken);
-
     await this.logoutAll(resetToken.userId);
 
     return { message: 'Password has been reset successfully' };
   }
 
-  
+
   // Generate access and refresh tokens
   private async generateTokens(
     user: User,
     userAgent?: string,
     ipAddress?: string,
-    rememberMe?: boolean,
-  ): Promise<TokenResponse> {
+    rememberMe?: boolean
+  ):
+    Promise<TokenResponse> {
     const payload = {
       sub: user.id,
       email: user.email,

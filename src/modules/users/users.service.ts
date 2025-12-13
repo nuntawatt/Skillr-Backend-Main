@@ -11,7 +11,7 @@ import { AuthProvider, UserRole } from '../../common/enums';
 export class UsersService {
   constructor(
     @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    private readonly userRepository: Repository<User>
   ) { }
 
   // Create a new user
@@ -29,9 +29,7 @@ export class UsersService {
       avatar: createUserDto.avatar,
       provider: createUserDto.provider,
       role: createUserDto.role,
-      passwordHash: createUserDto.password
-        ? await argon2.hash(createUserDto.password)
-        : undefined,
+      passwordHash: createUserDto.password ? await argon2.hash(createUserDto.password) : undefined,
     });
 
     return this.userRepository.save(user);
@@ -136,7 +134,7 @@ export class UsersService {
   // Get all users
   async findAll(): Promise<User[]> {
     return this.userRepository.find({
-      select: ['id', 'email', 'firstName', 'lastName', 'avatar', 'role', 'provider', 'isVerified', 'createdAt'],
+      select: ['id', 'email', 'firstName', 'lastName', 'avatar', 'role', 'provider', 'isVerified', 'createdAt']
     });
   }
 

@@ -10,7 +10,7 @@ export class StudentsService {
   constructor(
     @InjectRepository(Student)
     private readonly studentRepository: Repository<Student>,
-  ) {}
+  ) { }
 
   async create(createStudentDto: CreateStudentDto): Promise<Student> {
     const student = this.studentRepository.create(createStudentDto);
@@ -22,10 +22,7 @@ export class StudentsService {
   }
 
   async findOne(id: string): Promise<Student> {
-    const student = await this.studentRepository.findOne({
-      where: { id },
-      relations: ['user'],
-    });
+    const student = await this.studentRepository.findOne({ where: { id }, relations: ['user'] });
     if (!student) {
       throw new NotFoundException(`Student with ID ${id} not found`);
     }
@@ -33,10 +30,7 @@ export class StudentsService {
   }
 
   async findByUserId(userId: string): Promise<Student | null> {
-    return this.studentRepository.findOne({
-      where: { userId },
-      relations: ['user'],
-    });
+    return this.studentRepository.findOne({ where: { userId }, relations: ['user'] });
   }
 
   async update(id: string, updateStudentDto: UpdateStudentDto): Promise<Student> {

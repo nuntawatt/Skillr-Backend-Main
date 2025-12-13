@@ -15,7 +15,7 @@ export class PaymentsService {
     const payment = this.paymentRepository.create({
       ...createPaymentDto,
       userId,
-      status: PaymentStatus.PENDING,
+      status: PaymentStatus.PENDING
     });
     
     return this.paymentRepository.save(payment);
@@ -25,7 +25,7 @@ export class PaymentsService {
     return this.paymentRepository.find({
       where: { userId },
       relations: ['course'],
-      order: { createdAt: 'DESC' },
+      order: { createdAt: 'DESC' }
     });
   }
 
@@ -54,8 +54,6 @@ export class PaymentsService {
   }
 
   async handleWebhook(payload: any): Promise<{ received: boolean }> {
-    // Handle payment gateway webhook
-    // This is a placeholder - implement based on your payment provider
     const { paymentId, status, providerRef } = payload;
     
     if (paymentId && status === 'success') {

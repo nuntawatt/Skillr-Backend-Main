@@ -72,13 +72,13 @@ export class AdminUsersController {
   @Patch(':id/role')
   async updateRole(
     @Param('id') id: string,
-    @Body() updateRoleDto: UpdateRoleDto,
+    @Body() updateRoleDto: UpdateRoleDto
   ) {
     const user = await this.usersService.updateRole(id, updateRoleDto);
     const { passwordHash, ...result } = user;
     return {
       message: 'User role updated successfully',
-      user: result,
+      user: result
     };
   }
 }

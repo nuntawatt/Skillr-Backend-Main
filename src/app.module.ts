@@ -26,37 +26,37 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
       isGlobal: true,
       envFilePath: '.env',
     }),
-    
+
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: getDatabaseConfig,
       inject: [ConfigService],
     }),
-    
+
     // Core Modules
     UsersModule,
     AuthModule,
-    
+
     // Profile Modules
     StudentsModule,
     InstructorsModule,
-    
+
     // Course Modules
     CoursesModule,
     LessonsModule,
     ContentModule,
     AssignmentsModule,
     LearningModule,
-    
+
     // Transaction Modules
     EnrollmentsModule,
     PaymentsModule,
-    
+
     // Other Modules
     ActivitiesModule,
-    NotificationsModule,
+    NotificationsModule
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService]
 })
-export class AppModule {}
+export class AppModule { }

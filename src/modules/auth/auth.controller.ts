@@ -38,7 +38,7 @@ export class AuthController {
         httpOnly: true,
         secure: this.configService.get('NODE_ENV') === 'production',
         sameSite: 'lax',
-        maxAge: 30 * 24 * 60 * 60 * 1000,
+        maxAge: 30 * 24 * 60 * 60 * 1000
       });
     }
 
@@ -55,7 +55,9 @@ export class AuthController {
   // Google OAuth - Callback
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
-  async googleAuthCallback(@Req() req: Request, @Res() res: Response) {
+  async googleAuthCallback(
+    @Req() req: Request,
+    @Res() res: Response) {
     const user = req.user as {
       googleId: string;
       email: string;
@@ -65,17 +67,6 @@ export class AuthController {
     };
 
     const result = await this.authService.googleLogin(user);
-
-    // TODO: Uncomment when frontend is connected
-    // Redirect to frontend with tokens
-    // const frontendUrl = this.configService.get(
-    //   'FRONTEND_URL',
-    //   'http://localhost:3000',
-    // );
-    // const redirectUrl = `${frontendUrl}/auth/callback?accessToken=${result.tokens.accessToken}&refreshToken=${result.tokens.refreshToken}`;
-    // return res.redirect(redirectUrl);
-
-    // For API testing without frontend - return JSON response
     return res.json(result);
   }
 
@@ -88,9 +79,7 @@ export class AuthController {
       throw new BadRequestException('id_token is required');
     }
 
-    const tokenInfoUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(
-      idToken,
-    )}`;
+    const tokenInfoUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`;
 
     const resp = await fetch(tokenInfoUrl);
     if (!resp.ok) {
@@ -111,7 +100,7 @@ export class AuthController {
       email: info.email,
       firstName: info.given_name,
       lastName: info.family_name,
-      avatar: info.picture,
+      avatar: info.picture
     };
 
     return this.authService.googleLogin(profile);
@@ -120,12 +109,11 @@ export class AuthController {
   // Refresh token
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
+
   async refreshTokens(
     @Body() refreshTokenDto: RefreshTokenDto,
-    @Req() req: Request,
-  ) {
-    const refreshToken =
-      refreshTokenDto.refreshToken || req.cookies?.refreshToken;
+    @Req() req: Request) {
+    const refreshToken = refreshTokenDto.refreshToken || req.cookies?.refreshToken;
 
     if (!refreshToken) {
       throw new BadRequestException('Refresh token is required');
@@ -141,14 +129,13 @@ export class AuthController {
   async logout(
     @Body() body: { refreshToken?: string },
     @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+    @Res({ passthrough: true }) res: Response) {
+
     const refreshToken = body.refreshToken || req.cookies?.refreshToken;
 
     if (refreshToken) {
       await this.authService.logout(refreshToken);
     }
-
     res.clearCookie('refreshToken');
 
     return { message: 'Logged out successfully' };
@@ -160,8 +147,7 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async logoutAll(
     @CurrentUser('id') userId: string,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+    @Res({ passthrough: true }) res: Response) {
     await this.authService.logoutAll(userId);
     res.clearCookie('refreshToken');
     return { message: 'Logged out from all devices successfully' };

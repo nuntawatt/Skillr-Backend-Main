@@ -7,10 +7,8 @@ import { UpdateInstructorDto } from './dto/update-instructor.dto';
 
 @Injectable()
 export class InstructorsService {
-  constructor(
-    @InjectRepository(Instructor)
-    private readonly instructorRepository: Repository<Instructor>,
-  ) {}
+  constructor(@InjectRepository(Instructor)
+  private readonly instructorRepository: Repository<Instructor>) { }
 
   async create(createInstructorDto: CreateInstructorDto): Promise<Instructor> {
     const instructor = this.instructorRepository.create(createInstructorDto);
@@ -22,10 +20,8 @@ export class InstructorsService {
   }
 
   async findOne(id: string): Promise<Instructor> {
-    const instructor = await this.instructorRepository.findOne({
-      where: { id },
-      relations: ['user'],
-    });
+    const instructor = await this.instructorRepository.findOne({ where: { id }, relations: ['user'] });
+
     if (!instructor) {
       throw new NotFoundException(`Instructor with ID ${id} not found`);
     }
@@ -33,10 +29,7 @@ export class InstructorsService {
   }
 
   async findByUserId(userId: string): Promise<Instructor | null> {
-    return this.instructorRepository.findOne({
-      where: { userId },
-      relations: ['user'],
-    });
+    return this.instructorRepository.findOne({ where: { userId }, relations: ['user'] });
   }
 
   async update(id: string, updateInstructorDto: UpdateInstructorDto): Promise<Instructor> {
