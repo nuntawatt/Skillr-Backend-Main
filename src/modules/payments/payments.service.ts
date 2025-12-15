@@ -12,9 +12,11 @@ export class PaymentsService {
   ) {}
 
   async create(createPaymentDto: CreatePaymentDto, userId: string): Promise<Payment> {
+    const numericUserId = Number(userId);
     const payment = this.paymentRepository.create({
       ...createPaymentDto,
-      userId,
+      userId: numericUserId,
+      courseId: Number(createPaymentDto.courseId),
       status: PaymentStatus.PENDING
     });
     
@@ -22,16 +24,18 @@ export class PaymentsService {
   }
 
   async findByUser(userId: string): Promise<Payment[]> {
+    const numericUserId = Number(userId);
     return this.paymentRepository.find({
-      where: { userId },
+      where: { userId: numericUserId },
       relations: ['course'],
       order: { createdAt: 'DESC' }
     });
   }
 
   async findOne(id: string): Promise<Payment> {
+    const paymentId = Number(id);
     const payment = await this.paymentRepository.findOne({
-      where: { id },
+      where: { id: paymentId },
       relations: ['user', 'course'],
     });
     if (!payment) {
@@ -41,16 +45,11 @@ export class PaymentsService {
   }
 
   async findAll(status?: string): Promise<Payment[]> {
-    const query = this.paymentRepository.createQueryBuilder('payment')
-      .leftJoinAndSelect('payment.user', 'user')
-      .leftJoinAndSelect('payment.course', 'course')
-      .orderBy('payment.createdAt', 'DESC');
-    
-    if (status) {
-      query.where('payment.status = :status', { status });
-    }
-    
-    return query.getMany();
+    return this.paymentRepository.find({
+      where: status ? ({ status } as any) : undefined,
+      relations: ['user', 'course'],
+      order: { createdAt: 'DESC' },
+    });
   }
 
   async handleWebhook(payload: any): Promise<{ received: boolean }> {

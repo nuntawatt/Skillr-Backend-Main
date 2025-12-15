@@ -12,21 +12,21 @@ export enum RegistrationStatus {
 @Entity('activity_registrations')
 @Unique(['activityId', 'userId'])
 export class ActivityRegistration {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
-  @Column()
-  activityId: string;
+  @Column({ name: 'activity_id' })
+  activityId: number;
 
   @ManyToOne(() => Activity, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'activityId' })
+  @JoinColumn({ name: 'activity_id' })
   activity: Activity;
 
-  @Column()
-  userId: string;
+  @Column({ name: 'user_id' })
+  userId: number;
 
   @ManyToOne(() => User)
-  @JoinColumn({ name: 'userId' })
+  @JoinColumn({ name: 'user_id' })
   user: User;
 
   @Column({
@@ -36,6 +36,6 @@ export class ActivityRegistration {
   })
   status: RegistrationStatus;
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 }

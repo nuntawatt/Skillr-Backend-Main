@@ -3,14 +3,14 @@ import { User } from '../../users/entities/user.entity';
 
 @Entity('instructors')
 export class Instructor {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
-  @Column({ unique: true })
-  userId: string;
+  @Column({ name: 'user_id', unique: true })
+  userId: number;
 
   @OneToOne(() => User)
-  @JoinColumn({ name: 'userId' })
+  @JoinColumn({ name: 'user_id' })
   user: User;
 
   @Column({ nullable: true })
@@ -25,12 +25,12 @@ export class Instructor {
   @Column({ nullable: true })
   qualification: string;
 
-  @Column({ default: false })
+  @Column({ name: 'is_verified', default: false })
   isVerified: boolean;
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 }

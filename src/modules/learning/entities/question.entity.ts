@@ -9,8 +9,8 @@ export enum QuestionType {
 
 @Entity('questions')
 export class Question {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @Column({ type: 'text' })
   question: string;
@@ -25,7 +25,7 @@ export class Question {
   @Column({ type: 'jsonb', nullable: true })
   options: string[]; // For multiple choice
 
-  @Column()
+  @Column({ name: 'correct_answer' })
   correctAnswer: string;
 
   @Column({ nullable: true })
@@ -37,16 +37,16 @@ export class Question {
   @Column({ default: 0 })
   order: number;
 
-  @Column()
-  quizId: string;
+  @Column({ name: 'quiz_id' })
+  quizId: number;
 
   @ManyToOne(() => Quiz, (quiz) => quiz.questions, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'quizId' })
+  @JoinColumn({ name: 'quiz_id' })
   quiz: Quiz;
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 }

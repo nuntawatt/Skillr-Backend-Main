@@ -1,4 +1,5 @@
-import { IsString, IsOptional, IsNumber, IsEnum, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsString, IsOptional, IsNumber, IsEnum, Min, IsInt } from 'class-validator';
 import { ContentType } from '../entities/content.entity';
 
 export class CreateContentDto {
@@ -22,6 +23,7 @@ export class CreateContentDto {
   @Min(0)
   order?: number;
 
-  @IsString()
-  lessonId: string;
+  @IsInt()
+  @Type(() => Number)
+  lessonId: number;
 }

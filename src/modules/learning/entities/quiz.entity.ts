@@ -4,8 +4,8 @@ import { Question } from './question.entity';
 
 @Entity('quizzes')
 export class Quiz {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @Column()
   title: string;
@@ -13,28 +13,28 @@ export class Quiz {
   @Column({ type: 'text', nullable: true })
   description: string;
 
-  @Column()
-  lessonId: string;
+  @Column({ name: 'lesson_id' })
+  lessonId: number;
 
   @ManyToOne(() => Lesson, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'lessonId' })
+  @JoinColumn({ name: 'lesson_id' })
   lesson: Lesson;
 
   @OneToMany(() => Question, (question) => question.quiz, { cascade: true })
   questions: Question[];
 
-  @Column({ nullable: true })
+  @Column({ name: 'time_limit', nullable: true })
   timeLimit: number; // in minutes
 
-  @Column({ default: 60 })
+  @Column({ name: 'passing_score', default: 60 })
   passingScore: number; // percentage
 
-  @Column({ default: true })
+  @Column({ name: 'is_active', default: true })
   isActive: boolean;
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 }

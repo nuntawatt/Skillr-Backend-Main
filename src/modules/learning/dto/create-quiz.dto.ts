@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsNumber, IsArray, ValidateNested, IsEnum, Min, Max } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsArray, ValidateNested, IsEnum, Min, Max, IsInt } from 'class-validator';
 import { Type } from 'class-transformer';
 import { QuestionType } from '../entities/question.entity';
 
@@ -41,8 +41,9 @@ export class CreateQuizDto {
   @IsString()
   description?: string;
 
-  @IsString()
-  lessonId: string;
+  @IsInt()
+  @Type(() => Number)
+  lessonId: number;
 
   @IsOptional()
   @IsNumber()

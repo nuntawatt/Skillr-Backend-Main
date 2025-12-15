@@ -146,7 +146,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   async logoutAll(
-    @CurrentUser('id') userId: string,
+    @CurrentUser('id') userId: number,
     @Res({ passthrough: true }) res: Response) {
     await this.authService.logoutAll(userId);
     res.clearCookie('refreshToken');

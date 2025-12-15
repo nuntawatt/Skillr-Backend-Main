@@ -19,21 +19,21 @@ export enum PaymentMethod {
 
 @Entity('payments')
 export class Payment {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
-  @Column()
-  userId: string;
+  @Column({ name: 'user_id' })
+  userId: number;
 
   @ManyToOne(() => User)
-  @JoinColumn({ name: 'userId' })
+  @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @Column()
-  courseId: string;
+  @Column({ name: 'course_id' })
+  courseId: number;
 
   @ManyToOne(() => Course)
-  @JoinColumn({ name: 'courseId' })
+  @JoinColumn({ name: 'course_id' })
   course: Course;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
@@ -53,15 +53,15 @@ export class Payment {
   })
   status: PaymentStatus;
 
-  @Column({ nullable: true })
+  @Column({ name: 'provider_ref', nullable: true })
   providerRef: string; // Reference from payment provider
 
-  @Column({ type: 'timestamptz', nullable: true })
+  @Column({ name: 'paid_at', type: 'timestamptz', nullable: true })
   paidAt: Date;
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 }

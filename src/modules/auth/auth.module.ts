@@ -8,7 +8,7 @@ import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { UsersModule } from '../users/users.module';
-import { RefreshToken } from '../users/entities/refresh-token.entity';
+import { Session } from '../users/entities/session.entity';
 import { PasswordResetToken } from '../users/entities/password-reset-token.entity';
 import { getJwtConfig } from '../../config/jwt.config';
 
@@ -21,7 +21,7 @@ import { getJwtConfig } from '../../config/jwt.config';
       useFactory: getJwtConfig,
       inject: [ConfigService],
     }),
-    TypeOrmModule.forFeature([RefreshToken, PasswordResetToken]),
+    TypeOrmModule.forFeature([Session, PasswordResetToken]),
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, GoogleStrategy],

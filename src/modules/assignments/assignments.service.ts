@@ -18,7 +18,10 @@ export class AssignmentsService {
   ) {}
 
   async create(createAssignmentDto: CreateAssignmentDto): Promise<Assignment> {
-    const assignment = this.assignmentRepository.create(createAssignmentDto);
+    const assignment = this.assignmentRepository.create({
+      ...createAssignmentDto,
+      courseId: Number(createAssignmentDto.courseId),
+    });
     return this.assignmentRepository.save(assignment);
   }
 
@@ -27,15 +30,16 @@ export class AssignmentsService {
       .leftJoinAndSelect('assignment.course', 'course');
     
     if (courseId) {
-      query.where('assignment.courseId = :courseId', { courseId });
+      query.where('assignment.courseId = :courseId', { courseId: Number(courseId) });
     }
     
     return query.getMany();
   }
 
   async findOne(id: string): Promise<Assignment> {
+    const assignmentId = Number(id);
     const assignment = await this.assignmentRepository.findOne({
-      where: { id },
+      where: { id: assignmentId },
       relations: ['course'],
     });
     if (!assignment) {
@@ -57,10 +61,11 @@ export class AssignmentsService {
 
   async submit(assignmentId: string, studentId: string, submitDto: SubmitAssignmentDto): Promise<AssignmentSubmission> {
     const assignment = await this.findOne(assignmentId);
+    const numericStudentId = Number(studentId);
     
     const submission = this.submissionRepository.create({
       assignmentId: assignment.id,
-      studentId,
+      studentId: numericStudentId,
       content: submitDto.content,
       fileUrl: submitDto.fileUrl,
     });
@@ -69,15 +74,17 @@ export class AssignmentsService {
   }
 
   async getSubmissions(assignmentId: string): Promise<AssignmentSubmission[]> {
+    const numericAssignmentId = Number(assignmentId);
     return this.submissionRepository.find({
-      where: { assignmentId },
+      where: { assignmentId: numericAssignmentId },
       relations: ['student', 'student.user'],
     });
   }
 
   async gradeSubmission(submissionId: string, gradeDto: GradeSubmissionDto): Promise<AssignmentSubmission> {
+    const numericSubmissionId = Number(submissionId);
     const submission = await this.submissionRepository.findOne({
-      where: { id: submissionId },
+      where: { id: numericSubmissionId },
     });
     
     if (!submission) {

@@ -13,7 +13,10 @@ export class LessonsService {
   ) {}
 
   async create(createLessonDto: CreateLessonDto): Promise<Lesson> {
-    const lesson = this.lessonRepository.create(createLessonDto);
+    const lesson = this.lessonRepository.create({
+      ...createLessonDto,
+      courseId: Number(createLessonDto.courseId),
+    });
     return this.lessonRepository.save(lesson);
   }
 
@@ -23,15 +26,16 @@ export class LessonsService {
       .orderBy('lesson.order', 'ASC');
     
     if (courseId) {
-      query.where('lesson.courseId = :courseId', { courseId });
+      query.where('lesson.courseId = :courseId', { courseId: Number(courseId) });
     }
     
     return query.getMany();
   }
 
   async findOne(id: string): Promise<Lesson> {
+    const lessonId = Number(id);
     const lesson = await this.lessonRepository.findOne({
-      where: { id },
+      where: { id: lessonId },
       relations: ['course']
     });
     if (!lesson) {

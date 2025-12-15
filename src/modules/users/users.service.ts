@@ -36,8 +36,12 @@ export class UsersService {
   }
 
   // Find user by ID
-  async findById(id: string): Promise<User | null> {
-    return this.userRepository.findOne({ where: { id } });
+  async findById(id: number | string): Promise<User | null> {
+    const numericId = typeof id === 'string' ? Number(id) : id;
+    if (!Number.isFinite(numericId)) {
+      return null;
+    }
+    return this.userRepository.findOne({ where: { id: numericId } });
   }
 
   // Find user by email
@@ -91,7 +95,7 @@ export class UsersService {
   }
 
   // Update user details
-  async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+  async update(id: number | string, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findById(id);
     if (!user) {
       throw new NotFoundException('User not found');
@@ -102,7 +106,7 @@ export class UsersService {
   }
 
   // Update user role
-  async updateRole(id: string, updateRoleDto: UpdateRoleDto): Promise<User> {
+  async updateRole(id: number | string, updateRoleDto: UpdateRoleDto): Promise<User> {
     const user = await this.findById(id);
     if (!user) {
       throw new NotFoundException('User not found');
@@ -113,7 +117,7 @@ export class UsersService {
   }
 
   // Update user password
-  async updatePassword(id: string, newPassword: string): Promise<void> {
+  async updatePassword(id: number | string, newPassword: string): Promise<void> {
     const user = await this.findById(id);
     if (!user) {
       throw new NotFoundException('User not found');
@@ -139,8 +143,9 @@ export class UsersService {
   }
 
   // Delete user
-  async delete(id: string): Promise<void> {
-    const result = await this.userRepository.delete(id);
+  async delete(id: number | string): Promise<void> {
+    const numericId = typeof id === 'string' ? Number(id) : id;
+    const result = await this.userRepository.delete(numericId);
     if (result.affected === 0) {
       throw new NotFoundException('User not found');
     }

@@ -4,27 +4,27 @@ import { Student } from '../../students/entities/student.entity';
 
 @Entity('assignment_submissions')
 export class AssignmentSubmission {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
-  @Column()
-  assignmentId: string;
+  @Column({ name: 'assignment_id' })
+  assignmentId: number;
 
   @ManyToOne(() => Assignment, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'assignmentId' })
+  @JoinColumn({ name: 'assignment_id' })
   assignment: Assignment;
 
-  @Column()
-  studentId: string;
+  @Column({ name: 'student_id' })
+  studentId: number;
 
   @ManyToOne(() => Student)
-  @JoinColumn({ name: 'studentId' })
+  @JoinColumn({ name: 'student_id' })
   student: Student;
 
   @Column({ type: 'text', nullable: true })
   content: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'file_url', nullable: true })
   fileUrl: string;
 
   @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
@@ -33,12 +33,12 @@ export class AssignmentSubmission {
   @Column({ type: 'text', nullable: true })
   feedback: string;
 
-  @Column({ type: 'timestamptz', nullable: true })
+  @Column({ name: 'graded_at', type: 'timestamptz', nullable: true })
   gradedAt: Date;
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 }

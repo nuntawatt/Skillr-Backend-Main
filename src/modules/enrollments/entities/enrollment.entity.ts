@@ -12,21 +12,21 @@ export enum EnrollmentStatus {
 @Entity('enrollments')
 @Unique(['studentId', 'courseId'])
 export class Enrollment {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
-  @Column()
-  studentId: string;
+  @Column({ name: 'student_id' })
+  studentId: number;
 
   @ManyToOne(() => Student)
-  @JoinColumn({ name: 'studentId' })
+  @JoinColumn({ name: 'student_id' })
   student: Student;
 
-  @Column()
-  courseId: string;
+  @Column({ name: 'course_id' })
+  courseId: number;
 
   @ManyToOne(() => Course)
-  @JoinColumn({ name: 'courseId' })
+  @JoinColumn({ name: 'course_id' })
   course: Course;
 
   @Column({
@@ -39,12 +39,12 @@ export class Enrollment {
   @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })
   progress: number; // percentage
 
-  @Column({ type: 'timestamptz', nullable: true })
+  @Column({ name: 'completed_at', type: 'timestamptz', nullable: true })
   completedAt: Date;
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 }

@@ -13,7 +13,10 @@ export class StudentsService {
   ) { }
 
   async create(createStudentDto: CreateStudentDto): Promise<Student> {
-    const student = this.studentRepository.create(createStudentDto);
+    const student = this.studentRepository.create({
+      ...createStudentDto,
+      userId: Number(createStudentDto.userId),
+    });
     return this.studentRepository.save(student);
   }
 
@@ -22,7 +25,8 @@ export class StudentsService {
   }
 
   async findOne(id: string): Promise<Student> {
-    const student = await this.studentRepository.findOne({ where: { id }, relations: ['user'] });
+    const studentId = Number(id);
+    const student = await this.studentRepository.findOne({ where: { id: studentId }, relations: ['user'] });
     if (!student) {
       throw new NotFoundException(`Student with ID ${id} not found`);
     }
@@ -30,7 +34,7 @@ export class StudentsService {
   }
 
   async findByUserId(userId: string): Promise<Student | null> {
-    return this.studentRepository.findOne({ where: { userId }, relations: ['user'] });
+    return this.studentRepository.findOne({ where: { userId: Number(userId) }, relations: ['user'] });
   }
 
   async update(id: string, updateStudentDto: UpdateStudentDto): Promise<Student> {

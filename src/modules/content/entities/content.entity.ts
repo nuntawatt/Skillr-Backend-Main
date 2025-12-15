@@ -12,8 +12,8 @@ export enum ContentType {
 
 @Entity('contents')
 export class Content {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @Column()
   title: string;
@@ -34,16 +34,16 @@ export class Content {
   @Column({ default: 0 })
   order: number;
 
-  @Column()
-  lessonId: string;
+  @Column({ name: 'lesson_id' })
+  lessonId: number;
 
   @ManyToOne(() => Lesson, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'lessonId' })
+  @JoinColumn({ name: 'lesson_id' })
   lesson: Lesson;
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 }

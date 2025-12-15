@@ -4,25 +4,25 @@ import { User } from './user.entity';
 // Password Reset Token Entity
 @Entity('password_reset_tokens')
 export class PasswordResetToken {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @Column({ unique: true })
   token: string;
 
-  @Column()
-  userId: string;
+  @Column({ name: 'user_id' })
+  userId: number;
 
-  @Column()
+  @Column({ name: 'expires_at', type: 'timestamptz' })
   expiresAt: Date;
 
-  @Column({ default: false })
+  @Column({ name: 'is_used', type: 'boolean', default: false })
   isUsed: boolean;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
   @ManyToOne(() => User, (user) => user.passwordResetTokens, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'userId' })
+  @JoinColumn({ name: 'user_id' })
   user: User;
 }

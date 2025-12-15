@@ -1,9 +1,10 @@
-import { IsArray, ValidateNested, IsString } from 'class-validator';
+import { IsArray, ValidateNested, IsString, IsInt } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class AnswerDto {
-  @IsString()
-  questionId: string;
+  @IsInt()
+  @Type(() => Number)
+  questionId: number;
 
   @IsString()
   answer: string;

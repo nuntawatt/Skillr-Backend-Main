@@ -18,40 +18,46 @@ export class NotificationsService {
     data?: Record<string, any>
   ):
     Promise<Notification> {
-    const notification = this.notificationRepository.create({ userId, title, message, type, data });
+    const numericUserId = Number(userId);
+    const notification = this.notificationRepository.create({
+      userId: numericUserId,
+      title,
+      message,
+      type,
+      data,
+    });
 
     return this.notificationRepository.save(notification);
   }
 
   async findByUser(userId: string, unreadOnly: boolean = false): Promise<Notification[]> {
-    const query = this.notificationRepository.createQueryBuilder('notification')
-      .where('notification.userId = :userId', { userId })
-      .orderBy('notification.createdAt', 'DESC');
-
-    if (unreadOnly) {
-      query.andWhere('notification.isRead = :isRead', { isRead: false });
-    }
-
-    return query.getMany();
+    const numericUserId = Number(userId);
+    return this.notificationRepository.find({
+      where: unreadOnly ? { userId: numericUserId, isRead: false } : { userId: numericUserId },
+      order: { createdAt: 'DESC' },
+    });
   }
 
   async getUnreadCount(userId: string): Promise<{ count: number }> {
+    const numericUserId = Number(userId);
     const count = await this.notificationRepository.count({
-      where: { userId, isRead: false },
+      where: { userId: numericUserId, isRead: false },
     });
     return { count };
   }
 
   async markAsRead(id: string, userId: string): Promise<Notification> {
+    const notificationId = Number(id);
+    const numericUserId = Number(userId);
     const notification = await this.notificationRepository.findOne({
-      where: { id },
+      where: { id: notificationId },
     });
 
     if (!notification) {
       throw new NotFoundException(`Notification with ID ${id} not found`);
     }
 
-    if (notification.userId !== userId) {
+    if (notification.userId !== numericUserId) {
       throw new ForbiddenException('You can only mark your own notifications as read');
     }
 
@@ -62,8 +68,9 @@ export class NotificationsService {
   }
 
   async markAllAsRead(userId: string): Promise<{ updated: number }> {
+    const numericUserId = Number(userId);
     const result = await this.notificationRepository.update(
-      { userId, isRead: false },
+      { userId: numericUserId, isRead: false },
       { isRead: true, readAt: new Date() }
     );
 
@@ -71,13 +78,15 @@ export class NotificationsService {
   }
 
   async remove(id: string, userId: string): Promise<void> {
-    const notification = await this.notificationRepository.findOne({ where: { id } });
+    const notificationId = Number(id);
+    const numericUserId = Number(userId);
+    const notification = await this.notificationRepository.findOne({ where: { id: notificationId } });
 
     if (!notification) {
       throw new NotFoundException(`Notification with ID ${id} not found`);
     }
 
-    if (notification.userId !== userId) {
+    if (notification.userId !== numericUserId) {
       throw new ForbiddenException('You can only delete your own notifications');
     }
 

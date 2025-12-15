@@ -4,25 +4,25 @@ import { User } from '../../users/entities/user.entity';
 
 @Entity('quiz_attempts')
 export class QuizAttempt {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
-  @Column()
-  quizId: string;
+  @Column({ name: 'quiz_id' })
+  quizId: number;
 
   @ManyToOne(() => Quiz, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'quizId' })
+  @JoinColumn({ name: 'quiz_id' })
   quiz: Quiz;
 
-  @Column()
-  userId: string;
+  @Column({ name: 'user_id' })
+  userId: number;
 
   @ManyToOne(() => User)
-  @JoinColumn({ name: 'userId' })
+  @JoinColumn({ name: 'user_id' })
   user: User;
 
   @Column({ type: 'jsonb', nullable: true })
-  answers: { questionId: string; answer: string }[];
+  answers: { questionId: number; answer: string }[];
 
   @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
   score: number;
@@ -30,12 +30,12 @@ export class QuizAttempt {
   @Column({ default: false })
   passed: boolean;
 
-  @Column({ type: 'timestamptz' })
+  @Column({ name: 'started_at', type: 'timestamptz' })
   startedAt: Date;
 
-  @Column({ type: 'timestamptz', nullable: true })
+  @Column({ name: 'completed_at', type: 'timestamptz', nullable: true })
   completedAt: Date;
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 }

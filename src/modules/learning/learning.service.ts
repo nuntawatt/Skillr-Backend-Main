@@ -23,7 +23,7 @@ export class LearningService {
     const quiz = this.quizRepository.create({
       title: createQuizDto.title,
       description: createQuizDto.description,
-      lessonId: createQuizDto.lessonId,
+      lessonId: Number(createQuizDto.lessonId),
       timeLimit: createQuizDto.timeLimit,
       passingScore: createQuizDto.passingScore
     });
@@ -50,15 +50,16 @@ export class LearningService {
       .leftJoinAndSelect('quiz.lesson', 'lesson');
     
     if (lessonId) {
-      query.where('quiz.lessonId = :lessonId', { lessonId });
+      query.where('quiz.lessonId = :lessonId', { lessonId: Number(lessonId) });
     }
     
     return query.getMany();
   }
 
-  async findOneQuiz(id: string): Promise<Quiz> {
+  async findOneQuiz(id: string | number): Promise<Quiz> {
+    const quizId = Number(id);
     const quiz = await this.quizRepository.findOne({
-      where: { id },
+      where: { id: quizId },
       relations: ['questions', 'lesson']
     });
     if (!quiz) {
@@ -81,10 +82,11 @@ export class LearningService {
 
   async startQuiz(quizId: string, userId: string): Promise<QuizAttempt> {
     const quiz = await this.findOneQuiz(quizId);
+    const numericUserId = Number(userId);
     
     const attempt = this.attemptRepository.create({
       quizId: quiz.id,
-      userId,
+      userId: numericUserId,
       startedAt: new Date()
     });
     
@@ -93,6 +95,8 @@ export class LearningService {
 
   async submitQuiz(quizId: string, userId: string, submitDto: SubmitQuizDto): Promise<QuizAttempt> {
     const quiz = await this.findOneQuiz(quizId);
+    const numericQuizId = Number(quizId);
+    const numericUserId = Number(userId);
     
     // Calculate score
     let correctAnswers = 0;
@@ -110,14 +114,14 @@ export class LearningService {
     
     // Find or create attempt
     let attempt = await this.attemptRepository.findOne({
-      where: { quizId, userId, completedAt: undefined as any },
+      where: { quizId: numericQuizId, userId: numericUserId, completedAt: undefined as any },
       order: { startedAt: 'DESC' },
     });
     
     if (!attempt) {
       attempt = this.attemptRepository.create({
-        quizId,
-        userId,
+        quizId: numericQuizId,
+        userId: numericUserId,
         startedAt: new Date()
       });
     }
@@ -131,8 +135,10 @@ export class LearningService {
   }
 
   async getAttempts(quizId: string, userId: string): Promise<QuizAttempt[]> {
+    const numericQuizId = Number(quizId);
+    const numericUserId = Number(userId);
     return this.attemptRepository.find({
-      where: { quizId, userId },
+      where: { quizId: numericQuizId, userId: numericUserId },
       order: { startedAt: 'DESC' }
     });
   }

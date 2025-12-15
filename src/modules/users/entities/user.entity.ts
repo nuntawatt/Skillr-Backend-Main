@@ -1,36 +1,42 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, Index } from 'typeorm';
 import { Exclude } from 'class-transformer';
-import { UserRole, AuthProvider } from '../../../common/enums';
-import { RefreshToken } from './refresh-token.entity';
+import { AuthProvider, UserRole } from '../../../common/enums';
 import { PasswordResetToken } from './password-reset-token.entity';
+import { Session } from './session.entity';
+import { EmailVerificationToken } from './email-verification-token.entity';
 
 // User Entity
 @Entity('users')
 export class User {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @Column({ unique: true })
   email: string;
 
   @Exclude()
-  @Column({ nullable: true })
+  @Column({ name: 'password_hash', nullable: true })
   passwordHash: string;
 
   @Exclude()
-  @Column({ nullable: true, unique: true })
+  @Column({ name: 'google_id', nullable: true, unique: true })
   googleId: string;
+
+  @Index({ unique: true })
+  @Column({ nullable: true })
+  username: string;
 
   @Column({ nullable: true })
   avatar: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'first_name', nullable: true })
   firstName: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'last_name', nullable: true })
   lastName: string;
 
   @Column({
+    name: 'auth_provider',
     type: 'enum',
     enum: AuthProvider,
     default: AuthProvider.LOCAL,
@@ -44,18 +50,25 @@ export class User {
   })
   role: UserRole;
 
-  @Column({ default: false })
+  @Column({ name: 'is_verified', default: false })
   isVerified: boolean;
 
-  @CreateDateColumn()
+  @Column({ type: 'varchar', length: 20, default: 'active' })
+  status: string;
+
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 
   @Exclude()
-  @OneToMany(() => RefreshToken, (refreshToken) => refreshToken.user)
-  refreshTokens: RefreshToken[];
+  @OneToMany(() => Session, (session) => session.user)
+  sessions: Session[];
+
+  @Exclude()
+  @OneToMany(() => EmailVerificationToken, (token) => token.user)
+  emailVerificationTokens: EmailVerificationToken[];
 
   @Exclude()
   @OneToMany(() => PasswordResetToken, (token) => token.user)

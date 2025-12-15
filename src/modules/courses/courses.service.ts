@@ -13,7 +13,10 @@ export class CoursesService {
   ) {}
 
   async create(createCourseDto: CreateCourseDto): Promise<Course> {
-    const course = this.courseRepository.create(createCourseDto);
+    const course = this.courseRepository.create({
+      ...createCourseDto,
+      instructorId: Number(createCourseDto.instructorId),
+    });
     return this.courseRepository.save(course);
   }
 
@@ -30,8 +33,9 @@ export class CoursesService {
   }
 
   async findOne(id: string): Promise<Course> {
+    const courseId = Number(id);
     const course = await this.courseRepository.findOne({
-      where: { id },
+      where: { id: courseId },
       relations: ['instructor', 'instructor.user'],
     });
     if (!course) {
@@ -42,7 +46,7 @@ export class CoursesService {
 
   async findByInstructor(instructorId: string): Promise<Course[]> {
     return this.courseRepository.find({
-      where: { instructorId },
+      where: { instructorId: Number(instructorId) },
       relations: ['instructor'],
     });
   }

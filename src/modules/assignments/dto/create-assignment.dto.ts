@@ -1,4 +1,5 @@
-import { IsString, IsOptional, IsNumber, IsBoolean, IsDateString, Min, Max } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsString, IsOptional, IsNumber, IsBoolean, IsDateString, Min, IsInt } from 'class-validator';
 
 export class CreateAssignmentDto {
   @IsString()
@@ -12,8 +13,9 @@ export class CreateAssignmentDto {
   @IsString()
   instructions?: string;
 
-  @IsString()
-  courseId: string;
+  @IsInt()
+  @Type(() => Number)
+  courseId: number;
 
   @IsOptional()
   @IsDateString()

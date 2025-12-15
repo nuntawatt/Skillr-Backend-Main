@@ -3,14 +3,14 @@ import { User } from '../../users/entities/user.entity';
 
 @Entity('students')
 export class Student {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
-  @Column({ unique: true })
-  userId: string;
+  @Column({ name: 'user_id', unique: true })
+  userId: number;
 
   @OneToOne(() => User)
-  @JoinColumn({ name: 'userId' })
+  @JoinColumn({ name: 'user_id' })
   user: User;
 
   @Column({ nullable: true })
@@ -25,9 +25,9 @@ export class Student {
   @Column({ nullable: true })
   address: string;
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 }

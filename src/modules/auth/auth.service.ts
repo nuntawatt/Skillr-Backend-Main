@@ -3,12 +3,11 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid';
 import * as crypto from 'crypto';
 
 import { UsersService } from '../users/users.service';
 import { User } from '../users/entities/user.entity';
-import { RefreshToken } from '../users/entities/refresh-token.entity';
+import { Session } from '../users/entities/session.entity';
 import { PasswordResetToken } from '../users/entities/password-reset-token.entity';
 import { RegisterDto, LoginDto } from './dto';
 
@@ -29,8 +28,8 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-    @InjectRepository(RefreshToken)
-    private readonly refreshTokenRepository: Repository<RefreshToken>,
+    @InjectRepository(Session)
+    private readonly sessionRepository: Repository<Session>,
     @InjectRepository(PasswordResetToken)
     private readonly passwordResetTokenRepository: Repository<PasswordResetToken>,
   ) { }
@@ -100,43 +99,30 @@ export class AuthService {
 
   // Refresh access token using refresh token
   async refreshTokens(refreshTokenValue: string): Promise<TokenResponse> {
-    const refreshToken = await this.refreshTokenRepository.findOne({
+    const session = await this.sessionRepository.findOne({
       where: {
-        token: refreshTokenValue,
-        isRevoked: false,
+        refreshToken: refreshTokenValue,
         expiresAt: MoreThan(new Date()),
       },
       relations: ['user'],
     });
 
-    if (!refreshToken) {
+    if (!session) {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
-    refreshToken.isRevoked = true;
-    await this.refreshTokenRepository.save(refreshToken);
-
-    return this.generateTokens(refreshToken.user);
+    await this.sessionRepository.delete(session.id);
+    return this.generateTokens(session.user);
   }
 
   // Logout
   async logout(refreshTokenValue: string): Promise<void> {
-    const refreshToken = await this.refreshTokenRepository.findOne({
-      where: { token: refreshTokenValue },
-    });
-
-    if (refreshToken) {
-      refreshToken.isRevoked = true;
-      await this.refreshTokenRepository.save(refreshToken);
-    }
+    await this.sessionRepository.delete({ refreshToken: refreshTokenValue });
   }
 
   // Logout from all devices 
-  async logoutAll(userId: string): Promise<void> {
-    await this.refreshTokenRepository.update(
-      { userId, isRevoked: false },
-      { isRevoked: true },
-    );
+  async logoutAll(userId: number): Promise<void> {
+    await this.sessionRepository.delete({ userId });
   }
 
   // Forgot password
@@ -216,17 +202,16 @@ export class AuthService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + refreshExpiresIn);
 
-    // Create refresh token
-    const refreshTokenValue = uuidv4();
-    const refreshToken = this.refreshTokenRepository.create({
-      token: refreshTokenValue,
+    const refreshTokenValue = crypto.randomBytes(48).toString('hex');
+    const session = this.sessionRepository.create({
+      refreshToken: refreshTokenValue,
       userId: user.id,
       expiresAt,
-      userAgent,
-      ipAddress,
+      userAgent: userAgent ?? null,
+      ipAddress: ipAddress ?? null,
     });
 
-    await this.refreshTokenRepository.save(refreshToken);
+    await this.sessionRepository.save(session);
 
     return {
       accessToken,

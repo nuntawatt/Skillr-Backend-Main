@@ -11,10 +11,12 @@ export class EnrollmentsService {
   ) { }
 
   async enroll(studentId: string, courseId: string): Promise<Enrollment> {
+    const numericStudentId = Number(studentId);
+    const numericCourseId = Number(courseId);
 
     // Check if enrolled
     const existing = await this.enrollmentRepository.findOne({
-      where: { studentId, courseId },
+      where: { studentId: numericStudentId, courseId: numericCourseId },
     });
 
     if (existing) {
@@ -22,28 +24,36 @@ export class EnrollmentsService {
     }
 
     // Create new enrollment studentId, courseId, status
-    const enrollment = this.enrollmentRepository.create({ studentId, courseId, status: EnrollmentStatus.ACTIVE });
+    const enrollment = this.enrollmentRepository.create({
+      studentId: numericStudentId,
+      courseId: numericCourseId,
+      status: EnrollmentStatus.ACTIVE,
+    });
 
     return this.enrollmentRepository.save(enrollment);
   }
 
   async findByStudent(studentId: string): Promise<Enrollment[]> {
+    const numericStudentId = Number(studentId);
     return this.enrollmentRepository.find({
-      where: { studentId },
+      where: { studentId: numericStudentId },
       relations: ['course', 'course.instructor', 'course.instructor.user']
     });
   }
 
   async findByCourse(courseId: string): Promise<Enrollment[]> {
+    const numericCourseId = Number(courseId);
     return this.enrollmentRepository.find({
-      where: { courseId },
+      where: { courseId: numericCourseId },
       relations: ['student', 'student.user']
     });
   }
 
   async checkEnrollment(studentId: string, courseId: string): Promise<{ enrolled: boolean }> {
+    const numericStudentId = Number(studentId);
+    const numericCourseId = Number(courseId);
     const enrollment = await this.enrollmentRepository.findOne({
-      where: { studentId, courseId, status: EnrollmentStatus.ACTIVE }
+      where: { studentId: numericStudentId, courseId: numericCourseId, status: EnrollmentStatus.ACTIVE }
     });
     return { enrolled: !!enrollment };
   }
@@ -61,8 +71,9 @@ export class EnrollmentsService {
   }
 
   async updateProgress(enrollmentId: string, progress: number): Promise<Enrollment> {
+    const numericEnrollmentId = Number(enrollmentId);
     const enrollment = await this.enrollmentRepository.findOne({
-      where: { id: enrollmentId }
+      where: { id: numericEnrollmentId }
     });
 
     if (!enrollment) {

@@ -9,8 +9,8 @@ export enum CourseStatus {
 
 @Entity('courses')
 export class Course {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @Column()
   title: string;
@@ -31,11 +31,11 @@ export class Course {
   })
   status: CourseStatus;
 
-  @Column()
-  instructorId: string;
+  @Column({ name: 'instructor_id' })
+  instructorId: number;
 
   @ManyToOne(() => Instructor)
-  @JoinColumn({ name: 'instructorId' })
+  @JoinColumn({ name: 'instructor_id' })
   instructor: Instructor;
 
   @Column({ nullable: true })
@@ -47,9 +47,9 @@ export class Course {
   @Column({ default: 0 })
   duration: number; // in minutes
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 }

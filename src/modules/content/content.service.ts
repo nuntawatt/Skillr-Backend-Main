@@ -13,7 +13,10 @@ export class ContentService {
   ) {}
 
   async create(createContentDto: CreateContentDto): Promise<Content> {
-    const content = this.contentRepository.create(createContentDto);
+    const content = this.contentRepository.create({
+      ...createContentDto,
+      lessonId: Number(createContentDto.lessonId),
+    });
     return this.contentRepository.save(content);
   }
 
@@ -23,15 +26,16 @@ export class ContentService {
       .orderBy('content.order', 'ASC');
     
     if (lessonId) {
-      query.where('content.lessonId = :lessonId', { lessonId });
+      query.where('content.lessonId = :lessonId', { lessonId: Number(lessonId) });
     }
     
     return query.getMany();
   }
 
   async findOne(id: string): Promise<Content> {
+    const contentId = Number(id);
     const content = await this.contentRepository.findOne({
-      where: { id },
+      where: { id: contentId },
       relations: ['lesson'],
     });
     if (!content) {

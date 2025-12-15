@@ -32,8 +32,9 @@ export class ActivitiesService {
   }
 
   async findOne(id: string): Promise<Activity> {
+    const activityId = Number(id);
     const activity = await this.activityRepository.findOne({
-      where: { id },
+      where: { id: activityId },
     });
     if (!activity) {
       throw new NotFoundException(`Activity with ID ${id} not found`);
@@ -54,10 +55,12 @@ export class ActivitiesService {
 
   async register(activityId: string, userId: string): Promise<ActivityRegistration> {
     const activity = await this.findOne(activityId);
+    const numericActivityId = Number(activityId);
+    const numericUserId = Number(userId);
     
     // Check capacity
     const registrationCount = await this.registrationRepository.count({
-      where: { activityId, status: RegistrationStatus.CONFIRMED },
+      where: { activityId: numericActivityId, status: RegistrationStatus.CONFIRMED },
     });
     
     if (activity.capacity && registrationCount >= activity.capacity) {
@@ -66,7 +69,7 @@ export class ActivitiesService {
     
     // Check if already registered
     const existing = await this.registrationRepository.findOne({
-      where: { activityId, userId },
+      where: { activityId: numericActivityId, userId: numericUserId },
     });
     
     if (existing) {
@@ -74,8 +77,8 @@ export class ActivitiesService {
     }
     
     const registration = this.registrationRepository.create({
-      activityId,
-      userId,
+      activityId: numericActivityId,
+      userId: numericUserId,
       status: RegistrationStatus.CONFIRMED,
     });
     
@@ -83,8 +86,10 @@ export class ActivitiesService {
   }
 
   async cancelRegistration(activityId: string, userId: string): Promise<void> {
+    const numericActivityId = Number(activityId);
+    const numericUserId = Number(userId);
     const registration = await this.registrationRepository.findOne({
-      where: { activityId, userId },
+      where: { activityId: numericActivityId, userId: numericUserId },
     });
     
     if (!registration) {
@@ -96,15 +101,17 @@ export class ActivitiesService {
   }
 
   async getRegistrations(activityId: string): Promise<ActivityRegistration[]> {
+    const numericActivityId = Number(activityId);
     return this.registrationRepository.find({
-      where: { activityId },
+      where: { activityId: numericActivityId },
       relations: ['user'],
     });
   }
 
   async getMyRegistrations(userId: string): Promise<ActivityRegistration[]> {
+    const numericUserId = Number(userId);
     return this.registrationRepository.find({
-      where: { userId },
+      where: { userId: numericUserId },
       relations: ['activity'],
     });
   }

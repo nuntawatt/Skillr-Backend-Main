@@ -3,8 +3,8 @@ import { Course } from '../../courses/entities/course.entity';
 
 @Entity('assignments')
 export class Assignment {
-  @PrimaryGeneratedColumn('uuid')
-  id: string;
+  @PrimaryGeneratedColumn()
+  id: number;
 
   @Column()
   title: string;
@@ -15,25 +15,25 @@ export class Assignment {
   @Column({ type: 'text', nullable: true })
   instructions: string;
 
-  @Column()
-  courseId: string;
+  @Column({ name: 'course_id' })
+  courseId: number;
 
   @ManyToOne(() => Course, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'courseId' })
+  @JoinColumn({ name: 'course_id' })
   course: Course;
 
-  @Column({ type: 'timestamptz', nullable: true })
+  @Column({ name: 'due_date', type: 'timestamptz', nullable: true })
   dueDate: Date;
 
-  @Column({ default: 100 })
+  @Column({ name: 'max_score', default: 100 })
   maxScore: number;
 
-  @Column({ default: true })
+  @Column({ name: 'is_active', default: true })
   isActive: boolean;
 
-  @CreateDateColumn({ type: 'timestamptz' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 }

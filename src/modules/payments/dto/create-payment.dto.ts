@@ -1,9 +1,11 @@
-import { IsString, IsNumber, IsEnum, IsOptional, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsNumber, IsEnum, IsOptional, Min, IsInt } from 'class-validator';
 import { PaymentMethod } from '../entities/payment.entity';
 
 export class CreatePaymentDto {
-  @IsString()
-  courseId: string;
+  @IsInt()
+  @Type(() => Number)
+  courseId: number;
 
   @IsNumber()
   @Min(0)
