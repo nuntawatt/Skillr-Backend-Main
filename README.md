@@ -1,5 +1,5 @@
 # backend-monorepo
-test
+Morgorn & Wave
 
 
 ## Getting started
