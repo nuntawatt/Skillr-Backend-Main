@@ -18,7 +18,7 @@
       "@common/*": ["libs/common/src/*"],
       "@config/*": ["libs/config/src/*"],
       "@shared/*": ["libs/shared/src/*"],
-      "@auth": ["libs/auth/src/index.ts"],
+      "@auth": ["libs/auth/src"],
       "@auth/*": ["libs/auth/src/*"]
     },
     "incremental": true,

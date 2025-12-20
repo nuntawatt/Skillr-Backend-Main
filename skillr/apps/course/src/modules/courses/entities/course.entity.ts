@@ -30,8 +30,8 @@ export class Course {
   })
   status: CourseStatus;
 
-  @Column({ name: 'instructor_id' })
-  instructorId: number;
+  @Column({ name: 'owner_id' })
+  ownerId: number;
 
   @Column({ nullable: true })
   category: string;

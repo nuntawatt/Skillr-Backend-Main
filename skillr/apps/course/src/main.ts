@@ -19,7 +19,7 @@ async function bootstrap() {
   app.use(cookieParser());
   app.setGlobalPrefix('api');
 
-  const port = process.env.PORT ?? 3001;
+  const port = Number(process.env.PORT ?? 3001);
   await app.listen(port);
 
   logger.log(`Application is running on http://localhost:${port}/api`);

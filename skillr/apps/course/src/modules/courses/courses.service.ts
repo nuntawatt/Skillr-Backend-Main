@@ -15,7 +15,7 @@ export class CoursesService {
   async create(createCourseDto: CreateCourseDto): Promise<Course> {
     const course = this.courseRepository.create({
       ...createCourseDto,
-      instructorId: Number(createCourseDto.instructorId),
+      ownerId: Number((createCourseDto as any).ownerId),
     });
     return this.courseRepository.save(course);
   }
@@ -41,9 +41,9 @@ export class CoursesService {
     return course;
   }
 
-  async findByInstructor(instructorId: string): Promise<Course[]> {
+  async findByOwner(ownerId: string): Promise<Course[]> {
     return this.courseRepository.find({
-      where: { instructorId: Number(instructorId) },
+      where: { ownerId: Number(ownerId) },
     });
   }
 

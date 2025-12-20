@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Request } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
@@ -12,7 +12,9 @@ export class CoursesController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  create(@Body() createCourseDto: CreateCourseDto) {
+  create(@Body() createCourseDto: CreateCourseDto, @Request() req: any) {
+    const requestUserId = String(req.user?.sub ?? req.user?.id);
+    createCourseDto.ownerId = createCourseDto.ownerId ?? requestUserId;
     return this.coursesService.create(createCourseDto);
   }
 

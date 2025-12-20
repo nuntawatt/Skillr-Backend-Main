@@ -22,8 +22,9 @@ export class CreateCourseDto {
   @IsEnum(CourseStatus)
   status?: CourseStatus;
 
+  @IsOptional()
   @IsString()
-  instructorId: string;
+  ownerId?: string;
 
   @IsOptional()
   @IsString()
