@@ -66,12 +66,7 @@ Create `skillr/.env` and set at least:
 
 ```dotenv
 NODE_ENV=development
-DATABASE_URL=postgresql://<USER>:<PASSWORD>@localhost:5432/skillr?schema=public
-
-JWT_ACCESS_SECRET=change-me
-JWT_REFRESH_SECRET=change-me
-JWT_ACCESS_EXPIRES_IN=15m
-JWT_REFRESH_EXPIRES_IN=7d
+DATABASE_URL=postgresql://<USER>:<PASSWORD>@localhost:5432/db_name?schema=public
 ```
 
 Optional (Google OAuth):
@@ -79,7 +74,7 @@ Optional (Google OAuth):
 ```dotenv
 GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
-GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
+GOOGLE_CALLBACK_URL=localhost:Port/auth/google/callback
 ```
 
 ## Common Commands
@@ -96,7 +91,5 @@ pnpm run test:e2e
 
 ```powershell
 cd .\skillr
-pnpm exec nest g module modules/example --project course
-pnpm exec nest g controller modules/example --project course
-pnpm exec nest g service modules/example --project course
+pnpm 
 ```

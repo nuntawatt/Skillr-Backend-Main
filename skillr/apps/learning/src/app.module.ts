@@ -9,7 +9,6 @@ import { AssignmentsModule } from './modules/assignments/assignments.module';
 import { EnrollmentsModule } from './modules/enrollments/enrollments.module';
 import { LearningModule } from './modules/learning/learning.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
-
 @Module({
   imports: [
     ConfigModule.forRoot({
