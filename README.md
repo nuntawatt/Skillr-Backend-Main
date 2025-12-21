@@ -8,7 +8,7 @@
 
 # Skillr Backend (NestJS Monorepo)
 
-NestJS monorepo แยก 5 services: `auth`, `course`, `media`, `learning`, `payment` และมี `libs/` สำหรับโค้ดที่ใช้ร่วมกัน.
+Skllr backend is a NestJS monorepo with 5 services and shared libraries.
 
 ## Tools
 
@@ -24,15 +24,17 @@ NestJS monorepo แยก 5 services: `auth`, `course`, `media`, `learning`, `pa
 ![ESLint](https://img.shields.io/badge/ESLint-lint-4B32C3?logo=eslint&logoColor=white)
 ![Prettier](https://img.shields.io/badge/Prettier-format-F7B93E?logo=prettier&logoColor=black)
 
-## โครงสร้างย่อ
+## Project Layout
 
 ```
 skillr/
-  apps/ (5 services)
-  libs/ (common, config, auth, shared)
+  apps/   # auth, course, media, learning, payment
+  libs/   # common, config, auth, shared
 ```
 
-## Ports
+## Services & Ports
+
+Ports are set per service in `skillr/package.json` scripts (so you can run multiple services without port conflicts).
 
 | Service | Command | Port |
 |---|---|---:|
@@ -44,7 +46,10 @@ skillr/
 
 ## Roles
 
-มี 2 role: `ADMIN`, `STUDENT`
+This project uses 2 roles:
+
+- `ADMIN`
+- `STUDENT`
 
 ## Quickstart
 
@@ -52,17 +57,42 @@ skillr/
 cd skillr
 pnpm install
 pnpm run build:all
+pnpm run start:auth
 ```
 
-Env ที่ต้องมีอย่างน้อย (ที่ `skillr/.env`):
+## Environment
+
+Create `skillr/.env` and set at least:
 
 ```dotenv
 NODE_ENV=development
-DATABASE_URL=postgresql://<USER>:<PASSWORD>@local:5432/dbname
+DATABASE_URL=postgresql://<USER>:<PASSWORD>@localhost:5432/skillr?schema=public
+
 JWT_ACCESS_SECRET=change-me
+JWT_REFRESH_SECRET=change-me
+JWT_ACCESS_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
 ```
 
-## Nest CLI: generate
+Optional (Google OAuth):
+
+```dotenv
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
+```
+
+## Common Commands
+
+```bash
+cd skillr
+pnpm run build:all
+pnpm run lint
+pnpm run test
+pnpm run test:e2e
+```
+
+## Nest CLI (Generate)
 
 ```powershell
 cd .\skillr
