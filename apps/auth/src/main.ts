@@ -5,7 +5,9 @@ import { AuthAppModule } from './auth-app.module';
 
 async function bootstrap() {
   const logger = new Logger('AuthBootstrap');
-  const app = await NestFactory.create(AuthAppModule, { logger: ['log', 'error', 'warn'] });
+  const app = await NestFactory.create(AuthAppModule, {
+    logger: ['log', 'error', 'warn'],
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -23,4 +25,4 @@ async function bootstrap() {
   logger.log(`Auth service listening on http://localhost:${port}`);
 }
 
-bootstrap();
+void bootstrap();

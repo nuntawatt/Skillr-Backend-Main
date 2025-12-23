@@ -29,7 +29,7 @@ export class CreateLessonResourceDto {
   media_asset_id?: number;
 
   @IsOptional()
-  meta?: any;
+  meta?: unknown;
 
   @IsOptional()
   @IsInt()

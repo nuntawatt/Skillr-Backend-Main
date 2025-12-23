@@ -4,13 +4,17 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../../users/users.service';
 
-export interface JwtPayload { sub: number; email: string; role: string; }
+export interface JwtPayload {
+  sub: number;
+  email: string;
+  role: string;
+}
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(
     private readonly configService: ConfigService,
-    private readonly usersService: UsersService
+    private readonly usersService: UsersService,
   ) {
     const secret = configService.get<string>('JWT_ACCESS_SECRET');
     if (!secret) {
@@ -20,7 +24,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: secret
+      secretOrKey: secret,
     });
   }
 
@@ -30,7 +34,14 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       throw new UnauthorizedException('User not found');
     }
 
-    const normalizedRole = (user.role as any) === 'INSTRUCTOR' ? ('ADMIN' as any) : user.role;
-    return { id: user.id, email: user.email, role: normalizedRole, firstName: user.firstName, lastName: user.lastName };
+    const role = String(user.role);
+    const normalizedRole = role === 'INSTRUCTOR' ? 'ADMIN' : role;
+    return {
+      id: user.id,
+      email: user.email,
+      role: normalizedRole,
+      firstName: user.firstName,
+      lastName: user.lastName,
+    };
   }
 }

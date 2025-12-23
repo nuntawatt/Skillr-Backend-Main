@@ -1,4 +1,4 @@
-import { IsNumber, IsOptional, IsString, Min, Max } from 'class-validator';
+import { IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class GradeSubmissionDto {
   @IsNumber()

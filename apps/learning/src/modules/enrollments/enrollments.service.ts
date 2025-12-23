@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Enrollment, EnrollmentStatus } from './entities/enrollment.entity';
@@ -8,7 +12,7 @@ export class EnrollmentsService {
   constructor(
     @InjectRepository(Enrollment)
     private readonly enrollmentRepository: Repository<Enrollment>,
-  ) { }
+  ) {}
 
   async enroll(studentId: string, courseId: string): Promise<Enrollment> {
     const numericStudentId = Number(studentId);
@@ -47,30 +51,47 @@ export class EnrollmentsService {
     });
   }
 
-  async checkEnrollment(studentId: string, courseId: string): Promise<{ enrolled: boolean }> {
+  async checkEnrollment(
+    studentId: string,
+    courseId: string,
+  ): Promise<{ enrolled: boolean }> {
     const numericStudentId = Number(studentId);
     const numericCourseId = Number(courseId);
     const enrollment = await this.enrollmentRepository.findOne({
-      where: { studentId: numericStudentId, courseId: numericCourseId, status: EnrollmentStatus.ACTIVE }
+      where: {
+        studentId: numericStudentId,
+        courseId: numericCourseId,
+        status: EnrollmentStatus.ACTIVE,
+      },
     });
     return { enrolled: !!enrollment };
   }
 
   async findAll(status?: string): Promise<Enrollment[]> {
+    const statusValue =
+      status && (Object.values(EnrollmentStatus) as string[]).includes(status)
+        ? (status as EnrollmentStatus)
+        : undefined;
+
     return this.enrollmentRepository.find({
-      where: status ? ({ status } as any) : undefined,
+      where: statusValue ? { status: statusValue } : undefined,
       order: { createdAt: 'DESC' },
     });
   }
 
-  async updateProgress(enrollmentId: string, progress: number): Promise<Enrollment> {
+  async updateProgress(
+    enrollmentId: string,
+    progress: number,
+  ): Promise<Enrollment> {
     const numericEnrollmentId = Number(enrollmentId);
     const enrollment = await this.enrollmentRepository.findOne({
-      where: { id: numericEnrollmentId }
+      where: { id: numericEnrollmentId },
     });
 
     if (!enrollment) {
-      throw new NotFoundException(`Enrollment with ID ${enrollmentId} not found`);
+      throw new NotFoundException(
+        `Enrollment with ID ${enrollmentId} not found`,
+      );
     }
 
     enrollment.progress = progress;

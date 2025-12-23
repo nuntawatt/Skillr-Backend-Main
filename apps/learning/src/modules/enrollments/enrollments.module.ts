@@ -8,6 +8,6 @@ import { Enrollment } from './entities/enrollment.entity';
   imports: [TypeOrmModule.forFeature([Enrollment])],
   controllers: [EnrollmentsController],
   providers: [EnrollmentsService],
-  exports: [EnrollmentsService]
+  exports: [EnrollmentsService],
 })
 export class EnrollmentsModule {}

@@ -1,18 +1,22 @@
-import { Injectable, ConflictException, NotFoundException, } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as argon2 from 'argon2';
 import * as crypto from 'crypto';
 import { User } from './entities/user.entity';
 import { CreateUserDto, UpdateUserDto, UpdateRoleDto } from './dto';
-import { AuthProvider, UserRole } from '@common/enums';
+import { AuthProvider } from '@common/enums';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
-    private readonly userRepository: Repository<User>
-  ) { }
+    private readonly userRepository: Repository<User>,
+  ) {}
 
   // Create a new user
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -29,7 +33,9 @@ export class UsersService {
       avatar: createUserDto.avatar,
       provider: createUserDto.provider,
       role: createUserDto.role,
-      passwordHash: createUserDto.password ? await argon2.hash(createUserDto.password) : undefined,
+      passwordHash: createUserDto.password
+        ? await argon2.hash(createUserDto.password)
+        : undefined,
     });
 
     return this.userRepository.save(user);
@@ -62,7 +68,6 @@ export class UsersService {
     lastName?: string;
     avatar?: string;
   }): Promise<User> {
-
     let user = await this.findByGoogleId(profile.googleId);
     if (user) {
       return user;
@@ -88,14 +93,17 @@ export class UsersService {
       avatar: profile.avatar,
       provider: AuthProvider.GOOGLE,
       passwordHash: await argon2.hash(crypto.randomBytes(32).toString('hex')),
-      isVerified: true
+      isVerified: true,
     });
 
     return this.userRepository.save(newUser);
   }
 
   // Update user details
-  async update(id: number | string, updateUserDto: UpdateUserDto): Promise<User> {
+  async update(
+    id: number | string,
+    updateUserDto: UpdateUserDto,
+  ): Promise<User> {
     const user = await this.findById(id);
     if (!user) {
       throw new NotFoundException('User not found');
@@ -106,7 +114,10 @@ export class UsersService {
   }
 
   // Update user role
-  async updateRole(id: number | string, updateRoleDto: UpdateRoleDto): Promise<User> {
+  async updateRole(
+    id: number | string,
+    updateRoleDto: UpdateRoleDto,
+  ): Promise<User> {
     const user = await this.findById(id);
     if (!user) {
       throw new NotFoundException('User not found');
@@ -117,7 +128,10 @@ export class UsersService {
   }
 
   // Update user password
-  async updatePassword(id: number | string, newPassword: string): Promise<void> {
+  async updatePassword(
+    id: number | string,
+    newPassword: string,
+  ): Promise<void> {
     const user = await this.findById(id);
     if (!user) {
       throw new NotFoundException('User not found');
@@ -138,7 +152,17 @@ export class UsersService {
   // Get all users
   async findAll(): Promise<User[]> {
     return this.userRepository.find({
-      select: ['id', 'email', 'firstName', 'lastName', 'avatar', 'role', 'provider', 'isVerified', 'createdAt']
+      select: [
+        'id',
+        'email',
+        'firstName',
+        'lastName',
+        'avatar',
+        'role',
+        'provider',
+        'isVerified',
+        'createdAt',
+      ],
     });
   }
 

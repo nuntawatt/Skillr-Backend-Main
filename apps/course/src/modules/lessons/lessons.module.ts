@@ -9,6 +9,6 @@ import { LessonResource } from './entities/lesson-resource.entity';
   imports: [TypeOrmModule.forFeature([Lesson, LessonResource])],
   controllers: [LessonsController],
   providers: [LessonsService],
-  exports: [LessonsService]
+  exports: [LessonsService],
 })
 export class LessonsModule {}

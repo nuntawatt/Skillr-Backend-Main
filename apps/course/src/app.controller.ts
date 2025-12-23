@@ -9,5 +9,4 @@ export class AppController {
   getgetHome_api(): string {
     return this.appService.getHome_api();
   }
-  
 }

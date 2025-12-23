@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Lesson } from './lesson.entity';
 
 export enum LessonResourceType {
@@ -40,7 +47,7 @@ export class LessonResource {
   mediaAssetId?: number;
 
   @Column({ type: 'json', nullable: true })
-  meta?: any;
+  meta?: unknown;
 
   @Column({ nullable: true })
   position?: number;

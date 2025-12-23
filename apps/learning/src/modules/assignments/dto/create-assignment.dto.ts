@@ -1,5 +1,13 @@
 import { Type } from 'class-transformer';
-import { IsString, IsOptional, IsNumber, IsBoolean, IsDateString, Min, IsInt } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsNumber,
+  IsBoolean,
+  IsDateString,
+  Min,
+  IsInt,
+} from 'class-validator';
 
 export class CreateAssignmentDto {
   @IsString()

@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { Quiz } from './entities/quiz.entity';
 import { Question } from './entities/question.entity';
 import { QuizAttempt } from './entities/quiz-attempt.entity';
@@ -16,7 +16,7 @@ export class LearningService {
     @InjectRepository(Question)
     private readonly questionRepository: Repository<Question>,
     @InjectRepository(QuizAttempt)
-    private readonly attemptRepository: Repository<QuizAttempt>
+    private readonly attemptRepository: Repository<QuizAttempt>,
   ) {}
 
   async createQuiz(createQuizDto: CreateQuizDto): Promise<Quiz> {
@@ -25,11 +25,11 @@ export class LearningService {
       description: createQuizDto.description,
       lessonId: Number(createQuizDto.lessonId),
       timeLimit: createQuizDto.timeLimit,
-      passingScore: createQuizDto.passingScore
+      passingScore: createQuizDto.passingScore,
     });
-    
+
     const savedQuiz = await this.quizRepository.save(quiz);
-    
+
     // Create questions if provided
     if (createQuizDto.questions && createQuizDto.questions.length > 0) {
       for (const q of createQuizDto.questions) {
@@ -40,18 +40,19 @@ export class LearningService {
         await this.questionRepository.save(question);
       }
     }
-    
+
     return this.findOneQuiz(savedQuiz.id);
   }
 
   async findAllQuizzes(lessonId?: string): Promise<Quiz[]> {
-    const query = this.quizRepository.createQueryBuilder('quiz')
+    const query = this.quizRepository
+      .createQueryBuilder('quiz')
       .leftJoinAndSelect('quiz.questions', 'questions');
-    
+
     if (lessonId) {
       query.where('quiz.lessonId = :lessonId', { lessonId: Number(lessonId) });
     }
-    
+
     return query.getMany();
   }
 
@@ -59,7 +60,7 @@ export class LearningService {
     const quizId = Number(id);
     const quiz = await this.quizRepository.findOne({
       where: { id: quizId },
-      relations: ['questions']
+      relations: ['questions'],
     });
     if (!quiz) {
       throw new NotFoundException(`Quiz with ID ${id} not found`);
@@ -82,54 +83,63 @@ export class LearningService {
   async startQuiz(quizId: string, userId: string): Promise<QuizAttempt> {
     const quiz = await this.findOneQuiz(quizId);
     const numericUserId = Number(userId);
-    
+
     const attempt = this.attemptRepository.create({
       quizId: quiz.id,
       userId: numericUserId,
-      startedAt: new Date()
+      startedAt: new Date(),
     });
-    
+
     return this.attemptRepository.save(attempt);
   }
 
-  async submitQuiz(quizId: string, userId: string, submitDto: SubmitQuizDto): Promise<QuizAttempt> {
+  async submitQuiz(
+    quizId: string,
+    userId: string,
+    submitDto: SubmitQuizDto,
+  ): Promise<QuizAttempt> {
     const quiz = await this.findOneQuiz(quizId);
     const numericQuizId = Number(quizId);
     const numericUserId = Number(userId);
-    
+
     // Calculate score
     let correctAnswers = 0;
     const totalQuestions = quiz.questions.length;
-    
+
     for (const answer of submitDto.answers) {
-      const question = quiz.questions.find(q => q.id === answer.questionId);
+      const question = quiz.questions.find((q) => q.id === answer.questionId);
       if (question && question.correctAnswer === answer.answer) {
         correctAnswers++;
       }
     }
-    
-    const score = totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
+
+    const score =
+      totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
     const passed = score >= (quiz.passingScore || 60);
-    
+
     // Find or create attempt
     let attempt = await this.attemptRepository.findOne({
-      where: { quizId: numericQuizId, userId: numericUserId, completedAt: undefined as any },
+      where: {
+        quizId: numericQuizId,
+        userId: numericUserId,
+        completedAt: IsNull(),
+      },
       order: { startedAt: 'DESC' },
     });
-    
+
     if (!attempt) {
       attempt = this.attemptRepository.create({
         quizId: numericQuizId,
         userId: numericUserId,
-        startedAt: new Date()
+        startedAt: new Date(),
       });
     }
-    
+
     attempt.answers = submitDto.answers;
     attempt.score = score;
     attempt.passed = passed;
     attempt.completedAt = new Date();
-    
+
     return this.attemptRepository.save(attempt);
   }
 
@@ -138,7 +148,7 @@ export class LearningService {
     const numericUserId = Number(userId);
     return this.attemptRepository.find({
       where: { quizId: numericQuizId, userId: numericUserId },
-      order: { startedAt: 'DESC' }
+      order: { startedAt: 'DESC' },
     });
   }
 }

@@ -14,9 +14,9 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     });
   }
 
-  async validate(
-    accessToken: string,
-    refreshToken: string,
+  validate(
+    _accessToken: string,
+    _refreshToken: string,
     profile: Profile,
     done: VerifyCallback,
   ): Promise<void> {
@@ -31,5 +31,6 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     };
 
     done(null, user);
+    return Promise.resolve();
   }
 }

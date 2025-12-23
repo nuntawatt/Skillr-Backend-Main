@@ -1,10 +1,18 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Lesson } from './entities/lesson.entity';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
-import { LessonResource, LessonResourceType } from './entities/lesson-resource.entity';
+import {
+  LessonResource,
+  LessonResourceType,
+} from './entities/lesson-resource.entity';
 import { CreateLessonResourceDto } from './dto/create-lesson-resource.dto';
 
 @Injectable()
@@ -20,21 +28,24 @@ export class LessonsService {
     const lesson = this.lessonRepository.create({
       courseId: Number(createLessonDto.courseId),
       title: createLessonDto.title,
-      contentText: (createLessonDto as any).content_text,
-      position: Number((createLessonDto as any).position ?? 0),
+      contentText: createLessonDto.content_text,
+      position: Number(createLessonDto.position ?? 0),
     });
     return this.lessonRepository.save(lesson);
   }
 
   async findAll(courseId?: string): Promise<Lesson[]> {
-    const query = this.lessonRepository.createQueryBuilder('lesson')
+    const query = this.lessonRepository
+      .createQueryBuilder('lesson')
       .leftJoinAndSelect('lesson.course', 'course')
       .orderBy('lesson.position', 'ASC');
-    
+
     if (courseId) {
-      query.where('lesson.courseId = :courseId', { courseId: Number(courseId) });
+      query.where('lesson.courseId = :courseId', {
+        courseId: Number(courseId),
+      });
     }
-    
+
     return query.getMany();
   }
 
@@ -75,11 +86,20 @@ export class LessonsService {
       throw new ConflictException('unable to validate media asset');
     }
 
-    const asset = (await res.json()) as { status?: string; type?: string };
-    if (String(asset.type) !== 'video') {
+    const data = (await res.json()) as unknown;
+    const asset =
+      typeof data === 'object' && data !== null
+        ? (data as Record<string, unknown>)
+        : {};
+
+    const type = typeof asset['type'] === 'string' ? asset['type'] : undefined;
+    const status =
+      typeof asset['status'] === 'string' ? asset['status'] : undefined;
+
+    if (type !== 'video') {
       throw new BadRequestException('media asset is not a video');
     }
-    if (String(asset.status) !== 'ready') {
+    if (status !== 'ready') {
       throw new ConflictException('media asset is not ready');
     }
   }

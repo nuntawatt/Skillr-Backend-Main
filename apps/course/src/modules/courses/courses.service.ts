@@ -13,12 +13,11 @@ export class CoursesService {
   ) {}
 
   async create(createCourseDto: CreateCourseDto): Promise<Course> {
-    const isPublished = (createCourseDto as any).is_published;
-
+    const isPublished = createCourseDto.is_published;
     const course = this.courseRepository.create({
-      ownerUserId: Number((createCourseDto as any).ownerId),
+      ownerUserId: Number(createCourseDto.ownerId ?? 0),
       title: createCourseDto.title,
-      shortDescription: (createCourseDto as any).short_description,
+      shortDescription: createCourseDto.short_description,
       description: createCourseDto.description,
       price: Number(createCourseDto.price ?? 0),
       isPublished: typeof isPublished === 'boolean' ? isPublished : false,

@@ -1,10 +1,16 @@
 import { NestFactory, Reflector } from '@nestjs/core';
-import { ClassSerializerInterceptor, Logger, ValidationPipe } from '@nestjs/common';
+import {
+  ClassSerializerInterceptor,
+  Logger,
+  ValidationPipe,
+} from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const logger = new Logger('PaymentBootstrap');
-  const app = await NestFactory.create(AppModule, { logger: ['log', 'error', 'warn'] });
+  const app = await NestFactory.create(AppModule, {
+    logger: ['log', 'error', 'warn'],
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -23,4 +29,4 @@ async function bootstrap() {
   logger.log(`Payment service listening on http://localhost:${port}/api`);
 }
 
-bootstrap();
+void bootstrap();

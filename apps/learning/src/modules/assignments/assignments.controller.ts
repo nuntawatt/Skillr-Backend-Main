@@ -1,11 +1,36 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Query,
+  Request,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AssignmentsService } from './assignments.service';
 import { CreateAssignmentDto } from './dto/create-assignment.dto';
 import { UpdateAssignmentDto } from './dto/update-assignment.dto';
 import { SubmitAssignmentDto } from './dto/submit-assignment.dto';
 import { GradeSubmissionDto } from './dto/grade-submission.dto';
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
+import type { AuthUser } from '@auth';
 import { UserRole } from '@common/enums';
+
+type RequestWithUser = {
+  user?: AuthUser;
+};
+
+function getUserIdOrThrow(user?: AuthUser): string {
+  const raw = user?.id ?? user?.sub;
+  if (typeof raw === 'string' || typeof raw === 'number') {
+    return String(raw);
+  }
+  throw new UnauthorizedException();
+}
 
 @Controller('assignments')
 @UseGuards(JwtAuthGuard)
@@ -32,7 +57,10 @@ export class AssignmentsController {
   @Patch(':id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
-  update(@Param('id') id: string, @Body() updateAssignmentDto: UpdateAssignmentDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateAssignmentDto: UpdateAssignmentDto,
+  ) {
     return this.assignmentsService.update(id, updateAssignmentDto);
   }
 
@@ -48,9 +76,13 @@ export class AssignmentsController {
   submit(
     @Param('id') id: string,
     @Body() submitDto: SubmitAssignmentDto,
-    @Request() req
+    @Request() req: RequestWithUser,
   ) {
-    return this.assignmentsService.submit(id, req.user.id, submitDto);
+    return this.assignmentsService.submit(
+      id,
+      getUserIdOrThrow(req.user),
+      submitDto,
+    );
   }
 
   // Get submissions for an assignment
@@ -67,7 +99,7 @@ export class AssignmentsController {
   @Roles(UserRole.ADMIN)
   gradeSubmission(
     @Param('submissionId') submissionId: string,
-    @Body() gradeDto: GradeSubmissionDto
+    @Body() gradeDto: GradeSubmissionDto,
   ) {
     return this.assignmentsService.gradeSubmission(submissionId, gradeDto);
   }

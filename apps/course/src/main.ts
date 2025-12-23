@@ -1,17 +1,23 @@
 import { NestFactory, Reflector } from '@nestjs/core';
-import { ValidationPipe, Logger, ClassSerializerInterceptor } from '@nestjs/common';
+import {
+  ValidationPipe,
+  Logger,
+  ClassSerializerInterceptor,
+} from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const logger = new Logger('CourseBootstrap');
-  const app = await NestFactory.create(AppModule, { logger: ['log', 'error', 'warn'] });
+  const app = await NestFactory.create(AppModule, {
+    logger: ['log', 'error', 'warn'],
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
-      transform: true
+      transform: true,
     }),
   );
 
@@ -24,4 +30,4 @@ async function bootstrap() {
 
   logger.log(`Application is running on http://localhost:${port}/api`);
 }
-bootstrap();
+void bootstrap();

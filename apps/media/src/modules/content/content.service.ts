@@ -24,11 +24,13 @@ export class ContentService {
     const query = this.contentRepository
       .createQueryBuilder('content')
       .orderBy('content.order', 'ASC');
-    
+
     if (lessonId) {
-      query.where('content.lessonId = :lessonId', { lessonId: Number(lessonId) });
+      query.where('content.lessonId = :lessonId', {
+        lessonId: Number(lessonId),
+      });
     }
-    
+
     return query.getMany();
   }
 
@@ -43,7 +45,10 @@ export class ContentService {
     return content;
   }
 
-  async update(id: string, updateContentDto: UpdateContentDto): Promise<Content> {
+  async update(
+    id: string,
+    updateContentDto: UpdateContentDto,
+  ): Promise<Content> {
     const content = await this.findOne(id);
     Object.assign(content, updateContentDto);
     return this.contentRepository.save(content);

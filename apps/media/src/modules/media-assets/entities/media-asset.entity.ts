@@ -55,8 +55,16 @@ export class MediaAsset {
   @Column({ name: 'storage_bucket', nullable: true })
   storageBucket?: string;
 
-  @Column({ name: 'storage_key', type: 'varchar', length: 1024, nullable: true })
+  @Column({
+    name: 'storage_key',
+    type: 'varchar',
+    length: 1024,
+    nullable: true,
+  })
   storageKey?: string;
+
+  @Column({ name: 'public_url', type: 'varchar', length: 2048, nullable: true })
+  publicUrl?: string;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

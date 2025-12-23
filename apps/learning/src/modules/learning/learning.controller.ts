@@ -1,10 +1,35 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Request,
+  Query,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { LearningService } from './learning.service';
 import { CreateQuizDto } from './dto/create-quiz.dto';
 import { UpdateQuizDto } from './dto/update-quiz.dto';
 import { SubmitQuizDto } from './dto/submit-quiz.dto';
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
+import type { AuthUser } from '@auth';
 import { UserRole } from '@common/enums';
+
+type RequestWithUser = {
+  user?: AuthUser;
+};
+
+function getUserIdOrThrow(user?: AuthUser): string {
+  const raw = user?.id ?? user?.sub;
+  if (typeof raw === 'string' || typeof raw === 'number') {
+    return String(raw);
+  }
+  throw new UnauthorizedException();
+}
 
 @Controller('learning')
 @UseGuards(JwtAuthGuard)
@@ -45,21 +70,25 @@ export class LearningController {
 
   // Quiz attempts
   @Post('quizzes/:id/start')
-  startQuiz(@Param('id') id: string, @Request() req) {
-    return this.learningService.startQuiz(id, req.user.id);
+  startQuiz(@Param('id') id: string, @Request() req: RequestWithUser) {
+    return this.learningService.startQuiz(id, getUserIdOrThrow(req.user));
   }
 
   @Post('quizzes/:id/submit')
   submitQuiz(
     @Param('id') id: string,
     @Body() submitDto: SubmitQuizDto,
-    @Request() req,
+    @Request() req: RequestWithUser,
   ) {
-    return this.learningService.submitQuiz(id, req.user.id, submitDto);
+    return this.learningService.submitQuiz(
+      id,
+      getUserIdOrThrow(req.user),
+      submitDto,
+    );
   }
 
   @Get('quizzes/:id/attempts')
-  getMyAttempts(@Param('id') id: string, @Request() req) {
-    return this.learningService.getAttempts(id, req.user.id);
+  getMyAttempts(@Param('id') id: string, @Request() req: RequestWithUser) {
+    return this.learningService.getAttempts(id, getUserIdOrThrow(req.user));
   }
 }

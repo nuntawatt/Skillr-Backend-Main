@@ -1,4 +1,12 @@
-import { IsString, IsOptional, IsNumber, IsEnum, IsDateString, IsBoolean, Min } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsNumber,
+  IsEnum,
+  IsDateString,
+  IsBoolean,
+  Min,
+} from 'class-validator';
 import { ActivityType } from '../entities/activity.entity';
 
 export class CreateActivityDto {

@@ -1,4 +1,10 @@
-import { IsString, IsOptional, IsNumber, Min, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsNumber,
+  Min,
+  IsBoolean,
+} from 'class-validator';
 
 export class CreateCourseDto {
   @IsString()

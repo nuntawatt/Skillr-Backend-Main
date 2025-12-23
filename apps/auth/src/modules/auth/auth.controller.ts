@@ -1,19 +1,45 @@
-import { Controller, Post, Get, Body, UseGuards, Req, Res, HttpCode, HttpStatus, } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  UseGuards,
+  Req,
+  Res,
+  HttpCode,
+  HttpStatus,
+  BadRequestException,
+} from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto, RefreshTokenDto, ForgotPasswordDto, ResetPasswordDto, } from './dto';
+import {
+  RegisterDto,
+  LoginDto,
+  RefreshTokenDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+} from './dto';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { ConfigService } from '@nestjs/config';
-import { BadRequestException } from '@nestjs/common';
+
+type GoogleTokenInfo = {
+  aud?: string;
+  audience?: string;
+  sub?: string;
+  email?: string;
+  given_name?: string;
+  family_name?: string;
+  picture?: string;
+};
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
-  ) { }
+  ) {}
 
   // Register a new user
   @Post('register')
@@ -38,7 +64,7 @@ export class AuthController {
         httpOnly: true,
         secure: this.configService.get('NODE_ENV') === 'production',
         sameSite: 'lax',
-        maxAge: 30 * 24 * 60 * 60 * 1000
+        maxAge: 30 * 24 * 60 * 60 * 1000,
       });
     }
 
@@ -48,16 +74,12 @@ export class AuthController {
   // Google OAuth - Initiate
   @Get('google')
   @UseGuards(GoogleAuthGuard)
-  async googleAuth() {
-    ;
-  }
+  async googleAuth() {}
 
   // Google OAuth - Callback
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
-  async googleAuthCallback(
-    @Req() req: Request,
-    @Res() res: Response) {
+  async googleAuthCallback(@Req() req: Request, @Res() res: Response) {
     const user = req.user as {
       googleId: string;
       email: string;
@@ -86,21 +108,21 @@ export class AuthController {
       throw new BadRequestException('Invalid id_token');
     }
 
-    const info = await resp.json();
+    const info = (await resp.json()) as GoogleTokenInfo;
 
     // Verify audience (client id)
-    const aud = info.aud || info.audience;
+    const aud = info.aud ?? info.audience;
     const expected = this.configService.get<string>('GOOGLE_CLIENT_ID');
     if (!expected || aud !== expected) {
       throw new BadRequestException('Invalid id_token audience');
     }
 
     const profile = {
-      googleId: info.sub,
-      email: info.email,
+      googleId: info.sub ?? '',
+      email: info.email ?? '',
       firstName: info.given_name,
       lastName: info.family_name,
-      avatar: info.picture
+      avatar: info.picture,
     };
 
     return this.authService.googleLogin(profile);
@@ -109,11 +131,21 @@ export class AuthController {
   // Refresh token
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-
   async refreshTokens(
     @Body() refreshTokenDto: RefreshTokenDto,
-    @Req() req: Request) {
-    const refreshToken = refreshTokenDto.refreshToken || req.cookies?.refreshToken;
+    @Req() req: Request,
+  ) {
+    const cookiesUnknown: unknown = (req as unknown as { cookies?: unknown })
+      .cookies;
+    const cookies =
+      typeof cookiesUnknown === 'object' && cookiesUnknown !== null
+        ? (cookiesUnknown as { refreshToken?: unknown })
+        : undefined;
+
+    const refreshTokenRaw =
+      refreshTokenDto.refreshToken ?? cookies?.refreshToken;
+    const refreshToken =
+      typeof refreshTokenRaw === 'string' ? refreshTokenRaw : undefined;
 
     if (!refreshToken) {
       throw new BadRequestException('Refresh token is required');
@@ -129,9 +161,17 @@ export class AuthController {
   async logout(
     @Body() body: { refreshToken?: string },
     @Req() req: Request,
-    @Res({ passthrough: true }) res: Response) {
-
-    const refreshToken = body.refreshToken || req.cookies?.refreshToken;
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const cookiesUnknown: unknown = (req as unknown as { cookies?: unknown })
+      .cookies;
+    const cookies =
+      typeof cookiesUnknown === 'object' && cookiesUnknown !== null
+        ? (cookiesUnknown as { refreshToken?: unknown })
+        : undefined;
+    const refreshTokenRaw = body.refreshToken ?? cookies?.refreshToken;
+    const refreshToken =
+      typeof refreshTokenRaw === 'string' ? refreshTokenRaw : undefined;
 
     if (refreshToken) {
       await this.authService.logout(refreshToken);
@@ -147,7 +187,8 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async logoutAll(
     @CurrentUser('id') userId: number,
-    @Res({ passthrough: true }) res: Response) {
+    @Res({ passthrough: true }) res: Response,
+  ) {
     await this.authService.logoutAll(userId);
     res.clearCookie('refreshToken');
     return { message: 'Logged out from all devices successfully' };
@@ -173,7 +214,7 @@ export class AuthController {
   // Get current authenticated user
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  getMe(@CurrentUser() user: any) {
+  getMe(@CurrentUser() user: unknown) {
     return user;
   }
 }

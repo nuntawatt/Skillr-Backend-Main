@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException, BadRequestException, ConflictException, } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -32,7 +37,7 @@ export class AuthService {
     private readonly sessionRepository: Repository<Session>,
     @InjectRepository(PasswordResetToken)
     private readonly passwordResetTokenRepository: Repository<PasswordResetToken>,
-  ) { }
+  ) {}
 
   // Register a new user
   async register(registerDto: RegisterDto): Promise<AuthResponse> {
@@ -45,23 +50,26 @@ export class AuthService {
       firstName: registerDto.firstName,
       lastName: registerDto.lastName,
       email: registerDto.email,
-      password: registerDto.password
+      password: registerDto.password,
     });
 
     const tokens = await this.generateTokens(user);
 
     return {
       user: this.sanitizeUser(user),
-      tokens
+      tokens,
     };
   }
 
   // Login with email and password
-  async login(loginDto: LoginDto, userAgent?: string, ipAddress?: string): Promise<AuthResponse> {
+  async login(
+    loginDto: LoginDto,
+    userAgent?: string,
+    ipAddress?: string,
+  ): Promise<AuthResponse> {
     const user = await this.usersService.findByEmail(loginDto.email);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
-
     }
 
     const isPasswordValid = await this.usersService.verifyPassword(
@@ -72,7 +80,12 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const tokens = await this.generateTokens(user, userAgent, ipAddress, loginDto.rememberMe);
+    const tokens = await this.generateTokens(
+      user,
+      userAgent,
+      ipAddress,
+      loginDto.rememberMe,
+    );
 
     return {
       user: this.sanitizeUser(user),
@@ -120,7 +133,7 @@ export class AuthService {
     await this.sessionRepository.delete({ refreshToken: refreshTokenValue });
   }
 
-  // Logout from all devices 
+  // Logout from all devices
   async logoutAll(userId: number): Promise<void> {
     await this.sessionRepository.delete({ userId });
   }
@@ -157,13 +170,15 @@ export class AuthService {
     };
   }
 
-  async resetPassword(token: string, newPassword: string,):
-    Promise<{ message: string }> {
+  async resetPassword(
+    token: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
     const resetToken = await this.passwordResetTokenRepository.findOne({
       where: {
         token,
         isUsed: false,
-        expiresAt: MoreThan(new Date())
+        expiresAt: MoreThan(new Date()),
       },
       relations: ['user'],
     });
@@ -181,16 +196,15 @@ export class AuthService {
     return { message: 'Password has been reset successfully' };
   }
 
-
   // Generate access and refresh tokens
   private async generateTokens(
     user: User,
     userAgent?: string,
     ipAddress?: string,
-    rememberMe?: boolean
-  ):
-    Promise<TokenResponse> {
-    const normalizedRole = (user.role as any) === 'INSTRUCTOR' ? ('ADMIN' as any) : user.role;
+    rememberMe?: boolean,
+  ): Promise<TokenResponse> {
+    const role = String(user.role);
+    const normalizedRole = role === 'INSTRUCTOR' ? 'ADMIN' : role;
     const payload = {
       sub: user.id,
       email: user.email,
@@ -223,7 +237,8 @@ export class AuthService {
 
   // Remove sensitive fields user object
   private sanitizeUser(user: User): Partial<User> {
-    const { passwordHash, ...sanitizedUser } = user;
+    const { passwordHash: passwordHashRemoved, ...sanitizedUser } = user;
+    void passwordHashRemoved;
     return sanitizedUser;
   }
 }

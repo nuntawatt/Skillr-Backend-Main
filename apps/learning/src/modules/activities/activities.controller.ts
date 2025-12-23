@@ -1,9 +1,34 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Request,
+  Query,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ActivitiesService } from './activities.service';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { UpdateActivityDto } from './dto/update-activity.dto';
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
+import type { AuthUser } from '@auth';
 import { UserRole } from '@common/enums';
+
+type RequestWithUser = {
+  user?: AuthUser;
+};
+
+function getUserIdOrThrow(user?: AuthUser): string {
+  const raw = user?.id ?? user?.sub;
+  if (typeof raw === 'string' || typeof raw === 'number') {
+    return String(raw);
+  }
+  throw new UnauthorizedException();
+}
 
 @Controller('activities')
 export class ActivitiesController {
@@ -29,7 +54,10 @@ export class ActivitiesController {
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  update(@Param('id') id: string, @Body() updateActivityDto: UpdateActivityDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updateActivityDto: UpdateActivityDto,
+  ) {
     return this.activitiesService.update(id, updateActivityDto);
   }
 
@@ -43,15 +71,18 @@ export class ActivitiesController {
   // Register for activity
   @Post(':id/register')
   @UseGuards(JwtAuthGuard)
-  register(@Param('id') id: string, @Request() req) {
-    return this.activitiesService.register(id, req.user.id);
+  register(@Param('id') id: string, @Request() req: RequestWithUser) {
+    return this.activitiesService.register(id, getUserIdOrThrow(req.user));
   }
 
   // Cancel registration
   @Delete(':id/register')
   @UseGuards(JwtAuthGuard)
-  cancelRegistration(@Param('id') id: string, @Request() req) {
-    return this.activitiesService.cancelRegistration(id, req.user.id);
+  cancelRegistration(@Param('id') id: string, @Request() req: RequestWithUser) {
+    return this.activitiesService.cancelRegistration(
+      id,
+      getUserIdOrThrow(req.user),
+    );
   }
 
   // Get registrations for activity
@@ -65,7 +96,9 @@ export class ActivitiesController {
   // Get my registrations
   @Get('my/registrations')
   @UseGuards(JwtAuthGuard)
-  getMyRegistrations(@Request() req) {
-    return this.activitiesService.getMyRegistrations(req.user.id);
+  getMyRegistrations(@Request() req: RequestWithUser) {
+    return this.activitiesService.getMyRegistrations(
+      getUserIdOrThrow(req.user),
+    );
   }
 }

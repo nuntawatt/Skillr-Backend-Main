@@ -10,6 +10,6 @@ import { QuizAttempt } from './entities/quiz-attempt.entity';
   imports: [TypeOrmModule.forFeature([Quiz, Question, QuizAttempt])],
   controllers: [LearningController],
   providers: [LearningService],
-  exports: [LearningService]
+  exports: [LearningService],
 })
 export class LearningModule {}

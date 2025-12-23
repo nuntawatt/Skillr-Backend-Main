@@ -10,7 +10,8 @@ import { AuthLibModule } from '@auth/auth-lib.module';
 import { CoursesModule } from './modules/courses/courses.module';
 import { LessonsModule } from './modules/lessons/lessons.module';
 
-const isTest = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
+const isTest =
+  process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
 
 @Module({
   imports: [
@@ -34,6 +35,6 @@ const isTest = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !==
         ]),
   ],
   controllers: [AppController],
-  providers: [AppService]
+  providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

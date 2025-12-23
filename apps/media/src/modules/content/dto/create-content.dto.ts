@@ -1,5 +1,12 @@
 import { Type } from 'class-transformer';
-import { IsString, IsOptional, IsNumber, IsEnum, Min, IsInt } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsNumber,
+  IsEnum,
+  Min,
+  IsInt,
+} from 'class-validator';
 import { ContentType } from '../entities/content.entity';
 
 export class CreateContentDto {

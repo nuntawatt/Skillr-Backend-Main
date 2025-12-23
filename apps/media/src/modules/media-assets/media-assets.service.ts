@@ -9,8 +9,8 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
-import { S3Client, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import * as Minio from 'minio';
+import type { AuthUser } from '@auth';
 
 import {
   MediaAsset,
@@ -18,29 +18,182 @@ import {
   MediaAssetType,
 } from './entities/media-asset.entity';
 import { CreateVideoUploadDto } from './dto/create-video-upload.dto';
-import { CompleteVideoUploadDto } from './dto/complete-video-upload.dto';
 
 @Injectable()
 export class MediaAssetsService {
-  private readonly s3: S3Client;
+  private readonly s3: Minio.Client;
 
   constructor(
     private readonly configService: ConfigService,
     @InjectRepository(MediaAsset)
     private readonly mediaAssetsRepository: Repository<MediaAsset>,
   ) {
-    const region = this.configService.get<string>('S3_REGION') ?? 'us-east-1';
-    const endpoint = this.configService.get<string>('S3_ENDPOINT');
+    const { endPoint, port, useSSL, accessKey, secretKey } =
+      this.getMinioConnectionConfig();
 
-    this.s3 = new S3Client({
-      region,
-      endpoint,
-      forcePathStyle: true,
-      credentials: {
-        accessKeyId: this.configService.get<string>('S3_ACCESS_KEY_ID') ?? '',
-        secretAccessKey: this.configService.get<string>('S3_SECRET_ACCESS_KEY') ?? '',
-      },
+    this.s3 = new Minio.Client({
+      endPoint,
+      port,
+      useSSL,
+      accessKey,
+      secretKey,
     });
+  }
+
+  private getMinioConnectionConfig(): {
+    endPoint: string;
+    port: number;
+    useSSL: boolean;
+    accessKey: string;
+    secretKey: string;
+  } {
+    // IMPORTANT: the host used for presigned URLs must be reachable by the client.
+    // For LAN usage, set it to something like 10.3.1.88 (not localhost).
+    const endpointRaw = this.configService.get<string>('S3_ENDPOINT');
+    const explicitHost = this.configService.get<string>('MINIO_ENDPOINT');
+    const explicitPort = this.configService.get<string>('MINIO_PORT');
+    const explicitUseSsl = this.configService.get<string>('MINIO_USE_SSL');
+
+    let endPoint = explicitHost ?? 'localhost';
+    let port = explicitPort ? Number(explicitPort) : 9000;
+    let useSSL = explicitUseSsl ? explicitUseSsl === 'true' : false;
+
+    const endpoint = endpointRaw
+      ? endpointRaw.trim().split(/\s+/)[0]
+      : undefined;
+
+    if (endpoint) {
+      try {
+        const url = new URL(endpoint);
+        endPoint = url.hostname;
+        if (url.port) port = Number(url.port);
+        useSSL = url.protocol === 'https:';
+      } catch {
+        // If S3_ENDPOINT is not a URL, treat it as a hostname.
+        endPoint = endpoint;
+      }
+    }
+
+    const accessKey =
+      this.configService.get<string>('S3_ACCESS_KEY_ID') ??
+      this.configService.get<string>('MINIO_ACCESS_KEY') ??
+      '';
+    const secretKey =
+      this.configService.get<string>('S3_SECRET_ACCESS_KEY') ??
+      this.configService.get<string>('MINIO_SECRET_KEY') ??
+      '';
+
+    if (!accessKey || !secretKey) {
+      throw new BadRequestException('MinIO credentials are not configured');
+    }
+
+    return { endPoint, port, useSSL, accessKey, secretKey };
+  }
+
+  async uploadVideoFileAndPersist(
+    file: Express.Multer.File,
+    requestUser: AuthUser | undefined,
+    mediaAssetId?: number,
+    ownerUserIdFromBody?: number,
+  ) {
+    // NOTE: temporarily allow public upload (no login required)
+    // If requestUser exists, keep the admin check. Otherwise allow.
+    if (requestUser) {
+      this.assertAdmin(requestUser);
+    }
+    this.validateVideoMime(file.mimetype);
+
+    const maxSizeBytes = Number(
+      this.configService.get<string>('VIDEO_MAX_SIZE_BYTES') ??
+        String(2 * 1024 * 1024 * 1024),
+    );
+    if (file.size > maxSizeBytes) {
+      throw new BadRequestException('file size exceeds limit');
+    }
+
+    const bucket = this.getBucketOrThrow();
+    let asset: MediaAsset | undefined;
+
+    if (mediaAssetId !== undefined && Number.isFinite(mediaAssetId)) {
+      asset = await this.getAssetOrThrow(Number(mediaAssetId));
+      if (asset.type !== MediaAssetType.VIDEO) {
+        throw new BadRequestException('media asset is not a video');
+      }
+      // Allow upload only for UPLOADING state (created via createVideoUpload)
+      if (asset.status !== MediaAssetStatus.UPLOADING) {
+        throw new ConflictException('invalid state');
+      }
+    }
+
+    const objectKey = asset?.storageKey ?? `videos/${randomUUID()}`;
+
+    await this.s3.putObject(bucket, objectKey, file.buffer, file.size, {
+      'Content-Type': file.mimetype,
+    });
+
+    const ownerUserId = requestUser
+      ? this.getUserIdOrZero(requestUser)
+      : Number(ownerUserIdFromBody ?? 0);
+    const publicUrl = this.buildPublicUrl(bucket, objectKey);
+
+    const saved = await this.mediaAssetsRepository.save(
+      this.mediaAssetsRepository.create({
+        ...(asset?.id ? { id: asset.id } : {}),
+        ownerUserId: asset?.ownerUserId ?? ownerUserId,
+        type: MediaAssetType.VIDEO,
+        status: MediaAssetStatus.READY,
+        originalFilename: file.originalname,
+        mimeType: file.mimetype,
+        sizeBytes: String(file.size),
+        storageProvider:
+          this.configService.get<string>('STORAGE_PROVIDER') ?? 'minio',
+        storageBucket: bucket,
+        storageKey: objectKey,
+        publicUrl,
+      }),
+    );
+
+    const key = objectKey.startsWith('videos/')
+      ? objectKey.slice('videos/'.length)
+      : objectKey;
+
+    return {
+      media_asset_id: saved.id,
+      key,
+      storage_key: objectKey,
+      public_url: saved.publicUrl,
+    };
+  }
+
+  async getVideoFileUrl(key: string) {
+    const bucket = this.getBucketOrThrow();
+    const dir = `videos/${key}`;
+
+    const expiresIn = Number(
+      this.configService.get<string>('S3_SIGNED_URL_EXPIRES_SECONDS') ?? '900',
+    );
+    return this.s3.presignedGetObject(bucket, dir, expiresIn);
+  }
+
+  async getVideoUrlByMediaAssetId(mediaAssetId: number) {
+    const asset = await this.getAssetOrThrow(mediaAssetId);
+    if (asset.type !== MediaAssetType.VIDEO) {
+      throw new BadRequestException('media asset is not a video');
+    }
+    if (asset.status !== MediaAssetStatus.READY) {
+      throw new ConflictException('media asset is not ready');
+    }
+    if (!asset.storageKey) {
+      throw new BadRequestException('storage_key is missing');
+    }
+
+    // storageKey is expected to be like "videos/<uuid>" or similar
+    const bucket = asset.storageBucket ?? this.getBucketOrThrow();
+    const expiresIn = Number(
+      this.configService.get<string>('S3_SIGNED_URL_EXPIRES_SECONDS') ?? '900',
+    );
+    const objectKey = asset.storageKey;
+    return this.s3.presignedGetObject(bucket, objectKey, expiresIn);
   }
 
   private getBucketOrThrow(): string {
@@ -51,7 +204,7 @@ export class MediaAssetsService {
     return bucket;
   }
 
-  private assertAdmin(user: any) {
+  private assertAdmin(user: AuthUser) {
     // JwtAuthGuard + RolesGuard should handle this already.
     // This is just a hard-stop safety check.
     const role = String(user?.role ?? '').toLowerCase();
@@ -60,57 +213,56 @@ export class MediaAssetsService {
     }
   }
 
+  private getUserIdOrZero(user: AuthUser): number {
+    const raw = user.sub ?? user.id;
+    const n = typeof raw === 'string' ? Number(raw) : raw;
+    return Number.isFinite(n) ? Number(n) : 0;
+  }
+
   private validateVideoMime(mimeType: string) {
-    const allow = (this.configService.get<string>('VIDEO_MIME_ALLOWLIST') ??
-      'video/mp4,video/webm,video/quicktime').split(',');
+    const allow = (
+      this.configService.get<string>('VIDEO_MIME_ALLOWLIST') ??
+      'video/mp4,video/webm,video/quicktime'
+    ).split(',');
     const normalized = mimeType.trim().toLowerCase();
     if (!allow.map((x) => x.trim().toLowerCase()).includes(normalized)) {
       throw new BadRequestException('mime_type is not allowed');
     }
   }
 
-  async createVideoUpload(dto: CreateVideoUploadDto, requestUser: any) {
+  async createVideoUpload(dto: CreateVideoUploadDto, requestUser: AuthUser) {
     this.assertAdmin(requestUser);
     this.validateVideoMime(dto.mime_type);
 
-    const maxSizeBytes = Number(this.configService.get<string>('VIDEO_MAX_SIZE_BYTES') ?? String(2 * 1024 * 1024 * 1024));
+    const maxSizeBytes = Number(
+      this.configService.get<string>('VIDEO_MAX_SIZE_BYTES') ??
+        String(2 * 1024 * 1024 * 1024),
+    );
     if (dto.size_bytes > maxSizeBytes) {
       throw new BadRequestException('size_bytes exceeds limit');
     }
 
     const bucket = this.getBucketOrThrow();
-    const keyPrefix = this.configService.get<string>('S3_VIDEO_KEY_PREFIX') ?? 'videos';
+    const keyPrefix =
+      this.configService.get<string>('S3_VIDEO_KEY_PREFIX') ?? 'videos';
     const key = `${keyPrefix}/${randomUUID()}`;
 
     const asset = this.mediaAssetsRepository.create({
-      ownerUserId: Number(requestUser?.sub ?? requestUser?.id),
+      ownerUserId: this.getUserIdOrZero(requestUser),
       type: MediaAssetType.VIDEO,
       status: MediaAssetStatus.UPLOADING,
       originalFilename: dto.original_filename,
       mimeType: dto.mime_type,
       sizeBytes: String(dto.size_bytes),
-      storageProvider: this.configService.get<string>('STORAGE_PROVIDER') ?? 's3',
+      storageProvider:
+        this.configService.get<string>('STORAGE_PROVIDER') ?? 's3',
       storageBucket: bucket,
       storageKey: key,
     });
-
     const saved = await this.mediaAssetsRepository.save(asset);
-
-    const expiresIn = Number(this.configService.get<string>('S3_SIGNED_URL_EXPIRES_SECONDS') ?? '900');
-    const uploadUrl = await getSignedUrl(
-      this.s3,
-      new PutObjectCommand({
-        Bucket: bucket,
-        Key: key,
-        ContentType: dto.mime_type,
-      }),
-      { expiresIn },
-    );
-
-    return {
-      mediaAssetId: saved.id,
-      uploadUrl,
-    };
+    // NOTE: current flow for uploads is handled via /media/videos/upload (multipart).
+    // We still return the created asset id for linking in DB.
+    return { media_asset_id: saved.id };
   }
 
   async getAssetOrThrow(id: number) {
@@ -134,54 +286,25 @@ export class MediaAssetsService {
       storage_provider: asset.storageProvider,
       storage_bucket: asset.storageBucket,
       storage_key: asset.storageKey,
+      public_url: asset.publicUrl,
       created_at: asset.createdAt,
       updated_at: asset.updatedAt,
     };
   }
 
-  async completeVideoUploadByMediaAssetId(
-    mediaAssetId: number,
-    dto: CompleteVideoUploadDto,
-    requestUser: any,
-  ) {
-    this.assertAdmin(requestUser);
+  private buildPublicUrl(
+    bucket: string,
+    objectKey: string,
+  ): string | undefined {
+    const baseRaw =
+      this.configService.get<string>('S3_PUBLIC_BASE_URL') ??
+      this.configService.get<string>('S3_ENDPOINT');
 
-    const asset = await this.getAssetOrThrow(mediaAssetId);
+    const base = baseRaw ? baseRaw.trim().split(/\s+/)[0] : undefined;
+    if (!base) return undefined;
 
-    if (asset.type !== MediaAssetType.VIDEO) {
-      throw new BadRequestException('media asset is not a video');
-    }
-
-    if (asset.status !== MediaAssetStatus.UPLOADING) {
-      throw new ConflictException('invalid state');
-    }
-
-    const bucket = asset.storageBucket ?? this.getBucketOrThrow();
-    const key = asset.storageKey;
-    if (!key) {
-      throw new BadRequestException('storage_key is missing');
-    }
-
-    const head = await this.s3.send(
-      new HeadObjectCommand({
-        Bucket: bucket,
-        Key: key,
-      }),
-    );
-
-    const expected = dto.expected_size_bytes ?? (asset.sizeBytes ? Number(asset.sizeBytes) : undefined);
-    if (expected && head.ContentLength !== undefined && Number(head.ContentLength) !== Number(expected)) {
-      asset.status = MediaAssetStatus.FAILED;
-      await this.mediaAssetsRepository.save(asset);
-      throw new ConflictException('upload size mismatch');
-    }
-
-    asset.status = MediaAssetStatus.READY;
-    await this.mediaAssetsRepository.save(asset);
-
-    return {
-      mediaAssetId: asset.id,
-      status: asset.status,
-    };
+    const normalizedBase = base.replace(/\/$/, '');
+    const normalizedKey = objectKey.replace(/^\//, '');
+    return `${normalizedBase}/${bucket}/${normalizedKey}`;
   }
 }

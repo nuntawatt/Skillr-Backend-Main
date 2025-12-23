@@ -27,11 +27,13 @@ export class AssignmentsService {
 
   async findAll(courseId?: string): Promise<Assignment[]> {
     const query = this.assignmentRepository.createQueryBuilder('assignment');
-    
+
     if (courseId) {
-      query.where('assignment.courseId = :courseId', { courseId: Number(courseId) });
+      query.where('assignment.courseId = :courseId', {
+        courseId: Number(courseId),
+      });
     }
-    
+
     return query.getMany();
   }
 
@@ -46,7 +48,10 @@ export class AssignmentsService {
     return assignment;
   }
 
-  async update(id: string, updateAssignmentDto: UpdateAssignmentDto): Promise<Assignment> {
+  async update(
+    id: string,
+    updateAssignmentDto: UpdateAssignmentDto,
+  ): Promise<Assignment> {
     const assignment = await this.findOne(id);
     Object.assign(assignment, updateAssignmentDto);
     return this.assignmentRepository.save(assignment);
@@ -57,17 +62,21 @@ export class AssignmentsService {
     await this.assignmentRepository.remove(assignment);
   }
 
-  async submit(assignmentId: string, studentId: string, submitDto: SubmitAssignmentDto): Promise<AssignmentSubmission> {
+  async submit(
+    assignmentId: string,
+    studentId: string,
+    submitDto: SubmitAssignmentDto,
+  ): Promise<AssignmentSubmission> {
     const assignment = await this.findOne(assignmentId);
     const numericStudentId = Number(studentId);
-    
+
     const submission = this.submissionRepository.create({
       assignmentId: assignment.id,
       studentId: numericStudentId,
       content: submitDto.content,
       fileUrl: submitDto.fileUrl,
     });
-    
+
     return this.submissionRepository.save(submission);
   }
 
@@ -78,22 +87,27 @@ export class AssignmentsService {
     });
   }
 
-  async gradeSubmission(submissionId: string, gradeDto: GradeSubmissionDto): Promise<AssignmentSubmission> {
+  async gradeSubmission(
+    submissionId: string,
+    gradeDto: GradeSubmissionDto,
+  ): Promise<AssignmentSubmission> {
     const numericSubmissionId = Number(submissionId);
     const submission = await this.submissionRepository.findOne({
       where: { id: numericSubmissionId },
     });
-    
+
     if (!submission) {
-      throw new NotFoundException(`Submission with ID ${submissionId} not found`);
+      throw new NotFoundException(
+        `Submission with ID ${submissionId} not found`,
+      );
     }
-    
+
     submission.score = gradeDto.score;
     if (gradeDto.feedback) {
       submission.feedback = gradeDto.feedback;
     }
     submission.gradedAt = new Date();
-    
+
     return this.submissionRepository.save(submission);
   }
 }
