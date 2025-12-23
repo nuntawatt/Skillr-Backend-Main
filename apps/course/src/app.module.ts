@@ -16,7 +16,7 @@ const isTest = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !==
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: ['apps/course/.env', '.env'],
     }),
 
     ...(isTest

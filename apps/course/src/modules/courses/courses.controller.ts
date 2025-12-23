@@ -19,8 +19,8 @@ export class CoursesController {
   }
 
   @Get()
-  findAll(@Query('status') status?: string) {
-    return this.coursesService.findAll(status);
+  findAll(@Query('is_published') isPublished?: string) {
+    return this.coursesService.findAll(isPublished);
   }
 
   @Get(':id')

@@ -4,12 +4,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { getDatabaseConfig } from '@config/database.config';
 import { AuthLibModule } from '@auth/auth-lib.module';
 import { ContentModule } from './modules/content/content.module';
+import { MediaAssetsModule } from './modules/media-assets/media-assets.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: ['apps/media/.env', '.env'],
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -18,6 +19,7 @@ import { ContentModule } from './modules/content/content.module';
     }),
     AuthLibModule,
     ContentModule,
+    MediaAssetsModule,
   ],
 })
 export class AppModule {}

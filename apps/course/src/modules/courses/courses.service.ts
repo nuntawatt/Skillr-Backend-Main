@@ -13,20 +13,30 @@ export class CoursesService {
   ) {}
 
   async create(createCourseDto: CreateCourseDto): Promise<Course> {
+    const isPublished = (createCourseDto as any).is_published;
+
     const course = this.courseRepository.create({
-      ...createCourseDto,
-      ownerId: Number((createCourseDto as any).ownerId),
+      ownerUserId: Number((createCourseDto as any).ownerId),
+      title: createCourseDto.title,
+      shortDescription: (createCourseDto as any).short_description,
+      description: createCourseDto.description,
+      price: Number(createCourseDto.price ?? 0),
+      isPublished: typeof isPublished === 'boolean' ? isPublished : false,
     });
     return this.courseRepository.save(course);
   }
 
-  async findAll(status?: string): Promise<Course[]> {
+  async findAll(isPublished?: string): Promise<Course[]> {
     const query = this.courseRepository.createQueryBuilder('course');
-    
-    if (status) {
-      query.where('course.status = :status', { status });
+
+    if (typeof isPublished === 'string') {
+      const normalized = isPublished.trim().toLowerCase();
+      if (['true', 'false', '1', '0'].includes(normalized)) {
+        const value = normalized === 'true' || normalized === '1';
+        query.where('course.isPublished = :value', { value });
+      }
     }
-    
+
     return query.getMany();
   }
 
@@ -43,7 +53,7 @@ export class CoursesService {
 
   async findByOwner(ownerId: string): Promise<Course[]> {
     return this.courseRepository.find({
-      where: { ownerId: Number(ownerId) },
+      where: { ownerUserId: Number(ownerId) },
     });
   }
 

@@ -12,31 +12,46 @@
       "type": "application",
       "root": "apps/auth",
       "entryFile": "main",
-      "sourceRoot": "apps/auth/src"
+      "sourceRoot": "apps/auth/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/auth/tsconfig.app.json"
+      }
     },
     "learning": {
       "type": "application",
       "root": "apps/learning",
       "entryFile": "main",
-      "sourceRoot": "apps/learning/src"
+      "sourceRoot": "apps/learning/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/learning/tsconfig.app.json"
+      }
     },
     "course": {
       "type": "application",
       "root": "apps/course",
       "entryFile": "main",
-      "sourceRoot": "apps/course/src"
+      "sourceRoot": "apps/course/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/course/tsconfig.app.json"
+      }
     },
     "media": {
       "type": "application",
       "root": "apps/media",
       "entryFile": "main",
-      "sourceRoot": "apps/media/src"
+      "sourceRoot": "apps/media/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/media/tsconfig.app.json"
+      }
     },
     "payment": {
       "type": "application",
       "root": "apps/payment",
       "entryFile": "main",
-      "sourceRoot": "apps/payment/src"
+      "sourceRoot": "apps/payment/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/payment/tsconfig.app.json"
+      }
     },
     "common": {
       "type": "library",

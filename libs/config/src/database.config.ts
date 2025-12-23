@@ -9,7 +9,7 @@ export const getDatabaseConfig = (
   return {
     type: 'postgres',
     url: databaseUrl,
-    autoLoadEntities: true,
+    autoLoadEntities: false,
     synchronize: configService.get<string>('NODE_ENV') !== 'production',
     logging: false, // Set to true if you need SQL query log
   };

@@ -1,5 +1,4 @@
-import { IsString, IsOptional, IsNumber, IsEnum, Min } from 'class-validator';
-import { CourseStatus } from '../entities/course.entity';
+import { IsString, IsOptional, IsNumber, Min, IsBoolean } from 'class-validator';
 
 export class CreateCourseDto {
   @IsString()
@@ -7,11 +6,11 @@ export class CreateCourseDto {
 
   @IsOptional()
   @IsString()
-  description?: string;
+  short_description?: string;
 
   @IsOptional()
   @IsString()
-  thumbnail?: string;
+  description?: string;
 
   @IsOptional()
   @IsNumber()
@@ -19,23 +18,10 @@ export class CreateCourseDto {
   price?: number;
 
   @IsOptional()
-  @IsEnum(CourseStatus)
-  status?: CourseStatus;
+  @IsBoolean()
+  is_published?: boolean;
 
   @IsOptional()
   @IsString()
   ownerId?: string;
-
-  @IsOptional()
-  @IsString()
-  category?: string;
-
-  @IsOptional()
-  @IsString()
-  level?: string;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  duration?: number;
 }
