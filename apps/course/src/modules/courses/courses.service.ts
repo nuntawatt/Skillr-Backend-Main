@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DeepPartial } from 'typeorm';
 import { Course } from './entities/course.entity';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
@@ -10,18 +10,25 @@ export class CoursesService {
   constructor(
     @InjectRepository(Course)
     private readonly courseRepository: Repository<Course>,
-  ) {}
+  ) { }
 
   async create(createCourseDto: CreateCourseDto): Promise<Course> {
     const isPublished = createCourseDto.is_published;
-    const course = this.courseRepository.create({
-      ownerUserId: Number(createCourseDto.ownerId ?? 0),
+
+    const payload: DeepPartial<Course> = {
+      ownerUserId: createCourseDto.ownerId !== undefined ? Number(createCourseDto.ownerId) : undefined,
       title: createCourseDto.title,
-      shortDescription: createCourseDto.short_description,
       description: createCourseDto.description,
       price: Number(createCourseDto.price ?? 0),
       isPublished: typeof isPublished === 'boolean' ? isPublished : false,
-    });
+      categoryId: createCourseDto.categoryId,
+      level: String(createCourseDto.level ?? 'beginner'),
+      coverMediaAssetId: createCourseDto.coverMediaId ?? undefined,
+      introMediaAssetId: createCourseDto.introMediaId ?? undefined,
+      durationSeconds: 0,
+    };
+    
+    const course = this.courseRepository.create(payload);
     return this.courseRepository.save(course);
   }
 

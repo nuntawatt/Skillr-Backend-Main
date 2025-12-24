@@ -1,26 +1,20 @@
-import {
-  IsString,
-  IsOptional,
-  IsNumber,
-  Min,
-  IsBoolean,
-} from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsNotEmpty, IsInt, IsIn, } from 'class-validator';
 
 export class CreateCourseDto {
+  @IsNotEmpty()
   @IsString()
   title: string;
-
-  @IsOptional()
-  @IsString()
-  short_description?: string;
 
   @IsOptional()
   @IsString()
   description?: string;
 
   @IsOptional()
-  @IsNumber()
-  @Min(0)
+  @IsInt()
+  ownerId?: number;
+
+  @IsOptional()
+  @IsInt()
   price?: number;
 
   @IsOptional()
@@ -28,6 +22,18 @@ export class CreateCourseDto {
   is_published?: boolean;
 
   @IsOptional()
-  @IsString()
-  ownerId?: string;
+  @IsInt()
+  categoryId?: number;
+
+  @IsOptional()
+  @IsIn(['beginner', 'intermediate', 'advanced'])
+  level?: string;
+
+  @IsOptional()
+  @IsInt()
+  coverMediaId?: number;
+
+  @IsOptional()
+  @IsInt()
+  introMediaId?: number;
 }

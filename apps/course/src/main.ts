@@ -28,6 +28,7 @@ async function bootstrap() {
   const port = Number(process.env.PORT ?? 3001);
   await app.listen(port);
 
+  (app.getHttpServer() as any).setTimeout(5 * 60 * 1000);
   logger.log(`Application is running on http://localhost:${port}/api`);
 }
 void bootstrap();

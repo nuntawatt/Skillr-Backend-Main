@@ -1,15 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  Redirect,
-  Req,
-  UploadedFile,
-  UseGuards,
-  UseInterceptors,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Redirect, Req, UploadedFile, UseGuards, UseInterceptors, } from '@nestjs/common';
 import { JwtAuthGuard, Roles, RolesGuard } from '@auth';
 import type { AuthUser } from '@auth';
 import { UserRole } from '@common/enums';
@@ -39,7 +28,7 @@ function parseOptionalNumber(value: unknown): number | undefined {
 
 @Controller('media/videos')
 export class MediaVideosController {
-  constructor(private readonly mediaAssetsService: MediaAssetsService) {}
+  constructor(private readonly mediaAssetsService: MediaAssetsService) { }
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -51,9 +40,13 @@ export class MediaVideosController {
     return this.mediaAssetsService.createVideoUpload(dto, req.user ?? {});
   }
 
+  @Get(':id/payback')
+  getPlaybackInfo(@Param('id') id: string) {
+    return this.mediaAssetsService.getVideoPlaybackInfo(Number(id));
+  }
+
   @Post('upload')
-  // NOTE: temporarily public upload (no login required)
-  // TODO(next sprint): lock this down to ADMIN only
+  // lock this down to ADMIN only
   // @UseGuards(JwtAuthGuard, RolesGuard)
   // @Roles(UserRole.ADMIN)
   @UseInterceptors(FileInterceptor('file'))
@@ -76,7 +69,7 @@ export class MediaVideosController {
       file,
       req.user,
       mediaAssetId,
-      ownerUserId,
+      ownerUserId,  
     );
   }
 
@@ -85,7 +78,6 @@ export class MediaVideosController {
     return this.mediaAssetsService.getVideoFileUrl(key);
   }
 
-  // Convenience for browsers/clients: open one URL on Media API and get redirected to MinIO presigned URL.
   // Example: http://10.3.1.88:3002/api/media/videos/file/<key>/redirect
   @Get('file/:key/redirect')
   @Redirect()

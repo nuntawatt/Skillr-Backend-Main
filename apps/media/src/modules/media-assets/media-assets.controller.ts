@@ -16,7 +16,6 @@ export class MediaAssetsController {
   }
 
   // Frontend uses this to get a watchable URL from the same LAN.
-  // Requires login (any role). If you want public links, we can add a separate unauth route later.
   @Get(':id/url')
   @UseGuards(JwtAuthGuard)
   getPlaybackUrl(@Param('id') id: string) {

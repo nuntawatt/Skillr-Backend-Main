@@ -12,15 +12,18 @@ import { randomUUID } from 'crypto';
 import * as Minio from 'minio';
 import type { AuthUser } from '@auth';
 
-import {
-  MediaAsset,
-  MediaAssetStatus,
-  MediaAssetType,
-} from './entities/media-asset.entity';
+import { MediaAsset, MediaAssetStatus, MediaAssetType, } from './entities/media-asset.entity';
 import { CreateVideoUploadDto } from './dto/create-video-upload.dto';
 
 @Injectable()
 export class MediaAssetsService {
+  getVideoPlaybackInfo(arg0: number) {
+    throw new Error('Method not implemented.');
+  }
+  getVideoInfo(arg0: number) {
+    throw new Error('Method not implemented.');
+  }
+  
   private readonly s3: Minio.Client;
 
   constructor(
@@ -105,7 +108,7 @@ export class MediaAssetsService {
 
     const maxSizeBytes = Number(
       this.configService.get<string>('VIDEO_MAX_SIZE_BYTES') ??
-        String(2 * 1024 * 1024 * 1024),
+      String(2 * 1024 * 1024 * 1024),
     );
     if (file.size > maxSizeBytes) {
       throw new BadRequestException('file size exceeds limit');
@@ -119,7 +122,7 @@ export class MediaAssetsService {
       if (asset.type !== MediaAssetType.VIDEO) {
         throw new BadRequestException('media asset is not a video');
       }
-      // Allow upload only for UPLOADING state (created via createVideoUpload)
+      // Allow upload only for upload state assets.
       if (asset.status !== MediaAssetStatus.UPLOADING) {
         throw new ConflictException('invalid state');
       }
@@ -160,6 +163,60 @@ export class MediaAssetsService {
     return {
       media_asset_id: saved.id,
       key,
+      storage_key: objectKey,
+      public_url: saved.publicUrl,
+    };
+  }
+
+  async uploadImageFileAndPersist(
+    file: Express.Multer.File,
+    ownerUserIdFromBody?: number,
+  ) {
+    // Allow public upload for now (no requestUser parameter here)
+    const mime = (file.mimetype ?? '').toLowerCase();
+    const allow = (
+      this.configService.get<string>('IMAGE_MIME_ALLOWLIST') ??
+      'image/png,image/jpeg,image/jpg'
+    ).split(',').map((s) => s.trim().toLowerCase());
+    if (!allow.includes(mime)) {
+      throw new BadRequestException('image mime_type is not allowed');
+    }
+
+    const maxSizeBytes = Number(
+      this.configService.get<string>('IMAGE_MAX_SIZE_BYTES') ?? String(5 * 1024 * 1024),
+    );
+    if (file.size > maxSizeBytes) {
+      throw new BadRequestException('file size exceeds limit');
+    }
+
+    const bucket = this.getBucketOrThrow();
+    const keyPrefix = this.configService.get<string>('S3_IMAGE_KEY_PREFIX') ?? 'images';
+    const objectKey = `${keyPrefix}/${randomUUID()}`;
+
+    await this.s3.putObject(bucket, objectKey, file.buffer, file.size, {
+      'Content-Type': file.mimetype,
+    });
+
+    const ownerUserId = Number(ownerUserIdFromBody ?? 0);
+    const publicUrl = this.buildPublicUrl(bucket, objectKey);
+
+    const saved = await this.mediaAssetsRepository.save(
+      this.mediaAssetsRepository.create({
+        ownerUserId,
+        type: MediaAssetType.IMAGE,
+        status: MediaAssetStatus.READY,
+        originalFilename: file.originalname,
+        mimeType: file.mimetype,
+        sizeBytes: String(file.size),
+        storageProvider: this.configService.get<string>('STORAGE_PROVIDER') ?? 'minio',
+        storageBucket: bucket,
+        storageKey: objectKey,
+        publicUrl,
+      }),
+    );
+
+    return {
+      media_asset_id: saved.id,
       storage_key: objectKey,
       public_url: saved.publicUrl,
     };
@@ -213,11 +270,13 @@ export class MediaAssetsService {
     }
   }
 
+
   private getUserIdOrZero(user: AuthUser): number {
     const raw = user.sub ?? user.id;
     const n = typeof raw === 'string' ? Number(raw) : raw;
     return Number.isFinite(n) ? Number(n) : 0;
   }
+
 
   private validateVideoMime(mimeType: string) {
     const allow = (
@@ -230,13 +289,14 @@ export class MediaAssetsService {
     }
   }
 
+  
   async createVideoUpload(dto: CreateVideoUploadDto, requestUser: AuthUser) {
     this.assertAdmin(requestUser);
     this.validateVideoMime(dto.mime_type);
 
     const maxSizeBytes = Number(
       this.configService.get<string>('VIDEO_MAX_SIZE_BYTES') ??
-        String(2 * 1024 * 1024 * 1024),
+      String(2 * 1024 * 1024 * 1024),
     );
     if (dto.size_bytes > maxSizeBytes) {
       throw new BadRequestException('size_bytes exceeds limit');
@@ -258,10 +318,11 @@ export class MediaAssetsService {
         this.configService.get<string>('STORAGE_PROVIDER') ?? 's3',
       storageBucket: bucket,
       storageKey: key,
+
     });
     const saved = await this.mediaAssetsRepository.save(asset);
+
     // NOTE: current flow for uploads is handled via /media/videos/upload (multipart).
-    // We still return the created asset id for linking in DB.
     return { media_asset_id: saved.id };
   }
 

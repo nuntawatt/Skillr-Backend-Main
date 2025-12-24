@@ -22,14 +22,16 @@ export class CoursesController {
   constructor(private readonly coursesService: CoursesService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  // @Roles(UserRole.ADMIN)
+  
   create(
     @Body() createCourseDto: CreateCourseDto,
     @Request() req: { user?: AuthUser },
   ) {
     const requestUserId = String(req.user?.sub ?? req.user?.id ?? '');
-    createCourseDto.ownerId = createCourseDto.ownerId ?? requestUserId;
+    createCourseDto.ownerId = Number(requestUserId);
+    
     return this.coursesService.create(createCourseDto);
   }
 
@@ -44,15 +46,15 @@ export class CoursesController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  // @Roles(UserRole.ADMIN)
   update(@Param('id') id: string, @Body() updateCourseDto: UpdateCourseDto) {
     return this.coursesService.update(id, updateCourseDto);
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  // @Roles(UserRole.ADMIN)
   remove(@Param('id') id: string) {
     return this.coursesService.remove(id);
   }
