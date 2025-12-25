@@ -8,10 +8,12 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
+  Res,
 } from '@nestjs/common';
 import { JwtAuthGuard, Roles, RolesGuard } from '@auth';
 import { UserRole } from '@common/enums';
 import { MediaAssetsService } from './media-assets.service';
+import type { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 
 function parseOptionalNumber(value: unknown): number | undefined {
@@ -75,6 +77,13 @@ export class MediaAssetsController {
       Number(id),
     );
     return { url };
+  }
+
+  // Stream the image through the API so the client does not need direct
+  // access to MinIO. Example: GET /api/media/assets/123/file/public/stream
+  @Get(':id/file/public/stream')
+  async streamFilePublic(@Param('id') id: string, @Res() res: Response) {
+    return this.mediaAssetsService.streamObjectByMediaAssetId(Number(id), res);
   }
 
   // Public (no-login) status check: READY/UPLOADING/PROCESSING/FAILED.

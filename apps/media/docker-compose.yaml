@@ -1,0 +1,48 @@
+services:
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: skillr_minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: miniopassword
+    volumes:
+      - minio_data:/data
+    command: server --console-address ":9001" /data
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: skillr_media_postgres
+    env_file:
+      - .env.docker
+    ports:
+      - "5437:5432"
+    volumes:
+      - media_pg_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U $$POSTGRES_USER"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  media:
+    container_name: skillr_media_api
+    build:
+      context: ../..
+      dockerfile: apps/media/dockerfile.media
+    env_file:
+      - .env.docker
+    ports:
+      - "3002:3002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  media_pg_data:
+  minio_data:

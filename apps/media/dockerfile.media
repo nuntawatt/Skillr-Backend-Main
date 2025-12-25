@@ -11,11 +11,11 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml nest-cli.json tsconfig.json
 COPY apps ./apps
 COPY libs ./libs
 
-# install deps
+# install deps and build media app
 RUN pnpm install --frozen-lockfile
-
-# build course app
-RUN pnpm exec nest build course
+# Ensure a clean build output inside Docker (avoid stale incremental artifacts)
+RUN rm -rf dist
+RUN pnpm exec nest build media
 
 # Runtime stage
 FROM node:20-alpine
@@ -27,7 +27,7 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
-EXPOSE 3001
+EXPOSE 3002
 
-# Nest build output includes the original monorepo path (apps/course/src)
-CMD ["node", "dist/apps/course/apps/course/src/main.js"]
+# Nest build output includes the original monorepo path (apps/media/src)
+CMD ["node", "dist/apps/media/apps/media/src/main.js"]

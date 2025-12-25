@@ -20,8 +20,8 @@ export class ContentController {
   constructor(private readonly contentService: ContentService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  // @Roles(UserRole.ADMIN)
   create(@Body() createContentDto: CreateContentDto) {
     return this.contentService.create(createContentDto);
   }

@@ -11,6 +11,7 @@ import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import * as Minio from 'minio';
 import type { AuthUser } from '@auth';
+import type { Response } from 'express';
 
 import { MediaAsset, MediaAssetStatus, MediaAssetType, } from './entities/media-asset.entity';
 import { CreateVideoUploadDto } from './dto/create-video-upload.dto';
@@ -416,5 +417,58 @@ export class MediaAssetsService {
     const normalizedBase = base.replace(/\/$/, '');
     const normalizedKey = objectKey.replace(/^\//, '');
     return `${normalizedBase}/${bucket}/${normalizedKey}`;
+  }
+
+  // Stream an object by media asset id through the API response.
+  async streamObjectByMediaAssetId(id: number, res: Response) {
+    const asset = await this.getAssetOrThrow(id);
+    if (!asset.storageBucket || !asset.storageKey) {
+      throw new BadRequestException('asset has no storage info');
+    }
+    const mime = asset.mimeType ?? 'application/octet-stream';
+    const size = asset.sizeBytes ? Number(asset.sizeBytes) : undefined;
+    return this.streamObject(asset.storageBucket, asset.storageKey, res, mime, size);
+  }
+
+  // Stream an object by key (for videos where key may be provided without the prefix).
+  async streamObjectByKey(key: string, res: Response) {
+    const bucket = this.getBucketOrThrow();
+    const objectKey = key.startsWith('videos/') ? key : `videos/${key}`;
+    let mime = 'application/octet-stream';
+    let size: number | undefined = undefined;
+    try {
+      const maybe = await this.mediaAssetsRepository.findOne({ where: { storageBucket: bucket, storageKey: objectKey } });
+      if (maybe) {
+        mime = maybe.mimeType ?? mime;
+        size = maybe.sizeBytes ? Number(maybe.sizeBytes) : undefined;
+      }
+    } catch {
+      // ignore
+    }
+    return this.streamObject(bucket, objectKey, res, mime, size);
+  }
+
+  private async streamObject(bucket: string, objectKey: string, res: Response, mimeType?: string, sizeBytes?: number) {
+    try {
+      // Recent minio client returns a Promise<ReadableStream> for getObject.
+      const dataStream: NodeJS.ReadableStream = await (this.s3 as any).getObject(bucket, objectKey);
+      if (mimeType) res.setHeader('Content-Type', mimeType);
+      if (sizeBytes && Number.isFinite(sizeBytes)) res.setHeader('Content-Length', String(sizeBytes));
+
+      await new Promise<void>((resolve, reject) => {
+        dataStream.on('error', (e) => {
+          try { res.end(); } catch {}
+          reject(e);
+        });
+        dataStream.on('end', () => resolve());
+        try {
+          (dataStream as any).pipe(res);
+        } catch (e) {
+          reject(e as Error);
+        }
+      });
+    } catch (e) {
+      throw new NotFoundException('object not found');
+    }
   }
 }

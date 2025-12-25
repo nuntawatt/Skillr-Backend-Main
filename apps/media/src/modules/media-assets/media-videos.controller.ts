@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Redirect, Req, UploadedFile, UseGuards, UseInterceptors, } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Redirect, Req, UploadedFile, UseGuards, UseInterceptors, Res, } from '@nestjs/common';
 import { JwtAuthGuard, Roles, RolesGuard } from '@auth';
 import type { AuthUser } from '@auth';
 import { UserRole } from '@common/enums';
@@ -84,5 +84,11 @@ export class MediaVideosController {
   async redirectToFile(@Param('key') key: string) {
     const url = await this.mediaAssetsService.getVideoFileUrl(key);
     return { url };
+  }
+
+  // Stream the video file through the API so clients don't access MinIO directly.
+  @Get('file/:key/stream')
+  async streamFileByKey(@Param('key') key: string, @Res() res: any) {
+    return this.mediaAssetsService.streamObjectByKey(key, res);
   }
 }
