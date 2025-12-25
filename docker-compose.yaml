@@ -1,5 +1,3 @@
-version: '3.7'
-
 services:
   minio:
     image: quay.io/minio/minio:latest
@@ -15,5 +13,34 @@ services:
     command: server --console-address ":9001" /data
     restart: unless-stopped
 
+  postgres:
+    image: postgres:16-alpine
+    profiles: ["app"]
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: skllr_course
+    ports:
+      - "5432:5432"
+    volumes:
+      - course_pg_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  course:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: apps/course/dockerfile.course
+    environment:
+      NODE_ENV: development
+      PORT: "3001"
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/skllr_course?schema=public
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
 volumes:
   minio_data:
+  course_pg_data:

@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - NODE_ENV=development
+    ports:
+      - '5432:5432'
+    volumes:
+      - course_pg_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  course:
+    build:
+      context: ../..
+      dockerfile: apps/course/dockerfile.course
+    environment:
+      NODE_ENV: development
+      PORT: '3001'
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/skllr_course?schema=public
+
+    ports:
+      - '3001:3001'
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+volumes:
+  course_pg_data:
+
