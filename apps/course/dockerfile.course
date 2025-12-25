@@ -1,28 +1,34 @@
+# Builder stage
 FROM node:20-alpine AS builder
+
 WORKDIR /app
 
-# Install build tools and enable pnpm via corepack
+# build deps
+RUN apk add --no-cache python3 make g++ libc6-compat
 RUN corepack enable
-# Copy package metadata and lockfile first for efficient caching
+
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml nest-cli.json tsconfig.json tsconfig.build.json ./
 
-# Monorepo sources
 COPY apps ./apps
 COPY libs ./libs
 
-# Install dependencies and build the `course` project
+# install deps
 RUN pnpm install --frozen-lockfile
+
+# build course app
 RUN pnpm exec nest build course
 
-FROM node:20-alpine AS runtime
-WORKDIR /app
+# Runtime stage
+FROM node:20-alpine
 
-# Copy built output and production node_modules from builder
+WORKDIR /app
+ENV NODE_ENV=production
+
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
 
-ENV NODE_ENV=production
 EXPOSE 3001
 
-# Start the course app
-CMD ["node", "dist/apps/course/src/main.js"]
+# Nest build output includes the original monorepo path (apps/course/src)
+CMD ["node", "dist/apps/course/apps/course/src/main.js"]

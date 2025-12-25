@@ -1,29 +1,33 @@
 services:
   postgres:
     image: postgres:16-alpine
-    environment:
-      - NODE_ENV=development
+    container_name: skillr_course_postgres
+    env_file:
+      - .env.docker
     ports:
-      - '5432:5432'
+      - "5435:5432"
     volumes:
       - course_pg_data:/var/lib/postgresql/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   course:
+    container_name: skillr_course_api
     build:
       context: ../..
       dockerfile: apps/course/dockerfile.course
-    environment:
-      NODE_ENV: development
-      PORT: '3001'
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/skllr_course?schema=public
-
+    env_file:
+      - .env.docker
     ports:
-      - '3001:3001'
+      - "3001:3001"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
   course_pg_data:
-
