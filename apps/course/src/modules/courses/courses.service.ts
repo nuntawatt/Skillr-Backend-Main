@@ -12,6 +12,16 @@ export class CoursesService {
     private readonly courseRepository: Repository<Course>,
   ) { }
 
+  private buildPublicIntroVideoPath(mediaAssetId: number): string {
+    // Path-only so frontend can prefix with MEDIA_ORIGIN from env.
+    return `/api/media/assets/${mediaAssetId}/url/public/redirect`;
+  }
+
+  private buildPublicCoverImagePath(mediaAssetId: number): string {
+    // Path-only so frontend can prefix with MEDIA_ORIGIN from env.
+    return `/api/media/assets/${mediaAssetId}/image/url/public/redirect`;
+  }
+
   async create(createCourseDto: CreateCourseDto): Promise<Course> {
     const isPublished = createCourseDto.is_published;
 
@@ -46,7 +56,11 @@ export class CoursesService {
     return query.getMany();
   }
 
-  async findOne(id: string): Promise<Course> {
+  async findOne(
+    id: string,
+  ): Promise<
+    Course & { introVideoPath?: string; coverImagePath?: string }
+  > {
     const courseId = Number(id);
     const course = await this.courseRepository.findOne({
       where: { id: courseId },
@@ -54,7 +68,20 @@ export class CoursesService {
     if (!course) {
       throw new NotFoundException(`Course with ID ${id} not found`);
     }
-    return course;
+
+    const introVideoPath = course.introMediaAssetId
+      ? this.buildPublicIntroVideoPath(course.introMediaAssetId)
+      : undefined;
+
+    const coverImagePath = course.coverMediaAssetId
+      ? this.buildPublicCoverImagePath(course.coverMediaAssetId)
+      : undefined;
+
+    return {
+      ...(course as Course),
+      introVideoPath,
+      coverImagePath,
+    };
   }
 
   async findByOwner(ownerId: string): Promise<Course[]> {
@@ -65,7 +92,36 @@ export class CoursesService {
 
   async update(id: string, updateCourseDto: UpdateCourseDto): Promise<Course> {
     const course = await this.findOne(id);
-    Object.assign(course, updateCourseDto);
+
+    if (updateCourseDto.title !== undefined) course.title = updateCourseDto.title;
+    if (updateCourseDto.description !== undefined)
+      course.description = updateCourseDto.description;
+
+    if (updateCourseDto.price !== undefined) {
+      course.price = Number(updateCourseDto.price ?? 0);
+    }
+
+    if (updateCourseDto.is_published !== undefined) {
+      course.isPublished = updateCourseDto.is_published;
+    }
+
+    if (updateCourseDto.categoryId !== undefined) {
+      course.categoryId = updateCourseDto.categoryId;
+    }
+
+    if (updateCourseDto.level !== undefined) {
+      course.level = String(updateCourseDto.level);
+    }
+
+    if (updateCourseDto.coverMediaId !== undefined) {
+      course.coverMediaAssetId = updateCourseDto.coverMediaId ?? undefined;
+    }
+
+    if (updateCourseDto.introMediaId !== undefined) {
+      course.introMediaAssetId = updateCourseDto.introMediaId ?? undefined;
+    }
+
+    // Intentionally ignore ownerId changes via update.
     return this.courseRepository.save(course);
   }
 

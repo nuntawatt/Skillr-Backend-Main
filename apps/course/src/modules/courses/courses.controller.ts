@@ -1,15 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  UseGuards,
-  Query,
-  Request,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Request, } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
@@ -19,19 +8,24 @@ import { UserRole } from '@common/enums';
 
 @Controller('courses')
 export class CoursesController {
-  constructor(private readonly coursesService: CoursesService) {}
+  constructor(private readonly coursesService: CoursesService) { }
 
   @Post()
   // @UseGuards(JwtAuthGuard, RolesGuard)
   // @Roles(UserRole.ADMIN)
-  
+
   create(
     @Body() createCourseDto: CreateCourseDto,
     @Request() req: { user?: AuthUser },
   ) {
-    const requestUserId = String(req.user?.sub ?? req.user?.id ?? '');
-    createCourseDto.ownerId = Number(requestUserId);
-    
+    const rawUserId = req.user?.sub ?? req.user?.id;
+    const requestUserId =
+      typeof rawUserId === 'string' ? Number(rawUserId) : rawUserId;
+    // No-login flow: if no user on request, keep ownerId from body.
+    if (Number.isFinite(requestUserId as number)) {
+      createCourseDto.ownerId = Number(requestUserId);
+    }
+
     return this.coursesService.create(createCourseDto);
   }
 
