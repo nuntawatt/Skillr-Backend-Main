@@ -1,4 +1,5 @@
-import { IsString, IsOptional, IsNumber, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsString, IsOptional, IsInt, Min, IsNumber } from 'class-validator';
 
 export class CreateLessonDto {
   @IsString()
@@ -13,6 +14,8 @@ export class CreateLessonDto {
   @Min(0)
   position?: number;
 
-  @IsString()
-  courseId: string;
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  courseId: number;
 }

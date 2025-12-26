@@ -12,6 +12,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { LearningService } from './learning.service';
+import { LearningDashboardService } from './learning-dashboard.service';
+import { LearningProgressService } from './learning-progress.service';
 import { CreateQuizDto } from './dto/create-quiz.dto';
 import { UpdateQuizDto } from './dto/update-quiz.dto';
 import { SubmitQuizDto } from './dto/submit-quiz.dto';
@@ -34,7 +36,11 @@ function getUserIdOrThrow(user?: AuthUser): string {
 @Controller('learning')
 @UseGuards(JwtAuthGuard)
 export class LearningController {
-  constructor(private readonly learningService: LearningService) {}
+  constructor(
+    private readonly learningService: LearningService,
+    private readonly learningProgressService: LearningProgressService,
+    private readonly learningDashboardService: LearningDashboardService,
+  ) {}
 
   // Quiz CRUD
   @Post('quizzes')
@@ -90,5 +96,33 @@ export class LearningController {
   @Get('quizzes/:id/attempts')
   getMyAttempts(@Param('id') id: string, @Request() req: RequestWithUser) {
     return this.learningService.getAttempts(id, getUserIdOrThrow(req.user));
+  }
+
+  @Post('lessons/:id/complete')
+  completeLesson(@Param('id') id: string, @Request() req: RequestWithUser) {
+    return this.learningProgressService.completeLesson(
+      getUserIdOrThrow(req.user),
+      id,
+    );
+  }
+
+  @Get('progress')
+  getProgressSummary(@Request() req: RequestWithUser) {
+    return this.learningProgressService.getSummary(getUserIdOrThrow(req.user));
+  }
+
+  @Get('lessons/:id/progress')
+  getLessonProgress(@Param('id') id: string, @Request() req: RequestWithUser) {
+    return this.learningProgressService.getLessonProgress(
+      getUserIdOrThrow(req.user),
+      id,
+    );
+  }
+
+  @Get('dashboard')
+  getDashboard(@Request() req: RequestWithUser) {
+    return this.learningDashboardService.getDashboard(
+      getUserIdOrThrow(req.user),
+    );
   }
 }

@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessThan, Repository } from 'typeorm';
@@ -7,7 +12,9 @@ import { MediaAsset, MediaAssetStatus } from './entities/media-asset.entity';
 import { MediaAssetsService } from './media-assets.service';
 
 @Injectable()
-export class MediaAssetsCleanupService implements OnModuleInit, OnModuleDestroy {
+export class MediaAssetsCleanupService
+  implements OnModuleInit, OnModuleDestroy
+{
   private readonly logger = new Logger(MediaAssetsCleanupService.name);
   private interval: NodeJS.Timeout | undefined;
 
@@ -19,7 +26,9 @@ export class MediaAssetsCleanupService implements OnModuleInit, OnModuleDestroy 
   ) {}
 
   onModuleInit() {
-    const enabledRaw = this.configService.get<string>('MEDIA_ASSET_CLEANUP_ENABLED');
+    const enabledRaw = this.configService.get<string>(
+      'MEDIA_ASSET_CLEANUP_ENABLED',
+    );
     const enabled = enabledRaw === undefined ? true : enabledRaw === 'true';
     if (!enabled) {
       this.logger.log('Media asset cleanup disabled');
@@ -27,7 +36,8 @@ export class MediaAssetsCleanupService implements OnModuleInit, OnModuleDestroy 
     }
 
     const intervalSeconds = Number(
-      this.configService.get<string>('MEDIA_ASSET_CLEANUP_INTERVAL_SECONDS') ?? '600',
+      this.configService.get<string>('MEDIA_ASSET_CLEANUP_INTERVAL_SECONDS') ??
+        '600',
     );
     const ms = Math.max(30, intervalSeconds) * 1000;
 
@@ -36,7 +46,9 @@ export class MediaAssetsCleanupService implements OnModuleInit, OnModuleDestroy 
     }, ms);
 
     void this.cleanupOnce();
-    this.logger.log(`Media asset cleanup started (every ${Math.round(ms / 1000)}s)`);
+    this.logger.log(
+      `Media asset cleanup started (every ${Math.round(ms / 1000)}s)`,
+    );
   }
 
   onModuleDestroy() {
@@ -48,7 +60,8 @@ export class MediaAssetsCleanupService implements OnModuleInit, OnModuleDestroy 
 
   private async cleanupOnce() {
     const ttlSeconds = Number(
-      this.configService.get<string>('MEDIA_ASSET_PENDING_TTL_SECONDS') ?? '3600',
+      this.configService.get<string>('MEDIA_ASSET_PENDING_TTL_SECONDS') ??
+        '3600',
     );
     const cutoff = new Date(Date.now() - Math.max(60, ttlSeconds) * 1000);
 
@@ -72,6 +85,8 @@ export class MediaAssetsCleanupService implements OnModuleInit, OnModuleDestroy 
       }
     }
 
-    this.logger.log(`Cleaned up ${deleted} pending media assets (cutoff=${cutoff.toISOString()})`);
+    this.logger.log(
+      `Cleaned up ${deleted} pending media assets (cutoff=${cutoff.toISOString()})`,
+    );
   }
 }

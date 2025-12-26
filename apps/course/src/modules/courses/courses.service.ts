@@ -10,7 +10,7 @@ export class CoursesService {
   constructor(
     @InjectRepository(Course)
     private readonly courseRepository: Repository<Course>,
-  ) { }
+  ) {}
 
   private buildPublicIntroVideoPath(mediaAssetId: number): string {
     // Path-only so frontend can prefix with MEDIA_ORIGIN from env.
@@ -26,7 +26,10 @@ export class CoursesService {
     const isPublished = createCourseDto.is_published;
 
     const payload: DeepPartial<Course> = {
-      ownerUserId: createCourseDto.ownerId !== undefined ? Number(createCourseDto.ownerId) : undefined,
+      ownerUserId:
+        createCourseDto.ownerId !== undefined
+          ? Number(createCourseDto.ownerId)
+          : undefined,
       title: createCourseDto.title,
       description: createCourseDto.description,
       price: Number(createCourseDto.price ?? 0),
@@ -37,7 +40,7 @@ export class CoursesService {
       introMediaAssetId: createCourseDto.introMediaId ?? undefined,
       durationSeconds: 0,
     };
-    
+
     const course = this.courseRepository.create(payload);
     return this.courseRepository.save(course);
   }
@@ -58,9 +61,7 @@ export class CoursesService {
 
   async findOne(
     id: string,
-  ): Promise<
-    Course & { introVideoPath?: string; coverImagePath?: string }
-  > {
+  ): Promise<Course & { introVideoPath?: string; coverImagePath?: string }> {
     const courseId = Number(id);
     const course = await this.courseRepository.findOne({
       where: { id: courseId },
@@ -78,7 +79,7 @@ export class CoursesService {
       : undefined;
 
     return {
-      ...(course as Course),
+      ...course,
       introVideoPath,
       coverImagePath,
     };
@@ -93,7 +94,8 @@ export class CoursesService {
   async update(id: string, updateCourseDto: UpdateCourseDto): Promise<Course> {
     const course = await this.findOne(id);
 
-    if (updateCourseDto.title !== undefined) course.title = updateCourseDto.title;
+    if (updateCourseDto.title !== undefined)
+      course.title = updateCourseDto.title;
     if (updateCourseDto.description !== undefined)
       course.description = updateCourseDto.description;
 

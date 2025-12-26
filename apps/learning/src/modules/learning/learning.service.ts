@@ -151,4 +151,49 @@ export class LearningService {
       order: { startedAt: 'DESC' },
     });
   }
+
+  async getUserAttemptStats(userId: string): Promise<QuizAttemptStats> {
+    const numericUserId = Number(userId);
+    const [totalAttempts, passedAttempts, latestAttempt] = await Promise.all([
+      this.attemptRepository.count({
+        where: { userId: numericUserId },
+      }),
+      this.attemptRepository.count({
+        where: { userId: numericUserId, passed: true },
+      }),
+      this.attemptRepository.findOne({
+        where: { userId: numericUserId },
+        order: { completedAt: 'DESC' },
+        relations: ['quiz'],
+      }),
+    ]);
+
+    return {
+      totalAttempts,
+      passedAttempts,
+      latestAttempt: latestAttempt
+        ? {
+            quizId: latestAttempt.quizId,
+            quizTitle: latestAttempt.quiz?.title,
+            score: latestAttempt.score ?? undefined,
+            passed: Boolean(latestAttempt.passed),
+            completedAt: latestAttempt.completedAt,
+          }
+        : undefined,
+    };
+  }
 }
+
+export type QuizAttemptInsight = {
+  quizId: number;
+  quizTitle?: string;
+  passed: boolean;
+  score?: number;
+  completedAt?: Date;
+};
+
+export type QuizAttemptStats = {
+  totalAttempts: number;
+  passedAttempts: number;
+  latestAttempt?: QuizAttemptInsight;
+};

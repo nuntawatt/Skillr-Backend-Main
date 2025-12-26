@@ -1,4 +1,16 @@
-import { Body, Controller, Get, Param, Post, Redirect, Req, UploadedFile, UseGuards, UseInterceptors, Res, } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Redirect,
+  Req,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+  Res,
+} from '@nestjs/common';
 import { JwtAuthGuard, Roles, RolesGuard } from '@auth';
 import type { AuthUser } from '@auth';
 import { UserRole } from '@common/enums';
@@ -28,7 +40,7 @@ function parseOptionalNumber(value: unknown): number | undefined {
 
 @Controller('media/videos')
 export class MediaVideosController {
-  constructor(private readonly mediaAssetsService: MediaAssetsService) { }
+  constructor(private readonly mediaAssetsService: MediaAssetsService) {}
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -69,7 +81,7 @@ export class MediaVideosController {
       file,
       req.user,
       mediaAssetId,
-      ownerUserId,  
+      ownerUserId,
     );
   }
 

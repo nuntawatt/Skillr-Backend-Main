@@ -1,5 +1,12 @@
 import { Transform, Type } from 'class-transformer';
-import { IsString, IsOptional, IsBoolean, IsNotEmpty, IsInt, IsIn, } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsNotEmpty,
+  IsInt,
+  IsIn,
+} from 'class-validator';
 
 function transformOptionalNumber({ value }: { value: unknown }) {
   if (value === null || value === undefined || value === '') return undefined;

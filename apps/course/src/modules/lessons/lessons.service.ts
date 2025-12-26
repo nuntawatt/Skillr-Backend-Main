@@ -9,7 +9,10 @@ import { Repository } from 'typeorm';
 import { Lesson } from './entities/lesson.entity';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
-import { LessonResource, LessonResourceType, } from './entities/lesson-resource.entity';
+import {
+  LessonResource,
+  LessonResourceType,
+} from './entities/lesson-resource.entity';
 import { CreateLessonResourceDto } from './dto/create-lesson-resource.dto';
 
 @Injectable()
@@ -19,7 +22,7 @@ export class LessonsService {
     private readonly lessonRepository: Repository<Lesson>,
     @InjectRepository(LessonResource)
     private readonly lessonResourceRepository: Repository<LessonResource>,
-  ) { }
+  ) {}
 
   async create(createLessonDto: CreateLessonDto): Promise<Lesson> {
     const lesson = this.lessonRepository.create({

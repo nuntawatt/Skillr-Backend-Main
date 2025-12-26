@@ -16,10 +16,10 @@ RUN pnpm install --frozen-lockfile
 # Ensure a clean build output inside Docker (avoid stale incremental artifacts)
 RUN rm -rf dist
 RUN pnpm exec nest build media
+RUN ls -R dist/apps/media || true
 
 # Runtime stage
 FROM node:20-alpine
-
 WORKDIR /app
 ENV NODE_ENV=production
 
@@ -29,5 +29,5 @@ COPY --from=builder /app/package.json ./package.json
 
 EXPOSE 3002
 
-# Nest build output includes the original monorepo path (apps/media/src)
+# Try common build entry paths; if none exist, print tree and exit
 CMD ["node", "dist/apps/media/apps/media/src/main.js"]

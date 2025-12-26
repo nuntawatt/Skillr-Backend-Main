@@ -43,7 +43,9 @@ export class MediaAssetsController {
     @UploadedFile('file') file: Express.Multer.File,
     @Body() body: Record<string, unknown>,
   ) {
-    const ownerUserId = parseOptionalNumber(body?.['owner_user_id'] ?? body?.['ownerUserId']);
+    const ownerUserId = parseOptionalNumber(
+      body?.['owner_user_id'] ?? body?.['ownerUserId'],
+    );
     return this.mediaAssetsService.uploadImageFileAndPersist(file, ownerUserId);
   }
 

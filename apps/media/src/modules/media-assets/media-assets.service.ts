@@ -13,7 +13,11 @@ import * as Minio from 'minio';
 import type { AuthUser } from '@auth';
 import type { Response } from 'express';
 
-import { MediaAsset, MediaAssetStatus, MediaAssetType, } from './entities/media-asset.entity';
+import {
+  MediaAsset,
+  MediaAssetStatus,
+  MediaAssetType,
+} from './entities/media-asset.entity';
 import { CreateVideoUploadDto } from './dto/create-video-upload.dto';
 
 @Injectable()
@@ -24,7 +28,7 @@ export class MediaAssetsService {
   getVideoInfo(arg0: number) {
     throw new Error('Method not implemented.');
   }
-  
+
   private readonly s3: Minio.Client;
 
   constructor(
@@ -109,7 +113,7 @@ export class MediaAssetsService {
 
     const maxSizeBytes = Number(
       this.configService.get<string>('VIDEO_MAX_SIZE_BYTES') ??
-      String(2 * 1024 * 1024 * 1024),
+        String(2 * 1024 * 1024 * 1024),
     );
     if (file.size > maxSizeBytes) {
       throw new BadRequestException('file size exceeds limit');
@@ -178,20 +182,24 @@ export class MediaAssetsService {
     const allow = (
       this.configService.get<string>('IMAGE_MIME_ALLOWLIST') ??
       'image/png,image/jpeg,image/jpg'
-    ).split(',').map((s) => s.trim().toLowerCase());
+    )
+      .split(',')
+      .map((s) => s.trim().toLowerCase());
     if (!allow.includes(mime)) {
       throw new BadRequestException('image mime_type is not allowed');
     }
 
     const maxSizeBytes = Number(
-      this.configService.get<string>('IMAGE_MAX_SIZE_BYTES') ?? String(5 * 1024 * 1024),
+      this.configService.get<string>('IMAGE_MAX_SIZE_BYTES') ??
+        String(5 * 1024 * 1024),
     );
     if (file.size > maxSizeBytes) {
       throw new BadRequestException('file size exceeds limit');
     }
 
     const bucket = this.getBucketOrThrow();
-    const keyPrefix = this.configService.get<string>('S3_IMAGE_KEY_PREFIX') ?? 'images';
+    const keyPrefix =
+      this.configService.get<string>('S3_IMAGE_KEY_PREFIX') ?? 'images';
     const objectKey = `${keyPrefix}/${randomUUID()}`;
 
     await this.s3.putObject(bucket, objectKey, file.buffer, file.size, {
@@ -209,7 +217,8 @@ export class MediaAssetsService {
         originalFilename: file.originalname,
         mimeType: file.mimetype,
         sizeBytes: String(file.size),
-        storageProvider: this.configService.get<string>('STORAGE_PROVIDER') ?? 'minio',
+        storageProvider:
+          this.configService.get<string>('STORAGE_PROVIDER') ?? 'minio',
         storageBucket: bucket,
         storageKey: objectKey,
         publicUrl,
@@ -320,13 +329,11 @@ export class MediaAssetsService {
     }
   }
 
-
   private getUserIdOrZero(user: AuthUser): number {
     const raw = user.sub ?? user.id;
     const n = typeof raw === 'string' ? Number(raw) : raw;
     return Number.isFinite(n) ? Number(n) : 0;
   }
-
 
   private validateVideoMime(mimeType: string) {
     const allow = (
@@ -339,14 +346,13 @@ export class MediaAssetsService {
     }
   }
 
-  
   async createVideoUpload(dto: CreateVideoUploadDto, requestUser: AuthUser) {
     this.assertAdmin(requestUser);
     this.validateVideoMime(dto.mime_type);
 
     const maxSizeBytes = Number(
       this.configService.get<string>('VIDEO_MAX_SIZE_BYTES') ??
-      String(2 * 1024 * 1024 * 1024),
+        String(2 * 1024 * 1024 * 1024),
     );
     if (dto.size_bytes > maxSizeBytes) {
       throw new BadRequestException('size_bytes exceeds limit');
@@ -368,7 +374,6 @@ export class MediaAssetsService {
         this.configService.get<string>('STORAGE_PROVIDER') ?? 's3',
       storageBucket: bucket,
       storageKey: key,
-
     });
     const saved = await this.mediaAssetsRepository.save(asset);
 
@@ -427,7 +432,13 @@ export class MediaAssetsService {
     }
     const mime = asset.mimeType ?? 'application/octet-stream';
     const size = asset.sizeBytes ? Number(asset.sizeBytes) : undefined;
-    return this.streamObject(asset.storageBucket, asset.storageKey, res, mime, size);
+    return this.streamObject(
+      asset.storageBucket,
+      asset.storageKey,
+      res,
+      mime,
+      size,
+    );
   }
 
   // Stream an object by key (for videos where key may be provided without the prefix).
@@ -437,7 +448,9 @@ export class MediaAssetsService {
     let mime = 'application/octet-stream';
     let size: number | undefined = undefined;
     try {
-      const maybe = await this.mediaAssetsRepository.findOne({ where: { storageBucket: bucket, storageKey: objectKey } });
+      const maybe = await this.mediaAssetsRepository.findOne({
+        where: { storageBucket: bucket, storageKey: objectKey },
+      });
       if (maybe) {
         mime = maybe.mimeType ?? mime;
         size = maybe.sizeBytes ? Number(maybe.sizeBytes) : undefined;
@@ -448,16 +461,27 @@ export class MediaAssetsService {
     return this.streamObject(bucket, objectKey, res, mime, size);
   }
 
-  private async streamObject(bucket: string, objectKey: string, res: Response, mimeType?: string, sizeBytes?: number) {
+  private async streamObject(
+    bucket: string,
+    objectKey: string,
+    res: Response,
+    mimeType?: string,
+    sizeBytes?: number,
+  ) {
     try {
       // Recent minio client returns a Promise<ReadableStream> for getObject.
-      const dataStream: NodeJS.ReadableStream = await (this.s3 as any).getObject(bucket, objectKey);
+      const dataStream: NodeJS.ReadableStream = await (
+        this.s3 as any
+      ).getObject(bucket, objectKey);
       if (mimeType) res.setHeader('Content-Type', mimeType);
-      if (sizeBytes && Number.isFinite(sizeBytes)) res.setHeader('Content-Length', String(sizeBytes));
+      if (sizeBytes && Number.isFinite(sizeBytes))
+        res.setHeader('Content-Length', String(sizeBytes));
 
       await new Promise<void>((resolve, reject) => {
         dataStream.on('error', (e) => {
-          try { res.end(); } catch {}
+          try {
+            res.end();
+          } catch {}
           reject(e);
         });
         dataStream.on('end', () => resolve());
