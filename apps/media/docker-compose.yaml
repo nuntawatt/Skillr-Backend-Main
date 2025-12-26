@@ -24,6 +24,8 @@ services:
       - media_pg_data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
+      # Use escaped $$POSTGRES_USER so Compose passes $POSTGRES_USER into the container
+      # and the shell inside the container expands it from the env_file.
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U $$POSTGRES_USER"]
       interval: 5s
       timeout: 5s
