@@ -28,6 +28,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   const port = Number(process.env.PORT ?? 3002);
+  // const portInfo = isNaN(port) ? process. : port;
   await app.listen(port);
 
   logger.log(`Media service listening on http://localhost:${port}/api`);
