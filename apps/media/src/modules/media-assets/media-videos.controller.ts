@@ -87,7 +87,7 @@ export class MediaVideosController {
   @Get('file/:key')
   getFileUrl(@Param('key') key: string) {
     return this.mediaAssetsService.getVideoFileUrl(key);
-  }
+  } 
 
   // Example: http://10.3.1.88:3002/api/media/videos/file/<key>/redirect
   @Get('file/:key/redirect')
