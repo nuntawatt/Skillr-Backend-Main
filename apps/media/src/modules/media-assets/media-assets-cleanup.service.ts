@@ -70,7 +70,7 @@ export class MediaAssetsCleanupService
         { status: MediaAssetStatus.UPLOADING, createdAt: LessThan(cutoff) },
         { status: MediaAssetStatus.PROCESSING, createdAt: LessThan(cutoff) },
       ],
-      take: 200,
+      take: 200, 
     });
 
     if (candidates.length === 0) return;

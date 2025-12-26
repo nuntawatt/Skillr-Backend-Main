@@ -240,7 +240,7 @@ export class MediaAssetsService {
       this.configService.get<string>('S3_SIGNED_URL_EXPIRES_SECONDS') ?? '900',
     );
     return this.s3.presignedGetObject(bucket, dir, expiresIn);
-  }
+  } 
 
   async getPublicAssetStatus(id: number) {
     const asset = await this.getAssetOrThrow(id);

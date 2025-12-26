@@ -12,7 +12,7 @@ function parseOptionalNumber(value: unknown): number | undefined {
   if (typeof value === 'string') {
     const trimmed = value.trim();
     if (trimmed === '') {
-      return undefined;
+      return undefined; 
     }
     const parsed = Number(trimmed);
     return Number.isFinite(parsed) ? parsed : undefined;
