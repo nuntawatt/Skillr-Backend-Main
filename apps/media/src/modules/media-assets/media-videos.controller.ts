@@ -58,7 +58,6 @@ export class MediaVideosController {
   }
 
   @Post('upload')
-  // lock this down to ADMIN only
   // @UseGuards(JwtAuthGuard, RolesGuard)
   // @Roles(UserRole.ADMIN)
   @UseInterceptors(FileInterceptor('file'))
@@ -98,8 +97,8 @@ export class MediaVideosController {
     return { url };
   }
 
-  // Stream the video file through the API so clients don't access MinIO directly.
-  @Get('file/:key/stream')
+  // Stream the video file through the API so the client does not need direct
+  @Get('presign/:key')
   async streamFileByKey(@Param('key') key: string, @Res() res: any) {
     return this.mediaAssetsService.streamObjectByKey(key, res);
   }

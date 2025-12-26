@@ -242,46 +242,6 @@ export class MediaAssetsService {
     return this.s3.presignedGetObject(bucket, dir, expiresIn);
   }
 
-  async getVideoUrlByMediaAssetId(mediaAssetId: number) {
-    const asset = await this.getAssetOrThrow(mediaAssetId);
-    if (asset.type !== MediaAssetType.VIDEO) {
-      throw new BadRequestException('media asset is not a video');
-    }
-    if (asset.status !== MediaAssetStatus.READY) {
-      throw new ConflictException('media asset is not ready');
-    }
-    if (!asset.storageKey) {
-      throw new BadRequestException('storage_key is missing');
-    }
-
-    // storageKey is expected to be like "videos/<uuid>" or similar
-    const bucket = asset.storageBucket ?? this.getBucketOrThrow();
-    const expiresIn = Number(
-      this.configService.get<string>('S3_SIGNED_URL_EXPIRES_SECONDS') ?? '900',
-    );
-    const objectKey = asset.storageKey;
-    return this.s3.presignedGetObject(bucket, objectKey, expiresIn);
-  }
-
-  async getImageUrlByMediaAssetId(mediaAssetId: number) {
-    const asset = await this.getAssetOrThrow(mediaAssetId);
-    if (asset.type !== MediaAssetType.IMAGE) {
-      throw new BadRequestException('media asset is not an image');
-    }
-    if (asset.status !== MediaAssetStatus.READY) {
-      throw new ConflictException('media asset is not ready');
-    }
-    if (!asset.storageKey) {
-      throw new BadRequestException('storage_key is missing');
-    }
-
-    const bucket = asset.storageBucket ?? this.getBucketOrThrow();
-    const expiresIn = Number(
-      this.configService.get<string>('S3_SIGNED_URL_EXPIRES_SECONDS') ?? '900',
-    );
-    return this.s3.presignedGetObject(bucket, asset.storageKey, expiresIn);
-  }
-
   async getPublicAssetStatus(id: number) {
     const asset = await this.getAssetOrThrow(id);
     return {
@@ -297,7 +257,6 @@ export class MediaAssetsService {
     const asset = await this.mediaAssetsRepository.findOne({ where: { id } });
     if (!asset) return { deleted: false };
 
-    // Best-effort object deletion.
     const bucket = asset.storageBucket;
     const key = asset.storageKey;
     if (bucket && key) {
@@ -441,7 +400,7 @@ export class MediaAssetsService {
     );
   }
 
-  // Stream an object by key (for videos where key may be provided without the prefix).
+  // Stream an object by key
   async streamObjectByKey(key: string, res: Response) {
     const bucket = this.getBucketOrThrow();
     const objectKey = key.startsWith('videos/') ? key : `videos/${key}`;
