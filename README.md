@@ -30,7 +30,7 @@ Skllr backend is a NestJS monorepo with 5 services and shared libraries.
 skillr/
   apps/   # auth, course, media, learning, payment
   libs/   # common, config, auth, shared
-```
+``` 
 
 ## Services & Ports
 
