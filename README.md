@@ -38,26 +38,23 @@ Ports are set per service in `skillr/package.json` scripts (so you can run multi
 
 | Service | Command | Port |
 |---|---|---:|
-| auth | `pnpm run start:auth` | 3000 |
-| course | `pnpm run start:course` | 3001 |
-| media | `pnpm run start:media` | 3002 |
+| auth | `pnpm run start:auth` | 3001 |
+| course | `pnpm run start:course` | 3002 |
 | learning | `pnpm run start:learning` | 3003 |
-| payment | `pnpm run start:payment` | 3004 |
+| media | `pnpm run start:media` | 3004 |
+| payment | `pnpm run start:payment` | 3005 |
 
 ## Roles
 
 This project uses 2 roles:
-
 - `ADMIN`
 - `STUDENT`
 
-## Quickstart
+## Build Project
 
 ```bash
-cd skillr
 pnpm install
 pnpm run build:all
-pnpm run start:auth
 ```
 
 ## Environment
@@ -80,16 +77,8 @@ GOOGLE_CALLBACK_URL=localhost:Port/auth/google/callback
 ## Common Commands
 
 ```bash
-cd skillr
 pnpm run build:all
 pnpm run lint
 pnpm run test
 pnpm run test:e2e
-```
-
-## Nest CLI (Generate)
-
-```powershell
-cd .\skillr
-pnpm 
 ```
