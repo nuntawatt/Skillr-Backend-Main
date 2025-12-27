@@ -27,7 +27,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.setGlobalPrefix('api');
 
-  const port = Number(process.env.PORT ?? 3002);
+  const port = Number(process.env.PORT ?? 3004);
   // const portInfo = isNaN(port) ? process. : port;
   await app.listen(port);
 

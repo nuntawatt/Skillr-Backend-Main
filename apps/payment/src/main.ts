@@ -23,7 +23,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.setGlobalPrefix('api');
 
-  const port = Number(process.env.PORT ?? 3004);
+  const port = Number(process.env.PORT ?? 3005);
   await app.listen(port);
 
   logger.log(`Payment service listening on http://localhost:${port}/api`);

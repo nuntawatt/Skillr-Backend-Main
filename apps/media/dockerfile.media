@@ -13,6 +13,7 @@ COPY libs ./libs
 
 # install deps and build media app
 RUN pnpm install --frozen-lockfile
+
 # Ensure a clean build output inside Docker (avoid stale incremental artifacts)
 RUN rm -rf dist
 RUN pnpm exec nest build media
@@ -27,7 +28,7 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
-EXPOSE 3002
+EXPOSE 3004
 
-# Nest build output includes the original monorepo path (apps/media/src)
+# Nest build output entrypoint
 CMD ["node", "dist/apps/media/apps/media/src/main.js"]

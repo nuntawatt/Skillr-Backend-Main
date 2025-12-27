@@ -17,7 +17,7 @@ RUN pnpm install --frozen-lockfile
 
 # ensure clean dist inside the build context to avoid stale artifacts
 RUN rm -rf dist
-RUN pnpm exec nest build course
+RUN pnpm exec nest build payment
 
 # Runtime stage
 FROM node:20-alpine
@@ -29,7 +29,7 @@ COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
-EXPOSE 3002
+EXPOSE 3005
 
-# Nest build output entrypoint
-CMD ["node", "dist/apps/course/apps/course/src/main.js"]
+# Nest build output includes the original monorepo path (apps/payment/src)
+CMD ["node", "dist/apps/payment/apps/payment/src/main.js"]

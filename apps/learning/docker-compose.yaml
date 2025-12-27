@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: skillr_learning_postgres
+    env_file:
+      - .env.docker
+    ports:
+      - "5440:5432"
+    volumes:
+      - learning_pg_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      # Use escaped $$ so the variable is expanded inside the container
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  learning:
+    container_name: skillr_learning_api
+    build:
+      context: ../..
+      dockerfile: apps/learning/dockerfile.learning
+    env_file:
+      - .env.docker
+    ports:
+      - "3003:3003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  learning_pg_data:

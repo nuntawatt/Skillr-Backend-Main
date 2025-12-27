@@ -19,7 +19,7 @@ async function bootstrap() {
 
   app.use(cookieParser());
 
-  const port = Number(process.env.PORT ?? 3000);
+  const port = Number(process.env.PORT ?? 3001);
   await app.listen(port);
 
   logger.log(`Auth service listening on http://localhost:${port}`);
