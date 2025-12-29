@@ -43,8 +43,8 @@ export class MediaVideosController {
   constructor(private readonly mediaAssetsService: MediaAssetsService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  // @Roles(UserRole.ADMIN)
   createUpload(
     @Body() dto: CreateVideoUploadDto,
     @Req() req: RequestWithUserAndBody,

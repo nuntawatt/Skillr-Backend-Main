@@ -25,8 +25,10 @@ export class Lesson {
   @Column({ name: 'position', type: 'int', default: 0 })
   position: number;
 
-  @Column({ name: 'course_id' })
-  courseId: number;
+  // Allow null when lesson is not yet attached to a course
+  // This avoids inserting a foreign-key value of 0 which may not exist
+  @Column({ name: 'course_id', type: 'int', nullable: true })
+  courseId?: number | null;
 
   @ManyToOne(() => Course, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'course_id' })

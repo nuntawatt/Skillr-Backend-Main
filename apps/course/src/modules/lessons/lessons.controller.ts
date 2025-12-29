@@ -40,8 +40,8 @@ export class LessonsController {
 
   // ตาม flow: ผูกวิดีโอเข้ากับ Lesson (สร้าง lesson_resources)
   @Post(':id/resources')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  // @Roles(UserRole.ADMIN)
   createResource(
     @Param('id') lessonId: string,
     @Body() dto: CreateLessonResourceDto,

@@ -6,6 +6,7 @@ import {
   IsNotEmpty,
   IsInt,
   IsIn,
+  IsArray,
 } from 'class-validator';
 
 function transformOptionalNumber({ value }: { value: unknown }) {
@@ -30,21 +31,10 @@ export class CreateCourseDto {
   @IsOptional()
   @IsString()
   description?: string;
-
-  @IsOptional()
-  @IsInt()
-  @Transform(transformOptionalNumber)
-  ownerId?: number;
-
   @IsOptional()
   @IsInt()
   @Transform(transformOptionalNumber)
   price?: number;
-
-  @IsOptional()
-  @IsBoolean()
-  @Transform(transformOptionalBoolean)
-  is_published?: boolean;
 
   @IsOptional()
   @IsInt()
@@ -56,6 +46,11 @@ export class CreateCourseDto {
   level?: string;
 
   @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
+
+  @IsOptional()
   @IsInt()
   @Transform(transformOptionalNumber)
   coverMediaId?: number;
@@ -64,4 +59,9 @@ export class CreateCourseDto {
   @IsInt()
   @Transform(transformOptionalNumber)
   introMediaId?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Transform(transformOptionalNumber)
+  ownerId?: number;
 }

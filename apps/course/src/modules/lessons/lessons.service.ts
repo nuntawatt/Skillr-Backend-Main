@@ -26,7 +26,9 @@ export class LessonsService {
 
   async create(createLessonDto: CreateLessonDto): Promise<Lesson> {
     const lesson = this.lessonRepository.create({
-      courseId: Number(createLessonDto.courseId),
+      courseId: createLessonDto.courseId
+        ? Number(createLessonDto.courseId)
+        : null,
       title: createLessonDto.title,
       contentText: createLessonDto.content_text,
       position: Number(createLessonDto.position ?? 0),

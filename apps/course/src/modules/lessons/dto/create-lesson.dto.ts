@@ -14,8 +14,10 @@ export class CreateLessonDto {
   @Min(0)
   position?: number;
 
+  // courseId is optional for now; default to 0 when not provided.
   @Type(() => Number)
+  @IsOptional()
   @IsInt()
-  @Min(1)
-  courseId: number;
+  @Min(0)
+  courseId?: number;
 }

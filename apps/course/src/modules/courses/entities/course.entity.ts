@@ -32,6 +32,9 @@ export class Course {
   @Column({ name: 'level', type: 'varchar', length: 20, default: 'beginner' })
   level: string;
 
+  @Column({ type: 'text', array: true, nullable: true })
+  tags?: string[];
+
   @Column({ name: 'cover_media_asset_id', type: 'int', nullable: true })
   coverMediaAssetId?: number;
 
