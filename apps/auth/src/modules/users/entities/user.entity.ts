@@ -1,19 +1,10 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  OneToMany,
-  Index,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, Index, } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { AuthProvider, UserRole } from '@common/enums';
 import { PasswordResetToken } from './password-reset-token.entity';
 import { Session } from './session.entity';
 import { EmailVerificationToken } from './email-verification-token.entity';
 
-// User Entity
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn()

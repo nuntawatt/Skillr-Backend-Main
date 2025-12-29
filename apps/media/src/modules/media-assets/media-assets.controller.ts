@@ -42,13 +42,13 @@ export class MediaAssetsController {
     return this.mediaAssetsService.streamObjectByMediaAssetId(Number(id), res);
   }
 
-  // Public (no-login) status check: ready or not
+  // Public: get asset status
   @Get('status/public/:id')
   getStatusPublic(@Param('id') id: string) {
     return this.mediaAssetsService.getPublicAssetStatus(Number(id));
   }
 
-  // ใช้สำหรับ Course service ตรวจว่า asset ready ก่อน attach
+  // Admin-only: get full asset info
   @Get(':id')
   // @UseGuards(JwtAuthGuard, RolesGuard)
   // @Roles(UserRole.ADMIN)

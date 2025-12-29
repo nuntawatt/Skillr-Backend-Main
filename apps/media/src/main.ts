@@ -1,9 +1,5 @@
 import { NestFactory, Reflector } from '@nestjs/core';
-import {
-  ClassSerializerInterceptor,
-  Logger,
-  ValidationPipe,
-} from '@nestjs/common';
+import { ClassSerializerInterceptor, Logger, ValidationPipe, } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -12,8 +8,7 @@ async function bootstrap() {
     logger: ['log', 'error', 'warn'],
   });
 
-  // Allow other devices in the same LAN to call the API from a frontend origin.
-  // For production, restrict origins explicitly.
+  // Enable CORS for all origins (adjust as needed for production)
   app.enableCors({ origin: true, credentials: true });
 
   app.useGlobalPipes(
@@ -28,7 +23,8 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   const port = Number(process.env.PORT ?? 3004);
-  // const portInfo = isNaN(port) ? process. : port;
+  
+  // Start the application
   await app.listen(port);
 
   logger.log(`Media service listening on http://localhost:${port}/api`);

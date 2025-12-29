@@ -1,24 +1,7 @@
-import {
-  Controller,
-  Post,
-  Get,
-  Body,
-  UseGuards,
-  Req,
-  Res,
-  HttpCode,
-  HttpStatus,
-  BadRequestException,
-} from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards, Req, Res, HttpCode, HttpStatus, BadRequestException } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
-import {
-  RegisterDto,
-  LoginDto,
-  RefreshTokenDto,
-  ForgotPasswordDto,
-  ResetPasswordDto,
-} from './dto';
+import { RegisterDto, LoginDto, RefreshTokenDto, ForgotPasswordDto, ResetPasswordDto, } from './dto';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -39,7 +22,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   // Register a new user
   @Post('register')
@@ -74,7 +57,7 @@ export class AuthController {
   // Google OAuth - Initiate
   @Get('google')
   @UseGuards(GoogleAuthGuard)
-  async googleAuth() {}
+  async googleAuth() { }
 
   // Google OAuth - Callback
   @Get('google/callback')
@@ -212,7 +195,7 @@ export class AuthController {
   }
 
   // Get current authenticated user
-  @Get('me')
+  @Get('myself')
   @UseGuards(JwtAuthGuard)
   getMe(@CurrentUser() user: unknown) {
     return user;

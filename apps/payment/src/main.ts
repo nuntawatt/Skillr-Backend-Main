@@ -1,9 +1,5 @@
 import { NestFactory, Reflector } from '@nestjs/core';
-import {
-  ClassSerializerInterceptor,
-  Logger,
-  ValidationPipe,
-} from '@nestjs/common';
+import { ClassSerializerInterceptor, Logger, ValidationPipe, } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {

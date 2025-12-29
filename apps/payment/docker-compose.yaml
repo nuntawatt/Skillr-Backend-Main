@@ -1,13 +1,13 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: skillr_auth_postgres
+    container_name: skillr_payment_postgres
     env_file:
       - .env.docker
     ports:
-      - "5430:5432"
+      - "5450:5432"
     volumes:
-      - auth_pg_data:/var/lib/postgresql/data
+      - payment_pg_data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U $$POSTGRES_USER -d $$POSTGRES_DB"]
@@ -15,19 +15,19 @@ services:
       timeout: 5s
       retries: 5
 
-  auth:
-    container_name: skillr_auth_api
+  payment:
+    container_name: skillr_payment_api
     build:
       context: ../..
-      dockerfile: apps/auth/dockerfile.auth
+      dockerfile: apps/payment/dockerfile.payment
     env_file:
       - .env.docker
     ports:
-      - "3001:3001"
+      - "3005:3005"
     depends_on:
       postgres:
         condition: service_healthy
     restart: unless-stopped
 
 volumes:
-  auth_pg_data:
+  payment_pg_data:

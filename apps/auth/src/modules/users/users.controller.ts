@@ -1,15 +1,4 @@
-import {
-  Controller,
-  Get,
-  Patch,
-  Param,
-  Body,
-  UseGuards,
-  Request,
-  Delete,
-  HttpCode,
-  HttpStatus,
-} from '@nestjs/common';
+import { Controller, Get, Patch, Param, Body, UseGuards, Request, Delete, HttpCode, HttpStatus } from '@nestjs/common';
 import type { Request as ExpressRequest } from 'express';
 import { UsersService } from './users.service';
 import { UpdateUserDto, UpdateRoleDto } from './dto';
@@ -23,10 +12,10 @@ type AuthedRequest = ExpressRequest & { user: { id: number } };
 @Controller('users')
 @UseGuards(JwtAuthGuard)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   // Get current user profile
-  @Get('me')
+  @Get('myself')
   async getProfile(@Request() req: AuthedRequest) {
     const user = await this.usersService.findById(req.user.id);
     if (!user) {
@@ -38,7 +27,7 @@ export class UsersController {
   }
 
   // Update current user profile
-  @Patch('me')
+  @Patch('myself')
   async updateProfile(
     @Request() req: AuthedRequest,
     @Body() updateUserDto: UpdateUserDto,
@@ -86,7 +75,7 @@ export class UsersController {
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
 export class AdminUsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   // Update user role (Admin)
   @Patch(':id/role')

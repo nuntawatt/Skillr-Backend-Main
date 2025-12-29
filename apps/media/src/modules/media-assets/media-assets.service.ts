@@ -1,10 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -24,7 +18,7 @@ export class MediaAssetsService {
   getVideoInfo(arg0: number) {
     throw new Error('Method not implemented.');
   }
-  
+
   private readonly s3: Minio.Client;
 
   constructor(
@@ -51,8 +45,7 @@ export class MediaAssetsService {
     accessKey: string;
     secretKey: string;
   } {
-    // IMPORTANT: the host used for presigned URLs must be reachable by the client.
-    // For LAN usage, set it to something like 10.3.1.88 (not localhost).
+
     const endpointRaw = this.configService.get<string>('S3_ENDPOINT');
     const explicitHost = this.configService.get<string>('MINIO_ENDPOINT');
     const explicitPort = this.configService.get<string>('MINIO_PORT');
@@ -73,7 +66,6 @@ export class MediaAssetsService {
         if (url.port) port = Number(url.port);
         useSSL = url.protocol === 'https:';
       } catch {
-        // If S3_ENDPOINT is not a URL, treat it as a hostname.
         endPoint = endpoint;
       }
     }
@@ -100,8 +92,8 @@ export class MediaAssetsService {
     mediaAssetId?: number,
     ownerUserIdFromBody?: number,
   ) {
-    // NOTE: temporarily allow public upload (no login required)
-    // If requestUser exists, keep the admin check. Otherwise allow.
+
+    // Validate mime type and permissions
     if (requestUser) {
       this.assertAdmin(requestUser);
     }
@@ -123,7 +115,6 @@ export class MediaAssetsService {
       if (asset.type !== MediaAssetType.VIDEO) {
         throw new BadRequestException('media asset is not a video');
       }
-      // Allow upload only for upload state assets.
       if (asset.status !== MediaAssetStatus.UPLOADING) {
         throw new ConflictException('invalid state');
       }
@@ -173,7 +164,7 @@ export class MediaAssetsService {
     file: Express.Multer.File,
     ownerUserIdFromBody?: number,
   ) {
-    // Allow public upload for now (no requestUser parameter here)
+    // Validate mime type
     const mime = (file.mimetype ?? '').toLowerCase();
     const allow = (
       this.configService.get<string>('IMAGE_MIME_ALLOWLIST') ??
@@ -233,26 +224,6 @@ export class MediaAssetsService {
     return this.s3.presignedGetObject(bucket, dir, expiresIn);
   }
 
-  async getVideoUrlByMediaAssetId(mediaAssetId: number) {
-    const asset = await this.getAssetOrThrow(mediaAssetId);
-    if (asset.type !== MediaAssetType.VIDEO) {
-      throw new BadRequestException('media asset is not a video');
-    }
-    if (asset.status !== MediaAssetStatus.READY) {
-      throw new ConflictException('media asset is not ready');
-    }
-    if (!asset.storageKey) {
-      throw new BadRequestException('storage_key is missing');
-    }
-
-    // storageKey is expected to be like "videos/<uuid>" or similar
-    const bucket = asset.storageBucket ?? this.getBucketOrThrow();
-    const expiresIn = Number(
-      this.configService.get<string>('S3_SIGNED_URL_EXPIRES_SECONDS') ?? '900',
-    );
-    const objectKey = asset.storageKey;
-    return this.s3.presignedGetObject(bucket, objectKey, expiresIn);
-  }
 
   async getImageUrlByMediaAssetId(mediaAssetId: number) {
     const asset = await this.getAssetOrThrow(mediaAssetId);
@@ -288,7 +259,7 @@ export class MediaAssetsService {
     const asset = await this.mediaAssetsRepository.findOne({ where: { id } });
     if (!asset) return { deleted: false };
 
-    // Best-effort object deletion.
+    // Delete from storage
     const bucket = asset.storageBucket;
     const key = asset.storageKey;
     if (bucket && key) {
@@ -312,34 +283,31 @@ export class MediaAssetsService {
   }
 
   private assertAdmin(user: AuthUser) {
-    // JwtAuthGuard + RolesGuard should handle this already.
-    // This is just a hard-stop safety check.
+    // Check if user is admin 
     const role = String(user?.role ?? '').toLowerCase();
     if (role !== 'admin') {
       throw new ForbiddenException();
     }
   }
 
-
   private getUserIdOrZero(user: AuthUser): number {
     const raw = user.sub ?? user.id;
     const n = typeof raw === 'string' ? Number(raw) : raw;
+
     return Number.isFinite(n) ? Number(n) : 0;
   }
 
-
   private validateVideoMime(mimeType: string) {
     const allow = (
-      this.configService.get<string>('VIDEO_MIME_ALLOWLIST') ??
-      'video/mp4,video/webm,video/quicktime'
-    ).split(',');
+      this.configService.get<string>('VIDEO_MIME_ALLOWLIST') ?? 'video/mp4,video/webm,video/quicktime').split(',');
+
     const normalized = mimeType.trim().toLowerCase();
     if (!allow.map((x) => x.trim().toLowerCase()).includes(normalized)) {
       throw new BadRequestException('mime_type is not allowed');
     }
   }
 
-  
+
   async createVideoUpload(dto: CreateVideoUploadDto, requestUser: AuthUser) {
     this.assertAdmin(requestUser);
     this.validateVideoMime(dto.mime_type);
@@ -355,6 +323,7 @@ export class MediaAssetsService {
     const bucket = this.getBucketOrThrow();
     const keyPrefix =
       this.configService.get<string>('S3_VIDEO_KEY_PREFIX') ?? 'videos';
+
     const key = `${keyPrefix}/${randomUUID()}`;
 
     const asset = this.mediaAssetsRepository.create({
@@ -372,7 +341,7 @@ export class MediaAssetsService {
     });
     const saved = await this.mediaAssetsRepository.save(asset);
 
-    // NOTE: current flow for uploads is handled via /media/videos/upload (multipart).
+    // Return the media asset ID for the client to use during upload
     return { media_asset_id: saved.id };
   }
 
@@ -403,10 +372,7 @@ export class MediaAssetsService {
     };
   }
 
-  private buildPublicUrl(
-    bucket: string,
-    objectKey: string,
-  ): string | undefined {
+  private buildPublicUrl(bucket: string, objectKey: string,): string | undefined {
     const baseRaw =
       this.configService.get<string>('S3_PUBLIC_BASE_URL') ??
       this.configService.get<string>('S3_ENDPOINT');
@@ -419,7 +385,7 @@ export class MediaAssetsService {
     return `${normalizedBase}/${bucket}/${normalizedKey}`;
   }
 
-  // Stream an object by media asset id through the API response.
+  // Stream an object by media asset ID
   async streamObjectByMediaAssetId(id: number, res: Response) {
     const asset = await this.getAssetOrThrow(id);
     if (!asset.storageBucket || !asset.storageKey) {
@@ -430,13 +396,13 @@ export class MediaAssetsService {
     return this.streamObject(asset.storageBucket, asset.storageKey, res, mime, size);
   }
 
-  // Stream an object by key (for videos where key may be provided without the prefix).
+  // Stream an object by storage key 
   async streamObjectByKey(key: string, res: Response) {
     const bucket = this.getBucketOrThrow();
     const objectKey = key.startsWith('videos/') ? key : `videos/${key}`;
-    // Try to look up an asset to get mime/size; fallback to generic headers.
     let mime = 'application/octet-stream';
     let size: number | undefined = undefined;
+
     try {
       const maybe = await this.mediaAssetsRepository.findOne({ where: { storageBucket: bucket, storageKey: objectKey } });
       if (maybe) {
@@ -446,19 +412,19 @@ export class MediaAssetsService {
     } catch {
       // ignore
     }
+
     return this.streamObject(bucket, objectKey, res, mime, size);
   }
 
   private async streamObject(bucket: string, objectKey: string, res: Response, mimeType?: string, sizeBytes?: number) {
     try {
-      // Recent minio client returns a Promise<ReadableStream> for getObject.
       const dataStream: NodeJS.ReadableStream = await (this.s3 as any).getObject(bucket, objectKey);
       if (mimeType) res.setHeader('Content-Type', mimeType);
       if (sizeBytes && Number.isFinite(sizeBytes)) res.setHeader('Content-Length', String(sizeBytes));
 
       await new Promise<void>((resolve, reject) => {
         dataStream.on('error', (e) => {
-          try { res.end(); } catch {}
+          try { res.end(); } catch { }
           reject(e);
         });
         dataStream.on('end', () => resolve());
@@ -468,6 +434,7 @@ export class MediaAssetsService {
           reject(e as Error);
         }
       });
+
     } catch (e) {
       throw new NotFoundException('object not found');
     }
