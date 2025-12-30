@@ -1,9 +1,5 @@
 import { NestFactory, Reflector } from '@nestjs/core';
-import {
-  ValidationPipe,
-  Logger,
-  ClassSerializerInterceptor,
-} from '@nestjs/common';
+import { ValidationPipe, Logger, ClassSerializerInterceptor } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
@@ -12,6 +8,9 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ['log', 'error', 'warn'],
   });
+
+  // Enable CORS for all origins (adjust as needed for production)
+  app.enableCors({ origin: true, credentials: true });
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -24,6 +23,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.use(cookieParser());
   app.setGlobalPrefix('api');
+
 
   const port = Number(process.env.PORT ?? 3002);
   await app.listen(port);

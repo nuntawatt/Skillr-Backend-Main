@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Redirect, UploadedFile, UseGuards, UseInterceptors, Res, } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Redirect, UploadedFile, UseGuards, UseInterceptors, Res, Req } from '@nestjs/common';
 import { JwtAuthGuard, Roles, RolesGuard } from '@auth';
 import { UserRole } from '@common/enums';
 import { MediaAssetsService } from './media-assets.service';
@@ -12,7 +12,7 @@ function parseOptionalNumber(value: unknown): number | undefined {
   if (typeof value === 'string') {
     const trimmed = value.trim();
     if (trimmed === '') {
-      return undefined; 
+      return undefined;
     }
     const parsed = Number(trimmed);
     return Number.isFinite(parsed) ? parsed : undefined;
@@ -37,9 +37,9 @@ export class MediaAssetsController {
   }
 
   // Stream the image through the API so the client does not need direct
-  @Get('/images/presign/:id')
-  async streamFilePublic(@Param('id') id: string, @Res() res: Response) {
-    return this.mediaAssetsService.streamObjectByMediaAssetId(Number(id), res);
+  @Get('/images/presign/:key')
+  async streamImageByKey(@Param('key') key: string, @Res() res: Response) {
+    return this.mediaAssetsService.streamImageByKey(key, res);
   }
 
   // Public: get asset status
@@ -47,6 +47,7 @@ export class MediaAssetsController {
   getStatusPublic(@Param('id') id: string) {
     return this.mediaAssetsService.getPublicAssetStatus(Number(id));
   }
+
 
   // Admin-only: get full asset info
   @Get(':id')

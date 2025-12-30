@@ -1,16 +1,8 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Activity } from './entities/activity.entity';
-import {
-  ActivityRegistration,
-  RegistrationStatus,
-} from './entities/activity-registration.entity';
+import { ActivityRegistration, RegistrationStatus } from './entities/activity-registration.entity';
 import { CreateActivityDto } from './dto/create-activity.dto';
 import { UpdateActivityDto } from './dto/update-activity.dto';
 
@@ -21,7 +13,7 @@ export class ActivitiesService {
     private readonly activityRepository: Repository<Activity>,
     @InjectRepository(ActivityRegistration)
     private readonly registrationRepository: Repository<ActivityRegistration>,
-  ) {}
+  ) { }
 
   async create(createActivityDto: CreateActivityDto): Promise<Activity> {
     const activity = this.activityRepository.create(createActivityDto);

@@ -8,6 +8,9 @@ async function bootstrap() {
     logger: ['log', 'error', 'warn'],
   });
 
+  // Enable CORS for all origins (adjust as needed for production)
+  app.enableCors({ origin: true, credentials: true });
+  
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

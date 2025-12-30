@@ -12,6 +12,9 @@ import { CreateVideoUploadDto } from './dto/create-video-upload.dto';
 
 @Injectable()
 export class MediaAssetsService {
+  // streamImageByKey(key: string, res: Response<any, Record<string, any>>) {
+  //   throw new Error('Method not implemented.');
+  // }
   getVideoPlaybackInfo(arg0: number) {
     throw new Error('Method not implemented.');
   }
@@ -154,7 +157,7 @@ export class MediaAssetsService {
 
     return {
       media_asset_id: saved.id,
-      key,
+      key: key,
       storage_key: objectKey,
       public_url: saved.publicUrl,
     };
@@ -183,7 +186,9 @@ export class MediaAssetsService {
 
     const bucket = this.getBucketOrThrow();
     const keyPrefix = this.configService.get<string>('S3_IMAGE_KEY_PREFIX') ?? 'images';
-    const objectKey = `${keyPrefix}/${randomUUID()}`;
+    const key = randomUUID();
+    const objectKey = `${keyPrefix}/${key}`;
+
 
     await this.s3.putObject(bucket, objectKey, file.buffer, file.size, {
       'Content-Type': file.mimetype,
@@ -204,11 +209,13 @@ export class MediaAssetsService {
         storageBucket: bucket,
         storageKey: objectKey,
         publicUrl,
+
       }),
     );
 
     return {
       media_asset_id: saved.id,
+      key,
       storage_key: objectKey,
       public_url: saved.publicUrl,
     };
@@ -307,7 +314,6 @@ export class MediaAssetsService {
     }
   }
 
-
   async createVideoUpload(dto: CreateVideoUploadDto, requestUser: AuthUser) {
     this.assertAdmin(requestUser);
     this.validateVideoMime(dto.mime_type);
@@ -385,15 +391,25 @@ export class MediaAssetsService {
     return `${normalizedBase}/${bucket}/${normalizedKey}`;
   }
 
-  // Stream an object by media asset ID
-  async streamObjectByMediaAssetId(id: number, res: Response) {
-    const asset = await this.getAssetOrThrow(id);
-    if (!asset.storageBucket || !asset.storageKey) {
-      throw new BadRequestException('asset has no storage info');
+  // Stream an image by storage key
+  async streamImageByKey(key: string, res: Response) {
+    const bucket = this.getBucketOrThrow();
+    const objectKey = key.startsWith('images/') ? key : `images/${key}`;
+    
+    const asset = await this.mediaAssetsRepository.findOne({ 
+      where: { storageBucket: bucket, storageKey: objectKey, type: MediaAssetType.IMAGE } });
+
+    if (!asset) {
+      throw new NotFoundException('image not found');
     }
-    const mime = asset.mimeType ?? 'application/octet-stream';
+    if (!asset.storageKey) {
+      throw new BadRequestException('asset has no storage key');
+    }
+
+    const mime = asset.mimeType ?? 'image/jpeg';
     const size = asset.sizeBytes ? Number(asset.sizeBytes) : undefined;
-    return this.streamObject(asset.storageBucket, asset.storageKey, res, mime, size);
+    
+    return this.streamObject(bucket, asset.storageKey, res, mime, size);
   }
 
   // Stream an object by storage key 
