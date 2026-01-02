@@ -80,10 +80,3 @@ pnpm run lint
 pnpm run test
 pnpm run test:e2e
 ```
-
-## Nest CLI (Generate)
-
-```powershell
-cd .\skillr
-pnpm 
-```
