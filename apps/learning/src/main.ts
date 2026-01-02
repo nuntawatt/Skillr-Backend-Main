@@ -1,9 +1,5 @@
 import { NestFactory, Reflector } from '@nestjs/core';
-import {
-  ClassSerializerInterceptor,
-  Logger,
-  ValidationPipe,
-} from '@nestjs/common';
+import { ClassSerializerInterceptor, Logger, ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -12,6 +8,10 @@ async function bootstrap() {
     logger: ['log', 'error', 'warn'],
   });
 
+<<<<<<< Updated upstream
+=======
+  
+>>>>>>> Stashed changes
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -19,7 +19,10 @@ async function bootstrap() {
       transform: true,
     }),
   );
-
+  
+  // Enable CORS for all origins (adjust as needed for production)
+  app.enableCors({ origin: true, credentials: true });
+  
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.setGlobalPrefix('api');
 

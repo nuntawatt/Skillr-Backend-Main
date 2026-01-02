@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap() {
   const logger = new Logger('CourseBootstrap');
@@ -13,6 +14,10 @@ async function bootstrap() {
     logger: ['log', 'error', 'warn'],
   });
 
+<<<<<<< Updated upstream
+=======
+  
+>>>>>>> Stashed changes
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -20,14 +25,29 @@ async function bootstrap() {
       transform: true,
     }),
   );
+  
+  const config = new DocumentBuilder()
+    .setTitle('Skillr Course Service API')
+    .setDescription('API documentation for the Course Service')
+    .setVersion('1.0.0')
+    .addServer('http://localhost:3002', 'Local server')
+    .addBearerAuth() 
+    .build();
 
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document);
+
+
+  app.enableCors({ origin: true, credentials: true });
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.use(cookieParser());
+
   app.setGlobalPrefix('api');
 
   const port = Number(process.env.PORT ?? 3002);
   await app.listen(port);
 
   logger.log(`Application is running on http://localhost:${port}/api`);
+  logger.log(`Swagger docs available at http://localhost:${port}/api/docs`);
 }
 void bootstrap();

@@ -16,7 +16,9 @@ import { UpdateLessonDto } from './dto/update-lesson.dto';
 import { CreateLessonResourceDto } from './dto/create-lesson-resource.dto';
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import { UserRole } from '@common/enums';
+import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiParam, ApiResponse } from '@nestjs/swagger';
 
+@ApiTags('Lessons Module')
 @Controller('lessons')
 export class LessonsController {
   constructor(private readonly lessonsService: LessonsService) {}
@@ -24,24 +26,74 @@ export class LessonsController {
   @Post()
   // @UseGuards(JwtAuthGuard, RolesGuard)
   // @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Create a new lesson' })
+  
+
+  @ApiConsumes('application/json')
+  @ApiBody({ 
+    type: CreateLessonDto,
+    
+    examples: {
+      lesson: {
+        summary: 'Example Lesson',
+        value: {
+          title: 'Introduction to NestJS',
+          content_text: 'This is the content of the lesson.'
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 201, description: 'The lesson has been successfully created.' })
+  @ApiResponse({ status: 400, description: 'Invalid input data.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   create(@Body() createLessonDto: CreateLessonDto) {
     return this.lessonsService.create(createLessonDto);
   }
-
+  
   @Get()
+  @ApiOperation({ summary: 'Get all lessons, optionally filtered by courseId' })
+  @ApiResponse({ status: 200, description: 'List of lessons retrieved successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid courseId parameter' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   findAll(@Query('courseId') courseId?: string) {
     return this.lessonsService.findAll(courseId);
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get a lesson by ID' })
+  @ApiParam({
+    name: 'id',
+    example: '10'
+  })
+  @ApiResponse({ status: 200, description: 'Lesson retrieved successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid lesson ID' })
+  @ApiResponse({ status: 404, description: 'Lesson not found' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   findOne(@Param('id') id: string) {
     return this.lessonsService.findOne(id);
   }
 
-  // ตาม flow: ผูกวิดีโอเข้ากับ Lesson (สร้าง lesson_resources)
+  // Flow: Create Lesson Resource
   @Post(':id/resources')
+<<<<<<< Updated upstream
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+=======
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  // @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Create a new lesson resource' })
+  @ApiConsumes('application/json')
+  @ApiBody({ type: CreateLessonResourceDto })
+  @ApiParam({
+    name: 'id',
+    example: '10'
+  })
+  @ApiResponse({ status: 201, description: 'The lesson resource has been successfully created' })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
+>>>>>>> Stashed changes
   createResource(
     @Param('id') lessonId: string,
     @Body() dto: CreateLessonResourceDto,
@@ -51,15 +103,45 @@ export class LessonsController {
   }
 
   @Patch(':id')
+<<<<<<< Updated upstream
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+=======
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  // @Roles(UserRole.ADMIN)
+  @ApiOperation ({ summary: 'Update a lesson by ID' })
+  @ApiConsumes('application/json')
+  @ApiBody({ type: UpdateLessonDto })
+  @ApiParam({
+    name: 'id',
+    example: '10'
+  })
+  
+  @ApiResponse({ status: 200, description: 'Lesson updated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @ApiResponse({ status: 404, description: 'Lesson not found' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
+>>>>>>> Stashed changes
   update(@Param('id') id: string, @Body() updateLessonDto: UpdateLessonDto) {
     return this.lessonsService.update(id, updateLessonDto);
   }
 
   @Delete(':id')
+<<<<<<< Updated upstream
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+=======
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  // @Roles(UserRole.ADMIN)
+  @ApiOperation ({ summary: 'Delete a lesson by ID' })
+  @ApiParam({
+    name: 'id',
+    example: '10'
+  })
+  @ApiResponse({ status: 200, description: 'Lesson deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Lesson not found' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
+>>>>>>> Stashed changes
   remove(@Param('id') id: string) {
     return this.lessonsService.remove(id);
   }

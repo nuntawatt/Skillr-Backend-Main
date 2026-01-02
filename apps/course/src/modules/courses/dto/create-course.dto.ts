@@ -1,4 +1,5 @@
 import { Transform, Type } from 'class-transformer';
+<<<<<<< Updated upstream
 import {
   IsString,
   IsOptional,
@@ -7,6 +8,10 @@ import {
   IsInt,
   IsIn,
 } from 'class-validator';
+=======
+import { IsString, IsOptional, IsBoolean, IsNotEmpty, IsInt, IsIn, IsArray } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+>>>>>>> Stashed changes
 
 function transformOptionalNumber({ value }: { value: unknown }) {
   if (value === null || value === undefined || value === '') return undefined;
@@ -14,15 +19,11 @@ function transformOptionalNumber({ value }: { value: unknown }) {
   return Number.isFinite(n) ? n : value;
 }
 
-function transformOptionalBoolean({ value }: { value: unknown }) {
-  if (value === null || value === undefined || value === '') return undefined;
-  if (value === true || value === false) return value;
-  if (value === 1 || value === '1' || value === 'true') return true;
-  if (value === 0 || value === '0' || value === 'false') return false;
-  return value;
-}
-
 export class CreateCourseDto {
+  @ApiPropertyOptional({
+    description: 'Title of the course',
+    example: 'Introduction to Programming',
+  })
   @IsNotEmpty()
   @IsString()
   title: string;
@@ -31,11 +32,14 @@ export class CreateCourseDto {
   @IsString()
   description?: string;
 
+<<<<<<< Updated upstream
   @IsOptional()
   @IsInt()
   @Transform(transformOptionalNumber)
   ownerId?: number;
 
+=======
+>>>>>>> Stashed changes
   @IsOptional()
   @IsInt()
   @Transform(transformOptionalNumber)
