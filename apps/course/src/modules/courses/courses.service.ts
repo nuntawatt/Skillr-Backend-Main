@@ -2,15 +2,14 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DeepPartial } from 'typeorm';
 import { Course } from './entities/course.entity';
-import { CreateCourseDto } from './dto/create-course.dto';
-import { UpdateCourseDto } from './dto/update-course.dto';
+import { CreateCourseDto, UpdateCourseDto, CourseResponseDto, CourseDetailResponseDto } from './dto';
 
 @Injectable()
 export class CoursesService {
   constructor(
     @InjectRepository(Course)
     private readonly courseRepository: Repository<Course>,
-  ) {}
+  ) { }
 
   private buildPublicIntroVideoPath(mediaAssetId: number): string {
     return `/api/media/assets/${mediaAssetId}/url/public/redirect`;
@@ -21,25 +20,23 @@ export class CoursesService {
   }
 
   async create(createCourseDto: CreateCourseDto): Promise<Course> {
-    // Persist only the minimal fields provided by the frontend.
-    // Set a safe default for ownerUserId so DB constraints are satisfied.
     const payload: DeepPartial<Course> = {
-      ownerUserId: 0,
-      title: createCourseDto.title,
-      description: createCourseDto.description,
-      price: Number(createCourseDto.price ?? 0),
-      isPublished: false,
+      ownerUserId: Number(createCourseDto.ownerId ?? 0),
+      title: createCourseDto.course_name,
+      description: createCourseDto.course_detail,
+      price: Number(createCourseDto.course_price ?? 0),
+      isPublished: Boolean(createCourseDto.is_published ?? false),
       categoryId: createCourseDto.categoryId,
-      level: String(createCourseDto.level ?? 'beginner'),
-      tags: createCourseDto.tags ?? undefined,
-      coverMediaAssetId: createCourseDto.coverMediaId ?? undefined,
-      introMediaAssetId: createCourseDto.introMediaId ?? undefined,
-      durationSeconds: 0,
+      level: createCourseDto.course_level ?? 'beginner',
+      tags: createCourseDto.tags ?? [],
+      coverMediaAssetId: createCourseDto.course_coverMediaId ?? undefined,
+      introMediaAssetId: createCourseDto.course_introMediaId ?? undefined,
+      durationSeconds: 0
     };
 
     const course = this.courseRepository.create(payload);
     const saved = await this.courseRepository.save(course);
-    // Return object with fields ordered as requested by frontend
+
     return {
       id: saved.id,
       cover_media_asset_id: saved.coverMediaAssetId ?? undefined,
@@ -57,7 +54,7 @@ export class CoursesService {
     } as unknown as Course;
   }
 
-  async findAll(isPublished?: string): Promise<Course[]> {
+  async findAll(isPublished?: string): Promise<CourseResponseDto[]> {
     const query = this.courseRepository.createQueryBuilder('course');
 
     if (typeof isPublished === 'string') {
@@ -69,6 +66,7 @@ export class CoursesService {
     }
 
     const rows = await query.getMany();
+
     return rows.map((c) => ({
       id: c.id,
       cover_media_asset_id: c.coverMediaAssetId ?? undefined,
@@ -83,29 +81,19 @@ export class CoursesService {
       durationSeconds: c.durationSeconds,
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
-    } as unknown as Course));
+    }));
   }
 
-  async findOne(
-    id: string,
-  ): Promise<Course & { introVideoPath?: string; coverImagePath?: string }> {
+  async findOne(id: string): Promise<CourseDetailResponseDto> {
     const courseId = Number(id);
     const course = await this.courseRepository.findOne({
       where: { id: courseId },
     });
+
     if (!course) {
       throw new NotFoundException(`Course with ID ${id} not found`);
     }
 
-    const introVideoPath = course.introMediaAssetId
-      ? this.buildPublicIntroVideoPath(course.introMediaAssetId)
-      : undefined;
-
-    const coverImagePath = course.coverMediaAssetId
-      ? this.buildPublicCoverImagePath(course.coverMediaAssetId)
-      : undefined;
-
-    // Return with requested ordering: id, cover image id, title, media_assets_id (intro), description, level, price, tags
     return {
       id: course.id,
       cover_media_asset_id: course.coverMediaAssetId ?? undefined,
@@ -115,14 +103,18 @@ export class CoursesService {
       level: course.level,
       price: course.price,
       tags: course.tags ?? [],
-      introVideoPath,
-      coverImagePath,
       ownerUserId: course.ownerUserId,
       isPublished: course.isPublished,
       durationSeconds: course.durationSeconds,
       createdAt: course.createdAt,
       updatedAt: course.updatedAt,
-    } as unknown as Course & { introVideoPath?: string; coverImagePath?: string };
+      introVideoPath: course.introMediaAssetId
+        ? this.buildPublicIntroVideoPath(course.introMediaAssetId)
+        : undefined,
+      coverImagePath: course.coverMediaAssetId
+        ? this.buildPublicCoverImagePath(course.coverMediaAssetId)
+        : undefined,
+    };
   }
 
   async findByOwner(ownerId: string): Promise<Course[]> {
@@ -132,46 +124,75 @@ export class CoursesService {
   }
 
   async update(id: string, updateCourseDto: UpdateCourseDto): Promise<Course> {
-    const course = await this.findOne(id);
+    const courseId = Number(id);
+    const course = await this.courseRepository.findOne({
+      where: { id: courseId },
+    });
 
-    if (updateCourseDto.title !== undefined)
-      course.title = updateCourseDto.title;
-    if (updateCourseDto.description !== undefined)
-      course.description = updateCourseDto.description;
-
-    if (updateCourseDto.price !== undefined) {
-      course.price = Number(updateCourseDto.price ?? 0);
+    if (!course) {
+      throw new NotFoundException(`Course with ID ${id} not found`);
     }
 
+    // title
+    if (updateCourseDto.course_name !== undefined) {
+      course.title = updateCourseDto.course_name;
+    }
+
+    // description
+    if (updateCourseDto.course_detail !== undefined) {
+      course.description = updateCourseDto.course_detail;
+    }
+
+    // price
+    if (updateCourseDto.course_price !== undefined) {
+      course.price = Number(updateCourseDto.course_price);
+    }
+
+    // publish status
     if (updateCourseDto.is_published !== undefined) {
       course.isPublished = updateCourseDto.is_published;
     }
 
+    // category
     if (updateCourseDto.categoryId !== undefined) {
       course.categoryId = updateCourseDto.categoryId;
     }
 
-    if (updateCourseDto.level !== undefined) {
-      course.level = String(updateCourseDto.level);
+    // level 
+    if (updateCourseDto.course_level !== undefined) {
+      course.level = updateCourseDto.course_level;
     }
 
-    if ((updateCourseDto as any).tags !== undefined) {
-      course.tags = (updateCourseDto as any).tags;
+    // tags
+    if (updateCourseDto.tags !== undefined) {
+      course.tags = updateCourseDto.tags;
     }
 
-    if (updateCourseDto.coverMediaId !== undefined) {
-      course.coverMediaAssetId = updateCourseDto.coverMediaId ?? undefined;
+    // cover media
+    if (updateCourseDto.course_coverMediaId !== undefined) {
+      course.coverMediaAssetId = updateCourseDto.course_coverMediaId ?? undefined;
     }
 
-    if (updateCourseDto.introMediaId !== undefined) {
-      course.introMediaAssetId = updateCourseDto.introMediaId ?? undefined;
+    // intro media
+    if (updateCourseDto.course_introMediaId !== undefined) {
+      course.introMediaAssetId = updateCourseDto.course_introMediaId ?? undefined;
     }
 
     return this.courseRepository.save(course);
   }
 
+
   async remove(id: string): Promise<void> {
-    const course = await this.findOne(id);
+    const courseId = Number(id);
+
+    const course = await this.courseRepository.findOne({
+      where: { id: courseId },
+    });
+
+    if (!course) {
+      throw new NotFoundException(`Course with ID ${id} not found`);
+    }
+
     await this.courseRepository.remove(course);
   }
 }

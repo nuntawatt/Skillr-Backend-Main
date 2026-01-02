@@ -1,17 +1,13 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 
 @Entity('courses')
+@Index('idx_courses_owner_user_id', ['ownerUserId'])
+@Index('idx_courses_is_published', ['isPublished'])
 export class Course {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'owner_user_id' })
+  @Column({ name: 'owner_user_id', type: 'int' })
   ownerUserId: number;
 
   @Column()
@@ -20,7 +16,8 @@ export class Course {
   @Column({ type: 'text', nullable: true })
   description?: string;
 
-  @Column({ type: 'int', default: 0 })
+  // store as numeric with 2 decimal places
+  @Column({ type: 'numeric', precision: 10, scale: 2, default: 0 })
   price: number;
 
   @Column({ name: 'is_published', default: false })
@@ -29,11 +26,17 @@ export class Course {
   @Column({ name: 'category_id', type: 'int', nullable: true })
   categoryId?: number;
 
-  @Column({ name: 'level', type: 'varchar', length: 20, default: 'beginner' })
-  level: string;
+  // store as enum
+  @Column({
+    name: 'level',
+    type: 'enum',
+    enum: ['beginner', 'intermediate', 'advanced'],
+    default: 'beginner',
+  })
+  level: 'beginner' | 'intermediate' | 'advanced';
 
-  @Column({ type: 'text', array: true, nullable: true })
-  tags?: string[];
+  @Column({ type: 'simple-array', default: '' })
+  tags: string[];
 
   @Column({ name: 'cover_media_asset_id', type: 'int', nullable: true })
   coverMediaAssetId?: number;
