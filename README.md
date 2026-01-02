@@ -47,7 +47,6 @@ Ports are set per service in `skillr/package.json` scripts (so you can run multi
 ## Roles
 
 This project uses 2 roles:
-
 - `ADMIN`
 - `STUDENT`
 
@@ -80,4 +79,11 @@ pnpm run build:all
 pnpm run lint
 pnpm run test
 pnpm run test:e2e
+```
+
+## Nest CLI (Generate)
+
+```powershell
+cd .\skillr
+pnpm 
 ```

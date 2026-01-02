@@ -1,9 +1,14 @@
 import { PartialType } from '@nestjs/mapped-types';
 import { CreateCourseDto } from './create-course.dto';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateCourseDto extends PartialType(CreateCourseDto) {
-	// Optional compatibility fields used by service/update handlers
+	@ApiPropertyOptional()
 	is_published?: boolean;
+
+	@ApiPropertyOptional()
 	coverMediaId?: number;
+
+	@ApiPropertyOptional()
 	introMediaId?: number;
 }

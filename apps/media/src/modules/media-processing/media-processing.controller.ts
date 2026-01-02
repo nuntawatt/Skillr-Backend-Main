@@ -1,34 +1,52 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Post } from '@nestjs/common';
 import { MediaProcessingService } from './media-processing.service';
-import { CreateMediaProcessingDto } from './dto/transcode-video.dto';
-import { UpdateMediaProcessingDto } from './dto/update-media-processing.dto';
+import { TranscodeVideoDto } from './dto/transcode-video.dto';
+import { MediaAssetsService } from '../media-assets/media-assets.service';
 
-@Controller('media-processing')
+@Controller('media/processing')
 export class MediaProcessingController {
-  constructor(private readonly mediaProcessingService: MediaProcessingService) {}
+  constructor(
+    private readonly mediaProcessingService: MediaProcessingService,
+    private readonly mediaAssetsService: MediaAssetsService,
+  ) { }
 
-  @Post()
-  create(@Body() createMediaProcessingDto: CreateMediaProcessingDto) {
-    return this.mediaProcessingService.create(createMediaProcessingDto);
-  }
+  @Post('video/transcode')
+  async transcodeVideo(@Body() dto: TranscodeVideoDto) {
+    if (!dto.qualities?.length) {
+      throw new BadRequestException('qualities is required');
+    }
 
-  @Get()
-  findAll() {
-    return this.mediaProcessingService.findAll();
-  }
+    const asset = await this.mediaAssetsService.getAssetOrThrow(
+      dto.mediaAssetId,
+    );
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.mediaProcessingService.findOne(+id);
-  }
+    if (asset.type !== 'video') {
+      throw new BadRequestException('asset is not a video');
+    }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateMediaProcessingDto: UpdateMediaProcessingDto) {
-    return this.mediaProcessingService.update(+id, updateMediaProcessingDto);
-  }
+    const bucket = asset.storageBucket!;
+    const sourceKey = asset.storageKey!;
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.mediaProcessingService.remove(+id);
+    const qualities = [...new Set(dto.qualities)];
+
+    const outputs = await Promise.all(
+      qualities.map(async (quality) => {
+        const targetKey = `videos/${asset.id}/${quality}.mp4`;
+
+        await this.mediaProcessingService.transcodeVideo(
+          bucket,
+          sourceKey,
+          targetKey,
+          quality,
+        );
+
+        return { quality, storage_key: targetKey };
+      }),
+    );
+
+    return {
+      media_asset_id: asset.id,
+      outputs,
+    };
   }
 }

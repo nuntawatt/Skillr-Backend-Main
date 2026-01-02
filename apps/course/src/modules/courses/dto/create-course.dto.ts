@@ -1,29 +1,28 @@
 import { Transform, Type } from 'class-transformer';
-import {
-  IsString,
-  IsOptional,
-  IsBoolean,
-  IsNotEmpty,
-  IsInt,
-  IsIn,
-  IsArray,
-} from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsNotEmpty, IsInt, IsIn, IsArray } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 
 function transformOptionalNumber({ value }: { value: unknown }) {
   if (value === null || value === undefined || value === '') return undefined;
   const n = typeof value === 'number' ? value : Number(value);
   return Number.isFinite(n) ? n : value;
 }
-
 function transformOptionalBoolean({ value }: { value: unknown }) {
   if (value === null || value === undefined || value === '') return undefined;
-  if (value === true || value === false) return value;
-  if (value === 1 || value === '1' || value === 'true') return true;
-  if (value === 0 || value === '0' || value === 'false') return false;
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const lower = value.toLowerCase();
+    if (lower === 'true') return true;
+    if (lower === 'false') return false;
+  }
   return value;
 }
 
 export class CreateCourseDto {
+  @ApiPropertyOptional({
+    description: 'Title of the course',
+    example: 'Introduction to Programming',
+  })
   @IsNotEmpty()
   @IsString()
   title: string;
@@ -31,10 +30,16 @@ export class CreateCourseDto {
   @IsOptional()
   @IsString()
   description?: string;
+
   @IsOptional()
   @IsInt()
   @Transform(transformOptionalNumber)
   price?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  @Transform(transformOptionalBoolean)
+  is_published?: boolean;
 
   @IsOptional()
   @IsInt()
@@ -46,11 +51,6 @@ export class CreateCourseDto {
   level?: string;
 
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  tags?: string[];
-
-  @IsOptional()
   @IsInt()
   @Transform(transformOptionalNumber)
   coverMediaId?: number;
@@ -59,9 +59,4 @@ export class CreateCourseDto {
   @IsInt()
   @Transform(transformOptionalNumber)
   introMediaId?: number;
-
-  @IsOptional()
-  @IsInt()
-  @Transform(transformOptionalNumber)
-  ownerId?: number;
 }

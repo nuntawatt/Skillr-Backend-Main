@@ -1,5 +1,5 @@
 // src/modules/media-processing/dto/transcode-video.dto.ts
-import { IsEnum, IsNumber } from 'class-validator';
+import { IsArray, IsEnum, IsNumber } from 'class-validator';
 
 export enum VideoQuality {
   P360 = '360p',
@@ -11,6 +11,7 @@ export class TranscodeVideoDto {
   @IsNumber()
   mediaAssetId: number;
 
-  @IsEnum(VideoQuality)
-  quality: VideoQuality;
+  @IsArray()
+  @IsEnum(VideoQuality, { each: true })
+  qualities: VideoQuality[];
 }

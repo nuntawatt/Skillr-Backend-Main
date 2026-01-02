@@ -10,6 +10,7 @@ services:
       - payment_pg_data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
+      # Use escaped $$ so the variable is expanded inside the container
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s

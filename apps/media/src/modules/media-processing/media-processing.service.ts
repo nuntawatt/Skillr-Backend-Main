@@ -2,12 +2,15 @@
 import { Injectable } from '@nestjs/common';
 import { spawn } from 'child_process';
 import { VideoQuality } from './dto/transcode-video.dto';
-import { MinioService } from '../content/minio.service'; // ปรับ path ให้ตรงของคุณ
+import { ContentService } from '../content/content.service';
 
 @Injectable()
 export class MediaProcessingService {
-  constructor(private readonly minioService: MinioService) {}
+  constructor(
+    private readonly contentService: ContentService
+  ) { }
 
+  // settings profiles for different qualities
   private getProfile(quality: VideoQuality) {
     switch (quality) {
       case VideoQuality.P360:
@@ -21,26 +24,25 @@ export class MediaProcessingService {
     }
   }
 
+  // Transcode video using ffmpeg
   async transcodeVideo(
     bucket: string,
     sourceKey: string,
     targetKey: string,
-    quality: VideoQuality,
+    quality: VideoQuality
   ) {
     const profile = this.getProfile(quality);
 
-    // 1. read original video from MinIO
-    const inputStream = await this.minioService.getObjectStream(
+    const inputStream = await this.contentService.getObjectStream(
       bucket,
       sourceKey,
     );
 
-    // 2. spawn ffmpeg
+    // Spawn ffmpeg process
     const ffmpeg = spawn('ffmpeg', [
       '-i',
       'pipe:0',
 
-      // scale + keep aspect ratio
       '-vf',
       `scale=${profile.w}:${profile.h}:force_original_aspect_ratio=decrease`,
 
@@ -56,7 +58,6 @@ export class MediaProcessingService {
       '-b:a',
       profile.aBitrate,
 
-      // enable progressive streaming
       '-movflags',
       'frag_keyframe+empty_moov',
 
@@ -65,11 +66,44 @@ export class MediaProcessingService {
       'pipe:1',
     ]);
 
-    // pipe input → ffmpeg
     inputStream.pipe(ffmpeg.stdin);
 
-    // 3. write output back to MinIO
-    await this.minioService.putObject(
+    // error logs
+    ffmpeg.stderr.on('data', (data) => {
+      console.error('[ffmpeg]', data.toString());
+    });
+
+    ffmpeg.on('error', (err) => {
+      console.error('[ffmpeg] process error', err);
+    });
+
+    // stream safety
+    inputStream.on('error', (err) => {
+      console.error('[input stream]', err);
+      ffmpeg.kill('SIGKILL');
+    });
+
+    ffmpeg.stdin.on('error', (err) => {
+      console.error('[ffmpeg stdin]', err);
+    });
+
+    ffmpeg.stdout.on('error', (err) => {
+      console.error('[ffmpeg stdout]', err);
+    });
+
+    // wait for finish
+    await new Promise<void>((resolve, reject) => {
+      ffmpeg.once('close', (code) => {
+        if (code === 0) {
+          resolve();
+        } else {
+          reject(new Error(`ffmpeg exited with code ${code}`));
+        }
+      });
+    });
+
+
+    await this.contentService.putObject(
       bucket,
       targetKey,
       ffmpeg.stdout,

@@ -7,7 +7,9 @@ import type { AuthUser } from '@auth';
 import { UserRole } from '@common/enums';
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
+import { ApiTags, Api  } from '@nestjs/swagger';
 
+@ApiTags('Courses Module')
 @Controller('courses')
 export class CoursesController {
   constructor(private readonly coursesService: CoursesService) { }

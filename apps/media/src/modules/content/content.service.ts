@@ -5,12 +5,28 @@ import { Content } from './entities/content.entity';
 import { CreateContentDto } from './dto/create-content.dto';
 import { UpdateContentDto } from './dto/update-content.dto';
 
+import * as Minio from 'minio';
+import { Readable } from 'stream';
+
 @Injectable()
 export class ContentService {
+  private readonly minioClient: Minio.Client;
+
   constructor(
     @InjectRepository(Content)
     private readonly contentRepository: Repository<Content>,
-  ) {}
+  ) {
+    const endpoint = process.env.S3_ENDPOINT ?? process.env.S3_URL!;
+    const url = new URL(endpoint);
+
+    this.minioClient = new Minio.Client({
+      endPoint: url.hostname,
+      port: Number(url.port || 9000),
+      useSSL: url.protocol === 'https:',
+      accessKey: process.env.S3_ACCESS_KEY_ID,
+      secretKey: process.env.S3_SECRET_ACCESS_KEY,
+    });
+  }
 
   async create(createContentDto: CreateContentDto): Promise<Content> {
     const content = this.contentRepository.create({
@@ -57,5 +73,28 @@ export class ContentService {
   async remove(id: string): Promise<void> {
     const content = await this.findOne(id);
     await this.contentRepository.remove(content);
+  }
+
+  async getObjectStream(
+    bucket: string,
+    key: string,
+  ): Promise<Readable> {
+    return this.minioClient.getObject(bucket, key);
+  }
+
+  async putObject(
+    bucket: string,
+    key: string,
+    stream: Readable,
+    size?: number,
+    meta?: Record<string, string>,
+  ) {
+    return this.minioClient.putObject(
+      bucket,
+      key,
+      stream,
+      size,
+      meta,
+    );
   }
 }
