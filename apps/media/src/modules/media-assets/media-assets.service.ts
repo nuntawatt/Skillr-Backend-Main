@@ -12,13 +12,6 @@ import { CreateVideoUploadDto } from './dto/create-video-upload.dto';
 
 @Injectable()
 export class MediaAssetsService {
-  getVideoPlaybackInfo(arg0: number) {
-    throw new Error('Method not implemented.');
-  }
-  getVideoInfo(arg0: number) {
-    throw new Error('Method not implemented.');
-  }
-
   private readonly s3: Minio.Client;
 
   constructor(
@@ -215,17 +208,6 @@ export class MediaAssetsService {
     };
   }
 
-  async getVideoFileUrl(key: string) {
-    const bucket = this.getBucketOrThrow();
-    const dir = `videos/${key}`;
-
-    const expiresIn = Number(
-      this.configService.get<string>('S3_SIGNED_URL_EXPIRES_SECONDS') ?? '900',
-    );
-    return this.s3.presignedGetObject(bucket, dir, expiresIn);
-  }
-
-
   async getImageUrlByMediaAssetId(mediaAssetId: number) {
     const asset = await this.getAssetOrThrow(mediaAssetId);
     if (asset.type !== MediaAssetType.IMAGE) {
@@ -243,17 +225,6 @@ export class MediaAssetsService {
       this.configService.get<string>('S3_SIGNED_URL_EXPIRES_SECONDS') ?? '900',
     );
     return this.s3.presignedGetObject(bucket, asset.storageKey, expiresIn);
-  }
-
-  async getPublicAssetStatus(id: number) {
-    const asset = await this.getAssetOrThrow(id);
-    return {
-      id: asset.id,
-      type: asset.type,
-      status: asset.status,
-      created_at: asset.createdAt,
-      updated_at: asset.updatedAt,
-    };
   }
 
   async deleteAssetIfExists(id: number): Promise<{ deleted: boolean }> {

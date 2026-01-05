@@ -1,10 +1,10 @@
-import { Body, Controller, Get, Param, Post, Redirect, Req, UploadedFile, UseGuards, UseInterceptors, Res } from '@nestjs/common';
-import { JwtAuthGuard, Roles, RolesGuard } from '@auth';
 import type { AuthUser } from '@auth';
 import { UserRole } from '@common/enums';
+import { JwtAuthGuard, Roles, RolesGuard } from '@auth';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { MediaAssetsService } from './media-assets.service';
 import { CreateVideoUploadDto } from './dto/create-video-upload.dto';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { Body, Controller, Get, Param, Post, Redirect, Req, UploadedFile, UseGuards, UseInterceptors, Res } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiParam, ApiResponse } from '@nestjs/swagger';
 
 type RequestWithUserAndBody = {
@@ -36,33 +36,18 @@ export class MediaVideosController {
   // @UseGuards(JwtAuthGuard, RolesGuard)
   // @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Create a video upload record' })
+  @ApiConsumes('application/json')
   @ApiBody({ type: CreateVideoUploadDto })
 
-  @ApiResponse({status: 201,description: 'Video upload record created successfully'})
-  @ApiResponse({status: 400,description: 'Bad Request'})
-  @ApiResponse({status: 401,description: 'Unauthorized'})
-  @ApiResponse({status: 500,description: 'Internal Server Error'})
+  @ApiResponse({ status: 201, description: 'Video upload record created successfully' })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   createUpload(
     @Body() dto: CreateVideoUploadDto,
     @Req() req: RequestWithUserAndBody,
   ) {
     return this.mediaAssetsService.createVideoUpload(dto, req.user ?? {});
-  }
-
-  @Get(':id/payback')
-  @ApiOperation({ summary: 'Get video playback info' })
-  @ApiParam({
-    name: 'id',
-    example: '10'
-  })
-
-  @ApiResponse({status: 200,description: 'Playback info retrieved successfully'})
-  @ApiResponse({status: 400,description: 'Bad Request'})
-  @ApiResponse({status: 401,description: 'Unauthorized'})
-  @ApiResponse({status: 404,description: 'Video not found'})
-  @ApiResponse({status: 500,description: 'Internal Server Error'})
-  getPlaybackInfo(@Param('id') id: string) {
-    return this.mediaAssetsService.getVideoPlaybackInfo(Number(id));
   }
 
   @Post('upload')
@@ -80,10 +65,12 @@ export class MediaVideosController {
           format: 'binary'
         },
         media_asset_id: {
+          description: 'Optional media asset ID',
           type: 'number',
           example: 1,
         },
         owner_user_id: {
+          description: 'Optional owner user ID',
           type: 'number',
           example: 1,
         },
@@ -119,42 +106,12 @@ export class MediaVideosController {
     );
   }
 
-  @Get('file/:key')
-  @ApiOperation({ summary: 'Get video file URL by storage key' })
-  @ApiParam({
-    name: 'key',
-    example: 'videos/44f6ea80-45a8-445c-bf2b-62abe443096b/720p.mp4'
-  })
-  @ApiResponse({ status: 200, description: 'Video file URL retrieved successfully' })
-  @ApiResponse({ status: 400, description: 'Bad Request' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 500, description: 'Internal Server Error' })
-  getFileUrl(@Param('key') key: string) {
-    return this.mediaAssetsService.getVideoFileUrl(key);
-  }
-
-  @Get('file/:key/redirect')
-  @ApiOperation({ summary: 'Redirect to video file URL by storage key' })
-  @ApiParam({
-    name: 'key',
-    example: 'videos/44f6ea80-45a8-445c-bf2b-62abe443096b/720p.mp4'
-  })
-  @ApiResponse({ status: 302, description: 'Redirected to video URL successfully' })
-  @ApiResponse({ status: 400, description: 'Bad Request' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 500, description: 'Internal Server Error' })
-  @Redirect()
-  async redirectToFile(@Param('key') key: string) {
-    const url = await this.mediaAssetsService.getVideoFileUrl(key);
-    return { url };
-  }
-
-  // Stream the video file through the API so the client does not need direct
+  // Flow: Stream Video File by Key
   @Get('presign/:key')
   @ApiOperation({ summary: 'Stream a video file by its storage key' })
   @ApiParam({
     name: 'key',
-    example: 'videos/44f6ea80-45a8-445c-bf2b-62abe443096b/720p.mp4'
+    example: 'videos/44f6ea80-45a8-445c-bf2b-62abe443096b/skllr.mp4'
   })
   @ApiResponse({ status: 200, description: 'Presigned URL retrieved successfully' })
   @ApiResponse({ status: 400, description: 'Bad Request' })

@@ -77,31 +77,12 @@ export class MediaAssetsController {
     return this.mediaAssetsService.streamImageByKey(key, res);
   }
 
-  // Public (no-login) status check: ready or not
-  @Get('status/public/:id')
-  @ApiOperation({ summary: 'Get public status of a media asset' })
-  @ApiParam({ 
-    name: 'id', 
-    example: '10'
-  })
-
-  @ApiResponse({ status: 200, description: 'Asset status' })
-  @ApiResponse({ status: 400, description: 'Bad Request' })
-  @ApiResponse({ status: 404, description: 'Media asset not found' })
-  @ApiResponse({ status: 500, description: 'Internal Server Error' })
-  getStatusPublic(@Param('id') id: string) {
-    return this.mediaAssetsService.getPublicAssetStatus(Number(id));
-  }
-
   @Get(':id')
-  // @UseGuards(JwtAuthGuard, RolesGuard)
-  // @Roles(UserRole.ADMIN)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get media asset by ID (Admin)' })
-  @ApiParam({ 
-    name: 'id', 
-    example: '10'
-  })
-
+  @ApiParam({ name: 'id', example: '42' })
+  
   @ApiResponse({ status: 200, description: 'Media asset retrieved successfully' })
   @ApiResponse({ status: 400, description: 'Bad Request' })
   @ApiResponse({ status: 404, description: 'Media asset not found' })

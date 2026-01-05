@@ -1,9 +1,9 @@
 import type { AuthUser } from '@auth';
+import { UserRole } from '@common/enums';
+import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Request } from '@nestjs/common';
 import { CreateCourseDto, UpdateCourseDto, CourseResponseDto, CourseDetailResponseDto } from './dto';
 import { CoursesService } from './courses.service';
-import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
-import { UserRole } from '@common/enums';
 import { ApiTags, ApiOperation, ApiConsumes, ApiOkResponse, ApiCreatedResponse, ApiParam } from '@nestjs/swagger';
 
 @ApiTags('Courses Module')
