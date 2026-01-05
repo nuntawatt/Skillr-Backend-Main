@@ -15,7 +15,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) { }
 
   // Get current user profile
-  @Get('myself')
+  @Get('me')
   async getProfile(@Request() req: AuthedRequest) {
     const user = await this.usersService.findById(req.user.id);
     if (!user) {
@@ -27,7 +27,7 @@ export class UsersController {
   }
 
   // Update current user profile
-  @Patch('myself')
+  @Patch('me')
   async updateProfile(
     @Request() req: AuthedRequest,
     @Body() updateUserDto: UpdateUserDto,

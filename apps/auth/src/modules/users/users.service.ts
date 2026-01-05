@@ -1,4 +1,8 @@
-import { Injectable, ConflictException, NotFoundException, } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as argon2 from 'argon2';
@@ -12,7 +16,7 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-  ) { }
+  ) {}
 
   // Create a new user
   async create(createUserDto: CreateUserDto): Promise<User> {

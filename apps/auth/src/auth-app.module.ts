@@ -20,7 +20,7 @@ import { StudentsModule } from './modules/students/students.module';
     }),
     AuthModule,
     UsersModule,
-    StudentsModule,
+    StudentsModule
   ],
 })
 export class AuthAppModule {}
