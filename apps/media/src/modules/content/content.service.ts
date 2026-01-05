@@ -97,4 +97,17 @@ export class ContentService {
       meta,
     );
   }
+  async fPutObject(
+    bucket: string,
+    key: string,
+    filePath: string,
+    meta?: Record<string, string>,
+  ) {
+    return this.minioClient.fPutObject(
+      bucket,
+      key,
+      filePath,
+      meta,
+    );
+  }
 }

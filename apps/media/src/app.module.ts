@@ -5,7 +5,6 @@ import { getDatabaseConfig } from '@config/database.config';
 import { AuthLibModule } from '@auth/auth-lib.module';
 import { ContentModule } from './modules/content/content.module';
 import { MediaAssetsModule } from './modules/media-assets/media-assets.module';
-import { MediaProcessingModule } from './modules/media-processing/media-processing.module';
 
 @Module({
   imports: [
@@ -21,7 +20,6 @@ import { MediaProcessingModule } from './modules/media-processing/media-processi
     AuthLibModule,
     ContentModule,
     MediaAssetsModule,
-    MediaProcessingModule,
   ],
 })
 export class AppModule {}

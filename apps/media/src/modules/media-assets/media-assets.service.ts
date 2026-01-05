@@ -7,14 +7,11 @@ import * as Minio from 'minio';
 import type { AuthUser } from '@auth';
 import type { Response } from 'express';
 
-import { MediaAsset, MediaAssetStatus, MediaAssetType, } from './entities/media-asset.entity';
+import { MediaAsset, MediaAssetStatus, MediaAssetType } from './entities/media-asset.entity';
 import { CreateVideoUploadDto } from './dto/create-video-upload.dto';
 
 @Injectable()
 export class MediaAssetsService {
-  // streamImageByKey(key: string, res: Response<any, Record<string, any>>) {
-  //   throw new Error('Method not implemented.');
-  // }
   getVideoPlaybackInfo(arg0: number) {
     throw new Error('Method not implemented.');
   }
@@ -29,15 +26,14 @@ export class MediaAssetsService {
     @InjectRepository(MediaAsset)
     private readonly mediaAssetsRepository: Repository<MediaAsset>,
   ) {
-    const { endPoint, port, useSSL, accessKey, secretKey } =
-      this.getMinioConnectionConfig();
+    const { endPoint, port, useSSL, accessKey, secretKey } = this.getMinioConnectionConfig();
 
     this.s3 = new Minio.Client({
       endPoint,
       port,
       useSSL,
       accessKey,
-      secretKey,
+      secretKey
     });
   }
 
@@ -170,8 +166,7 @@ export class MediaAssetsService {
     // Validate mime type
     const mime = (file.mimetype ?? '').toLowerCase();
     const allow = (
-      this.configService.get<string>('IMAGE_MIME_ALLOWLIST') ??
-      'image/png,image/jpeg,image/jpg'
+      this.configService.get<string>('IMAGE_MIME_ALLOWLIST') ?? 'image/png,image/jpeg,image/jpg'
     ).split(',').map((s) => s.trim().toLowerCase());
     if (!allow.includes(mime)) {
       throw new BadRequestException('image mime_type is not allowed');
@@ -188,7 +183,6 @@ export class MediaAssetsService {
     const keyPrefix = this.configService.get<string>('S3_IMAGE_KEY_PREFIX') ?? 'images';
     const key = randomUUID();
     const objectKey = `${keyPrefix}/${key}`;
-
 
     await this.s3.putObject(bucket, objectKey, file.buffer, file.size, {
       'Content-Type': file.mimetype,
@@ -395,9 +389,10 @@ export class MediaAssetsService {
   async streamImageByKey(key: string, res: Response) {
     const bucket = this.getBucketOrThrow();
     const objectKey = key.startsWith('images/') ? key : `images/${key}`;
-    
-    const asset = await this.mediaAssetsRepository.findOne({ 
-      where: { storageBucket: bucket, storageKey: objectKey, type: MediaAssetType.IMAGE } });
+
+    const asset = await this.mediaAssetsRepository.findOne({
+      where: { storageBucket: bucket, storageKey: objectKey, type: MediaAssetType.IMAGE }
+    });
 
     if (!asset) {
       throw new NotFoundException('image not found');
@@ -408,7 +403,7 @@ export class MediaAssetsService {
 
     const mime = asset.mimeType ?? 'image/jpeg';
     const size = asset.sizeBytes ? Number(asset.sizeBytes) : undefined;
-    
+
     return this.streamObject(bucket, asset.storageKey, res, mime, size);
   }
 

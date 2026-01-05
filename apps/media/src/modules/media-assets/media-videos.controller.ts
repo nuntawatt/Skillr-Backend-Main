@@ -33,8 +33,15 @@ export class MediaVideosController {
   constructor(private readonly mediaAssetsService: MediaAssetsService) { }
 
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  // @UseGuards(JwtAuthGuard, RolesGuard)
+  // @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Create a video upload record' })
+  @ApiBody({ type: CreateVideoUploadDto })
+
+  @ApiResponse({status: 201,description: 'Video upload record created successfully'})
+  @ApiResponse({status: 400,description: 'Bad Request'})
+  @ApiResponse({status: 401,description: 'Unauthorized'})
+  @ApiResponse({status: 500,description: 'Internal Server Error'})
   createUpload(
     @Body() dto: CreateVideoUploadDto,
     @Req() req: RequestWithUserAndBody,
@@ -48,10 +55,12 @@ export class MediaVideosController {
     name: 'id',
     example: '10'
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Playback info retrieved successfully'
-  })
+
+  @ApiResponse({status: 200,description: 'Playback info retrieved successfully'})
+  @ApiResponse({status: 400,description: 'Bad Request'})
+  @ApiResponse({status: 401,description: 'Unauthorized'})
+  @ApiResponse({status: 404,description: 'Video not found'})
+  @ApiResponse({status: 500,description: 'Internal Server Error'})
   getPlaybackInfo(@Param('id') id: string) {
     return this.mediaAssetsService.getVideoPlaybackInfo(Number(id));
   }
@@ -82,12 +91,13 @@ export class MediaVideosController {
       required: ['file'],
     },
   })
+
   @ApiResponse({ status: 201, description: 'Video uploaded successfully' })
   @ApiResponse({ status: 400, description: 'Bad Request' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
   uploadFile(
-    @UploadedFile('file') file: Express.Multer.File,
+    @UploadedFile() file: Express.Multer.File,
     @Req() req: RequestWithUserAndBody,
   ) {
     const body =
@@ -132,6 +142,7 @@ export class MediaVideosController {
   @ApiResponse({ status: 302, description: 'Redirected to video URL successfully' })
   @ApiResponse({ status: 400, description: 'Bad Request' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   @Redirect()
   async redirectToFile(@Param('key') key: string) {
     const url = await this.mediaAssetsService.getVideoFileUrl(key);
@@ -148,6 +159,7 @@ export class MediaVideosController {
   @ApiResponse({ status: 200, description: 'Presigned URL retrieved successfully' })
   @ApiResponse({ status: 400, description: 'Bad Request' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   async streamFileByKey(@Param('key') key: string, @Res() res: any) {
     return this.mediaAssetsService.streamObjectByKey(key, res);
   }

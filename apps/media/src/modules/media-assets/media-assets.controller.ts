@@ -31,22 +31,18 @@ export class MediaAssetsController {
   @ApiOperation({ summary: 'Upload an image file' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
-    description: 'Image file to upload',
     schema: {
       type: 'object',
       properties: {
         file: {
           type: 'string',
           format: 'binary',
-          description: 'The image file to upload (binary form-data field)'
         },
         owner_user_id: {
           type: 'string',
-          description: 'Owner user id (form field, numeric string)',
-          example: '1',
+          description: 'Optional owner user ID',
         },
       },
-      required: ['file'],
     },
   })
 
@@ -55,7 +51,7 @@ export class MediaAssetsController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
   uploadImage(
-    @UploadedFile('file') file: Express.Multer.File,
+    @UploadedFile() file: Express.Multer.File,
     @Body() body: Record<string, unknown>,
   ) {
     const ownerUserId = parseOptionalNumber(
@@ -71,11 +67,12 @@ export class MediaAssetsController {
     name: 'key', 
     example: 'images/44f6ea80-45a8-445c-bf2b-62abe443096b' 
   })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Presigned URL retrieved successfully' 
-  })
-  
+
+  @ApiResponse({ status: 200, description: 'Presigned URL retrieved successfully' })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Image not found' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   async streamImageByKey(@Param('key') key: string, @Res() res: Response) {
     return this.mediaAssetsService.streamImageByKey(key, res);
   }
@@ -87,15 +84,15 @@ export class MediaAssetsController {
     name: 'id', 
     example: '10'
   })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Asset status' 
-  })
+
+  @ApiResponse({ status: 200, description: 'Asset status' })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 404, description: 'Media asset not found' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   getStatusPublic(@Param('id') id: string) {
     return this.mediaAssetsService.getPublicAssetStatus(Number(id));
   }
 
-  // ใช้สำหรับ Course service ตรวจว่า asset ready ก่อน attach
   @Get(':id')
   // @UseGuards(JwtAuthGuard, RolesGuard)
   // @Roles(UserRole.ADMIN)
@@ -104,10 +101,11 @@ export class MediaAssetsController {
     name: 'id', 
     example: '10'
   })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Media asset retrieved successfully' 
-  })
+
+  @ApiResponse({ status: 200, description: 'Media asset retrieved successfully' })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 404, description: 'Media asset not found' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   getOne(@Param('id') id: string) {
     return this.mediaAssetsService.getAsset(Number(id));
   }

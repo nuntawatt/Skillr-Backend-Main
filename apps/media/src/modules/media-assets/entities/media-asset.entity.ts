@@ -3,14 +3,14 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 export enum MediaAssetType {
   VIDEO = 'video',
   FILE = 'file',
-  IMAGE = 'image',
+  IMAGE = 'image'
 }
 
 export enum MediaAssetStatus {
   UPLOADING = 'uploading',
   PROCESSING = 'processing',
   READY = 'ready',
-  FAILED = 'failed',
+  FAILED = 'failed'
 }
 
 @Entity('media_assets')

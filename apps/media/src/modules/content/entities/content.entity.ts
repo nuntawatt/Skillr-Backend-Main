@@ -1,10 +1,4 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 export enum ContentType {
   VIDEO = 'video',
@@ -12,7 +6,7 @@ export enum ContentType {
   IMAGE = 'image',
   AUDIO = 'audio',
   EMBED = 'embed',
-  TEXT = 'text',
+  TEXT = 'text'
 }
 
 @Entity('contents')

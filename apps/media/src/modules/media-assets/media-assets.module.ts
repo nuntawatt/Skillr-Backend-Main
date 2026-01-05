@@ -10,6 +10,6 @@ import { MediaAssetsCleanupService } from './media-assets-cleanup.service';
   imports: [TypeOrmModule.forFeature([MediaAsset])],
   controllers: [MediaVideosController, MediaAssetsController],
   providers: [MediaAssetsService, MediaAssetsCleanupService],
-  exports: [MediaAssetsService],
+  exports: [MediaAssetsService]
 })
 export class MediaAssetsModule {}

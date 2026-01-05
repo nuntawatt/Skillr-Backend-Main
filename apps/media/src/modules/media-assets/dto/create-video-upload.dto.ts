@@ -1,12 +1,12 @@
 import { IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateVideoUploadDto {
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     description: 'Original filename of the uploaded video',
-    example: 'intro.mp4'
+    example: 'my_video.mp4'
   })
   @IsOptional()
   @IsString()
