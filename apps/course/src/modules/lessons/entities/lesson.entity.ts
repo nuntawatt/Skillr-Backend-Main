@@ -1,13 +1,4 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  ManyToOne,
-  JoinColumn,
-  OneToMany,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { Course } from '../../courses/entities/course.entity';
 import { LessonResource } from './lesson-resource.entity';
 
@@ -21,6 +12,9 @@ export class Lesson {
 
   @Column({ name: 'content_text', type: 'text', nullable: true })
   contentText?: string;
+
+  @Column({ name: 'media_asset_id', type: 'int', nullable: true })
+  mediaAssetId?: number | null;
 
   @Column({ name: 'position', type: 'int', default: 0 })
   position: number;

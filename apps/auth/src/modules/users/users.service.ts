@@ -93,7 +93,7 @@ export class UsersService {
       avatar: profile.avatar,
       provider: AuthProvider.GOOGLE,
       passwordHash: await argon2.hash(crypto.randomBytes(32).toString('hex')),
-      isVerified: true,
+      isVerified: true
     });
 
     return this.userRepository.save(newUser);

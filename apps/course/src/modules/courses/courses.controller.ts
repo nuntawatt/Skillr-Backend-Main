@@ -4,7 +4,7 @@ import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Request } from '@nestjs/common';
 import { CreateCourseDto, UpdateCourseDto, CourseResponseDto, CourseDetailResponseDto } from './dto';
 import { CoursesService } from './courses.service';
-import { ApiTags, ApiOperation, ApiConsumes, ApiOkResponse, ApiCreatedResponse, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiConsumes, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags('Courses Module')
 @Controller('courses')
@@ -14,7 +14,11 @@ export class CoursesController {
   @Post()
   @ApiOperation({ summary: 'Create a new course' })
   @ApiConsumes('application/json')
+  @ApiResponse({ status: 201, description: 'The course has been successfully created.' })
   @ApiCreatedResponse({ type: CourseResponseDto })
+  @ApiResponse({ status: 400, description: 'Invalid input data.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   create(
     @Body() dto: CreateCourseDto,
     @Request() req: { user?: AuthUser },
@@ -39,6 +43,8 @@ export class CoursesController {
   @Get(':id')
   @ApiParam({ name: 'id', type: Number })
   @ApiOkResponse({ type: CourseDetailResponseDto })
+  @ApiOperation({ summary: 'Get course details by ID' })
+  @ApiResponse({ status: 200, description: 'Course details retrieved successfully.' })
   findOne(@Param('id') id: string): Promise<CourseDetailResponseDto> {
     return this.coursesService.findOne(id);
   }

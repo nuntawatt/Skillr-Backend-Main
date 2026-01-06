@@ -19,6 +19,16 @@ export class CreateLessonDto {
   content_text?: string;
 
   @ApiPropertyOptional({
+    description: 'Media asset ID (e.g., uploaded video id) associated with the lesson',
+    example: 42,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  media_asset_id?: number;
+
+  @ApiPropertyOptional({
     description: 'Position of the lesson in the course',
     example: 1,
   })
