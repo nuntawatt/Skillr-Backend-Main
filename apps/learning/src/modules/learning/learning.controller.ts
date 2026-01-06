@@ -16,6 +16,7 @@ import { LearningDashboardService } from './learning-dashboard.service';
 import { LearningProgressService } from './learning-progress.service';
 import { CreateQuizDto } from './dto/create-quiz.dto';
 import { UpdateQuizDto } from './dto/update-quiz.dto';
+import { UpdateQuestionDto } from './dto/update-question.dto';
 import { SubmitQuizDto } from './dto/submit-quiz.dto';
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import type { AuthUser } from '@auth';
@@ -45,7 +46,7 @@ export class LearningController {
   // Quiz CRUD
   @Post('quizzes')
   @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
   createQuiz(@Body() createQuizDto: CreateQuizDto) {
     return this.learningService.createQuiz(createQuizDto);
   }
@@ -62,16 +63,33 @@ export class LearningController {
 
   @Patch('quizzes/:id')
   @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
   updateQuiz(@Param('id') id: string, @Body() updateQuizDto: UpdateQuizDto) {
     return this.learningService.updateQuiz(id, updateQuizDto);
   }
 
   @Delete('quizzes/:id')
   @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
   removeQuiz(@Param('id') id: string) {
     return this.learningService.removeQuiz(id);
+  }
+
+  @Delete('questions/:id')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
+  removeQuestion(@Param('id') id: string) {
+    return this.learningService.removeQuestion(Number(id));
+  }
+
+  @Patch('questions/:id')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
+  updateQuestion(
+    @Param('id') id: string,
+    @Body() updateQuestionDto: UpdateQuestionDto,
+  ) {
+    return this.learningService.updateQuestion(Number(id), updateQuestionDto);
   }
 
   // Quiz attempts

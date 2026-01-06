@@ -1,4 +1,10 @@
-import { IsArray, ValidateNested, IsString, IsInt } from 'class-validator';
+import {
+  IsArray,
+  ValidateNested,
+  IsString,
+  IsInt,
+  IsOptional,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class AnswerDto {
@@ -6,8 +12,8 @@ export class AnswerDto {
   @Type(() => Number)
   questionId: number;
 
-  @IsString()
-  answer: string;
+  @IsOptional()
+  answer: any;
 }
 
 export class SubmitQuizDto {

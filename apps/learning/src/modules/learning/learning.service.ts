@@ -1,11 +1,16 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
 import { Quiz } from './entities/quiz.entity';
-import { Question } from './entities/question.entity';
+import { Question, QuestionType } from './entities/question.entity';
 import { QuizAttempt } from './entities/quiz-attempt.entity';
-import { CreateQuizDto } from './dto/create-quiz.dto';
+import { CreateQuestionDto, CreateQuizDto } from './dto/create-quiz.dto';
 import { UpdateQuizDto } from './dto/update-quiz.dto';
+import { UpdateQuestionDto } from './dto/update-question.dto';
 import { SubmitQuizDto } from './dto/submit-quiz.dto';
 
 @Injectable()
@@ -20,6 +25,12 @@ export class LearningService {
   ) {}
 
   async createQuiz(createQuizDto: CreateQuizDto): Promise<Quiz> {
+    const questions: CreateQuestionDto[] = createQuizDto.questions ?? [];
+
+    if (questions.length > 3) {
+      throw new BadRequestException('1 Lesson สามารถมี Quiz ได้สูงสุด 3 ข้อ');
+    }
+
     const quiz = this.quizRepository.create({
       title: createQuizDto.title,
       description: createQuizDto.description,
@@ -31,10 +42,16 @@ export class LearningService {
     const savedQuiz = await this.quizRepository.save(quiz);
 
     // Create questions if provided
-    if (createQuizDto.questions && createQuizDto.questions.length > 0) {
-      for (const q of createQuizDto.questions) {
+    if (questions.length > 0) {
+      for (const [index, q] of questions.entries()) {
         const question = this.questionRepository.create({
-          ...q,
+          question: q.question,
+          type: q.type ?? QuestionType.MULTIPLE_CHOICE,
+          options: this.mapOptionsByType(q),
+          correctAnswer: this.mapCorrectAnswerByType(q),
+          explanation: q.explanation,
+          points: q.points,
+          order: index + 1, // บังคับเรียงลำดับบนลงล่าง
           quizId: savedQuiz.id,
         });
         await this.questionRepository.save(question);
@@ -44,10 +61,35 @@ export class LearningService {
     return this.findOneQuiz(savedQuiz.id);
   }
 
+  private mapOptionsByType(question: CreateQuestionDto) {
+    switch (question.type) {
+      case QuestionType.MATCH_PAIRS:
+        return question.optionsPairs;
+      case QuestionType.CORRECT_ORDER:
+        return question.optionsOrder;
+      default:
+        return question.options;
+    }
+  }
+
+  private mapCorrectAnswerByType(question: CreateQuestionDto) {
+    switch (question.type) {
+      case QuestionType.TRUE_FALSE:
+        return question.correctAnswerBool;
+      case QuestionType.MATCH_PAIRS:
+        return question.correctAnswerPairs ?? question.optionsPairs;
+      case QuestionType.CORRECT_ORDER:
+        return question.correctAnswerOrder;
+      default:
+        return question.correctAnswer;
+    }
+  }
+
   async findAllQuizzes(lessonId?: string): Promise<Quiz[]> {
     const query = this.quizRepository
       .createQueryBuilder('quiz')
-      .leftJoinAndSelect('quiz.questions', 'questions');
+      .leftJoinAndSelect('quiz.questions', 'questions')
+      .addOrderBy('questions.order', 'ASC');
 
     if (lessonId) {
       query.where('quiz.lessonId = :lessonId', { lessonId: Number(lessonId) });
@@ -58,10 +100,13 @@ export class LearningService {
 
   async findOneQuiz(id: string | number): Promise<Quiz> {
     const quizId = Number(id);
-    const quiz = await this.quizRepository.findOne({
-      where: { id: quizId },
-      relations: ['questions'],
-    });
+    const quiz = await this.quizRepository
+      .createQueryBuilder('quiz')
+      .leftJoinAndSelect('quiz.questions', 'questions')
+      .where('quiz.id = :id', { id: quizId })
+      .orderBy('questions.order', 'ASC')
+      .getOne();
+
     if (!quiz) {
       throw new NotFoundException(`Quiz with ID ${id} not found`);
     }
@@ -69,15 +114,82 @@ export class LearningService {
   }
 
   async updateQuiz(id: string, updateQuizDto: UpdateQuizDto): Promise<Quiz> {
+    if (updateQuizDto.questions && updateQuizDto.questions.length > 3) {
+      throw new BadRequestException('1 Lesson สามารถมี Quiz ได้สูงสุด 3 ข้อ');
+    }
+
     const quiz = await this.findOneQuiz(id);
     Object.assign(quiz, updateQuizDto);
     await this.quizRepository.save(quiz);
     return this.findOneQuiz(id);
   }
 
+  async updateQuestion(
+    id: number,
+    updateDto: UpdateQuestionDto,
+  ): Promise<Question> {
+    const question = await this.questionRepository.findOne({ where: { id } });
+    if (!question) {
+      throw new NotFoundException('Question not found');
+    }
+
+    // Handle options and correct answer mapping if they are being updated
+    const mappedOptions =
+      updateDto.type ||
+      updateDto.options ||
+      updateDto.optionsPairs ||
+      updateDto.optionsOrder
+        ? this.mapOptionsByType(updateDto as any)
+        : question.options;
+
+    const mappedAnswer =
+      updateDto.type ||
+      updateDto.correctAnswer ||
+      updateDto.correctAnswerBool ||
+      updateDto.correctAnswerPairs ||
+      updateDto.correctAnswerOrder
+        ? this.mapCorrectAnswerByType(updateDto as any)
+        : question.correctAnswer;
+
+    Object.assign(question, {
+      ...updateDto,
+      options: mappedOptions,
+      correctAnswer: mappedAnswer,
+    });
+
+    return await this.questionRepository.save(question);
+  }
+
   async removeQuiz(id: string): Promise<void> {
     const quiz = await this.findOneQuiz(id);
     await this.quizRepository.remove(quiz);
+  }
+
+  async removeQuestion(id: number): Promise<void> {
+    const question = await this.questionRepository.findOne({
+      where: { id },
+    });
+    if (!question) {
+      throw new NotFoundException('Question not found');
+    }
+
+    const quizId = question.quizId;
+    await this.questionRepository.remove(question);
+
+    // Re-index remaining questions in order
+    const remaining = await this.questionRepository.find({
+      where: { quizId },
+      order: { order: 'ASC' },
+    });
+
+    for (let i = 0; i < remaining.length; i++) {
+      const q = remaining[i];
+      const newOrder = i + 1;
+      if (q.order !== newOrder) {
+        q.order = newOrder;
+        await this.questionRepository.save(q);
+      }
+    }
   }
 
   async startQuiz(quizId: string, userId: string): Promise<QuizAttempt> {
@@ -108,7 +220,7 @@ export class LearningService {
 
     for (const answer of submitDto.answers) {
       const question = quiz.questions.find((q) => q.id === answer.questionId);
-      if (question && question.correctAnswer === answer.answer) {
+      if (question && this.isAnswerCorrect(question, answer.answer)) {
         correctAnswers++;
       }
     }
@@ -141,6 +253,29 @@ export class LearningService {
     attempt.completedAt = new Date();
 
     return this.attemptRepository.save(attempt);
+  }
+
+  private isAnswerCorrect(question: Question, submittedAnswer: any): boolean {
+    const correct = question.correctAnswer;
+
+    switch (question.type) {
+      case QuestionType.MULTIPLE_CHOICE:
+        return String(correct) === String(submittedAnswer);
+
+      case QuestionType.TRUE_FALSE:
+        return (
+          String(correct).toLowerCase() === String(submittedAnswer).toLowerCase()
+        );
+
+      case QuestionType.MATCH_PAIRS:
+      case QuestionType.CORRECT_ORDER:
+        // For complex types, we compare as JSON strings (order-sensitive for Correct Order)
+        // For Match Pairs, frontend should return pairs in the same logical order or sorted
+        return JSON.stringify(correct) === JSON.stringify(submittedAnswer);
+
+      default:
+        return correct === submittedAnswer;
+    }
   }
 
   async getAttempts(quizId: string, userId: string): Promise<QuizAttempt[]> {
