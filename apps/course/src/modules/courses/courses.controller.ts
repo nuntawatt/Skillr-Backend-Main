@@ -31,9 +31,24 @@ export class CoursesController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'List courses with search and filters' })
   @ApiOkResponse({ type: CourseResponseDto, isArray: true })
-  findAll(@Query('is_published') isPublished?: string): Promise<CourseResponseDto[]> {
-    return this.coursesService.findAll(isPublished);
+  findAll(
+    @Query('is_published') isPublished?: string,
+    @Query('q') q?: string,
+    @Query('categoryId') categoryId?: string,
+    @Query('level') level?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ): Promise<CourseResponseDto[]> {
+    return this.coursesService.findAll({
+      isPublished,
+      q,
+      categoryId,
+      level,
+      limit,
+      offset,
+    });
   }
 
   @Get(':id')
