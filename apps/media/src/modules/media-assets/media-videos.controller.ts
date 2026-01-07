@@ -35,14 +35,6 @@ export class MediaVideosController {
   @Post()
   // @UseGuards(JwtAuthGuard, RolesGuard)
   // @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Create a video upload record' })
-  @ApiConsumes('application/json')
-  @ApiBody({ type: CreateVideoUploadDto })
-
-  @ApiResponse({ status: 201, description: 'Video upload record created successfully' })
-  @ApiResponse({ status: 400, description: 'Bad Request' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   createUpload(
     @Body() dto: CreateVideoUploadDto,
     @Req() req: RequestWithUserAndBody,
