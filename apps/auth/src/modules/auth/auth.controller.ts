@@ -6,6 +6,7 @@ import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { ConfigService } from '@nestjs/config';
+import { Throttle } from '@nestjs/throttler';
 
 type GoogleTokenInfo = {
   aud?: string;
@@ -180,6 +181,7 @@ export class AuthController {
   // Forgot password - send reset email
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ short: { ttl: 60, limit: 2 }, medium: { ttl: 900, limit: 5 } })
   async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
     return this.authService.forgotPassword(forgotPasswordDto.email);
   }

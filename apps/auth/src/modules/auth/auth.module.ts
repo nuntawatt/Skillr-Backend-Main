@@ -10,6 +10,8 @@ import { GoogleStrategy } from './strategies/google.strategy';
 import { UsersModule } from '../users/users.module';
 import { Session } from '../users/entities/session.entity';
 import { PasswordResetToken } from '../users/entities/password-reset-token.entity';
+import { LoginAttempt } from './entities/login-attempt.entity';
+import { LoginAttemptsService } from './login-attempts.service';
 import { getJwtConfig } from '@config/jwt.config';
 
 @Module({
@@ -21,10 +23,10 @@ import { getJwtConfig } from '@config/jwt.config';
       useFactory: getJwtConfig,
       inject: [ConfigService],
     }),
-    TypeOrmModule.forFeature([Session, PasswordResetToken]),
+    TypeOrmModule.forFeature([Session, PasswordResetToken, LoginAttempt]),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, GoogleStrategy],
+  providers: [AuthService, JwtStrategy, GoogleStrategy, LoginAttemptsService],
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}
