@@ -12,6 +12,9 @@ import { CreateVideoUploadDto } from './dto/create-video-upload.dto';
 
 @Injectable()
 export class MediaAssetsService {
+  remove(arg0: number) {
+    throw new Error('Method not implemented.');
+  }
   private readonly s3: Minio.Client;
 
   constructor(
@@ -232,7 +235,7 @@ export class MediaAssetsService {
     if (!asset) return { deleted: false };
 
     // Delete from storage
-    const bucket = asset.storageBucket;
+    const bucket = asset.storageBucket ?? this.getBucketOrThrow();
     const key = asset.storageKey;
     if (bucket && key) {
       try {

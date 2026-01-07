@@ -32,15 +32,15 @@ function parseOptionalNumber(value: unknown): number | undefined {
 export class MediaVideosController {
   constructor(private readonly mediaAssetsService: MediaAssetsService) { }
 
-  @Post()
-  // @UseGuards(JwtAuthGuard, RolesGuard)
-  // @Roles(UserRole.ADMIN)
-  createUpload(
-    @Body() dto: CreateVideoUploadDto,
-    @Req() req: RequestWithUserAndBody,
-  ) {
-    return this.mediaAssetsService.createVideoUpload(dto, req.user ?? {});
-  }
+  // @Post()
+  // // @UseGuards(JwtAuthGuard, RolesGuard)
+  // // @Roles(UserRole.ADMIN)
+  // createUpload(
+  //   @Body() dto: CreateVideoUploadDto,
+  //   @Req() req: RequestWithUserAndBody
+  // ) {
+  //   return this.mediaAssetsService.createVideoUpload(dto, req.user ?? {});
+  // }
 
   @Post('upload')
   // @UseGuards(JwtAuthGuard, RolesGuard)
