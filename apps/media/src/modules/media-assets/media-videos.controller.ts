@@ -6,6 +6,7 @@ import { MediaAssetsService } from './media-assets.service';
 import { CreateVideoUploadDto } from './dto/create-video-upload.dto';
 import { Body, Controller, Get, Param, Post, Redirect, Req, UploadedFile, UseGuards, UseInterceptors, Res } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiParam, ApiResponse } from '@nestjs/swagger';
+import * as multer from 'multer';
 
 type RequestWithUserAndBody = {
   user?: AuthUser;
@@ -31,29 +32,11 @@ function parseOptionalNumber(value: unknown): number | undefined {
 @Controller('media/videos')
 export class MediaVideosController {
   constructor(private readonly mediaAssetsService: MediaAssetsService) { }
-
-  @Post()
-  // @UseGuards(JwtAuthGuard, RolesGuard)
-  // @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Create a video upload record' })
-  @ApiConsumes('application/json')
-  @ApiBody({ type: CreateVideoUploadDto })
-
-  @ApiResponse({ status: 201, description: 'Video upload record created successfully' })
-  @ApiResponse({ status: 400, description: 'Bad Request' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 500, description: 'Internal Server Error' })
-  createUpload(
-    @Body() dto: CreateVideoUploadDto,
-    @Req() req: RequestWithUserAndBody,
-  ) {
-    return this.mediaAssetsService.createVideoUpload(dto, req.user ?? {});
-  }
-
+  
   @Post('upload')
   // @UseGuards(JwtAuthGuard, RolesGuard)
   // @Roles(UserRole.ADMIN)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { storage: multer.memoryStorage() }))
   @ApiOperation({ summary: 'Upload a video file' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({

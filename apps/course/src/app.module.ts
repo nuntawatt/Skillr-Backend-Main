@@ -30,7 +30,7 @@ const isTest =
           AuthLibModule,
           CategoriesModule,
           CoursesModule,
-          LessonsModule,
+          LessonsModule
         ]),
   ],
 })

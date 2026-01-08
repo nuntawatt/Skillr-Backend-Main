@@ -23,6 +23,9 @@ export class LessonsService {
         : null,
       title: createLessonDto.title,
       contentText: createLessonDto.content_text,
+      mediaAssetId: createLessonDto.media_asset_id
+        ? Number(createLessonDto.media_asset_id)
+        : null,
       position: Number(createLessonDto.position ?? 0),
     });
     return this.lessonRepository.save(lesson);
@@ -132,7 +135,27 @@ export class LessonsService {
 
   async update(id: string, updateLessonDto: UpdateLessonDto): Promise<Lesson> {
     const lesson = await this.findOne(id);
-    Object.assign(lesson, updateLessonDto);
+
+    if (updateLessonDto.title !== undefined) {
+      lesson.title = updateLessonDto.title;
+    }
+    if (updateLessonDto.content_text !== undefined) {
+      lesson.contentText = updateLessonDto.content_text;
+    }
+    if (updateLessonDto.media_asset_id !== undefined) {
+      lesson.mediaAssetId = updateLessonDto.media_asset_id
+        ? Number(updateLessonDto.media_asset_id)
+        : null;
+    }
+    if (updateLessonDto.position !== undefined) {
+      lesson.position = Number(updateLessonDto.position);
+    }
+    if (updateLessonDto.courseId !== undefined) {
+      lesson.courseId = updateLessonDto.courseId
+        ? Number(updateLessonDto.courseId)
+        : null;
+    }
+
     return this.lessonRepository.save(lesson);
   }
 

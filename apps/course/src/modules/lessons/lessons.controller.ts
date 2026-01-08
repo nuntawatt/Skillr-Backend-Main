@@ -27,7 +27,8 @@ export class LessonsController {
         summary: 'Example Lesson',
         value: {
           title: 'Introduction to NestJS',
-          content_text: 'This is the content of the lesson.'
+          content_text: 'This is the content of the lesson.',
+          media_asset_id: 42
         }
       }
     }
@@ -42,6 +43,7 @@ export class LessonsController {
   
   @Get()
   @ApiOperation({ summary: 'Get all lessons, optionally filtered by courseId' })
+
   @ApiResponse({ status: 200, description: 'List of lessons retrieved successfully' })
   @ApiResponse({ status: 400, description: 'Invalid courseId parameter' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })

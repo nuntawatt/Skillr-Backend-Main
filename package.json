@@ -4,7 +4,7 @@
   "description": "",
   "author": "",
   "private": true,
-  "packageManager": "pnpm@10.26.1",
+  "packageManager": "pnpm@10.26.1+sha512.664074abc367d2c9324fdc18037097ce0a8f126034160f709928e9e9f95d98714347044e5c3164d65bd5da6c59c6be362b107546292a8eecb7999196e5ce58fa",
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build course",
@@ -53,6 +53,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
     "cookie-parser": "^1.4.7",
+    "file-type": "^21.3.0",
     "form-data": "^4.0.5",
     "jsonwebtoken": "^9.0.3",
     "minio": "^8.0.6",
