@@ -3,9 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
+import path from 'path';
 import * as Minio from 'minio';
 import type { AuthUser } from '@auth';
 import type { Response } from 'express';
+import { fileTypeFromBuffer } from 'file-type';
 
 import { MediaAsset, MediaAssetStatus, MediaAssetType } from './entities/media-asset.entity';
 import { CreateVideoUploadDto } from './dto/create-video-upload.dto';
@@ -16,6 +18,44 @@ export class MediaAssetsService {
     throw new Error('Method not implemented.');
   }
   private readonly s3: Minio.Client;
+
+  private getObjectStream(
+    bucket: string,
+    objectKey: string,
+  ): Promise<NodeJS.ReadableStream> {
+    return new Promise((resolve, reject) => {
+      this.s3.getObject(bucket, objectKey, (err, stream) => {
+        if (err || !stream) {
+          reject(err ?? new Error('No object stream'));
+          return;
+        }
+        resolve(stream);
+      });
+    });
+  }
+
+  private getPartialObjectStream(
+    bucket: string,
+    objectKey: string,
+    start: number,
+    length: number,
+  ): Promise<NodeJS.ReadableStream> {
+    return new Promise((resolve, reject) => {
+      this.s3.getPartialObject(
+        bucket,
+        objectKey,
+        start,
+        length,
+        (err, stream) => {
+          if (err || !stream) {
+            reject(err ?? new Error('No partial object stream'));
+            return;
+          }
+          resolve(stream);
+        },
+      );
+    });
+  }
 
   constructor(
     private readonly configService: ConfigService,
@@ -81,6 +121,35 @@ export class MediaAssetsService {
     return { endPoint, port, useSSL, accessKey, secretKey };
   }
 
+  private async detectVideoMimeOrThrow(file: Express.Multer.File): Promise<string> {
+    const allowedMimes = new Set([
+      'video/mp4',
+      'video/webm',
+      'video/ogg',
+      'video/quicktime',
+      'video/x-msvideo', // AVI
+      'video/avi',
+    ]);
+    if (allowedMimes.has(file.mimetype)) {
+      return file.mimetype;
+    }
+
+    // 2. เช็คจาก magic bytes (file signature)
+    const ft = await fileTypeFromBuffer(file.buffer);
+    if (ft && ft.mime.startsWith('video/')) {
+      return ft.mime;
+    }
+
+    // 3. fallback จากนามสกุลไฟล์
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ext === '.avi') return 'video/x-msvideo';
+    if (ext === '.mp4') return 'video/mp4';
+    if (ext === '.mov') return 'video/quicktime';
+    if (ext === '.webm') return 'video/webm';
+
+    throw new BadRequestException('unsupported video format');
+  }
+
   async uploadVideoFileAndPersist(
     file: Express.Multer.File,
     requestUser: AuthUser | undefined,
@@ -92,11 +161,11 @@ export class MediaAssetsService {
     if (requestUser) {
       this.assertAdmin(requestUser);
     }
-    this.validateVideoMime(file.mimetype);
+    const detectedMime = await this.detectVideoMimeOrThrow(file);
 
     const maxSizeBytes = Number(
       this.configService.get<string>('VIDEO_MAX_SIZE_BYTES') ??
-      String(2 * 1024 * 1024 * 1024),
+      String(2 * 1024 * 1024 * 1024)
     );
     if (file.size > maxSizeBytes) {
       throw new BadRequestException('file size exceeds limit');
@@ -118,7 +187,7 @@ export class MediaAssetsService {
     const objectKey = asset?.storageKey ?? `videos/${randomUUID()}`;
 
     await this.s3.putObject(bucket, objectKey, file.buffer, file.size, {
-      'Content-Type': file.mimetype,
+      'Content-Type': detectedMime,
     });
 
     const ownerUserId = requestUser
@@ -133,7 +202,7 @@ export class MediaAssetsService {
         type: MediaAssetType.VIDEO,
         status: MediaAssetStatus.READY,
         originalFilename: file.originalname,
-        mimeType: file.mimetype,
+        mimeType: detectedMime,
         sizeBytes: String(file.size),
         storageProvider:
           this.configService.get<string>('STORAGE_PROVIDER') ?? 'minio',
@@ -153,6 +222,19 @@ export class MediaAssetsService {
       storage_key: objectKey,
       public_url: saved.publicUrl,
     };
+  }
+
+  private buildPublicUrl(bucket: string, objectKey: string,): string | undefined {
+    const baseRaw =
+      this.configService.get<string>('S3_PUBLIC_BASE_URL') ??
+      this.configService.get<string>('S3_ENDPOINT');
+
+    const base = baseRaw ? baseRaw.trim().split(/\s+/)[0] : undefined;
+    if (!base) return undefined;
+
+    const normalizedBase = base.replace(/\/$/, '');
+    const normalizedKey = objectKey.replace(/^\//, '');
+    return `${normalizedBase}/${bucket}/${normalizedKey}`;
   }
 
   async uploadImageFileAndPersist(
@@ -346,20 +428,30 @@ export class MediaAssetsService {
     };
   }
 
-  private buildPublicUrl(bucket: string, objectKey: string,): string | undefined {
-    const baseRaw =
-      this.configService.get<string>('S3_PUBLIC_BASE_URL') ??
-      this.configService.get<string>('S3_ENDPOINT');
+  private async streamObject(bucket: string, objectKey: string, res: Response, mimeType?: string, sizeBytes?: number) {
+    try {
+      const dataStream = await this.getObjectStream(bucket, objectKey);
+      if (mimeType) res.setHeader('Content-Type', mimeType);
+      if (sizeBytes && Number.isFinite(sizeBytes)) res.setHeader('Content-Length', String(sizeBytes));
 
-    const base = baseRaw ? baseRaw.trim().split(/\s+/)[0] : undefined;
-    if (!base) return undefined;
+      await new Promise<void>((resolve, reject) => {
+        dataStream.on('error', (e) => {
+          try { res.end(); } catch { }
+          reject(e);
+        });
+        dataStream.on('end', () => resolve());
+        try {
+          dataStream.pipe(res);
+        } catch (e) {
+          reject(e as Error);
+        }
+      });
 
-    const normalizedBase = base.replace(/\/$/, '');
-    const normalizedKey = objectKey.replace(/^\//, '');
-    return `${normalizedBase}/${bucket}/${normalizedKey}`;
+    } catch (e) {
+      throw new NotFoundException('object not found');
+    }
   }
 
-  // Stream an image by storage key
   async streamImageByKey(key: string, res: Response) {
     const bucket = this.getBucketOrThrow();
     const objectKey = key.startsWith('images/') ? key : `images/${key}`;
@@ -381,47 +473,104 @@ export class MediaAssetsService {
     return this.streamObject(bucket, asset.storageKey, res, mime, size);
   }
 
-  // Stream an object by storage key 
+  private async streamObjectWithRange(
+    bucket: string,
+    objectKey: string,
+    res: Response,
+    mimeType: string,
+    size?: number,
+    range?: string,
+  ) {
+    res.setHeader('Accept-Ranges', 'bytes');
+
+    if (!size || !range) {
+      const stream = await this.getObjectStream(bucket, objectKey);
+      res.setHeader('Content-Type', mimeType);
+      if (size) res.setHeader('Content-Length', String(size));
+      stream.pipe(res);
+      return;
+    }
+
+    // ===== parse Range =====
+    const match = /bytes=(\d*)-(\d*)/.exec(range);
+    if (!match) {
+      res.status(416).end();
+      return;
+    }
+
+    let start: number;
+    let end: number;
+
+    if (match[1] === '' && match[2]) {
+      // bytes=-500
+      const suffix = Number(match[2]);
+      if (isNaN(suffix)) {
+        res.status(416).end();
+        return;
+      }
+      start = Math.max(size - suffix, 0);
+      end = size - 1;
+    } else {
+      start = Number(match[1]);
+      end = match[2]
+        ? Number(match[2])
+        : Math.min(start + 1024 * 1024, size - 1);
+    }
+
+    if (
+      isNaN(start) ||
+      isNaN(end) ||
+      start < 0 ||
+      start >= size ||
+      start > end
+    ) {
+      res.status(416).end();
+      return;
+    }
+
+    const chunkSize = end - start + 1;
+
+    // ===== response headers =====
+    res.status(206);
+    res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`);
+    res.setHeader('Content-Length', String(chunkSize));
+    res.setHeader('Content-Type', mimeType);
+
+    const stream = await this.getPartialObjectStream(
+      bucket,
+      objectKey,
+      start,
+      chunkSize,
+    );
+
+    stream.pipe(res);
+  }
+
+
   async streamObjectByKey(key: string, res: Response) {
     const bucket = this.getBucketOrThrow();
     const objectKey = key.startsWith('videos/') ? key : `videos/${key}`;
-    let mime = 'application/octet-stream';
-    let size: number | undefined = undefined;
 
-    try {
-      const maybe = await this.mediaAssetsRepository.findOne({ where: { storageBucket: bucket, storageKey: objectKey } });
-      if (maybe) {
-        mime = maybe.mimeType ?? mime;
-        size = maybe.sizeBytes ? Number(maybe.sizeBytes) : undefined;
-      }
-    } catch {
-      // ignore
+    const asset = await this.mediaAssetsRepository.findOne({
+      where: { storageBucket: bucket, storageKey: objectKey },
+    });
+
+    if (!asset) {
+      throw new NotFoundException('video not found');
     }
 
-    return this.streamObject(bucket, objectKey, res, mime, size);
-  }
+    const mime = asset.mimeType ?? 'video/mp4';
+    const size = asset.sizeBytes ? Number(asset.sizeBytes) : undefined;
 
-  private async streamObject(bucket: string, objectKey: string, res: Response, mimeType?: string, sizeBytes?: number) {
-    try {
-      const dataStream: NodeJS.ReadableStream = await (this.s3 as any).getObject(bucket, objectKey);
-      if (mimeType) res.setHeader('Content-Type', mimeType);
-      if (sizeBytes && Number.isFinite(sizeBytes)) res.setHeader('Content-Length', String(sizeBytes));
+    const range = res.req.headers.range as string | undefined;
 
-      await new Promise<void>((resolve, reject) => {
-        dataStream.on('error', (e) => {
-          try { res.end(); } catch { }
-          reject(e);
-        });
-        dataStream.on('end', () => resolve());
-        try {
-          (dataStream as any).pipe(res);
-        } catch (e) {
-          reject(e as Error);
-        }
-      });
-
-    } catch (e) {
-      throw new NotFoundException('object not found');
-    }
+    return this.streamObjectWithRange(
+      bucket,
+      objectKey,
+      res,
+      mime,
+      size,
+      range
+    );
   }
 }

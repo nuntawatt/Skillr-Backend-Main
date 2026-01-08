@@ -28,7 +28,7 @@ const isTest =
 
           AuthLibModule,
           CoursesModule,
-          LessonsModule,
+          LessonsModule
         ]),
   ],
 })
