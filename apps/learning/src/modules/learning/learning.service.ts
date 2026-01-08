@@ -8,6 +8,7 @@ import { IsNull, Repository } from 'typeorm';
 import { Quiz } from './entities/quiz.entity';
 import { Question, QuestionType } from './entities/question.entity';
 import { QuizAttempt } from './entities/quiz-attempt.entity';
+import { LearningProgressService } from './learning-progress.service';
 import { CreateQuestionDto, CreateQuizDto } from './dto/create-quiz.dto';
 import { UpdateQuizDto } from './dto/update-quiz.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
@@ -22,6 +23,7 @@ export class LearningService {
     private readonly questionRepository: Repository<Question>,
     @InjectRepository(QuizAttempt)
     private readonly attemptRepository: Repository<QuizAttempt>,
+    private readonly learningProgressService: LearningProgressService,
   ) {}
 
   async createQuiz(createQuizDto: CreateQuizDto): Promise<Quiz> {
@@ -109,6 +111,19 @@ export class LearningService {
 
     if (!quiz) {
       throw new NotFoundException(`Quiz with ID ${id} not found`);
+    }
+    return quiz;
+  }
+
+  /**
+   * Stips correct answers from quiz questions for students.
+   */
+  stripAnswers(quiz: Quiz): Quiz {
+    if (quiz.questions) {
+      quiz.questions = quiz.questions.map((q) => {
+        const { correctAnswer, ...rest } = q;
+        return rest as Question;
+      });
     }
     return quiz;
   }
@@ -214,22 +229,7 @@ export class LearningService {
     const numericQuizId = Number(quizId);
     const numericUserId = Number(userId);
 
-    // Calculate score
-    let correctAnswers = 0;
-    const totalQuestions = quiz.questions.length;
-
-    for (const answer of submitDto.answers) {
-      const question = quiz.questions.find((q) => q.id === answer.questionId);
-      if (question && this.isAnswerCorrect(question, answer.answer)) {
-        correctAnswers++;
-      }
-    }
-
-    const score =
-      totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
-    const passed = score >= (quiz.passingScore || 60);
-
-    // Find or create attempt
+    // 1. Find the active attempt
     let attempt = await this.attemptRepository.findOne({
       where: {
         quizId: numericQuizId,
@@ -240,6 +240,7 @@ export class LearningService {
     });
 
     if (!attempt) {
+      // If no active attempt, create one (or throw if you prefer strict flow)
       attempt = this.attemptRepository.create({
         quizId: numericQuizId,
         userId: numericUserId,
@@ -247,12 +248,48 @@ export class LearningService {
       });
     }
 
+    // 2. Calculate score and validate questions
+    let correctAnswers = 0;
+    const totalQuestions = quiz.questions.length;
+    const results: { questionId: number; isCorrect: boolean }[] = [];
+
+    for (const answer of submitDto.answers) {
+      const question = quiz.questions.find((q) => q.id === answer.questionId);
+      if (!question) {
+        throw new BadRequestException(
+          `Question ID ${answer.questionId} does not belong to this quiz`,
+        );
+      }
+
+      const isCorrect = this.isAnswerCorrect(question, answer.answer);
+      results.push({ questionId: answer.questionId, isCorrect });
+      if (isCorrect) {
+        correctAnswers++;
+      }
+    }
+
+    const score =
+      totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
+    const passed = score >= (quiz.passingScore || 60);
+
+    // 3. Update and save attempt
     attempt.answers = submitDto.answers;
+    attempt.results = results;
     attempt.score = score;
     attempt.passed = passed;
     attempt.completedAt = new Date();
 
-    return this.attemptRepository.save(attempt);
+    const savedAttempt = await this.attemptRepository.save(attempt);
+
+    // 4. Auto-update Lesson Progress if passed
+    if (passed) {
+      await this.learningProgressService.completeLesson(
+        userId,
+        String(quiz.lessonId),
+      );
+    }
+
+    return savedAttempt;
   }
 
   private isAnswerCorrect(question: Question, submittedAnswer: any): boolean {
@@ -264,13 +301,25 @@ export class LearningService {
 
       case QuestionType.TRUE_FALSE:
         return (
-          String(correct).toLowerCase() === String(submittedAnswer).toLowerCase()
+          String(correct).toLowerCase() ===
+          String(submittedAnswer).toLowerCase()
         );
 
       case QuestionType.MATCH_PAIRS:
+        // Sort pairs by 'left' to make it order-insensitive for the pairs themselves
+        if (Array.isArray(correct) && Array.isArray(submittedAnswer)) {
+          const sortFn = (a: any, b: any) =>
+            String(a.left).localeCompare(String(b.left));
+          const sortedCorrect = [...correct].sort(sortFn);
+          const sortedSubmitted = [...submittedAnswer].sort(sortFn);
+          return (
+            JSON.stringify(sortedCorrect) === JSON.stringify(sortedSubmitted)
+          );
+        }
+        return false;
+
       case QuestionType.CORRECT_ORDER:
         // For complex types, we compare as JSON strings (order-sensitive for Correct Order)
-        // For Match Pairs, frontend should return pairs in the same logical order or sorted
         return JSON.stringify(correct) === JSON.stringify(submittedAnswer);
 
       default:

@@ -24,7 +24,10 @@ export class QuizAttempt {
   userId: number;
 
   @Column({ type: 'jsonb', nullable: true })
-  answers: { questionId: number; answer: string }[];
+  answers: { questionId: number; answer: any }[];
+
+  @Column({ type: 'jsonb', nullable: true })
+  results: { questionId: number; isCorrect: boolean }[];
 
   @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
   score: number;

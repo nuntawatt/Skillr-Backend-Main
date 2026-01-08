@@ -54,13 +54,36 @@ export class LearningController {
   }
 
   @Get('quizzes')
-  findAllQuizzes(@Query('lessonId') lessonId?: string) {
-    return this.learningService.findAllQuizzes(lessonId);
+  findAllQuizzes(
+    @Request() req: RequestWithUser,
+    @Query('lessonId') lessonId?: string,
+  ) {
+    const quizzes = this.learningService.findAllQuizzes(lessonId);
+    return quizzes.then((list) => {
+      const user = req.user;
+      const isAdminOrInstructor =
+        user?.role === UserRole.ADMIN || user?.role === UserRole.INSTRUCTOR;
+
+      if (!isAdminOrInstructor) {
+        return list.map((q) => this.learningService.stripAnswers(q));
+      }
+      return list;
+    });
   }
 
   @Get('quizzes/:id')
-  findOneQuiz(@Param('id') id: string) {
-    return this.learningService.findOneQuiz(id);
+  findOneQuiz(@Param('id') id: string, @Request() req: RequestWithUser) {
+    const quiz = this.learningService.findOneQuiz(id);
+    return quiz.then((q) => {
+      const user = req.user;
+      const isAdminOrInstructor =
+        user?.role === UserRole.ADMIN || user?.role === UserRole.INSTRUCTOR;
+
+      if (!isAdminOrInstructor) {
+        return this.learningService.stripAnswers(q);
+      }
+      return q;
+    });
   }
 
   @Patch('quizzes/:id')
