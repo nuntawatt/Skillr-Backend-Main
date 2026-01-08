@@ -84,15 +84,15 @@ export class CreateQuestionDto {
   correctAnswerBool?: boolean;
 
   @ValidateIf((q) => q.type === QuestionType.MATCH_PAIRS)
+  @IsOptional()
   @IsArray()
-  @ArrayMinSize(3, { message: 'ต้องมีอย่างน้อย 3 คู่' })
   @ValidateNested({ each: true })
   @Type(() => MatchPairDto)
   correctAnswerPairs?: MatchPairDto[];
 
   @ValidateIf((q) => q.type === QuestionType.CORRECT_ORDER)
+  @IsOptional()
   @IsArray()
-  @ArrayMinSize(3, { message: 'ต้องมีอย่างน้อย 3 รายการ' })
   @IsInt({ each: true })
   correctAnswerOrder?: number[];
 

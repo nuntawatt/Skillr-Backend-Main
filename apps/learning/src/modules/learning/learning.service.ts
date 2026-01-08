@@ -79,9 +79,14 @@ export class LearningService {
       case QuestionType.TRUE_FALSE:
         return question.correctAnswerBool;
       case QuestionType.MATCH_PAIRS:
+        // ถ้าไม่ส่งเฉลยมา ให้ใช้ optionsPairs เป็นเฉลยไปเลย
         return question.correctAnswerPairs ?? question.optionsPairs;
       case QuestionType.CORRECT_ORDER:
-        return question.correctAnswerOrder;
+        // ถ้าไม่ส่งเฉลยลำดับมา ให้เรียง 1, 2, 3... ตามลำดับที่ส่งมา
+        return (
+          question.correctAnswerOrder ??
+          question.optionsOrder?.map((_, i) => i + 1)
+        );
       default:
         return question.correctAnswer;
     }
@@ -305,18 +310,32 @@ export class LearningService {
           String(submittedAnswer).toLowerCase()
         );
 
-      case QuestionType.MATCH_PAIRS:
-        // Sort pairs by 'left' to make it order-insensitive for the pairs themselves
-        if (Array.isArray(correct) && Array.isArray(submittedAnswer)) {
-          const sortFn = (a: any, b: any) =>
-            String(a.left).localeCompare(String(b.left));
-          const sortedCorrect = [...correct].sort(sortFn);
-          const sortedSubmitted = [...submittedAnswer].sort(sortFn);
-          return (
-            JSON.stringify(sortedCorrect) === JSON.stringify(sortedSubmitted)
-          );
+      case QuestionType.MATCH_PAIRS: {
+        if (!Array.isArray(correct) || !Array.isArray(submittedAnswer)) {
+          return false;
         }
-        return false;
+
+        const normalizedCorrect = this.normalizePairs(correct);
+        const normalizedSubmitted = this.normalizePairs(submittedAnswer);
+
+        if (
+          !normalizedCorrect ||
+          !normalizedSubmitted ||
+          normalizedCorrect.length !== normalizedSubmitted.length
+        ) {
+          return false;
+        }
+
+        const sortFn = (a: any, b: any) =>
+          String(a.left).localeCompare(String(b.left));
+        normalizedCorrect.sort(sortFn);
+        normalizedSubmitted.sort(sortFn);
+
+        return (
+          JSON.stringify(normalizedCorrect) ===
+          JSON.stringify(normalizedSubmitted)
+        );
+      }
 
       case QuestionType.CORRECT_ORDER:
         // For complex types, we compare as JSON strings (order-sensitive for Correct Order)
@@ -324,6 +343,34 @@ export class LearningService {
 
       default:
         return correct === submittedAnswer;
+    }
+  }
+
+  /**
+   * Normalize matching pairs for comparison:
+   * - require left/right keys
+   * - trim + lowercase to avoid casing/spacing issues
+   */
+  private normalizePairs(
+    pairs: any[],
+  ): { left: string; right: string }[] | null {
+    try {
+      return pairs.map((p) => {
+        if (p === null || p === undefined) {
+          throw new Error('Invalid pair');
+        }
+        if (p.left === undefined || p.right === undefined) {
+          throw new Error('Pair must include left and right');
+        }
+        const left = String(p.left).trim().toLowerCase();
+        const right = String(p.right).trim().toLowerCase();
+        if (left === '' || right === '') {
+          throw new Error('Pair values cannot be empty');
+        }
+        return { left, right };
+      });
+    } catch {
+      return null;
     }
   }
 
