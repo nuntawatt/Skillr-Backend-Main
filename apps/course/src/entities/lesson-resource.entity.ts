@@ -1,11 +1,4 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  ManyToOne,
-  JoinColumn,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Lesson } from './lesson.entity';
 
 export enum LessonResourceType {
@@ -21,10 +14,10 @@ export class LessonResource {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'lesson_id' })
-  lessonId: number;
-
-  @ManyToOne(() => Lesson, { onDelete: 'CASCADE' })
+  // Relation is the single source of truth for lesson_id
+  @ManyToOne(() => Lesson, lesson => lesson.resources, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'lesson_id' })
   lesson: Lesson;
 
@@ -37,14 +30,14 @@ export class LessonResource {
   @Column({ type: 'varchar', length: 1024, nullable: true })
   url?: string;
 
-  @Column({ name: 'filename', nullable: true })
+  @Column({ nullable: true })
   filename?: string;
 
   @Column({ name: 'mime_type', nullable: true })
   mimeType?: string;
 
-  @Column({ name: 'media_asset_id', nullable: true })
-  mediaAssetId?: number;
+  @Column({ name: 'media_asset_id', type: 'int', nullable: true })
+  mediaAssetId?: number | null;
 
   @Column({ type: 'json', nullable: true })
   meta?: unknown;

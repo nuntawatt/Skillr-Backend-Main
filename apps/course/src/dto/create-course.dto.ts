@@ -37,7 +37,6 @@ function transformTags({ value, obj }: { value: unknown; obj: any }) {
 
 export class CreateCourseDto {
   @ApiProperty({
-    title: 'Title of the course',
     example: 'Introduction to Programming'
   })
   @IsNotEmpty()

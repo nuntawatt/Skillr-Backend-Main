@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
-import { Course } from '../../courses/entities/course.entity';
+import { Course } from './course.entity';
 import { LessonResource } from './lesson-resource.entity';
 
 @Entity('lessons')
@@ -19,8 +19,7 @@ export class Lesson {
   @Column({ name: 'position', type: 'int', default: 0 })
   position: number;
 
-  // Allow null when lesson is not yet attached to a course
-  // This avoids inserting a foreign-key value of 0 which may not exist
+  // Nullable to allow draft lessons without course
   @Column({ name: 'course_id', type: 'int', nullable: true })
   courseId?: number | null;
 
@@ -28,6 +27,7 @@ export class Lesson {
   @JoinColumn({ name: 'course_id' })
   course: Course;
 
+  // Inverse side must reference the relation property, not the FK column
   @OneToMany(() => LessonResource, (resource) => resource.lesson)
   resources: LessonResource[];
 

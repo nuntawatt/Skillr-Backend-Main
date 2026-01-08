@@ -2,11 +2,11 @@ import type { AuthUser } from '@auth';
 import { UserRole } from '@common/enums';
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Request } from '@nestjs/common';
-import { CreateCourseDto, UpdateCourseDto, CourseResponseDto, CourseDetailResponseDto } from './dto';
-import { CoursesService } from './courses.service';
+import { CreateCourseDto, UpdateCourseDto, CourseResponseDto, CourseDetailResponseDto } from '../dto';
+import { CoursesService } from '../services/courses.service';
 import { ApiTags, ApiOperation, ApiConsumes, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiResponse } from '@nestjs/swagger';
 
-@ApiTags('Courses Module')
+@ApiTags('Courses')
 @Controller('courses')
 export class CoursesController {
   constructor(private readonly coursesService: CoursesService) { }

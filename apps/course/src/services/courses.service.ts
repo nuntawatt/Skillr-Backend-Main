@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DeepPartial } from 'typeorm';
-import { Course } from './entities/course.entity';
-import { CreateCourseDto, UpdateCourseDto, CourseResponseDto, CourseDetailResponseDto } from './dto';
+import { Course } from '../entities/course.entity';
+import { CreateCourseDto, UpdateCourseDto, CourseResponseDto, CourseDetailResponseDto } from '../dto';
 
 @Injectable()
 export class CoursesService {
