@@ -8,7 +8,6 @@ import * as Minio from 'minio';
 import type { AuthUser } from '@auth';
 import type { Response } from 'express';
 import { fileTypeFromBuffer } from 'file-type';
-
 import { MediaAsset, MediaAssetStatus, MediaAssetType } from './entities/media-asset.entity';
 import { CreateVideoUploadDto } from './dto/create-video-upload.dto';
 
@@ -316,7 +315,6 @@ export class MediaAssetsService {
     const asset = await this.mediaAssetsRepository.findOne({ where: { id } });
     if (!asset) return { deleted: false };
 
-    // Delete from storage
     const bucket = asset.storageBucket ?? this.getBucketOrThrow();
     const key = asset.storageKey;
     if (bucket && key) {
