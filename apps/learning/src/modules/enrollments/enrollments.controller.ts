@@ -1,12 +1,15 @@
 import {
+  Body,
   Controller,
   Get,
+  Headers,
   Post,
   Param,
   UseGuards,
   Request,
   Query,
   UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { EnrollmentsService } from './enrollments.service';
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
@@ -38,6 +41,26 @@ export class EnrollmentsController {
   @Get('my')
   getMyEnrollments(@Request() req: RequestWithUser) {
     return this.enrollmentsService.findByStudent(getUserIdOrThrow(req.user));
+  }
+
+  @Post('internal/enroll')
+  async internalEnroll(
+    @Headers('x-internal-secret') secret: string,
+    @Body()
+    payload: {
+      userId: string | number;
+      courseId: string | number;
+    },
+  ) {
+    const expected = process.env.INTERNAL_API_SECRET;
+    if (!expected || secret !== expected) {
+      throw new ForbiddenException('Invalid internal secret');
+    }
+
+    const userId = String(payload.userId);
+    const courseId = String(payload.courseId);
+
+    return this.enrollmentsService.enroll(userId, courseId);
   }
 
   @Get('courses/:courseId')

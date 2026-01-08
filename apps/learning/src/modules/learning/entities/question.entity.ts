@@ -12,8 +12,33 @@ import { Quiz } from './quiz.entity';
 export enum QuestionType {
   MULTIPLE_CHOICE = 'multiple_choice',
   TRUE_FALSE = 'true_false',
+  MATCH_PAIRS = 'match_pairs',
+  CORRECT_ORDER = 'correct_order',
   SHORT_ANSWER = 'short_answer',
 }
+
+export interface MatchPairOption {
+  left: string;
+  right: string;
+}
+
+export interface CorrectOrderOption {
+  text: string;
+}
+
+export type QuestionOptions =
+  | string[]
+  | MatchPairOption[]
+  | CorrectOrderOption[];
+
+export type QuestionAnswer =
+  | string
+  | number
+  | boolean
+  | string[]
+  | number[]
+  | MatchPairOption[]
+  | CorrectOrderOption[];
 
 @Entity('questions')
 export class Question {
@@ -31,10 +56,10 @@ export class Question {
   type: QuestionType;
 
   @Column({ type: 'jsonb', nullable: true })
-  options: string[]; // For multiple choice
+  options: QuestionOptions; // Stores options per question type
 
-  @Column({ name: 'correct_answer' })
-  correctAnswer: string;
+  @Column({ name: 'correct_answer', type: 'jsonb' })
+  correctAnswer: QuestionAnswer;
 
   @Column({ nullable: true })
   explanation: string;

@@ -1,11 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
 import { Quiz } from './entities/quiz.entity';
-import { Question } from './entities/question.entity';
+import { Question, QuestionType } from './entities/question.entity';
 import { QuizAttempt } from './entities/quiz-attempt.entity';
-import { CreateQuizDto } from './dto/create-quiz.dto';
+import { LearningProgressService } from './learning-progress.service';
+import { CreateQuestionDto, CreateQuizDto } from './dto/create-quiz.dto';
 import { UpdateQuizDto } from './dto/update-quiz.dto';
+import { UpdateQuestionDto } from './dto/update-question.dto';
 import { SubmitQuizDto } from './dto/submit-quiz.dto';
 
 @Injectable()
@@ -17,9 +23,16 @@ export class LearningService {
     private readonly questionRepository: Repository<Question>,
     @InjectRepository(QuizAttempt)
     private readonly attemptRepository: Repository<QuizAttempt>,
+    private readonly learningProgressService: LearningProgressService,
   ) {}
 
   async createQuiz(createQuizDto: CreateQuizDto): Promise<Quiz> {
+    const questions: CreateQuestionDto[] = createQuizDto.questions ?? [];
+
+    if (questions.length > 3) {
+      throw new BadRequestException('1 Lesson สามารถมี Quiz ได้สูงสุด 3 ข้อ');
+    }
+
     const quiz = this.quizRepository.create({
       title: createQuizDto.title,
       description: createQuizDto.description,
@@ -31,10 +44,16 @@ export class LearningService {
     const savedQuiz = await this.quizRepository.save(quiz);
 
     // Create questions if provided
-    if (createQuizDto.questions && createQuizDto.questions.length > 0) {
-      for (const q of createQuizDto.questions) {
+    if (questions.length > 0) {
+      for (const [index, q] of questions.entries()) {
         const question = this.questionRepository.create({
-          ...q,
+          question: q.question,
+          type: q.type ?? QuestionType.MULTIPLE_CHOICE,
+          options: this.mapOptionsByType(q),
+          correctAnswer: this.mapCorrectAnswerByType(q),
+          explanation: q.explanation,
+          points: q.points,
+          order: index + 1, // บังคับเรียงลำดับบนลงล่าง
           quizId: savedQuiz.id,
         });
         await this.questionRepository.save(question);
@@ -44,10 +63,40 @@ export class LearningService {
     return this.findOneQuiz(savedQuiz.id);
   }
 
+  private mapOptionsByType(question: CreateQuestionDto) {
+    switch (question.type) {
+      case QuestionType.MATCH_PAIRS:
+        return question.optionsPairs;
+      case QuestionType.CORRECT_ORDER:
+        return question.optionsOrder;
+      default:
+        return question.options;
+    }
+  }
+
+  private mapCorrectAnswerByType(question: CreateQuestionDto) {
+    switch (question.type) {
+      case QuestionType.TRUE_FALSE:
+        return question.correctAnswerBool;
+      case QuestionType.MATCH_PAIRS:
+        // ถ้าไม่ส่งเฉลยมา ให้ใช้ optionsPairs เป็นเฉลยไปเลย
+        return question.correctAnswerPairs ?? question.optionsPairs;
+      case QuestionType.CORRECT_ORDER:
+        // ถ้าไม่ส่งเฉลยลำดับมา ให้เรียง 1, 2, 3... ตามลำดับที่ส่งมา
+        return (
+          question.correctAnswerOrder ??
+          question.optionsOrder?.map((_, i) => i + 1)
+        );
+      default:
+        return question.correctAnswer;
+    }
+  }
+
   async findAllQuizzes(lessonId?: string): Promise<Quiz[]> {
     const query = this.quizRepository
       .createQueryBuilder('quiz')
-      .leftJoinAndSelect('quiz.questions', 'questions');
+      .leftJoinAndSelect('quiz.questions', 'questions')
+      .addOrderBy('questions.order', 'ASC');
 
     if (lessonId) {
       query.where('quiz.lessonId = :lessonId', { lessonId: Number(lessonId) });
@@ -58,26 +107,109 @@ export class LearningService {
 
   async findOneQuiz(id: string | number): Promise<Quiz> {
     const quizId = Number(id);
-    const quiz = await this.quizRepository.findOne({
-      where: { id: quizId },
-      relations: ['questions'],
-    });
+    const quiz = await this.quizRepository
+      .createQueryBuilder('quiz')
+      .leftJoinAndSelect('quiz.questions', 'questions')
+      .where('quiz.id = :id', { id: quizId })
+      .orderBy('questions.order', 'ASC')
+      .getOne();
+
     if (!quiz) {
       throw new NotFoundException(`Quiz with ID ${id} not found`);
     }
     return quiz;
   }
 
+  /**
+   * Stips correct answers from quiz questions for students.
+   */
+  stripAnswers(quiz: Quiz): Quiz {
+    if (quiz.questions) {
+      quiz.questions = quiz.questions.map((q) => {
+        const { correctAnswer, ...rest } = q;
+        return rest as Question;
+      });
+    }
+    return quiz;
+  }
+
   async updateQuiz(id: string, updateQuizDto: UpdateQuizDto): Promise<Quiz> {
+    if (updateQuizDto.questions && updateQuizDto.questions.length > 3) {
+      throw new BadRequestException('1 Lesson สามารถมี Quiz ได้สูงสุด 3 ข้อ');
+    }
+
     const quiz = await this.findOneQuiz(id);
     Object.assign(quiz, updateQuizDto);
     await this.quizRepository.save(quiz);
     return this.findOneQuiz(id);
   }
 
+  async updateQuestion(
+    id: number,
+    updateDto: UpdateQuestionDto,
+  ): Promise<Question> {
+    const question = await this.questionRepository.findOne({ where: { id } });
+    if (!question) {
+      throw new NotFoundException('Question not found');
+    }
+
+    // Handle options and correct answer mapping if they are being updated
+    const mappedOptions =
+      updateDto.type ||
+      updateDto.options ||
+      updateDto.optionsPairs ||
+      updateDto.optionsOrder
+        ? this.mapOptionsByType(updateDto as any)
+        : question.options;
+
+    const mappedAnswer =
+      updateDto.type ||
+      updateDto.correctAnswer ||
+      updateDto.correctAnswerBool ||
+      updateDto.correctAnswerPairs ||
+      updateDto.correctAnswerOrder
+        ? this.mapCorrectAnswerByType(updateDto as any)
+        : question.correctAnswer;
+
+    Object.assign(question, {
+      ...updateDto,
+      options: mappedOptions,
+      correctAnswer: mappedAnswer,
+    });
+
+    return await this.questionRepository.save(question);
+  }
+
   async removeQuiz(id: string): Promise<void> {
     const quiz = await this.findOneQuiz(id);
     await this.quizRepository.remove(quiz);
+  }
+
+  async removeQuestion(id: number): Promise<void> {
+    const question = await this.questionRepository.findOne({
+      where: { id },
+    });
+    if (!question) {
+      throw new NotFoundException('Question not found');
+    }
+
+    const quizId = question.quizId;
+    await this.questionRepository.remove(question);
+
+    // Re-index remaining questions in order
+    const remaining = await this.questionRepository.find({
+      where: { quizId },
+      order: { order: 'ASC' },
+    });
+
+    for (let i = 0; i < remaining.length; i++) {
+      const q = remaining[i];
+      const newOrder = i + 1;
+      if (q.order !== newOrder) {
+        q.order = newOrder;
+        await this.questionRepository.save(q);
+      }
+    }
   }
 
   async startQuiz(quizId: string, userId: string): Promise<QuizAttempt> {
@@ -102,22 +234,7 @@ export class LearningService {
     const numericQuizId = Number(quizId);
     const numericUserId = Number(userId);
 
-    // Calculate score
-    let correctAnswers = 0;
-    const totalQuestions = quiz.questions.length;
-
-    for (const answer of submitDto.answers) {
-      const question = quiz.questions.find((q) => q.id === answer.questionId);
-      if (question && question.correctAnswer === answer.answer) {
-        correctAnswers++;
-      }
-    }
-
-    const score =
-      totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
-    const passed = score >= (quiz.passingScore || 60);
-
-    // Find or create attempt
+    // 1. Find the active attempt
     let attempt = await this.attemptRepository.findOne({
       where: {
         quizId: numericQuizId,
@@ -128,6 +245,7 @@ export class LearningService {
     });
 
     if (!attempt) {
+      // If no active attempt, create one (or throw if you prefer strict flow)
       attempt = this.attemptRepository.create({
         quizId: numericQuizId,
         userId: numericUserId,
@@ -135,12 +253,125 @@ export class LearningService {
       });
     }
 
+    // 2. Calculate score and validate questions
+    let correctAnswers = 0;
+    const totalQuestions = quiz.questions.length;
+    const results: { questionId: number; isCorrect: boolean }[] = [];
+
+    for (const answer of submitDto.answers) {
+      const question = quiz.questions.find((q) => q.id === answer.questionId);
+      if (!question) {
+        throw new BadRequestException(
+          `Question ID ${answer.questionId} does not belong to this quiz`,
+        );
+      }
+
+      const isCorrect = this.isAnswerCorrect(question, answer.answer);
+      results.push({ questionId: answer.questionId, isCorrect });
+      if (isCorrect) {
+        correctAnswers++;
+      }
+    }
+
+    const score =
+      totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
+    const passed = score >= (quiz.passingScore || 60);
+
+    // 3. Update and save attempt
     attempt.answers = submitDto.answers;
+    attempt.results = results;
     attempt.score = score;
     attempt.passed = passed;
     attempt.completedAt = new Date();
 
-    return this.attemptRepository.save(attempt);
+    const savedAttempt = await this.attemptRepository.save(attempt);
+
+    // 4. Auto-update Lesson Progress if passed
+    if (passed) {
+      await this.learningProgressService.completeLesson(
+        userId,
+        String(quiz.lessonId),
+      );
+    }
+
+    return savedAttempt;
+  }
+
+  private isAnswerCorrect(question: Question, submittedAnswer: any): boolean {
+    const correct = question.correctAnswer;
+
+    switch (question.type) {
+      case QuestionType.MULTIPLE_CHOICE:
+        return String(correct) === String(submittedAnswer);
+
+      case QuestionType.TRUE_FALSE:
+        return (
+          String(correct).toLowerCase() ===
+          String(submittedAnswer).toLowerCase()
+        );
+
+      case QuestionType.MATCH_PAIRS: {
+        if (!Array.isArray(correct) || !Array.isArray(submittedAnswer)) {
+          return false;
+        }
+
+        const normalizedCorrect = this.normalizePairs(correct);
+        const normalizedSubmitted = this.normalizePairs(submittedAnswer);
+
+        if (
+          !normalizedCorrect ||
+          !normalizedSubmitted ||
+          normalizedCorrect.length !== normalizedSubmitted.length
+        ) {
+          return false;
+        }
+
+        const sortFn = (a: any, b: any) =>
+          String(a.left).localeCompare(String(b.left));
+        normalizedCorrect.sort(sortFn);
+        normalizedSubmitted.sort(sortFn);
+
+        return (
+          JSON.stringify(normalizedCorrect) ===
+          JSON.stringify(normalizedSubmitted)
+        );
+      }
+
+      case QuestionType.CORRECT_ORDER:
+        // For complex types, we compare as JSON strings (order-sensitive for Correct Order)
+        return JSON.stringify(correct) === JSON.stringify(submittedAnswer);
+
+      default:
+        return correct === submittedAnswer;
+    }
+  }
+
+  /**
+   * Normalize matching pairs for comparison:
+   * - require left/right keys
+   * - trim + lowercase to avoid casing/spacing issues
+   */
+  private normalizePairs(
+    pairs: any[],
+  ): { left: string; right: string }[] | null {
+    try {
+      return pairs.map((p) => {
+        if (p === null || p === undefined) {
+          throw new Error('Invalid pair');
+        }
+        if (p.left === undefined || p.right === undefined) {
+          throw new Error('Pair must include left and right');
+        }
+        const left = String(p.left).trim().toLowerCase();
+        const right = String(p.right).trim().toLowerCase();
+        if (left === '' || right === '') {
+          throw new Error('Pair values cannot be empty');
+        }
+        return { left, right };
+      });
+    } catch {
+      return null;
+    }
   }
 
   async getAttempts(quizId: string, userId: string): Promise<QuizAttempt[]> {

@@ -1,8 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
+import { Category } from '../../categories/entities';
 
 @Entity('courses')
 @Index('idx_courses_owner_user_id', ['ownerUserId'])
 @Index('idx_courses_is_published', ['isPublished'])
+@Index('idx_courses_category_id', ['categoryId'])
 export class Course {
   @PrimaryGeneratedColumn()
   id: number;
@@ -25,6 +27,10 @@ export class Course {
 
   @Column({ name: 'category_id', type: 'int', nullable: true })
   categoryId?: number;
+
+  @ManyToOne(() => Category, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'category_id' })
+  category?: Category;
 
   // store as enum
   @Column({

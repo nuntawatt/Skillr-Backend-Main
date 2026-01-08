@@ -54,16 +54,77 @@ export class CoursesService {
     } as unknown as Course;
   }
 
-  async findAll(isPublished?: string): Promise<CourseResponseDto[]> {
+  async findAll(params?: {
+    isPublished?: string;
+    q?: string;
+    categoryId?: string;
+    level?: string;
+    limit?: string;
+    offset?: string;
+  }): Promise<CourseResponseDto[]> {
     const query = this.courseRepository.createQueryBuilder('course');
 
-    if (typeof isPublished === 'string') {
-      const normalized = isPublished.trim().toLowerCase();
-      if (['true', 'false', '1', '0'].includes(normalized)) {
-        const value = normalized === 'true' || normalized === '1';
-        query.where('course.isPublished = :value', { value });
-      }
+    const normalizedPublished =
+      typeof params?.isPublished === 'string'
+        ? params.isPublished.trim().toLowerCase()
+        : undefined;
+
+    if (['true', 'false', '1', '0'].includes(normalizedPublished ?? '')) {
+      const value =
+        normalizedPublished === 'true' || normalizedPublished === '1';
+      query.andWhere('course.isPublished = :value', { value });
     }
+
+    const normalizedLevel =
+      typeof params?.level === 'string'
+        ? params.level.trim().toLowerCase()
+        : undefined;
+    if (
+      normalizedLevel &&
+      ['beginner', 'intermediate', 'advanced'].includes(normalizedLevel)
+    ) {
+      query.andWhere('course.level = :level', {
+        level: normalizedLevel as Course['level'],
+      });
+    }
+
+    const numericCategoryId =
+      typeof params?.categoryId === 'string'
+        ? Number(params.categoryId)
+        : undefined;
+    if (Number.isFinite(numericCategoryId)) {
+      query.andWhere('course.categoryId = :categoryId', {
+        categoryId: numericCategoryId,
+      });
+    }
+
+    const keyword =
+      typeof params?.q === 'string' ? params.q.trim().toLowerCase() : '';
+    if (keyword.length) {
+      query.andWhere(
+        '(LOWER(course.title) LIKE :kw OR LOWER(course.description) LIKE :kw)',
+        { kw: `%${keyword}%` },
+      );
+    }
+
+    // pagination
+    const limitRaw: number | undefined =
+      typeof params?.limit === 'string' ? Number(params.limit) : undefined;
+    const offsetRaw: number | undefined =
+      typeof params?.offset === 'string' ? Number(params.offset) : undefined;
+
+    const limit =
+      typeof limitRaw === 'number' && Number.isFinite(limitRaw) && limitRaw > 0
+        ? Math.min(limitRaw, 100)
+        : 50;
+    const offset =
+      typeof offsetRaw === 'number' &&
+      Number.isFinite(offsetRaw) &&
+      offsetRaw >= 0
+        ? offsetRaw
+        : 0;
+
+    query.orderBy('course.createdAt', 'DESC').limit(limit).offset(offset);
 
     const rows = await query.getMany();
 

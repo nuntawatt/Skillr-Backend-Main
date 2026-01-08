@@ -1,8 +1,15 @@
-import { Injectable, UnauthorizedException, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+  ConflictException,
+  Logger,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
+import { MailerService } from '@nestjs-modules/mailer';
 
 import * as crypto from 'crypto';
 import { UsersService } from '../users/users.service';
@@ -10,6 +17,7 @@ import { User } from '../users/entities/user.entity';
 import { Session } from '../users/entities/session.entity';
 import { PasswordResetToken } from '../users/entities/password-reset-token.entity';
 import { RegisterDto, LoginDto } from './dto';
+import { LoginAttemptsService } from './login-attempts.service';
 
 export interface TokenResponse {
   accessToken: string;
@@ -24,6 +32,8 @@ export interface AuthResponse {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
@@ -32,7 +42,9 @@ export class AuthService {
     private readonly sessionRepository: Repository<Session>,
     @InjectRepository(PasswordResetToken)
     private readonly passwordResetTokenRepository: Repository<PasswordResetToken>,
-  ) { }
+    private readonly loginAttemptsService: LoginAttemptsService,
+    private readonly mailerService: MailerService,
+  ) {}
 
   // Register a new user
   async register(registerDto: RegisterDto): Promise<AuthResponse> {
@@ -62,9 +74,27 @@ export class AuthService {
     userAgent?: string,
     ipAddress?: string,
   ): Promise<AuthResponse> {
+    const invalidMessage = 'Invalid email or password';
+
+    const lockStatus = await this.loginAttemptsService.getLockStatus(
+      loginDto.email,
+    );
+    if (lockStatus.isLocked) {
+      throw new UnauthorizedException(
+        this.formatLockMessage(lockStatus.remainingMs),
+      );
+    }
+
     const user = await this.usersService.findByEmail(loginDto.email);
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      const nextStatus = await this.loginAttemptsService.recordFailure(
+        loginDto.email,
+      );
+      throw new UnauthorizedException(
+        nextStatus.isLocked
+          ? this.formatLockMessage(nextStatus.remainingMs)
+          : invalidMessage,
+      );
     }
 
     const isPasswordValid = await this.usersService.verifyPassword(
@@ -72,7 +102,18 @@ export class AuthService {
       loginDto.password,
     );
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      const nextStatus = await this.loginAttemptsService.recordFailure(
+        loginDto.email,
+      );
+      throw new UnauthorizedException(
+        nextStatus.isLocked
+          ? this.formatLockMessage(nextStatus.remainingMs)
+          : invalidMessage,
+      );
+    }
+
+    if ((user.status ?? '').toLowerCase() !== 'active') {
+      throw new UnauthorizedException('Account is inactive or suspended');
     }
 
     const tokens = await this.generateTokens(
@@ -81,6 +122,8 @@ export class AuthService {
       ipAddress,
       loginDto.rememberMe,
     );
+
+    await this.loginAttemptsService.resetAttempts(loginDto.email);
 
     return {
       user: this.sanitizeUser(user),
@@ -97,6 +140,11 @@ export class AuthService {
     avatar?: string;
   }): Promise<AuthResponse> {
     const user = await this.usersService.findOrCreateFromGoogle(profile);
+
+    if ((user.status ?? '').toLowerCase() !== 'active') {
+      throw new UnauthorizedException('Account is inactive or suspended');
+    }
+
     const tokens = await this.generateTokens(user);
 
     return {
@@ -160,6 +208,8 @@ export class AuthService {
 
     await this.passwordResetTokenRepository.save(resetToken);
 
+    await this.safeSendResetEmail(user.email, token);
+
     return {
       message: 'If the email exists, a password reset link will be sent.',
     };
@@ -187,6 +237,9 @@ export class AuthService {
     resetToken.isUsed = true;
     await this.passwordResetTokenRepository.save(resetToken);
     await this.logoutAll(resetToken.userId);
+
+    await this.safeSendPasswordChangedEmail(resetToken.user.email);
+    this.logger.log(`Password reset for userId=${resetToken.userId}`);
 
     return { message: 'Password has been reset successfully' };
   }
@@ -235,5 +288,57 @@ export class AuthService {
     const { passwordHash: passwordHashRemoved, ...sanitizedUser } = user;
     void passwordHashRemoved;
     return sanitizedUser;
+  }
+
+  private formatLockMessage(remainingMs: number): string {
+    const secondsRemaining = Math.max(1, Math.ceil(remainingMs / 1000));
+    return `Account locked. Please try again in ${secondsRemaining} seconds`;
+  }
+
+  private buildResetLink(token: string): string {
+    const base =
+      this.configService.get<string>('RESET_PASSWORD_URL') ??
+      'http://localhost:3000/reset-password';
+    const separator = base.includes('?') ? '&' : '?';
+    return `${base}${separator}token=${encodeURIComponent(token)}`;
+  }
+
+  private async safeSendResetEmail(email: string, token: string): Promise<void> {
+    const resetLink = this.buildResetLink(token);
+    try {
+      await this.mailerService.sendMail({
+        to: email,
+        subject: 'Reset your password',
+        html: `
+          <p>We received a request to reset your password.</p>
+          <p><a href="${resetLink}">Click here to reset your password</a></p>
+          <p>If you did not request this, you can safely ignore this email.</p>
+        `,
+        text: `Reset your password: ${resetLink}`,
+      });
+      this.logger.log(`Sent reset email to ${email}`);
+    } catch (error) {
+      this.logger.error(`Failed to send reset email to ${email}`, error as Error);
+    }
+  }
+
+  private async safeSendPasswordChangedEmail(email: string): Promise<void> {
+    try {
+      await this.mailerService.sendMail({
+        to: email,
+        subject: 'Your password was changed',
+        html: `
+          <p>Your password was changed successfully.</p>
+          <p>If this wasn't you, please reset your password immediately.</p>
+        `,
+        text: 'Your password was changed successfully. If this was not you, please reset it immediately.',
+      });
+      this.logger.log(`Sent password-changed email to ${email}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send password-changed email to ${email}`,
+        error as Error,
+      );
+    }
   }
 }
