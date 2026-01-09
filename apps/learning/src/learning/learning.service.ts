@@ -29,8 +29,21 @@ export class LearningService {
   async createQuiz(createQuizDto: CreateQuizDto): Promise<Quiz> {
     const questions: CreateQuestionDto[] = createQuizDto.questions ?? [];
 
-    if (questions.length > 3) {
-      throw new BadRequestException('1 Lesson สามารถมี Quiz ได้สูงสุด 3 ข้อ');
+    // Check total questions for this lesson in DB
+    const existingQuizzes = await this.quizRepository.find({
+      where: { lessonId: Number(createQuizDto.lessonId) },
+      relations: ['questions'],
+    });
+
+    const totalExistingQuestions = existingQuizzes.reduce(
+      (sum, q) => sum + (q.questions?.length ?? 0),
+      0,
+    );
+
+    if (totalExistingQuestions + questions.length > 3) {
+      throw new BadRequestException(
+        `1 Lesson สามารถมีคำถามรวมได้สูงสุด 3 ข้อ (ปัจจุบันมีแล้ว ${totalExistingQuestions} ข้อ)`,
+      );
     }
 
     const quiz = this.quizRepository.create({
@@ -62,6 +75,8 @@ export class LearningService {
 
   private mapOptionsByType(question: CreateQuestionDto) {
     switch (question.type) {
+      case QuestionType.TRUE_FALSE:
+        return ['True', 'False'];
       case QuestionType.MATCH_PAIRS:
         return question.optionsPairs;
       case QuestionType.CORRECT_ORDER:
