@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { AppModule } from './../apps/course/src/app.module';
+import { AppModule } from '../apps/course/src/course.module';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
