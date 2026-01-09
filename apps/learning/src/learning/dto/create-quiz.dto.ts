@@ -90,12 +90,6 @@ export class CreateQuestionDto {
   @Type(() => MatchPairDto)
   correctAnswerPairs?: MatchPairDto[];
 
-  @ValidateIf((q) => q.type === QuestionType.CORRECT_ORDER)
-  @IsOptional()
-  @IsArray()
-  @IsInt({ each: true })
-  correctAnswerOrder?: number[];
-
   @IsOptional()
   @IsString()
   explanation?: string;
@@ -112,9 +106,6 @@ export class CreateQuestionDto {
 }
 
 export class CreateQuizDto {
-  @IsString()
-  title: string;
-
   @IsOptional()
   @IsString()
   description?: string;
@@ -122,17 +113,6 @@ export class CreateQuizDto {
   @IsInt()
   @Type(() => Number)
   lessonId: number;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(1)
-  timeLimit?: number;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  passingScore?: number;
 
   @IsOptional()
   @IsArray()
