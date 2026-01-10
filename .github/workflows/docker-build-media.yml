@@ -28,8 +28,8 @@ jobs:
         
       - name: Build Docker image
         run: |
-          docker build -f apps/media/dockerfile.media -t ghcr.io/${{ env.REPO_LC }}:latest .
+          docker build -f apps/media/dockerfile.media -t ghcr.io/${{ env.REPO_LC }}-media:latest .
 
       - name: Push Docker image
         run: |
-          docker push ghcr.io/${{ env.REPO_LC }}:latest
+          docker push ghcr.io/${{ env.REPO_LC }}-media:latest
