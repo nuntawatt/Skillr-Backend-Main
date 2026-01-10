@@ -30,5 +30,4 @@ COPY --from=builder /app/package.json ./package.json
 
 EXPOSE 3002
 
-# Nest build output entrypoint
-CMD ["node", "dist/apps/course/apps/course/src/main.js"]
+CMD ["node", "dist/apps/course/src/main.js"]

@@ -5,7 +5,7 @@
   "root": "apps/auth",
   "sourceRoot": "apps/auth/src",
   "compilerOptions": {
-    "deleteOutDir": true
+    "deleteOutDir": false
   },
   "projects": {
     "auth": {

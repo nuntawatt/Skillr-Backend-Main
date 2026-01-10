@@ -17,17 +17,10 @@ export class MediaVideosController {
   @UseInterceptors(FileInterceptor('file', { storage: multer.memoryStorage() }))
   @ApiOperation({ summary: 'Upload video file (optionally media_asset_id)' })
   @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        file: { type: 'string', format: 'binary' },
-        media_asset_id: { type: 'number' },
-        owner_user_id: { type: 'number' },
-      },
-      required: ['file'],
-    },
-  })
+  @ApiBody({ type: CreateVideoUploadDto })
+  @ApiResponse({ status: 201, description: 'Video uploaded' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   uploadFile(@UploadedFile() file: Express.Multer.File, @Req() req: RequestWithUserAndBody) {
     const body = typeof req.body === 'object' && req.body !== null ? req.body : {};
     const rawId = body['media_asset_id'] ?? body['mediaAssetId'];
@@ -40,6 +33,10 @@ export class MediaVideosController {
   @Get('presign/:key')
   @ApiParam({ name: 'key', example: 'abc-uuid' })
   @ApiOperation({ summary: 'Stream a video by key (supports range)' })
+  @ApiResponse({ status: 200, description: 'Video stream started' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 404, description: 'Video not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   async streamFileByKey(@Param('key') key: string, @Res() res: Response) {
     return this.svc.streamObjectByKey(key, res);
   }
