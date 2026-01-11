@@ -50,7 +50,7 @@ export class MediaCleanupService implements OnModuleInit, OnModuleDestroy {
     let deleted = 0;
     for (const asset of imageCandidates) {
       try {
-        await this.imagesSvc.deleteAssetIfExists(asset.id);
+        await this.imagesSvc.cleanupDeleteAsset(asset.id);
         deleted += 1;
       } catch (e) {
         this.logger.warn(`Failed to delete image ${asset.id}: ${String(e)}`);
@@ -67,7 +67,7 @@ export class MediaCleanupService implements OnModuleInit, OnModuleDestroy {
 
     for (const asset of videoCandidates) {
       try {
-        await this.videosSvc.deleteAssetIfExists(asset.id);
+        await this.videosSvc.cleanupDeleteAsset(asset.id);
         deleted += 1;
       } catch (e) {
         this.logger.warn(`Failed to delete video ${asset.id}: ${String(e)}`);

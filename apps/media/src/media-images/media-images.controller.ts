@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UploadedFile, UseInterceptors, Res } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UploadedFile, UseInterceptors, Res, Delete } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
 import { MediaImagesService } from './media-images.service';
@@ -35,5 +35,17 @@ export class MediaImagesController {
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async streamByKey(@Param('key') key: string, @Res() res: Response) {
     return this.svc.streamImageByKey(key, res);
+  }
+
+  @Delete(':id')
+  @ApiParam({ name: 'id', example: 10 })
+  @ApiOperation({ summary: 'Delete an image asset by ID' })
+  @ApiResponse({ status: 200, description: 'Image asset deleted' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 404, description: 'Image asset not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  async deleteImageById(@Param('id') id: string) {
+    const assetId = Number(id);
+    return this.svc.deleteImageById(assetId);
   }
 }

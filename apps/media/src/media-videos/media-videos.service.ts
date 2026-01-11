@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { StorageService } from '../storage/storage.service';
 import { VideoAsset, VideoAssetStatus } from './entities/video-asset.entity';
 import { CreateVideoUploadDto } from './dto/create-video-upload.dto';
@@ -159,14 +159,38 @@ export class MediaVideosService {
     const objectKey = key.startsWith('videos/') ? key : `videos/${key}`;
     const asset = await this.repo.findOne({ where: { storageBucket: bucket, storageKey: objectKey } });
     if (!asset) throw new NotFoundException('video not found');
+    
     const mime = asset.mimeType ?? 'video/mp4';
     const size = asset.sizeBytes ? Number(asset.sizeBytes) : undefined;
     return this.streamObjectWithRange(bucket, objectKey, res, mime, size);
   }
 
-  async deleteAssetIfExists(id: number) {
+  // delete video by id
+  async deleteVideoById(id: number) {
+    const asset = await this.repo.findOne({ where: { id } });
+    if (!asset) {
+      throw new NotFoundException('video asset not found');
+    }
+
+    const bucket = asset.storageBucket ?? this.storage.bucket;
+    const key = asset.storageKey;
+    if (bucket && key) {
+      try {
+        await this.storage.removeObject(bucket, key);
+      } catch (err) {
+        // optional log error
+      }
+    }
+
+    await this.repo.remove(asset);
+    return { deleted: true };
+  }
+
+  // cleanup deleted assets video 
+  async cleanupDeleteAsset(id: number) {
     const asset = await this.repo.findOne({ where: { id } });
     if (!asset) return { deleted: false };
+
     const bucket = asset.storageBucket ?? this.storage.bucket;
     const key = asset.storageKey;
     if (bucket && key) {

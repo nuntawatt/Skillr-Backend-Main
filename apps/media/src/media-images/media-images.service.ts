@@ -82,7 +82,25 @@ export class MediaImagesService {
     stream.pipe(res);
   }
 
-  async deleteAssetIfExists(id: number) {
+  async deleteImageById(id: number) {
+    const asset = await this.repo.findOne({ where: { id } });
+    if (!asset) throw new NotFoundException('media asset not found');
+
+    const bucket = asset.storageBucket ?? this.storage.bucket;
+    const key = asset.storageKey;
+    if (bucket && key) {
+      try {
+        await this.storage.removeObject(bucket, key);
+      } catch (err){
+        // optional log error
+      }
+    }
+    await this.repo.remove(asset);
+    return { deleted: true };
+  }
+
+  // cleanup deleted assets images
+  async cleanupDeleteAsset(id: number) {
     const asset = await this.repo.findOne({ where: { id } });
     if (!asset) return { deleted: false };
     const bucket = asset.storageBucket ?? this.storage.bucket;
