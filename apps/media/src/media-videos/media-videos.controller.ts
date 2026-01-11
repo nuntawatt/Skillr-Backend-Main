@@ -4,7 +4,7 @@ import * as multer from 'multer';
 import { MediaVideosService } from './media-videos.service';
 import { CreateVideoUploadDto } from './dto/create-video-upload.dto';
 import type { Response } from 'express';
-import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiParam, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiParam, ApiResponse, ApiCreatedResponse } from '@nestjs/swagger';
 
 type RequestWithUserAndBody = { user?: any; body?: any };
 
@@ -18,6 +18,7 @@ export class MediaVideosController {
   @ApiOperation({ summary: 'Upload video file (optionally media_asset_id)' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: CreateVideoUploadDto })
+  @ApiCreatedResponse({ description: 'Video uploaded' })
   @ApiResponse({ status: 201, description: 'Video uploaded' })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 500, description: 'Internal server error' })

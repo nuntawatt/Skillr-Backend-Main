@@ -17,8 +17,7 @@ export class Course {
   @Column({ type: 'text', nullable: true })
   description?: string;
 
-  // store as numeric with 2 decimal places
-  @Column({ type: 'numeric', precision: 10, scale: 2, default: 0 })
+  @Column({ type: 'int', default: 0 })
   price: number;
 
   @Column({ name: 'is_published', default: false })

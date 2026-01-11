@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsBoolean, IsNotEmpty, IsInt, IsIn, IsArray, IsNumber, Min } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsNotEmpty, IsInt, IsIn, IsArray, Min } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 function transformOptionalNumber({ value }: { value: unknown }) {
@@ -61,12 +61,12 @@ export class CreateCourseDto {
   course_level?: 'beginner' | 'intermediate' | 'advanced';
 
   @ApiPropertyOptional({
-    description: 'Price of the course',
-    example: 49.99,
+    description: 'Price of the course (integer only, must be greater than 0)',
+    example: 100,
   })
   @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 2 }, { message: 'price must be a valid number' })
-  @Min(0)
+  @IsInt()
+  @Min(1, { message: 'price must be greater than 0' })
   @Transform(transformOptionalNumber)
   course_price?: number;
 

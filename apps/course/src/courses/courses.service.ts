@@ -24,7 +24,7 @@ export class CoursesService {
       ownerUserId: Number(createCourseDto.ownerId ?? 0),
       title: createCourseDto.course_name,
       description: createCourseDto.course_detail,
-      price: Number(createCourseDto.course_price ?? 0),
+      price: Number(createCourseDto.course_price),
       isPublished: Boolean(createCourseDto.is_published ?? false),
       categoryId: createCourseDto.categoryId,
       level: createCourseDto.course_level ?? 'beginner',
@@ -62,67 +62,34 @@ export class CoursesService {
     limit?: string;
     offset?: string;
   }): Promise<CourseResponseDto[]> {
+
     const query = this.courseRepository.createQueryBuilder('course');
 
-    const normalizedPublished =
-      typeof params?.isPublished === 'string'
-        ? params.isPublished.trim().toLowerCase()
-        : undefined;
-
+    const normalizedPublished = typeof params?.isPublished === 'string' ? params.isPublished.trim().toLowerCase() : undefined;
     if (['true', 'false', '1', '0'].includes(normalizedPublished ?? '')) {
-      const value =
-        normalizedPublished === 'true' || normalizedPublished === '1';
+      const value = normalizedPublished === 'true' || normalizedPublished === '1';
       query.andWhere('course.isPublished = :value', { value });
     }
 
-    const normalizedLevel =
-      typeof params?.level === 'string'
-        ? params.level.trim().toLowerCase()
-        : undefined;
-    if (
-      normalizedLevel &&
-      ['beginner', 'intermediate', 'advanced'].includes(normalizedLevel)
-    ) {
+    const normalizedLevel = typeof params?.level === 'string' ? params.level.trim().toLowerCase() : undefined;
+    if (normalizedLevel && ['beginner', 'intermediate', 'advanced'].includes(normalizedLevel)) {
       query.andWhere('course.level = :level', {
         level: normalizedLevel as Course['level'],
       });
     }
 
-    const numericCategoryId =
-      typeof params?.categoryId === 'string'
-        ? Number(params.categoryId)
-        : undefined;
-    if (Number.isFinite(numericCategoryId)) {
-      query.andWhere('course.categoryId = :categoryId', {
-        categoryId: numericCategoryId,
-      });
-    }
-
-    const keyword =
-      typeof params?.q === 'string' ? params.q.trim().toLowerCase() : '';
+    const keyword = typeof params?.q === 'string' ? params.q.trim().toLowerCase() : '';
     if (keyword.length) {
-      query.andWhere(
-        '(LOWER(course.title) LIKE :kw OR LOWER(course.description) LIKE :kw)',
-        { kw: `%${keyword}%` },
+      query.andWhere('(LOWER(course.title) LIKE :kw OR LOWER(course.description) LIKE :kw)', { kw: `%${keyword}%` },
       );
     }
 
     // pagination
-    const limitRaw: number | undefined =
-      typeof params?.limit === 'string' ? Number(params.limit) : undefined;
-    const offsetRaw: number | undefined =
-      typeof params?.offset === 'string' ? Number(params.offset) : undefined;
+    const limitRaw: number | undefined = typeof params?.limit === 'string' ? Number(params.limit) : undefined;
+    const offsetRaw: number | undefined = typeof params?.offset === 'string' ? Number(params.offset) : undefined;
 
-    const limit =
-      typeof limitRaw === 'number' && Number.isFinite(limitRaw) && limitRaw > 0
-        ? Math.min(limitRaw, 100)
-        : 50;
-    const offset =
-      typeof offsetRaw === 'number' &&
-      Number.isFinite(offsetRaw) &&
-      offsetRaw >= 0
-        ? offsetRaw
-        : 0;
+    const limit = typeof limitRaw === 'number' && Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(limitRaw, 100) : 50;
+    const offset = typeof offsetRaw === 'number' && Number.isFinite(offsetRaw) && offsetRaw >= 0 ? offsetRaw : 0;
 
     query.orderBy('course.createdAt', 'DESC').limit(limit).offset(offset);
 
@@ -147,9 +114,7 @@ export class CoursesService {
 
   async findOne(id: string): Promise<CourseDetailResponseDto> {
     const courseId = Number(id);
-    const course = await this.courseRepository.findOne({
-      where: { id: courseId },
-    });
+    const course = await this.courseRepository.findOne({ where: { id: courseId }, });
 
     if (!course) {
       throw new NotFoundException(`Course with ID ${id} not found`);
@@ -179,16 +144,12 @@ export class CoursesService {
   }
 
   async findByOwner(ownerId: string): Promise<Course[]> {
-    return this.courseRepository.find({
-      where: { ownerUserId: Number(ownerId) },
-    });
+    return this.courseRepository.find({ where: { ownerUserId: Number(ownerId) }, });
   }
 
   async update(id: string, updateCourseDto: UpdateCourseDto): Promise<Course> {
     const courseId = Number(id);
-    const course = await this.courseRepository.findOne({
-      where: { id: courseId },
-    });
+    const course = await this.courseRepository.findOne({ where: { id: courseId }, });
 
     if (!course) {
       throw new NotFoundException(`Course with ID ${id} not found`);
@@ -214,11 +175,6 @@ export class CoursesService {
       course.isPublished = updateCourseDto.is_published;
     }
 
-    // category
-    if (updateCourseDto.categoryId !== undefined) {
-      course.categoryId = updateCourseDto.categoryId;
-    }
-
     // level 
     if (updateCourseDto.course_level !== undefined) {
       course.level = updateCourseDto.course_level;
@@ -229,7 +185,7 @@ export class CoursesService {
       course.tags = updateCourseDto.tags;
     }
 
-    // cover media
+    // cover image media
     if (updateCourseDto.course_coverMediaId !== undefined) {
       course.coverMediaAssetId = updateCourseDto.course_coverMediaId ?? undefined;
     }
@@ -242,13 +198,10 @@ export class CoursesService {
     return this.courseRepository.save(course);
   }
 
-
   async remove(id: string): Promise<void> {
     const courseId = Number(id);
 
-    const course = await this.courseRepository.findOne({
-      where: { id: courseId },
-    });
+    const course = await this.courseRepository.findOne({ where: { id: courseId }, });
 
     if (!course) {
       throw new NotFoundException(`Course with ID ${id} not found`);

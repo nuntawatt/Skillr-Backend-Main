@@ -1,14 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  UseGuards,
-  Request,
-  Query,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Request, Query, UnauthorizedException } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
@@ -30,7 +20,7 @@ function getUserIdOrThrow(user?: AuthUser): string {
 @Controller('payments')
 @UseGuards(JwtAuthGuard)
 export class PaymentsController {
-  constructor(private readonly paymentsService: PaymentsService) {}
+  constructor(private readonly paymentsService: PaymentsService) { }
 
   @Post()
   create(
@@ -43,7 +33,7 @@ export class PaymentsController {
     );
   }
 
-  @Get('my')
+  @Get('myself')
   getMyPayments(@Request() req: RequestWithUser) {
     return this.paymentsService.findByUser(getUserIdOrThrow(req.user));
   }

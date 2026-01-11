@@ -1,9 +1,9 @@
 import type { AuthUser } from '@auth';
 import { UserRole } from '@common/enums';
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
+import { CoursesService } from './courses.service';
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Request } from '@nestjs/common';
 import { CreateCourseDto, UpdateCourseDto, CourseResponseDto, CourseDetailResponseDto } from './dto/course';
-import { CoursesService } from './courses.service';
 import { ApiTags, ApiOperation, ApiConsumes, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags('Courses')
@@ -14,8 +14,8 @@ export class CoursesController {
   @Post()
   @ApiOperation({ summary: 'Create a new course' })
   @ApiConsumes('application/json')
-  @ApiResponse({ status: 201, description: 'The course has been successfully created.' })
   @ApiCreatedResponse({ type: CourseResponseDto })
+  @ApiResponse({ status: 201, description: 'The course has been successfully created.' })
   @ApiResponse({ status: 400, description: 'Invalid input data.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
@@ -42,16 +42,14 @@ export class CoursesController {
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   findAll(
     @Query('is_published') isPublished?: string,
-    @Query('q') q?: string,
-    @Query('categoryId') categoryId?: string,
+    @Query('search') search?: string,
     @Query('level') level?: string,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ): Promise<CourseResponseDto[]> {
     return this.coursesService.findAll({
       isPublished,
-      q,
-      categoryId,
+      q: search,
       level,
       limit,
       offset,

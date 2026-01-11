@@ -96,15 +96,15 @@ export class StorageService {
         });
     }
 
-    async presignedGetObject(bucket: string,key: string,expiresSeconds = 900): Promise<string> {
+    async presignedGetObject(bucket: string, key: string, expiresSeconds = 900): Promise<string> {
         return new Promise((resolve, reject) => {
-            (this.client as any).presignedGetObject(bucket,key,expiresSeconds,(err: Error | null, url?: string) => {
-                    if (err || !url) {
-                        reject(err ?? new Error('presign failed'));
-                        return;
-                    }
-                    resolve(url);
-                },
+            (this.client as any).presignedGetObject(bucket, key, expiresSeconds, (err: Error | null, url?: string) => {
+                if (err || !url) {
+                    reject(err ?? new Error('presign failed'));
+                    return;
+                }
+                resolve(url);
+            },
             );
         });
     }

@@ -4,7 +4,7 @@ import * as multer from 'multer';
 import { MediaImagesService } from './media-images.service';
 import { UploadImageDto } from './dto/upload-image.dto';
 import type { Response } from 'express';
-import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiResponse, ApiParam, ApiCreatedResponse } from '@nestjs/swagger';
 
 @ApiTags('Media Images')
 @Controller('media/images')
@@ -16,8 +16,10 @@ export class MediaImagesController {
   @ApiOperation({ summary: 'Upload an image file' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: UploadImageDto })
-  @ApiResponse({ status: 201, description: 'Image uploaded' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiCreatedResponse({ description: 'Image uploaded' })
+  @ApiResponse({ status: 201, description: 'The image has been successfully uploaded.' })
+  @ApiResponse({ status: 400, description: 'Invalid input data.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   uploadImage(@UploadedFile() file: Express.Multer.File, @Body() body: Record<string, unknown>) {
     const ownerUserId = body?.['owner_user_id'] ? Number(body['owner_user_id']) : undefined;
