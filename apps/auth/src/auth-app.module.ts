@@ -6,9 +6,9 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { getDatabaseConfig } from '@config/database.config';
 
-import { AuthModule } from './auth/auth.module';
-import { UsersModule } from './users/users.module';
-import { StudentsModule } from './students/students.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { UsersModule } from './modules/users/users.module';
+import { StudentsModule } from './modules/students/students.module';
 
 @Module({
   imports: [

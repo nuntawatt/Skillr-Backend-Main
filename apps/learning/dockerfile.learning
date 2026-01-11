@@ -31,5 +31,4 @@ COPY --from=builder /app/package.json ./package.json
 
 EXPOSE 3003
 
-# Nest build output includes the original monorepo path (apps/learning/src)
-CMD ["node", "dist/apps/learning/apps/learning/src/main.js"]
+CMD ["node", "dist/apps/learning/src/main.js"]

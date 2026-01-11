@@ -1,7 +1,7 @@
 import { NestFactory, Reflector } from '@nestjs/core';
 import { ValidationPipe, Logger, ClassSerializerInterceptor } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
-import { AppModule } from './app.module';
+import { AppModule } from './course.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap() {

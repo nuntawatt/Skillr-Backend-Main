@@ -11,8 +11,8 @@ COPY libs ./libs
 
 RUN pnpm install --frozen-lockfile
 
-RUN rm -rf dist
 RUN pnpm exec nest build media
+RUN pnpm prune --prod
 
 # Runtime stage
 FROM node:20-alpine
@@ -28,4 +28,4 @@ COPY --from=builder /app/package.json ./package.json
 
 EXPOSE 3004
 
-CMD ["node", "dist/apps/media/apps/media/src/main.js"]
+CMD ["node", "dist/apps/media/src/main.js"]

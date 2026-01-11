@@ -2626,14 +2626,11 @@ packages:
     resolution: {integrity: sha512-boU4EHmP3JXkwDo4uhyBhTt5pPstxB6eEXKJBu2yu2l7aAMMm7QQYQEzssJmKReZYrFdFOJS8koVo6bXIBGDqA==}
     engines: {node: '>=20'}
 
-<<<<<<<<< Temporary merge branch 1
   filelist@1.0.4:
     resolution: {integrity: sha512-w1cEuf3S+DrLCQL7ET6kz+gmlJdbq9J7yXCSjK/OZCPA+qEN1WyF4ZAf0YYJa4/shHJra2t/d/r8SV4Ji+x+8Q==}
-=========
   file-type@21.3.0:
     resolution: {integrity: sha512-8kPJMIGz1Yt/aPEwOsrR97ZyZaD1Iqm8PClb1nYFclUCkBi0Ma5IsYNQzvSFS9ib51lWyIw5mIT9rWzI/xjpzA==}
     engines: {node: '>=20'}
->>>>>>>>> Temporary merge branch 2
 
   fill-range@7.1.1:
     resolution: {integrity: sha512-YsGpe3WHLK8ZYi4tWDg2Jy3ebRz2rXowDxnld4bkQB00cc/1Zw9AWnC0i9ztDJitivtQvaI9KaLyKrc+hBW0yg==}
@@ -7848,12 +7845,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-<<<<<<<<< Temporary merge branch 1
   filelist@1.0.4:
     dependencies:
       minimatch: 5.1.6
     optional: true
-=========
   file-type@21.3.0:
     dependencies:
       '@tokenizer/inflate': 0.4.1
@@ -7862,7 +7857,6 @@ snapshots:
       uint8array-extras: 1.5.0
     transitivePeerDependencies:
       - supports-color
->>>>>>>>> Temporary merge branch 2
 
   fill-range@7.1.1:
     dependencies:

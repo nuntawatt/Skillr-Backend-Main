@@ -1,11 +1,12 @@
 import { NestFactory, Reflector } from '@nestjs/core';
 import { ClassSerializerInterceptor, Logger, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { AppModule } from './app.module';
+import { LearningAppModule } from './learning-app.module';
 
 async function bootstrap() {
   const logger = new Logger('LearningBootstrap');
-  const app = await NestFactory.create(AppModule, {
+
+  const app = await NestFactory.create(LearningAppModule, {
     logger: ['log', 'error', 'warn'],
   });
 
@@ -26,11 +27,13 @@ async function bootstrap() {
       transform: true,
     }),
   );
-  
-  // Enable CORS for all origins (adjust as needed for production)
+
   app.enableCors({ origin: true, credentials: true });
-  
-  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
+
+  app.useGlobalInterceptors(
+    new ClassSerializerInterceptor(app.get(Reflector)),
+  );
+
   app.setGlobalPrefix('api');
 
   const port = Number(process.env.PORT ?? 3003);
