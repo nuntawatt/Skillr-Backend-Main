@@ -14,6 +14,7 @@ import {
   Min,
   Max,
 } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { QuestionType } from '../entities/question.entity';
 
@@ -22,30 +23,36 @@ const MAX_QUESTION_LENGTH = 500;
 const MAX_OPTION_LENGTH = 150;
 
 export class MatchPairDto {
+  @ApiProperty({ example: 'แมว' })
   @IsString()
   @MaxLength(MAX_OPTION_LENGTH, { message: MESSAGE_LIMIT_EXCEEDED })
   left: string;
 
+  @ApiProperty({ example: 'เมี๊ยว' })
   @IsString()
   @MaxLength(MAX_OPTION_LENGTH, { message: MESSAGE_LIMIT_EXCEEDED })
   right: string;
 }
 
 export class CorrectOrderOptionDto {
+  @ApiProperty({ example: 'ตื่นนอน' })
   @IsString()
   @MaxLength(MAX_OPTION_LENGTH, { message: MESSAGE_LIMIT_EXCEEDED })
   text: string;
 }
 
 export class CreateQuestionDto {
+  @ApiProperty({ example: '1 + 1 เท่ากับเท่าไหร่?' })
   @IsString()
   @MaxLength(MAX_QUESTION_LENGTH, { message: MESSAGE_LIMIT_EXCEEDED })
   question: string;
 
+  @ApiProperty({ enum: QuestionType, example: QuestionType.MULTIPLE_CHOICE })
   @IsEnum(QuestionType)
   type: QuestionType;
 
   // Multiple Choice options: 3-4 choices, each <= 150 chars
+  @ApiPropertyOptional({ type: [String], example: ['1', '2', '3', '4'] })
   @ValidateIf((q) => q.type === QuestionType.MULTIPLE_CHOICE)
   @IsArray()
   @ArrayMinSize(3, { message: 'ต้องมีตัวเลือกอย่างน้อย 3 ตัวเลือก' })
@@ -58,6 +65,7 @@ export class CreateQuestionDto {
   options?: string[];
 
   // Match Pairs: at least 3 pairs, each side <= 150 chars
+  @ApiPropertyOptional({ type: [MatchPairDto] })
   @ValidateIf((q) => q.type === QuestionType.MATCH_PAIRS)
   @IsArray()
   @ArrayMinSize(3, { message: 'ต้องมีอย่างน้อย 3 คู่' })
@@ -66,6 +74,7 @@ export class CreateQuestionDto {
   optionsPairs?: MatchPairDto[];
 
   // Correct Order: at least 3 items, each <= 150 chars
+  @ApiPropertyOptional({ type: [CorrectOrderOptionDto] })
   @ValidateIf((q) => q.type === QuestionType.CORRECT_ORDER)
   @IsArray()
   @ArrayMinSize(3, { message: 'ต้องมีอย่างน้อย 3 รายการ' })
@@ -74,15 +83,18 @@ export class CreateQuestionDto {
   optionsOrder?: CorrectOrderOptionDto[];
 
   // correctAnswer validations per type
+  @ApiPropertyOptional({ example: '2' })
   @ValidateIf((q) => q.type === QuestionType.MULTIPLE_CHOICE)
   @IsString()
   @MaxLength(MAX_OPTION_LENGTH, { message: MESSAGE_LIMIT_EXCEEDED })
   correctAnswer?: string;
 
+  @ApiPropertyOptional({ example: true })
   @ValidateIf((q) => q.type === QuestionType.TRUE_FALSE)
   @IsBoolean()
   correctAnswerBool?: boolean;
 
+  @ApiPropertyOptional({ type: [MatchPairDto] })
   @ValidateIf((q) => q.type === QuestionType.MATCH_PAIRS)
   @IsOptional()
   @IsArray()
@@ -90,21 +102,18 @@ export class CreateQuestionDto {
   @Type(() => MatchPairDto)
   correctAnswerPairs?: MatchPairDto[];
 
-  @ValidateIf((q) => q.type === QuestionType.CORRECT_ORDER)
-  @IsOptional()
-  @IsArray()
-  @IsInt({ each: true })
-  correctAnswerOrder?: number[];
-
+  @ApiPropertyOptional({ example: 'คำอธิบายเพิ่มเติมสำหรับคำตอบที่ถูกต้อง' })
   @IsOptional()
   @IsString()
   explanation?: string;
 
+  @ApiPropertyOptional({ example: 1 })
   @IsOptional()
   @IsNumber()
   @Min(1)
   points?: number;
 
+  @ApiPropertyOptional({ example: 1 })
   @IsOptional()
   @IsNumber()
   @Min(0)
@@ -112,28 +121,17 @@ export class CreateQuestionDto {
 }
 
 export class CreateQuizDto {
-  @IsString()
-  title: string;
-
+  @ApiPropertyOptional({ example: 'แบบทดสอบพื้นฐาน TypeScript' })
   @IsOptional()
   @IsString()
   description?: string;
 
+  @ApiProperty({ example: 1 })
   @IsInt()
   @Type(() => Number)
   lessonId: number;
 
-  @IsOptional()
-  @IsNumber()
-  @Min(1)
-  timeLimit?: number;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  passingScore?: number;
-
+  @ApiPropertyOptional({ type: [CreateQuestionDto] })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })

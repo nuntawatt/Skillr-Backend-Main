@@ -29,16 +29,26 @@ export class LearningService {
   async createQuiz(createQuizDto: CreateQuizDto): Promise<Quiz> {
     const questions: CreateQuestionDto[] = createQuizDto.questions ?? [];
 
-    if (questions.length > 3) {
-      throw new BadRequestException('1 Lesson สามารถมี Quiz ได้สูงสุด 3 ข้อ');
+    // Check total questions for this lesson in DB
+    const existingQuizzes = await this.quizRepository.find({
+      where: { lessonId: Number(createQuizDto.lessonId) },
+      relations: ['questions'],
+    });
+
+    const totalExistingQuestions = existingQuizzes.reduce(
+      (sum, q) => sum + (q.questions?.length ?? 0),
+      0,
+    );
+
+    if (totalExistingQuestions + questions.length > 3) {
+      throw new BadRequestException(
+        `1 Lesson สามารถมีคำถามรวมได้สูงสุด 3 ข้อ (ปัจจุบันมีแล้ว ${totalExistingQuestions} ข้อ)`,
+      );
     }
 
     const quiz = this.quizRepository.create({
-      title: createQuizDto.title,
       description: createQuizDto.description,
       lessonId: Number(createQuizDto.lessonId),
-      timeLimit: createQuizDto.timeLimit,
-      passingScore: createQuizDto.passingScore,
     });
 
     const savedQuiz = await this.quizRepository.save(quiz);
@@ -65,6 +75,8 @@ export class LearningService {
 
   private mapOptionsByType(question: CreateQuestionDto) {
     switch (question.type) {
+      case QuestionType.TRUE_FALSE:
+        return ['True', 'False'];
       case QuestionType.MATCH_PAIRS:
         return question.optionsPairs;
       case QuestionType.CORRECT_ORDER:
@@ -82,11 +94,8 @@ export class LearningService {
         // ถ้าไม่ส่งเฉลยมา ให้ใช้ optionsPairs เป็นเฉลยไปเลย
         return question.correctAnswerPairs ?? question.optionsPairs;
       case QuestionType.CORRECT_ORDER:
-        // ถ้าไม่ส่งเฉลยลำดับมา ให้เรียง 1, 2, 3... ตามลำดับที่ส่งมา
-        return (
-          question.correctAnswerOrder ??
-          question.optionsOrder?.map((_, i) => i + 1)
-        );
+        // ใช้ลำดับของ optionsOrder ที่ส่งมาเป็นเฉลยโดยตรง (เก็บเป็น Array ของ Text)
+        return question.optionsOrder?.map((o) => o.text);
       default:
         return question.correctAnswer;
     }
@@ -166,8 +175,7 @@ export class LearningService {
       updateDto.type ||
       updateDto.correctAnswer ||
       updateDto.correctAnswerBool ||
-      updateDto.correctAnswerPairs ||
-      updateDto.correctAnswerOrder
+      updateDto.correctAnswerPairs
         ? this.mapCorrectAnswerByType(updateDto as any)
         : question.correctAnswer;
 
@@ -275,7 +283,7 @@ export class LearningService {
 
     const score =
       totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
-    const passed = score >= (quiz.passingScore || 60);
+    const passed = score >= 60; // Default passing score is now 60%
 
     // 3. Update and save attempt
     attempt.answers = submitDto.answers;
@@ -405,7 +413,6 @@ export class LearningService {
       latestAttempt: latestAttempt
         ? {
             quizId: latestAttempt.quizId,
-            quizTitle: latestAttempt.quiz?.title,
             score: latestAttempt.score ?? undefined,
             passed: Boolean(latestAttempt.passed),
             completedAt: latestAttempt.completedAt,
@@ -417,7 +424,6 @@ export class LearningService {
 
 export type QuizAttemptInsight = {
   quizId: number;
-  quizTitle?: string;
   passed: boolean;
   score?: number;
   completedAt?: Date;

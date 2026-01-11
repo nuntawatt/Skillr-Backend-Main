@@ -1,5 +1,6 @@
 import { NestFactory, Reflector } from '@nestjs/core';
 import { ClassSerializerInterceptor, Logger, ValidationPipe } from '@nestjs/common';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -7,6 +8,16 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ['log', 'error', 'warn'],
   });
+
+  const config = new DocumentBuilder()
+    .setTitle('Skillr Learning Service API')
+    .setDescription('API documentation for Quiz and Learning Progress')
+    .setVersion('1.0.0')
+    .addBearerAuth()
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document);
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -26,6 +37,7 @@ async function bootstrap() {
   await app.listen(port);
 
   logger.log(`Learning service listening on http://localhost:${port}/api`);
+  logger.log(`Swagger docs available at http://localhost:${port}/api/docs`);
 }
 
 void bootstrap();

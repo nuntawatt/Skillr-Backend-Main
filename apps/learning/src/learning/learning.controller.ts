@@ -11,6 +11,7 @@ import {
   Query,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { LearningService } from './learning.service';
 import { LearningDashboardService } from './learning-dashboard.service';
 import { LearningProgressService } from './learning-progress.service';
@@ -36,6 +37,8 @@ function getUserIdOrThrow(user?: AuthUser): string {
   // throw new UnauthorizedException();
 }
 
+@ApiTags('Learning & Quizzes')
+@ApiBearerAuth()
 @Controller('learning')
 // @UseGuards(JwtAuthGuard)
 export class LearningController {
@@ -47,6 +50,7 @@ export class LearningController {
 
   // Quiz CRUD
   @Post('quizzes')
+  @ApiOperation({ summary: 'Create a new quiz with questions' })
   // @UseGuards(RolesGuard)
   // @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
   createQuiz(@Body() createQuizDto: CreateQuizDto) {
@@ -54,6 +58,8 @@ export class LearningController {
   }
 
   @Get('quizzes')
+  @ApiOperation({ summary: 'Get all quizzes, optionally filtered by lessonId' })
+  @ApiQuery({ name: 'lessonId', required: false })
   findAllQuizzes(
     @Request() req: RequestWithUser,
     @Query('lessonId') lessonId?: string,
@@ -124,6 +130,7 @@ export class LearningController {
   }
 
   @Post('quizzes/:id/submit')
+  @ApiOperation({ summary: 'Submit answers for a quiz attempt' })
   submitQuiz(
     @Param('id') id: string,
     @Body() submitDto: SubmitQuizDto,
