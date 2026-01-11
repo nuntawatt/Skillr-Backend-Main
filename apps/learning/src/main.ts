@@ -8,13 +8,13 @@ async function bootstrap() {
 
   const app = await NestFactory.create(LearningAppModule, {
     logger: ['log', 'error', 'warn'],
-  });
+  }); 
 
   const config = new DocumentBuilder()
     .setTitle('Skillr Learning Service API')
     .setDescription('API documentation for Quiz and Learning Progress')
     .setVersion('1.0.0')
-    .addBearerAuth()
+    .addBearerAuth() 
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
