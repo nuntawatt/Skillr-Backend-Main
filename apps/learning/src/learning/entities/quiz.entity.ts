@@ -13,9 +13,6 @@ export class Quiz {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
-  title: string;
-
   @Column({ type: 'text', nullable: true })
   description: string;
 
@@ -24,12 +21,6 @@ export class Quiz {
 
   @OneToMany(() => Question, (question) => question.quiz, { cascade: true })
   questions: Question[];
-
-  @Column({ name: 'time_limit', nullable: true })
-  timeLimit: number; // in minutes
-
-  @Column({ name: 'passing_score', default: 60 })
-  passingScore: number; // percentage
 
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
