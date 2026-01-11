@@ -9,7 +9,7 @@ import { PaymentsModule } from './payments/payments.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['apps/payment/.env', '.env'],
+      envFilePath: process.env.NODE_ENV === 'development' ? ['apps/payment/.env', '.env'] : undefined,
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

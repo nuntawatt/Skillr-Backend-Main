@@ -10,7 +10,7 @@ import { MediaVideosModule } from './media-videos/media-videos.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['apps/media/.env', '.env'],
+      envFilePath: process.env.NODE_ENV === 'development' ? ['apps/media/.env', '.env'] : undefined,
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

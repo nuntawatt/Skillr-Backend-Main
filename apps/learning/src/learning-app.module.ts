@@ -14,7 +14,7 @@ import { NotificationsModule } from './notifications/notifications.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['apps/learning/.env', '.env'],
+      envFilePath: process.env.NODE_ENV === 'development' ? ['apps/learning/.env', '.env'] : undefined,
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

@@ -1,16 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  UseGuards,
-  Request,
-  Query,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Request, Query, UnauthorizedException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { LearningService } from './learning.service';
 import { LearningDashboardService } from './learning-dashboard.service';
@@ -46,7 +34,7 @@ export class LearningController {
     private readonly learningService: LearningService,
     private readonly learningProgressService: LearningProgressService,
     private readonly learningDashboardService: LearningDashboardService,
-  ) {}
+  ) { }
 
   // Quiz CRUD
   @Post('quizzes')

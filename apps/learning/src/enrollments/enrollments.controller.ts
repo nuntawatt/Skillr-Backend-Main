@@ -1,16 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Headers,
-  Post,
-  Param,
-  UseGuards,
-  Request,
-  Query,
-  UnauthorizedException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Body, Controller, Get, Headers, Post, Param, UseGuards, Request, Query, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { EnrollmentsService } from './enrollments.service';
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import type { AuthUser } from '@auth';
@@ -31,7 +19,7 @@ function getUserIdOrThrow(user?: AuthUser): string {
 @Controller('enrollments')
 @UseGuards(JwtAuthGuard)
 export class EnrollmentsController {
-  constructor(private readonly enrollmentsService: EnrollmentsService) {}
+  constructor(private readonly enrollmentsService: EnrollmentsService) { }
 
   @Post('courses/:courseId')
   enroll(@Param('courseId') courseId: string, @Request() req: RequestWithUser) {

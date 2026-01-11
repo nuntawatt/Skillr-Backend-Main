@@ -8,7 +8,6 @@ async function bootstrap() {
     logger: ['log', 'error', 'warn'],
   });
 
-  
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

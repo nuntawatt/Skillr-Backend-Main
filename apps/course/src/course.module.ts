@@ -25,10 +25,7 @@ const isTest =
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath:
-        process.env.NODE_ENV === 'development'
-          ? ['apps/course/.env', '.env']
-          : undefined,
+      envFilePath: process.env.NODE_ENV === 'development' ? ['apps/course/.env', '.env'] : undefined,
     }),
 
     ...(isTest

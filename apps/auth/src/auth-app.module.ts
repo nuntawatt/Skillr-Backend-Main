@@ -14,7 +14,7 @@ import { StudentsModule } from './modules/students/students.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['apps/auth/.env', '.env'],
+      envFilePath: process.env.NODE_ENV === 'development' ? ['apps/auth/.env', '.env'] : undefined,
     }),
     ThrottlerModule.forRoot([
       {
