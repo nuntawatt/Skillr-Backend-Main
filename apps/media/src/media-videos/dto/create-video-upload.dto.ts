@@ -10,43 +10,26 @@ export class CreateVideoUploadDto {
   })
   file: Express.Multer.File;
 
-  @ApiPropertyOptional({
-    description: 'Original filename of the uploaded video',
-    example: 'my_video.mp4',
-  })
   @IsOptional()
   @IsString()
   original_filename?: string;
 
-  @ApiProperty({
-    description: 'MIME type of the uploaded video',
-    example: 'video/mp4',
-  })
   @IsString()
   mime_type: string;
 
-  @ApiProperty({
-    description: 'Size of the uploaded video in bytes',
-    example: 1048576,
-    minimum: 1,
-  })
   @IsInt()
   @Min(1)
   @Type(() => Number)
   size_bytes: number;
 
-  @ApiPropertyOptional({
-    description: 'Media asset ID (optional, to link with existing asset)',
-    example: 123,
-  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   media_asset_id?: number;
 
   @ApiPropertyOptional({
-    description: 'Owner user ID',
-    example: 1,
+    description: 'Owner user ID of the video',
+    example: 42,
   })
   @IsOptional()
   @Type(() => Number)
