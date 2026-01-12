@@ -37,7 +37,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   const port = Number(process.env.PORT ?? 3003);
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 
   logger.log(`Learning service listening on http://localhost:${port}/api`);
   logger.log(`Swagger docs available at http://localhost:${port}/api/docs`);
