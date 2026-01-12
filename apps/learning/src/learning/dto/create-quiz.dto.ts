@@ -101,31 +101,9 @@ export class CreateQuestionDto {
   @ValidateNested({ each: true })
   @Type(() => MatchPairDto)
   correctAnswerPairs?: MatchPairDto[];
-
-  @ApiPropertyOptional({ example: 'คำอธิบายเพิ่มเติมสำหรับคำตอบที่ถูกต้อง' })
-  @IsOptional()
-  @IsString()
-  explanation?: string;
-
-  @ApiPropertyOptional({ example: 1 })
-  @IsOptional()
-  @IsNumber()
-  @Min(1)
-  points?: number;
-
-  @ApiPropertyOptional({ example: 1 })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  order?: number;
 }
 
 export class CreateQuizDto {
-  @ApiPropertyOptional({ example: 'แบบทดสอบพื้นฐาน TypeScript' })
-  @IsOptional()
-  @IsString()
-  description?: string;
-
   @ApiProperty({ example: 1 })
   @IsInt()
   @Type(() => Number)

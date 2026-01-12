@@ -13,9 +13,6 @@ export class Quiz {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'text', nullable: true })
-  description: string;
-
   @Column({ name: 'lesson_id' })
   lessonId: number;
 
