@@ -50,3 +50,4 @@ services:
 volumes:
   course_pg_data:
   course_minio_data:
+  minio_data:
