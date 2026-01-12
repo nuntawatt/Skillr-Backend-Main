@@ -15,7 +15,7 @@ export class MediaVideosController {
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file', { storage: multer.memoryStorage() }))
-  @ApiOperation({ summary: 'Upload video file (optionally media_asset_id)' })
+  @ApiOperation({ summary: 'Upload video file' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: CreateVideoUploadDto })
   @ApiCreatedResponse({ description: 'Video uploaded' })
