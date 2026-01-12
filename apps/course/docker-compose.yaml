@@ -27,27 +27,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      minio:
-        condition: service_started
-    restart: unless-stopped
-
-  minio:
-    image: quay.io/minio/minio:latest
-    container_name: skillr_minio
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    env_file:
-      - .env.docker
-    environment:
-      MINIO_ROOT_USER: skillr
-      MINIO_ROOT_PASSWORD: moragon2025!
-    volumes:
-      - minio_data:/data
-    command: server --console-address ":9001" /data
     restart: unless-stopped
 
 volumes:
   course_pg_data:
   course_minio_data:
-  minio_data:

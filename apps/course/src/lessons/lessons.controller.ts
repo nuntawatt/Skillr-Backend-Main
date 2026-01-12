@@ -18,7 +18,6 @@ const pdfFileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilte
   }
 };
 
-
 @ApiTags('Lessons')
 @Controller('lessons')
 export class LessonsController {
@@ -54,6 +53,7 @@ export class LessonsController {
   @ApiResponse({ status: 400, description: 'Invalid input data or file type.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
+  
   create(
     @Body() createLessonDto: CreateLessonDto,
     @UploadedFile() filePdf?: Express.Multer.File,
@@ -81,6 +81,17 @@ export class LessonsController {
   // ParseIntPipe converts & validates the path param before it reaches the service
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.lessonsService.findOne(id);
+  }
+
+  @Get('presign/:key')
+  @ApiOperation({ summary: 'Get a presigned URL for a lesson resource by key' })
+  @ApiParam({ name: 'key', example: 'abc-uuid' })
+  @ApiResponse({ status: 200, description: 'Presigned URL retrieved successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid key parameter' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
+
+  getPresignedUrl(@Param('key') key: string) {
+    return this.lessonsService.getPresignedUrlForResource(key);
   }
 
   // Flow: Create Lesson Resource

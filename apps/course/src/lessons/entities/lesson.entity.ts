@@ -16,8 +16,8 @@ export class Lesson {
   @Column({ name: 'media_asset_id', type: 'int', nullable: true })
   mediaAssetId?: number | null;
 
-  @Column({ name: 'pdf_url', type: 'varchar', length: 2048, nullable: true })
-  pdfUrl?: string | null;
+  @Column({ name: 'pdf_key', type: 'varchar', length: 2048, nullable: true })
+  pdfKey?: string | null;
 
   @Column({ name: 'position', type: 'int', default: 0 })
   position: number;
