@@ -13,6 +13,9 @@ import { LessonsController } from './lessons/lessons.controller';
 import { CoursesService } from './courses/courses.service';
 import { LessonsService } from './lessons/lessons.service';
 
+// storage
+import { StorageModule } from './storage/storage.module';
+
 // entities
 import { Course } from './courses/entities/course.entity';
 import { Lesson } from './lessons/entities/lesson.entity';
@@ -25,26 +28,27 @@ const isTest =
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: process.env.NODE_ENV === 'development' ? ['apps/course/.env', '.env'] : undefined,
+      envFilePath: ['apps/course/.env', '.env'],
     }),
 
     ...(isTest
       ? []
       : [
-        TypeOrmModule.forRootAsync({
-          imports: [ConfigModule],
-          useFactory: getDatabaseConfig,
-          inject: [ConfigService],
-        }),
+          TypeOrmModule.forRootAsync({
+            imports: [ConfigModule],
+            useFactory: getDatabaseConfig,
+            inject: [ConfigService],
+          }),
 
-        TypeOrmModule.forFeature([
-          Course,
-          Lesson,
-          LessonResource,
+          TypeOrmModule.forFeature([
+            Course,
+            Lesson,
+            LessonResource,
+          ]),
+
+          AuthLibModule,
+          StorageModule,
         ]),
-
-        AuthLibModule,
-      ]),
   ],
 
   controllers: [
@@ -57,4 +61,4 @@ const isTest =
     LessonsService,
   ],
 })
-export class AppModule { }
+export class AppModule {}

@@ -47,7 +47,6 @@ export class LearningService {
     }
 
     const quiz = this.quizRepository.create({
-      description: createQuizDto.description,
       lessonId: Number(createQuizDto.lessonId),
     });
 
@@ -61,8 +60,7 @@ export class LearningService {
           type: q.type ?? QuestionType.MULTIPLE_CHOICE,
           options: this.mapOptionsByType(q),
           correctAnswer: this.mapCorrectAnswerByType(q),
-          explanation: q.explanation,
-          points: q.points,
+          points: 1, // backend-managed points
           order: index + 1, // บังคับเรียงลำดับบนลงล่าง
           quizId: savedQuiz.id,
         });
