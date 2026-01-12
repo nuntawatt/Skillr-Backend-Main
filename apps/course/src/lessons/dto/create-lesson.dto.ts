@@ -1,6 +1,9 @@
 import { Type } from 'class-transformer';
-import { IsString, IsOptional, IsInt, Min, IsNumber } from 'class-validator';
+import { IsString, IsOptional, IsInt, Min } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+
+// Max PDF file size: 50MB
+export const MAX_PDF_SIZE_BYTES = 50 * 1024 * 1024;
 
 export class CreateLessonDto {
   @ApiPropertyOptional({
@@ -27,24 +30,4 @@ export class CreateLessonDto {
   @Min(1)
   @Type(() => Number)
   media_asset_id?: number;
-
-  @ApiPropertyOptional({
-    description: 'Position of the lesson in the course',
-    example: 1,
-  })
-  @Type(() => Number)
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  position?: number;
-
-  @ApiPropertyOptional({
-    description: 'ID of the course this lesson belongs to',
-    example: 5,
-  })
-  @Type(() => Number)
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  courseId?: number;
 }

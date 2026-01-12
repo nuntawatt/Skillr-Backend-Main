@@ -13,6 +13,9 @@ import { LessonsController } from './lessons/lessons.controller';
 import { CoursesService } from './courses/courses.service';
 import { LessonsService } from './lessons/lessons.service';
 
+// storage
+import { StorageModule } from './storage/storage.module';
+
 // entities
 import { Course } from './courses/entities/course.entity';
 import { Lesson } from './lessons/entities/lesson.entity';
@@ -44,6 +47,7 @@ const isTest =
           ]),
 
           AuthLibModule,
+          StorageModule,
         ]),
   ],
 
