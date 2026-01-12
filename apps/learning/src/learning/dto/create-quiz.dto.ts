@@ -93,14 +93,6 @@ export class CreateQuestionDto {
   @ValidateIf((q) => q.type === QuestionType.TRUE_FALSE)
   @IsBoolean()
   correctAnswerBool?: boolean;
-
-  @ApiPropertyOptional({ type: [MatchPairDto] })
-  @ValidateIf((q) => q.type === QuestionType.MATCH_PAIRS)
-  @IsOptional()
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => MatchPairDto)
-  correctAnswerPairs?: MatchPairDto[];
 }
 
 export class CreateQuizDto {

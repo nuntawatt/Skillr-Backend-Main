@@ -3,8 +3,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { getDatabaseConfig } from '@config/database.config';
 import { AuthLibModule } from '@auth/auth-lib.module';
-import { ContentModule } from './modules/content/content.module';
-import { MediaAssetsModule } from './modules/media-assets/media-assets.module';
+import { ContentModule } from './content/content.module';
+import { MediaAssetsModule } from './media-assets/media-assets.module';
 
 @Module({
   imports: [

@@ -4,9 +4,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { getDatabaseConfig } from '@config/database.config';
 import { AuthLibModule } from '@auth/auth-lib.module';
 
-import { CoursesModule } from './modules/courses/courses.module';
-import { LessonsModule } from './modules/lessons/lessons.module';
-import { CategoriesModule } from './modules/categories/categories.module';
+import { CoursesModule } from './courses/courses.module';
+import { LessonsModule } from './lessons/lessons.module';
+import { CategoriesModule } from './categories/categories.module';
 
 const isTest =
   process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
