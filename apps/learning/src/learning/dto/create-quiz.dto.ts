@@ -105,6 +105,7 @@ export class CreateQuizDto {
 
   @ApiPropertyOptional({
     type: [CreateQuestionDto],
+    description: 'รายการคำถาม (สูงสุด 10 ข้อต่อ 1 บทเรียน)',
     example: [
       {
         question: 'ผลไม้ในข้อใดมีสีแดง?',
