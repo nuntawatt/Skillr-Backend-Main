@@ -70,6 +70,7 @@ export class MediaVideosService {
     return new Promise((resolve, reject) => {
       const chunks: Buffer[] = [];
       const inputStream = Readable.from(inputBuffer);
+      let resolved = false;
 
       const command = ffmpeg()
         .input(inputStream)
@@ -82,31 +83,54 @@ export class MediaVideosService {
         .format('mp4')
         .outputOptions(['-movflags', 'frag_keyframe+empty_moov']);
 
-      const output = command.pipe();
-
-      output.on('data', (chunk: Buffer) => chunks.push(chunk));
-      output.on('end', () => {
-        const out = Buffer.concat(chunks);
-        this.logger.debug(`FFmpeg finished ${resolution}, size=${out.length}`);
-        resolve(out);
+      command.on('start', (cmd) => {
+        this.logger.debug(`FFmpeg command: ${cmd}`);
       });
-      output.on('error', (err) => {
-        this.logger.error(`FFmpeg output error: ${String(err)}`);
-        // Don't reject on output error if we already got data
-        if (chunks.length > 0) {
-          resolve(Buffer.concat(chunks));
-        } else {
+
+      command.on('progress', (progress) => {
+        if (progress.percent) {
+          this.logger.debug(`FFmpeg progress: ${progress.percent.toFixed(1)}%`);
+        }
+      });
+
+      command.on('error', (err, stdout, stderr) => {
+        this.logger.error(`FFmpeg error: ${String(err)}`);
+        if (stderr) this.logger.error(`FFmpeg stderr: ${stderr}`);
+        if (!resolved) {
+          resolved = true;
           reject(err);
         }
       });
 
-      command.on('error', (err) => {
-        this.logger.error(`FFmpeg command error: ${String(err)}`);
-        // Don't reject if we already got data from output
-        if (chunks.length > 0) {
-          resolve(Buffer.concat(chunks));
-        } else {
-          reject(err);
+      command.on('end', () => {
+        this.logger.debug(`FFmpeg encoding finished`);
+        if (!resolved && chunks.length > 0) {
+          resolved = true;
+          const out = Buffer.concat(chunks);
+          this.logger.debug(`FFmpeg output size: ${out.length} bytes`);
+          resolve(out);
+        }
+      });
+
+      const output = command.pipe();
+
+      output.on('data', (chunk: Buffer) => {
+        chunks.push(chunk);
+      });
+
+      output.on('error', (err) => {
+        this.logger.error(`FFmpeg output stream error: ${String(err)}`);
+      });
+
+      output.on('end', () => {
+        this.logger.debug(`Output stream ended, chunks: ${chunks.length}`);
+        if (!resolved && chunks.length > 0) {
+          resolved = true;
+          const out = Buffer.concat(chunks);
+          resolve(out);
+        } else if (!resolved) {
+          resolved = true;
+          reject(new Error('No data received from FFmpeg'));
         }
       });
     });
