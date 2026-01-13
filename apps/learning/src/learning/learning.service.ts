@@ -40,9 +40,9 @@ export class LearningService {
       0,
     );
 
-    if (totalExistingQuestions + questions.length > 3) {
+    if (totalExistingQuestions + questions.length > 10) {
       throw new BadRequestException(
-        `1 Lesson สามารถมีคำถามรวมได้สูงสุด 3 ข้อ (ปัจจุบันมีแล้ว ${totalExistingQuestions} ข้อ)`,
+        `1 Lesson สามารถมีคำถามรวมได้สูงสุด 10 ข้อ (ปัจจุบันมีแล้ว ${totalExistingQuestions} ข้อ)`,
       );
     }
 
@@ -89,8 +89,7 @@ export class LearningService {
       case QuestionType.TRUE_FALSE:
         return question.correctAnswerBool;
       case QuestionType.MATCH_PAIRS:
-        // ถ้าไม่ส่งเฉลยมา ให้ใช้ optionsPairs เป็นเฉลยไปเลย
-        return question.correctAnswerPairs ?? question.optionsPairs;
+        return question.optionsPairs;
       case QuestionType.CORRECT_ORDER:
         // ใช้ลำดับของ optionsOrder ที่ส่งมาเป็นเฉลยโดยตรง (เก็บเป็น Array ของ Text)
         return question.optionsOrder?.map((o) => o.text);
@@ -128,21 +127,57 @@ export class LearningService {
   }
 
   /**
-   * Stips correct answers from quiz questions for students.
+   * Stips correct answers from quiz questions for students and SHUFFLES options for challenge.
    */
   stripAnswers(quiz: Quiz): Quiz {
     if (quiz.questions) {
       quiz.questions = quiz.questions.map((q) => {
         const { correctAnswer, ...rest } = q;
-        return rest as Question;
+        const stripped = { ...rest } as Question;
+
+        // --- Shuffle options for students ---
+        if (stripped.options && Array.isArray(stripped.options)) {
+          if (q.type === QuestionType.MULTIPLE_CHOICE) {
+            // สลับตัวเลือก ก ข ค ง
+            stripped.options = this.shuffleArray([...(stripped.options as string[])]);
+          } else if (q.type === QuestionType.CORRECT_ORDER) {
+            // สลับขั้นตอนการเรียงลำดับให้มั่ว
+            stripped.options = this.shuffleArray([...(stripped.options as any[])]);
+          } else if (q.type === QuestionType.MATCH_PAIRS) {
+            // ตามโจทย์: ฝั่งขวาอยู่ที่เดิม แต่ฝั่งซ้ายสุ่มลำดับใหม่
+            const pairs = stripped.options as { left: string; right: string }[];
+            const shuffledLefts = this.shuffleArray(pairs.map((p) => p.left));
+            const originalRights = pairs.map((p) => p.right);
+
+            stripped.options = originalRights.map((right, i) => ({
+              left: shuffledLefts[i],
+              right: right,
+            }));
+          }
+        }
+        // ------------------------------------
+
+        return stripped;
       });
     }
     return quiz;
   }
 
+  /**
+   * Helper to shuffle an array using Fisher-Yates algorithm.
+   */
+  private shuffleArray<T>(array: T[]): T[] {
+    const arr = [...array];
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
   async updateQuiz(id: string, updateQuizDto: UpdateQuizDto): Promise<Quiz> {
-    if (updateQuizDto.questions && updateQuizDto.questions.length > 3) {
-      throw new BadRequestException('1 Lesson สามารถมี Quiz ได้สูงสุด 3 ข้อ');
+    if (updateQuizDto.questions && updateQuizDto.questions.length > 10) {
+      throw new BadRequestException('1 Lesson สามารถมี Quiz ได้สูงสุด 10 ข้อ');
     }
 
     const quiz = await this.findOneQuiz(id);
@@ -173,7 +208,7 @@ export class LearningService {
       updateDto.type ||
       updateDto.correctAnswer ||
       updateDto.correctAnswerBool ||
-      updateDto.correctAnswerPairs
+      updateDto.optionsPairs
         ? this.mapCorrectAnswerByType(updateDto as any)
         : question.correctAnswer;
 
