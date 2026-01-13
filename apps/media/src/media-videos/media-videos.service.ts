@@ -70,7 +70,6 @@ export class MediaVideosService {
     return new Promise((resolve, reject) => {
       const chunks: Buffer[] = [];
       const inputStream = Readable.from(inputBuffer);
-      let resolved = false;
 
       const command = ffmpeg()
         .input(inputStream)
@@ -83,55 +82,22 @@ export class MediaVideosService {
         .format('mp4')
         .outputOptions(['-movflags', 'frag_keyframe+empty_moov']);
 
-      command.on('start', (cmd) => {
-        this.logger.debug(`FFmpeg command: ${cmd}`);
-      });
-
-      command.on('progress', (progress) => {
-        if (progress.percent) {
-          this.logger.debug(`FFmpeg progress: ${progress.percent.toFixed(1)}%`);
-        }
-      });
-
-      command.on('error', (err, stdout, stderr) => {
-        this.logger.error(`FFmpeg error: ${String(err)}`);
-        if (stderr) this.logger.error(`FFmpeg stderr: ${stderr}`);
-        if (!resolved) {
-          resolved = true;
-          reject(err);
-        }
-      });
-
-      command.on('end', () => {
-        this.logger.debug(`FFmpeg encoding finished`);
-        if (!resolved && chunks.length > 0) {
-          resolved = true;
-          const out = Buffer.concat(chunks);
-          this.logger.debug(`FFmpeg output size: ${out.length} bytes`);
-          resolve(out);
-        }
-      });
-
       const output = command.pipe();
 
-      output.on('data', (chunk: Buffer) => {
-        chunks.push(chunk);
-      });
-
-      output.on('error', (err) => {
-        this.logger.error(`FFmpeg output stream error: ${String(err)}`);
-      });
-
+      output.on('data', (chunk: Buffer) => chunks.push(chunk));
       output.on('end', () => {
-        this.logger.debug(`Output stream ended, chunks: ${chunks.length}`);
-        if (!resolved && chunks.length > 0) {
-          resolved = true;
-          const out = Buffer.concat(chunks);
-          resolve(out);
-        } else if (!resolved) {
-          resolved = true;
-          reject(new Error('No data received from FFmpeg'));
-        }
+        const out = Buffer.concat(chunks);
+        this.logger.debug(`FFmpeg finished ${resolution}, size=${out.length}`);
+        resolve(out);
+      });
+      output.on('error', (err) => {
+        this.logger.error(`FFmpeg output error: ${String(err)}`);
+        reject(err);
+      });
+
+      command.on('error', (err) => {
+        this.logger.error(`FFmpeg command error: ${String(err)}`);
+        reject(err);
       });
     });
   }
@@ -254,33 +220,75 @@ export class MediaVideosService {
     // transcode to configured resolutions (in-memory)
     const versions: VideoVersion[] = [];
 
-    for (const r of this.resolutions) {
+    // If transcoding is disabled or fails, upload original as fallback
+    const enableTranscode = process.env.ENABLE_VIDEO_TRANSCODE !== 'false';
+    
+    if (!enableTranscode) {
+      this.logger.log('Video transcoding is disabled, uploading original only');
+      const originalKey = `${keyPrefix}/${videoUuid}/original.mp4`;
+      await this.storage.putObject(bucket, originalKey, file.buffer, file.size, { 'Content-Type': mime });
+      
+      let presigned: string | undefined;
       try {
-        this.logger.log(`Transcoding to ${r.name} (${r.resolution})`);
-        const processed = await this.processVideo(file.buffer, r.resolution, r.bitrate);
+        presigned = await this.storage.presignedGetObject(bucket, originalKey, 3600);
+      } catch {
+        presigned = undefined;
+      }
+      
+      versions.push({ 
+        quality: 'original', 
+        presignPath: `${videoUuid}/original.mp4`,
+        presigned: presigned 
+      });
+    } else {
+      for (const r of this.resolutions) {
+        try {
+          this.logger.log(`Transcoding to ${r.name} (${r.resolution})`);
+          const processed = await this.processVideo(file.buffer, r.resolution, r.bitrate);
 
-        // New path structure: videos/<video_uuid>/<quality>.mp4
-        const versionKey = `${keyPrefix}/${videoUuid}/${r.name}.mp4`;
-        await this.storage.putObject(bucket, versionKey, processed, processed.length, { 'Content-Type': 'video/mp4' });
+          // New path structure: videos/<video_uuid>/<quality>.mp4
+          const versionKey = `${keyPrefix}/${videoUuid}/${r.name}.mp4`;
+          await this.storage.putObject(bucket, versionKey, processed, processed.length, { 'Content-Type': 'video/mp4' });
 
+          let presigned: string | undefined;
+          try {
+            presigned = await this.storage.presignedGetObject(bucket, versionKey, 3600);
+          } catch {
+            presigned = undefined;
+          }
+
+          // Create presign path for frontend to use
+          const presignPath = `${videoUuid}/${r.name}.mp4`;
+          
+          versions.push({ 
+            quality: r.name, 
+            presignPath: presignPath,  // Frontend can use this: GET /api/media/videos/presign/{presignPath}
+            presigned: presigned 
+          });
+        } catch (e) {
+          this.logger.warn(`Transcode failed for ${r.name}: ${String(e)}`);
+          // continue other resolutions
+        }
+      }
+      
+      // If all transcoding failed, upload original as fallback
+      if (versions.length === 0) {
+        this.logger.warn('All transcoding failed, uploading original as fallback');
+        const originalKey = `${keyPrefix}/${videoUuid}/original.mp4`;
+        await this.storage.putObject(bucket, originalKey, file.buffer, file.size, { 'Content-Type': mime });
+        
         let presigned: string | undefined;
         try {
-          presigned = await this.storage.presignedGetObject(bucket, versionKey, 3600);
+          presigned = await this.storage.presignedGetObject(bucket, originalKey, 3600);
         } catch {
           presigned = undefined;
         }
-
-        // Create presign path for frontend to use
-        const presignPath = `${videoUuid}/${r.name}.mp4`;
         
         versions.push({ 
-          quality: r.name, 
-          presignPath: presignPath,  // Frontend can use this: GET /api/media/videos/presign/{presignPath}
+          quality: 'original', 
+          presignPath: `${videoUuid}/original.mp4`,
           presigned: presigned 
         });
-      } catch (e) {
-        this.logger.warn(`Transcode failed for ${r.name}: ${String(e)}`);
-        // continue other resolutions
       }
     }
 
