@@ -1,338 +1,274 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-  Logger,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { StorageService } from '../storage/storage.service';
 import { VideoAsset, VideoAssetStatus } from './entities/video-asset.entity';
 import { CreateVideoUploadDto } from './dto/create-video-upload.dto';
 import type { Response } from 'express';
-
-import ffmpeg from 'fluent-ffmpeg';
-import * as ffmpegPath from '@ffmpeg-installer/ffmpeg';
-import { Readable } from 'stream';
-
-interface VideoResolution {
-  name: string;
-  resolution: string;
-  bitrate: string;
-}
-
-export interface VideoVersion {
-  quality: string;
-  presignPath: string;
-  presigned?: string;
-}
+import { spawn } from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 
 @Injectable()
 export class MediaVideosService {
   private readonly logger = new Logger(MediaVideosService.name);
-  private readonly resolutions: VideoResolution[];
+
+  private readonly SUPPORTED_VIDEO_MIMES = [
+    'video/mp4',
+    'video/webm',
+    'video/quicktime',      // .mov
+    'video/x-msvideo',      // .avi
+    'video/avi',            // .avi (alternative)
+    'video/msvideo',        // .avi (alternative)
+    'video/x-ms-wmv',       // .wmv
+    'video/x-matroska',     // .mkv
+    'video/x-flv',          // .flv
+    'video/3gpp',           // .3gp
+    'video/3gpp2',          // .3g2
+    'video/ogg',            // .ogv
+    'video/mpeg',           // .mpeg, .mpg
+    'video/x-mpeg',         // .mpeg (alternative)
+    'video/mp2t',           // .ts
+    'video/x-m4v',          // .m4v
+    'application/octet-stream', // fallback for unknown binary
+  ];
+
+  // mime types that need conversion to mp4
+  private readonly MIMES_NEED_CONVERSION = [
+    'video/x-msvideo',
+    'video/avi',
+    'video/msvideo',
+    'video/x-ms-wmv',
+    'video/x-matroska',
+    'video/x-flv',
+    'video/3gpp',
+    'video/3gpp2',
+    'video/ogg',
+    'video/mpeg',
+    'video/x-mpeg',
+    'video/mp2t',
+    'video/quicktime',
+    'video/x-m4v',
+  ];
 
   constructor(
     private readonly storage: StorageService,
     @InjectRepository(VideoAsset)
     private readonly repo: Repository<VideoAsset>,
-  ) {
-    // set ffmpeg binary path
-    ffmpeg.setFfmpegPath(ffmpegPath.path);
+  ) { }
 
-    // parse resolutions from env or default to 360p/720p/1080p
-    this.resolutions = this.parseResolutions();
-  }
-
-  private parseResolutions(): VideoResolution[] {
-    const raw =
-      process.env.VIDEO_RESOLUTIONS ?? '360p:640x360:480k,720p:1280x720:1800k,1080p:1920x1080:4500k';
-
-    return raw.split(',').map((item) => {
-      const [name, resolution, bitrate] = item.split(':');
-      return {
-        name: (name ?? '').trim(),
-        resolution: (resolution ?? '').trim(),
-        bitrate: (bitrate ?? '').trim(),
-      };
-    });
-  }
-
-  /**
-   * Transcode inputBuffer into a single mp4 buffer at given resolution/bitrate
-   */
-  private processVideo(
-    inputBuffer: Buffer,
-    resolution: string,
-    bitrate: string,
-  ): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-      const chunks: Buffer[] = [];
-      const inputStream = Readable.from(inputBuffer);
-
-      const command = ffmpeg()
-        .input(inputStream)
-        .inputOptions(['-nostdin'])
-        .videoCodec('libx264')
-        .size(resolution)
-        .videoBitrate(bitrate)
-        .audioCodec('aac')
-        .audioBitrate('128k')
-        .format('mp4')
-        .outputOptions([
-          '-movflags', 'frag_keyframe+empty_moov',
-          '-preset', 'veryfast',
-          'threds', '1'
-        ]);
-
-      const output = command.pipe();
-
-      output.on('data', (chunk: Buffer) => chunks.push(chunk));
-      output.on('end', () => {
-        const out = Buffer.concat(chunks);
-        this.logger.debug(`FFmpeg finished ${resolution}, size=${out.length}`);
-        resolve(out);
-      });
-      output.on('error', (err) => {
-        this.logger.error(`FFmpeg output error: ${String(err)}`);
-        reject(err);
-      });
-
-      command.on('error', (err) => {
-        this.logger.error(`FFmpeg command error: ${String(err)}`);
-        reject(err);
-      });
-    });
-  }
-
-  /**
-   * Validate mime type. Expanded allowlist to include common containers:
-   * mp4, webm, mov, mkv, avi, flv, wmv, mpeg, 3gp
-   */
   private validateVideoMime(mimeType: string) {
-    if (!mimeType || typeof mimeType !== 'string') {
-      throw new BadRequestException('mime_type missing or invalid');
+    const mime = mimeType.trim().toLowerCase();
+    
+    // ตรวจสอบว่าเป็นวิดีโอหรือไม่
+    if (!mime.startsWith('video/') && mime !== 'application/octet-stream') {
+      throw new BadRequestException('mime_type is not a valid video type');
     }
 
-    // Basic check: must be video
-    if (!mimeType.startsWith('video/')) {
-      throw new BadRequestException('file is not a video');
-    }
+    // allowlist check
+    const allow = process.env.VIDEO_MIME_ALLOWLIST
+      ? process.env.VIDEO_MIME_ALLOWLIST.split(',').map(x => x.trim().toLowerCase())
+      : this.SUPPORTED_VIDEO_MIMES;
 
-    const allow = (
-      process.env.VIDEO_MIME_ALLOWLIST ??
-      'video/mp4,video/webm,video/quicktime,video/x-matroska,video/x-msvideo,video/x-flv,video/x-ms-wmv,video/mpeg,video/3gpp'
-    )
-      .split(',')
-      .map((x) => x.trim().toLowerCase());
-
-    if (!allow.includes(mimeType.trim().toLowerCase())) {
-      throw new BadRequestException('mime_type is not allowed');
+    if (!allow.includes(mime)) {
+      throw new BadRequestException(`mime_type '${mime}' is not allowed`);
     }
   }
 
-  /**
-   * Create pre-allocated VideoAsset row in UPLOADING state.
-   */
-  async createVideoUpload(
-    dto: CreateVideoUploadDto,
-    requestUser: { sub?: any } | undefined,
-  ) {
-    this.validateVideoMime(dto.mime_type);
+  // mimie types that need conversion
+  private needsConversion(mimeType: string): boolean {
+    const mime = mimeType.trim().toLowerCase();
+    return this.MIMES_NEED_CONVERSION.includes(mime);
+  }
 
-    const maxSizeBytes = Number(
-      process.env.VIDEO_MAX_SIZE_BYTES ?? String(2 * 1024 * 1024 * 1024),
-    );
-    if (dto.size_bytes > maxSizeBytes)
-      throw new BadRequestException('size_bytes exceeds limit');
+  // mp4 conversion
+  private async convertToMp4(inputBuffer: Buffer, originalFilename: string): Promise<{ buffer: Buffer; filename: string }> {
+    const tempDir = os.tmpdir();
+    const uniqueId = randomUUID();
+    const inputExt = path.extname(originalFilename) || '.avi';
+    const inputPath = path.join(tempDir, `input_${uniqueId}${inputExt}`);
+    const outputPath = path.join(tempDir, `output_${uniqueId}.mp4`);
+
+    try {
+      // Write input buffer to a temporary file
+      await fs.promises.writeFile(inputPath, inputBuffer);
+
+      // Convert using ffmpeg
+      await this.runFfmpeg(inputPath, outputPath);
+
+      // Read output file
+      const outputBuffer = await fs.promises.readFile(outputPath);
+
+      // Create new filename
+      const baseName = path.basename(originalFilename, inputExt);
+      const newFilename = `${baseName}.mp4`;
+
+      return { buffer: outputBuffer, filename: newFilename };
+    } finally {
+      // Delete temporary files
+      try {
+        await fs.promises.unlink(inputPath);
+      } catch { /* ignore */ }
+      try {
+        await fs.promises.unlink(outputPath);
+      } catch { /* ignore */ }
+    }
+  }
+
+  // ffmpeg execution
+  private runFfmpeg(inputPath: string, outputPath: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const ffmpegPath = process.env.FFMPEG_PATH || 'ffmpeg';
+      
+      const args = [
+        '-i', inputPath,
+        '-c:v', 'libx264',        // use H.264 codec
+        '-c:a', 'aac',            // use AAC audio codec
+        '-preset', 'fast',        // encoding speed
+        '-crf', '23',             // quality (0-51, lower is better)
+        '-movflags', '+faststart', // enable fast start for web playback
+        '-y',                     // overwrite output file
+        outputPath
+      ];
+
+      this.logger.log(`Converting video: ${inputPath} -> ${outputPath}`);
+
+      const ffmpeg = spawn(ffmpegPath, args);
+      
+      let stderr = '';
+      ffmpeg.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      ffmpeg.on('close', (code) => {
+        if (code === 0) {
+          this.logger.log('Video conversion completed successfully');
+          resolve();
+        } else {
+          this.logger.error(`FFmpeg exited with code ${code}: ${stderr}`);
+          reject(new BadRequestException(`Video conversion failed: ${stderr.slice(-500)}`));
+        }
+      });
+
+      ffmpeg.on('error', (err) => {
+        this.logger.error(`FFmpeg error: ${err.message}`);
+        reject(new BadRequestException(`FFmpeg not found or failed to start. Make sure ffmpeg is installed. Error: ${err.message}`));
+      });
+    });
+  }
+
+  async createVideoUpload(dto: CreateVideoUploadDto, requestUser: { sub?: any } | undefined) {
+    this.validateVideoMime(dto.mime_type);
+    const maxSizeBytes = Number(process.env.VIDEO_MAX_SIZE_BYTES ?? String(2 * 1024 * 1024 * 1024));
+    if (dto.size_bytes > maxSizeBytes) throw new BadRequestException('size_bytes exceeds limit');
 
     const bucket = this.storage.bucket;
     const keyPrefix = process.env.S3_VIDEO_KEY_PREFIX ?? 'videos';
-    const videoId = randomUUID();
-    const folderkey = `${keyPrefix}/${videoId}`;
-    const key = `${folderkey}/original-${videoId}`;
+    const key = `${keyPrefix}/${randomUUID()}`;
 
-    await this.storage.putObject(
-      this.storage.bucket,
-      `${folderkey}.keep`,
-      Buffer.alloc(0),
-      0,
-    );
-
-    // create entity via new VideoAsset() to avoid TS overload/typing issues
-    const asset = new VideoAsset();
-    asset.ownerUserId = Number(requestUser?.sub ?? 0);
-    asset.originalFilename = dto.original_filename;
-    asset.mimeType = dto.mime_type;
-    asset.sizeBytes = String(dto.size_bytes);
-    asset.storageProvider = process.env.STORAGE_PROVIDER ?? 'minio';
-    asset.storageBucket = bucket;
-    asset.storageKey = key;
-    asset.status = VideoAssetStatus.UPLOADING;
+    const asset = this.repo.create({
+      ownerUserId: Number(requestUser?.sub ?? 0),
+      originalFilename: dto.original_filename,
+      mimeType: dto.mime_type,
+      sizeBytes: String(dto.size_bytes),
+      storageProvider: process.env.STORAGE_PROVIDER ?? 'minio',
+      storageBucket: bucket,
+      storageKey: key,
+      status: VideoAssetStatus.UPLOADING,
+    } as Partial<VideoAsset>);
 
     const saved = await this.repo.save(asset);
     return { media_asset_id: saved.id };
   }
 
-  /**
-   * Upload original and create multiple mp4 versions (360p/720p/1080p).
-   * Note: this implementation transcodes in-memory (Buffer). For large files use a worker/streaming approach.
-   */
-  async uploadVideoFileAndPersist(
-    file: Express.Multer.File,
-    requestUser: { sub?: number } | undefined,
-    mediaAssetId?: number,
-    ownerUserIdFromBody?: number,
-  ) {
+  async uploadVideoFileAndPersist(file: Express.Multer.File, requestUser: { sub?: number } | undefined, mediaAssetId?: number, ownerUserIdFromBody?: number) {
     if (!file) throw new BadRequestException('file missing');
 
-    // Use `VideoAsset | null` because findOne() returns null when not found
-    let asset: VideoAsset | null = null;
+    // If provided an asset id, link to it
+    let asset: VideoAsset | undefined;
 
     if (mediaAssetId !== undefined && Number.isFinite(mediaAssetId)) {
-      asset = await this.repo.findOne({
+      const found = await this.repo.findOne({
         where: { id: Number(mediaAssetId) },
       });
 
-      if (!asset) throw new NotFoundException('media asset not found');
-      if (asset.status !== VideoAssetStatus.UPLOADING)
+      if (!found) {
+        throw new NotFoundException('media asset not found');
+      }
+
+      if (found.status !== VideoAssetStatus.UPLOADING) {
         throw new BadRequestException('invalid state');
+      }
+
+      asset = found;
     }
 
-    const mime = file.mimetype ?? '';
+    // basic mime check
+    let mime = file.mimetype ?? '';
     this.validateVideoMime(mime);
 
-    const maxSizeBytes = Number(
-      process.env.VIDEO_MAX_SIZE_BYTES ?? String(2 * 1024 * 1024 * 1024),
-    );
-    if (file.size > maxSizeBytes) throw new BadRequestException('file too large');
+    const maxSizeBytes = Number(process.env.VIDEO_MAX_SIZE_BYTES ?? String(2 * 1024 * 1024 * 1024));
+    if (file.size > maxSizeBytes) throw new BadRequestException('file size exceeds limit');
 
-    const bucket = this.storage.bucket;
-    const videoUuid = randomUUID();
-    const keyPrefix = process.env.S3_VIDEO_KEY_PREFIX ?? 'videos';
-    
-    // New folder structure: videos/<video_uuid>/
-    const folderPath = `${keyPrefix}/${videoUuid}`;
-    const objectKey = asset?.storageKey ?? `${folderPath}`;
+    // ตรวจสอบว่าต้องแปลงเป็น MP4 หรือไม่
+    let fileBuffer = file.buffer;
+    let fileName = file.originalname;
+    let fileSize = file.size;
 
-    // upload original file as-is (keep original) - optional, can be removed if not needed
-    // await this.storage.putObject(bucket, `${folderPath}/original.mp4`, file.buffer, file.size, {
-    //   'Content-Type': mime,
-    // });
-
-    // transcode to configured resolutions (in-memory)
-    const versions: VideoVersion[] = [];
-
-    // If transcoding is disabled or fails, upload original as fallback
-    const enableTranscode = process.env.ENABLE_VIDEO_TRANSCODE !== 'false';
-    
-    if (!enableTranscode) {
-      this.logger.log('Video transcoding is disabled, uploading original only');
-      const originalKey = `${keyPrefix}/${videoUuid}/original.mp4`;
-      await this.storage.putObject(bucket, originalKey, file.buffer, file.size, { 'Content-Type': mime });
-      
-      let presigned: string | undefined;
+    if (this.needsConversion(mime)) {
+      this.logger.log(`Converting video from ${mime} to MP4: ${fileName}`);
       try {
-        presigned = await this.storage.presignedGetObject(bucket, originalKey, 3600);
-      } catch {
-        presigned = undefined;
-      }
-      
-      versions.push({ 
-        quality: 'original', 
-        presignPath: `${videoUuid}/original.mp4`,
-        presigned: presigned 
-      });
-    } else {
-      for (const r of this.resolutions) {
-        try {
-          this.logger.log(`Transcoding to ${r.name} (${r.resolution})`);
-          const processed = await this.processVideo(file.buffer, r.resolution, r.bitrate);
-
-          // New path structure: videos/<video_uuid>/<quality>.mp4
-          const versionKey = `${keyPrefix}/${videoUuid}/${r.name}.mp4`;
-          await this.storage.putObject(bucket, versionKey, processed, processed.length, { 'Content-Type': 'video/mp4' });
-
-          let presigned: string | undefined;
-          try {
-            presigned = await this.storage.presignedGetObject(bucket, versionKey, 3600);
-          } catch {
-            presigned = undefined;
-          }
-
-          // Create presign path for frontend to use
-          const presignPath = `${videoUuid}/${r.name}.mp4`;
-          
-          versions.push({ 
-            quality: r.name, 
-            presignPath: presignPath,  // Frontend can use this: GET /api/media/videos/presign/{presignPath}
-            presigned: presigned 
-          });
-        } catch (e) {
-          this.logger.warn(`Transcode failed for ${r.name}: ${String(e)}`);
-          // continue other resolutions
-        }
-      }
-      
-      // If all transcoding failed, upload original as fallback
-      if (versions.length === 0) {
-        this.logger.warn('All transcoding failed, uploading original as fallback');
-        const originalKey = `${keyPrefix}/${videoUuid}/original.mp4`;
-        await this.storage.putObject(bucket, originalKey, file.buffer, file.size, { 'Content-Type': mime });
-        
-        let presigned: string | undefined;
-        try {
-          presigned = await this.storage.presignedGetObject(bucket, originalKey, 3600);
-        } catch {
-          presigned = undefined;
-        }
-        
-        versions.push({ 
-          quality: 'original', 
-          presignPath: `${videoUuid}/original.mp4`,
-          presigned: presigned 
-        });
+        const converted = await this.convertToMp4(file.buffer, file.originalname);
+        fileBuffer = converted.buffer;
+        fileName = converted.filename;
+        fileSize = converted.buffer.length;
+        mime = 'video/mp4';
+        this.logger.log(`Conversion complete. New size: ${fileSize} bytes`);
+      } catch (error) {
+        this.logger.error(`Video conversion failed: ${error.message}`);
+        throw new BadRequestException(`Video conversion failed: ${error.message}`);
       }
     }
+
+    const bucket = this.storage.bucket;
+    // ใช้นามสกุล .mp4 สำหรับ key
+    const fileExt = path.extname(fileName) || '.mp4';
+    const objectKey = asset?.storageKey ?? `${process.env.S3_VIDEO_KEY_PREFIX ?? 'videos'}/${randomUUID()}${fileExt}`;
+    await this.storage.putObject(bucket, objectKey, fileBuffer, fileSize, { 'Content-Type': mime });
 
     const ownerUserId = requestUser ? Number(requestUser.sub ?? 0) : Number(ownerUserIdFromBody ?? 0);
     const publicUrl = this.storage.buildPublicUrl(bucket, objectKey);
 
-    // create or update entity safely using explicit assignment
-    if (!asset) {
-      asset = new VideoAsset();
-      asset.ownerUserId = ownerUserId;
-      asset.status = VideoAssetStatus.UPLOADING;
-    }
+    const saved = await this.repo.save(
+      this.repo.create({
+        ...(asset?.id ? { id: asset.id } : {}),
+        ownerUserId: asset?.ownerUserId ?? ownerUserId,
+        originalFilename: fileName,
+        mimeType: mime,
+        sizeBytes: String(fileSize),
+        storageProvider: process.env.STORAGE_PROVIDER ?? 'minio',
+        storageBucket: bucket,
+        storageKey: objectKey,
+        publicUrl,
+        status: VideoAssetStatus.READY,
+      }),
+    );
 
-    asset.originalFilename = file.originalname;
-    asset.mimeType = mime;
-    asset.sizeBytes = String(file.size);
-    asset.storageProvider = process.env.STORAGE_PROVIDER ?? 'minio';
-    asset.storageBucket = bucket;
-    asset.storageKey = `${keyPrefix}/${videoUuid}`;  // Store folder path as key
-    asset.publicUrl = publicUrl;
-    asset.status = VideoAssetStatus.READY;
-
-    const saved = await this.repo.save(asset);
-
+    const key = objectKey.startsWith(`${process.env.S3_VIDEO_KEY_PREFIX ?? 'videos'}/`) ? objectKey.slice((process.env.S3_VIDEO_KEY_PREFIX ?? 'videos').length + 1) : objectKey;
     return {
       media_asset_id: saved.id,
-      storage_key: `${keyPrefix}/${videoUuid}`,
-      versions,
+      key,
+      storage_key: objectKey,
+      public_url: saved.publicUrl,
+      converted: this.needsConversion(file.mimetype ?? ''),
+      original_mime: file.mimetype,
+      final_mime: mime,
     };
   }
 
-  /* ---------------- streaming with range support ---------------- */
-
-  private async streamObjectWithRange(
-    bucket: string,
-    objectKey: string,
-    res: Response,
-    mimeType: string,
-    size?: number,
-  ) {
+  private async streamObjectWithRange(bucket: string, objectKey: string, res: Response, mimeType: string, size?: number) {
     res.setHeader('Accept-Ranges', 'bytes');
 
     const range = res.req.headers.range as string | undefined;
@@ -345,19 +281,36 @@ export class MediaVideosService {
     }
 
     const match = /bytes=(\d*)-(\d*)/.exec(range);
-    if (!match) return res.status(416).end();
+    if (!match) {
+      res.status(416).end();
+      return;
+    }
 
-    const start = Number(match[1] || 0);
-    const end = match[2] ? Number(match[2]) : Math.min(start + 1024 * 1024, (size ?? 0) - 1);
+    let start: number;
+    let end: number;
 
-    if (isNaN(start) || isNaN(end) || start >= (size ?? 0) || start > end) return res.status(416).end();
+    if (match[1] === '' && match[2]) {
+      const suffix = Number(match[2]);
+      if (isNaN(suffix)) { res.status(416).end(); return; }
+      start = Math.max(size - suffix, 0);
+      end = size - 1;
+    } else {
+      start = Number(match[1]);
+      end = match[2] ? Number(match[2]) : Math.min(start + 1024 * 1024, size - 1);
+    }
 
+    if (isNaN(start) || isNaN(end) || start < 0 || start >= size || start > end) {
+      res.status(416).end();
+      return;
+    }
+
+    const chunkSize = end - start + 1;
     res.status(206);
     res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`);
-    res.setHeader('Content-Length', String(end - start + 1));
+    res.setHeader('Content-Length', String(chunkSize));
     res.setHeader('Content-Type', mimeType);
 
-    const stream = await this.storage.getPartialObject(bucket, objectKey, start, end - start + 1);
+    const stream = await this.storage.getPartialObject(bucket, objectKey, start, chunkSize);
     stream.pipe(res);
   }
 
@@ -365,49 +318,11 @@ export class MediaVideosService {
     const bucket = this.storage.bucket;
     const objectKey = key.startsWith('videos/') ? key : `videos/${key}`;
     const asset = await this.repo.findOne({ where: { storageBucket: bucket, storageKey: objectKey } });
-
     if (!asset) throw new NotFoundException('video not found');
-
+    
+    const mime = asset.mimeType ?? 'video/mp4';
     const size = asset.sizeBytes ? Number(asset.sizeBytes) : undefined;
-    return this.streamObjectWithRange(bucket, objectKey, res, asset.mimeType ?? 'video/mp4', size);
-  }
-
-  /**
-   * Get presigned URL for a specific video file
-   * Example: GET /api/media/videos/presign/394b2801-9f82-46f2-a8ca-161111ce1095/360p.mp4
-   * Or: GET /api/media/videos/presign/videos/394b2801-9f82-46f2-a8ca-161111ce1095/360p.mp4
-   */
-  async getPresignedUrl(fileKey: string) {
-    const bucket = this.storage.bucket;
-    const keyPrefix = process.env.S3_VIDEO_KEY_PREFIX ?? 'videos';
-    
-    // Handle different formats:
-    // 1. Full path: "videos/uuid/360p.mp4"
-    // 2. Relative path: "uuid/360p.mp4" 
-    // 3. Just filename after receiving from storageKey response
-    let objectKey: string;
-    
-    if (fileKey.startsWith(`${keyPrefix}/`)) {
-      // Already has prefix
-      objectKey = fileKey;
-    } else if (fileKey.includes('/')) {
-      // Has slash, assume it's uuid/quality.mp4 format
-      objectKey = `${keyPrefix}/${fileKey}`;
-    } else {
-      // Single file, just add prefix
-      objectKey = `${keyPrefix}/${fileKey}`;
-    }
-    
-    try {
-      const presignedUrl = await this.storage.presignedGetObject(bucket, objectKey, 3600);
-      return {
-        storageKey: objectKey,
-        presignedUrl,
-      };
-    } catch (e) {
-      this.logger.error(`Failed to generate presigned URL for ${objectKey}: ${String(e)}`);
-      throw new NotFoundException('video file not found');
-    }
+    return this.streamObjectWithRange(bucket, objectKey, res, mime, size);
   }
 
   // delete video by id
@@ -444,5 +359,4 @@ export class MediaVideosService {
     await this.repo.remove(asset);
     return { deleted: true };
   }
-
 }
