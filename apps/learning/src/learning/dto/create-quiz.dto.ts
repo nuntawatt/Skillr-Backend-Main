@@ -68,7 +68,8 @@ export class CreateQuestionDto {
   @ApiPropertyOptional({ type: [MatchPairDto] })
   @ValidateIf((q) => q.type === QuestionType.MATCH_PAIRS)
   @IsArray()
-  @ArrayMinSize(3, { message: 'ต้องมีอย่างน้อย 3 คู่' })
+  @ArrayMinSize(2, { message: 'ต้องมีอย่างน้อย 2 คู่' })
+  @ArrayMaxSize(4, { message: 'ต้องมีไม่เกิน 4 คู่' })
   @ValidateNested({ each: true })
   @Type(() => MatchPairDto)
   optionsPairs?: MatchPairDto[];
@@ -78,6 +79,7 @@ export class CreateQuestionDto {
   @ValidateIf((q) => q.type === QuestionType.CORRECT_ORDER)
   @IsArray()
   @ArrayMinSize(3, { message: 'ต้องมีอย่างน้อย 3 รายการ' })
+  @ArrayMaxSize(4, { message: 'ต้องมีไม่เกิน 4 รายการ' })
   @ValidateNested({ each: true })
   @Type(() => CorrectOrderOptionDto)
   optionsOrder?: CorrectOrderOptionDto[];
@@ -101,7 +103,34 @@ export class CreateQuizDto {
   @Type(() => Number)
   lessonId: number;
 
-  @ApiPropertyOptional({ type: [CreateQuestionDto] })
+  @ApiPropertyOptional({
+    type: [CreateQuestionDto],
+    example: [
+      {
+        question: 'ผลไม้ในข้อใดมีสีแดง?',
+        type: 'multiple_choice',
+        options: ['แอปเปิ้ล', 'กล้วย', 'องุ่นเขียว'],
+        correctAnswer: 'แอปเปิ้ล',
+      },
+      {
+        question: 'จงจับคู่แม่สีให้ถูกต้อง',
+        type: 'match_pairs',
+        optionsPairs: [
+          { left: 'ท้องฟ้า', right: 'สีน้ำเงิน' },
+          { left: 'กล้วยหอม', right: 'สีเหลือง' },
+        ],
+      },
+      {
+        question: 'จงเรียงลำดับการล้างมือ',
+        type: 'correct_order',
+        optionsOrder: [
+          { text: 'ชโลมสบู่' },
+          { text: 'ถูมือให้สะอาด' },
+          { text: 'ล้างด้วยน้ำเปล่า' },
+        ],
+      },
+    ],
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
