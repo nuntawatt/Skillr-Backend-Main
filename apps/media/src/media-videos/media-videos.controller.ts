@@ -32,7 +32,7 @@ export class MediaVideosController {
     return this.svc.uploadVideoFileAndPersist(file, req.user, mediaAssetId);
   }
 
-  @Get('presign/*')
+  @Get('presign/*path')
   @ApiOperation({ summary: 'Get presigned URL for a video file' })
   @ApiParam({
     name: 'filePath',
