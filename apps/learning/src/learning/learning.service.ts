@@ -89,8 +89,7 @@ export class LearningService {
       case QuestionType.TRUE_FALSE:
         return question.correctAnswerBool;
       case QuestionType.MATCH_PAIRS:
-        // ถ้าไม่ส่งเฉลยมา ให้ใช้ optionsPairs เป็นเฉลยไปเลย
-        return question.correctAnswerPairs ?? question.optionsPairs;
+        return question.optionsPairs;
       case QuestionType.CORRECT_ORDER:
         // ใช้ลำดับของ optionsOrder ที่ส่งมาเป็นเฉลยโดยตรง (เก็บเป็น Array ของ Text)
         return question.optionsOrder?.map((o) => o.text);
@@ -209,7 +208,7 @@ export class LearningService {
       updateDto.type ||
       updateDto.correctAnswer ||
       updateDto.correctAnswerBool ||
-      updateDto.correctAnswerPairs
+      updateDto.optionsPairs
         ? this.mapCorrectAnswerByType(updateDto as any)
         : question.correctAnswer;
 
