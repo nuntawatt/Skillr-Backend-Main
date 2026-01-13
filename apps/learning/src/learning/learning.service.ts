@@ -40,9 +40,9 @@ export class LearningService {
       0,
     );
 
-    if (totalExistingQuestions + questions.length > 3) {
+    if (totalExistingQuestions + questions.length > 10) {
       throw new BadRequestException(
-        `1 Lesson สามารถมีคำถามรวมได้สูงสุด 3 ข้อ (ปัจจุบันมีแล้ว ${totalExistingQuestions} ข้อ)`,
+        `1 Lesson สามารถมีคำถามรวมได้สูงสุด 10 ข้อ (ปัจจุบันมีแล้ว ${totalExistingQuestions} ข้อ)`,
       );
     }
 
@@ -176,8 +176,8 @@ export class LearningService {
   }
 
   async updateQuiz(id: string, updateQuizDto: UpdateQuizDto): Promise<Quiz> {
-    if (updateQuizDto.questions && updateQuizDto.questions.length > 3) {
-      throw new BadRequestException('1 Lesson สามารถมี Quiz ได้สูงสุด 3 ข้อ');
+    if (updateQuizDto.questions && updateQuizDto.questions.length > 10) {
+      throw new BadRequestException('1 Lesson สามารถมี Quiz ได้สูงสุด 10 ข้อ');
     }
 
     const quiz = await this.findOneQuiz(id);
