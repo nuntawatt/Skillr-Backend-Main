@@ -10,6 +10,8 @@ import { MediaVideosModule } from './media-videos/media-videos.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      // Always attempt to load local env files (apps/media/.env first),
+      // which is helpful when running the service locally.
       envFilePath: ['apps/media/.env', '.env'],
     }),
     TypeOrmModule.forRootAsync({

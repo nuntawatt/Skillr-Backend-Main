@@ -30,6 +30,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+      
 
   media:
     container_name: skillr_media_api
@@ -46,6 +47,8 @@ services:
       minio:
         condition: service_started
     restart: unless-stopped
+    mem_limit: 2g
+    cpus: 1.0
 
 volumes:
   media_pg_data:

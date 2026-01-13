@@ -29,11 +29,11 @@ export class CreateVideoUploadDto {
 
   @ApiPropertyOptional({
     description: 'Owner user ID of the video',
-    example: 42,
+    example: 10,
   })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(0)
-  owner_user_id?: number;
+  owner_user_id?: number;ผ
 }
