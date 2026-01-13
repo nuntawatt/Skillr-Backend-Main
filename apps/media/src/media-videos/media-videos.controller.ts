@@ -22,6 +22,7 @@ export class MediaVideosController {
   @ApiResponse({ status: 201, description: 'Video uploaded' })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
+
   uploadFile(@UploadedFile() file: Express.Multer.File, @Req() req: RequestWithUserAndBody) {
     const body = typeof req.body === 'object' && req.body !== null ? req.body : {};
     const rawId = body['media_asset_id'] ?? body['mediaAssetId'];
@@ -30,6 +31,8 @@ export class MediaVideosController {
     const ownerUserId = typeof rawOwner === 'string' && rawOwner.trim() !== '' ? Number(rawOwner) : typeof rawOwner === 'number' ? rawOwner : undefined;
     return this.svc.uploadVideoFileAndPersist(file, req.user, mediaAssetId, ownerUserId);
   }
+
+  
 
   @Get('presign/:key')
   @ApiParam({ name: 'key', example: 'abc-uuid' })

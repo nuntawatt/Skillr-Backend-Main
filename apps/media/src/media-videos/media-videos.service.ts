@@ -108,6 +108,9 @@ export class MediaVideosService {
     };
   }
 
+
+
+
   private async streamObjectWithRange(bucket: string, objectKey: string, res: Response, mimeType: string, size?: number) {
     res.setHeader('Accept-Ranges', 'bytes');
 
@@ -165,6 +168,9 @@ export class MediaVideosService {
     return this.streamObjectWithRange(bucket, objectKey, res, mime, size);
   }
 
+
+
+  
   // delete video by id
   async deleteVideoById(id: number) {
     const asset = await this.repo.findOne({ where: { id } });

@@ -62,7 +62,7 @@ export class LessonsService {
 
   private async uploadPdfToStorage(file: Express.Multer.File): Promise<string> {
     const bucket = this.storageService.bucket;
-    const fileExt = path.extname(file.originalname) || '.pdf';
+    const fileExt = path.extname(file.originalname);
 
     const fileName = `${randomUUID()}${fileExt}`;
     const objectKey = `lessons/pdf/${fileName}`;
@@ -73,6 +73,16 @@ export class LessonsService {
 
 
     return fileName;
+  }
+
+  async createArticle(filePdf: Express.Multer.File): Promise<Lesson> {
+    if (!filePdf) {
+      throw new BadRequestException('PDF file is required');
+    }
+    const createLessonDto: CreateLessonDto = {
+      title: filePdf.originalname,
+    };
+    return this.create(createLessonDto, filePdf);
   }
 
   async findAll(courseId?: number): Promise<Lesson[]> {
