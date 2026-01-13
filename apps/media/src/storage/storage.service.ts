@@ -103,7 +103,24 @@ export class StorageService {
                     reject(err ?? new Error('presign failed'));
                     return;
                 }
-                resolve(url);
+                
+                // Replace internal hostname with public URL if needed
+                const publicEndpoint = this.config.get<string>('S3_PUBLIC_ENDPOINT') ?? this.config.get<string>('S3_PUBLIC_BASE_URL');
+                if (publicEndpoint && url) {
+                    try {
+                        const urlObj = new URL(url);
+                        const publicUrlObj = new URL(publicEndpoint);
+                        urlObj.hostname = publicUrlObj.hostname;
+                        urlObj.port = publicUrlObj.port || urlObj.port;
+                        urlObj.protocol = publicUrlObj.protocol;
+                        resolve(urlObj.toString());
+                    } catch {
+                        // If URL parsing fails, return original
+                        resolve(url);
+                    }
+                } else {
+                    resolve(url);
+                }
             },
             );
         });
