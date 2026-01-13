@@ -80,7 +80,11 @@ export class MediaVideosService {
         .audioCodec('aac')
         .audioBitrate('128k')
         .format('mp4')
-        .outputOptions(['-movflags', 'frag_keyframe+empty_moov']);
+        .outputOptions([
+          '-movflags', 'frag_keyframe+empty_moov',
+          '-preset', 'veryfast',
+          'threds', '1'
+        ]);
 
       const output = command.pipe();
 
