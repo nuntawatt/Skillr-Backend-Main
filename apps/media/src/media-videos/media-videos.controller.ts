@@ -32,30 +32,25 @@ export class MediaVideosController {
     return this.svc.uploadVideoFileAndPersist(file, req.user, mediaAssetId);
   }
 
-  @Get('presign/*path')
+  @Get('presign/:key/:quality')
   @ApiOperation({ summary: 'Get presigned URL for a video file' })
   @ApiParam({
-    name: 'filePath',
-    required: true,
-    description: 'presignPath: 40b8cbfd-33ac-4613-b9b3-516be230212a/360p.mp4',
-    example: '40b8cbfd-33ac-4613-b9b3-516be230212a/360p.mp4'
+    name: 'key',
+    description: 'Video UUID',
+    example: 'e012551d-75ba-4c70-8704-81eb62057402',
   })
-  // @ApiBody({ description: 'presignPath: 40b8cbfd-33ac-4613-b9b3-516be230212a/360p.mp4', })
-
+  @ApiParam({
+    name: 'quality',
+    description: 'Video file name (e.g. 360p.mp4)',
+    example: '360p.mp4',
+  })
   @ApiResponse({ status: 200, description: 'Presigned URL generated' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 404, description: 'Video not found' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  async getPresignedUrl(@Req() req: RequestWithUserAndBody) {
-    // Get everything after /presign/
-    if (!req.url) {
-      throw new NotFoundException('invalid request');
-    }
-    const fullPath = req.url.split('/presign/')[1];
-    if (!fullPath) {
-      throw new NotFoundException('file path is required');
-    }
-    return this.svc.getPresignedUrl(decodeURIComponent(fullPath));
+  async getPresignedUrl(
+    @Param('key') key: string,
+    @Param('quality') quality: string,
+  ) {
+    return this.svc.getPresignedUrl(key, quality);
   }
 
   @Delete(':id')

@@ -9,7 +9,7 @@ import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiResponse, ApiParam, Api
 @ApiTags('Media Images')
 @Controller('media/images')
 export class MediaImagesController {
-  constructor(private readonly svc: MediaImagesService) {}
+  constructor(private readonly svc: MediaImagesService) { }
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file', { storage: multer.memoryStorage() }))
@@ -25,16 +25,14 @@ export class MediaImagesController {
     const ownerUserId = body?.['owner_user_id'] ? Number(body['owner_user_id']) : undefined;
     return this.svc.uploadImageFileAndPersist(file, ownerUserId);
   }
-
+  
   @Get('presign/:key')
   @ApiParam({ name: 'key', example: 'abc-uuid' })
-  @ApiOperation({ summary: 'Stream an image by key' })
-  @ApiResponse({ status: 200, description: 'Image stream started' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiOperation({ summary: 'Get presigned URL for image by key' })
+  @ApiResponse({ status: 200, description: 'Presigned URL generated' })
   @ApiResponse({ status: 404, description: 'Image not found' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  async streamByKey(@Param('key') key: string, @Res() res: Response) {
-    return this.svc.streamImageByKey(key, res);
+  async getPresignedImageUrl(@Param('key') key: string) {
+    return this.svc.getPresignedImageByKey(key);
   }
 
   @Delete(':id')
