@@ -10,7 +10,9 @@ import { MediaVideosModule } from './media-videos/media-videos.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: process.env.NODE_ENV === 'development' ? ['apps/media/.env', '.env'] : undefined,
+      // Always attempt to load local env files (apps/media/.env first),
+      // which is helpful when running the service locally.
+      envFilePath: ['apps/media/.env', '.env'],
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

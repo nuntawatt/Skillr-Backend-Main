@@ -35,5 +35,5 @@ export class CreateVideoUploadDto {
   @Type(() => Number)
   @IsInt()
   @Min(0)
-  owner_user_id?: number;
+  owner_user_id?: number;ผ
 }

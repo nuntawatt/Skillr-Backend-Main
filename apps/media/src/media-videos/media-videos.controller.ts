@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Req, UploadedFile, UseInterceptors, Res, Delete } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, UploadedFile, UseInterceptors, Res, Delete, NotFoundException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
 import { MediaVideosService } from './media-videos.service';
@@ -6,12 +6,12 @@ import { CreateVideoUploadDto } from './dto/create-video-upload.dto';
 import type { Response } from 'express';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiParam, ApiResponse, ApiCreatedResponse } from '@nestjs/swagger';
 
-type RequestWithUserAndBody = { user?: any; body?: any };
+type RequestWithUserAndBody = { user?: any; body?: any; url?: string };
 
 @ApiTags('Media Videos')
 @Controller('media/videos')
 export class MediaVideosController {
-  constructor(private readonly svc: MediaVideosService) {}
+  constructor(private readonly svc: MediaVideosService) { }
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file', { storage: multer.memoryStorage() }))
@@ -29,20 +29,33 @@ export class MediaVideosController {
     const mediaAssetId = typeof rawId === 'string' && rawId.trim() !== '' ? Number(rawId) : typeof rawId === 'number' ? rawId : undefined;
     const rawOwner = body['owner_user_id'] ?? body['ownerUserId'];
     const ownerUserId = typeof rawOwner === 'string' && rawOwner.trim() !== '' ? Number(rawOwner) : typeof rawOwner === 'number' ? rawOwner : undefined;
-    return this.svc.uploadVideoFileAndPersist(file, req.user, mediaAssetId, ownerUserId);
+    return this.svc.uploadVideoFileAndPersist(file, req.user, mediaAssetId);
   }
 
-  
+  @Get('presign/*')
+  @ApiOperation({ summary: 'Get presigned URL for a video file' })
+  @ApiParam({
+    name: 'filePath',
+    required: true,
+    description: 'presignPath: 40b8cbfd-33ac-4613-b9b3-516be230212a/360p.mp4',
+    example: '40b8cbfd-33ac-4613-b9b3-516be230212a/360p.mp4'
+  })
+  // @ApiBody({ description: 'presignPath: 40b8cbfd-33ac-4613-b9b3-516be230212a/360p.mp4', })
 
-  @Get('presign/:key')
-  @ApiParam({ name: 'key', example: 'abc-uuid' })
-  @ApiOperation({ summary: 'Stream a video by key (supports range)' })
-  @ApiResponse({ status: 200, description: 'Video stream started' })
+  @ApiResponse({ status: 200, description: 'Presigned URL generated' })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 404, description: 'Video not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  async streamFileByKey(@Param('key') key: string, @Res() res: Response) {
-    return this.svc.streamObjectByKey(key, res);
+  async getPresignedUrl(@Req() req: RequestWithUserAndBody) {
+    // Get everything after /presign/
+    if (!req.url) {
+      throw new NotFoundException('invalid request');
+    }
+    const fullPath = req.url.split('/presign/')[1];
+    if (!fullPath) {
+      throw new NotFoundException('file path is required');
+    }
+    return this.svc.getPresignedUrl(decodeURIComponent(fullPath));
   }
 
   @Delete(':id')
