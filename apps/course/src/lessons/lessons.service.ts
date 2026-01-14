@@ -23,22 +23,20 @@ export class LessonsService {
   ) { }
 
   async create(createLessonDto: CreateLessonDto, filePdf?: Express.Multer.File): Promise<Lesson> {
-    // Validate PDF file if provided
-    let pdfUrl: string | null = null;
+    let pdfKey: string | null = null;
 
     if (filePdf) {
-      // Validate file type
       if (filePdf.mimetype !== 'application/pdf') {
         throw new BadRequestException('Only PDF files are allowed');
       }
 
-      // Validate file size (50MB max)
       if (filePdf.size > MAX_PDF_SIZE_BYTES) {
         throw new BadRequestException(`PDF file size exceeds ${MAX_PDF_SIZE_BYTES / (1024 * 1024)}MB limit`);
       }
 
       // Upload PDF directly to MinIO
-      pdfUrl = await this.uploadPdfToStorage(filePdf);
+      pdfKey = await this.uploadPdfToStorage(filePdf);
+
     }
 
     // Auto-generate position (get max position + 1)
@@ -55,7 +53,7 @@ export class LessonsService {
         createLessonDto.media_asset_id !== undefined && createLessonDto.media_asset_id !== null
           ? Number(createLessonDto.media_asset_id)
           : null,
-      pdfUrl,
+      pdfKey,
       position: nextPosition,
     });
 
@@ -64,15 +62,27 @@ export class LessonsService {
 
   private async uploadPdfToStorage(file: Express.Multer.File): Promise<string> {
     const bucket = this.storageService.bucket;
-    const fileExt = path.extname(file.originalname) || '.pdf';
-    const objectKey = `lessons/pdf/${randomUUID()}${fileExt}`;
+    const fileExt = path.extname(file.originalname);
+
+    const fileName = `${randomUUID()}${fileExt}`;
+    const objectKey = `lessons/pdf/${fileName}`;
 
     await this.storageService.putObject(bucket, objectKey, file.buffer, file.size, {
       'Content-Type': file.mimetype,
     });
 
-    const publicUrl = this.storageService.buildPublicUrl(bucket, objectKey);
-    return publicUrl ?? objectKey;
+
+    return fileName;
+  }
+
+  async createArticle(filePdf: Express.Multer.File): Promise<Lesson> {
+    if (!filePdf) {
+      throw new BadRequestException('PDF file is required');
+    }
+    const createLessonDto: CreateLessonDto = {
+      title: filePdf.originalname,
+    };
+    return this.create(createLessonDto, filePdf);
   }
 
   async findAll(courseId?: number): Promise<Lesson[]> {
@@ -97,6 +107,19 @@ export class LessonsService {
       throw new NotFoundException(`Lesson with ID ${id} not found`);
     }
     return lesson;
+  }
+
+  async getPresignedUrlForResource(key: string): Promise<{ presignedUrl: string }> {
+    const bucket = this.storageService.bucket;
+    const objectKey = `lessons/pdf/${key}`;
+
+    const presignedUrl = await this.storageService.buildPublicUrl(bucket, objectKey);
+
+    if (!presignedUrl) {
+      throw new NotFoundException(`Resource with key ${key} not found`);
+    }
+
+    return { presignedUrl };
   }
 
   async createResource(
@@ -146,7 +169,7 @@ export class LessonsService {
       }
 
       // Upload PDF directly to MinIO
-      lesson.pdfUrl = await this.uploadPdfToStorage(filePdf);
+      lesson.pdfKey = await this.uploadPdfToStorage(filePdf);
     }
 
     // apply patch-only updates (do not overwrite with undefined)
@@ -168,6 +191,17 @@ export class LessonsService {
 
   async remove(id: number): Promise<void> {
     const lesson = await this.findOne(id);
+
+    if (lesson.pdfKey) {
+      try {
+        const bucket = this.storageService.bucket;
+        const objectKey = `lessons/pdf/${lesson.pdfKey}`;
+        await this.storageService.removeObject(this.storageService.bucket, objectKey);
+      } catch (e) {
+        this.logger.warn(`Failed to delete PDF for lesson ID ${id}: ${String(e)}`);
+      }
+    }
+
     await this.lessonRepository.remove(lesson);
   }
 }

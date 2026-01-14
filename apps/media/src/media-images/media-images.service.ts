@@ -12,7 +12,7 @@ export class MediaImagesService {
     private readonly storage: StorageService,
     @InjectRepository(ImageAsset)
     private readonly repo: Repository<ImageAsset>,
-  ) {}
+  ) { }
 
   private validateImageMime(mime: string) {
     const allow = (process.env.IMAGE_MIME_ALLOWLIST ?? 'image/png,image/jpeg,image/jpg')
@@ -61,25 +61,37 @@ export class MediaImagesService {
     };
   }
 
-  async getImageUrlByMediaAssetId(mediaAssetId: number) {
-    const asset = await this.repo.findOne({ where: { id: mediaAssetId } });
-    if (!asset) throw new NotFoundException('media asset not found');
-    if (!asset.storageKey) throw new BadRequestException('storage_key is missing');
-    const expiresIn = Number(process.env.S3_SIGNED_URL_EXPIRES_SECONDS ?? '900');
-    return this.storage.presignedGetObject(asset.storageBucket ?? this.storage.bucket, asset.storageKey, expiresIn);
-  }
-
-  async streamImageByKey(key: string, res: Response) {
+  async getPresignedImageByKey(key: string) {
     const bucket = this.storage.bucket;
-    const objectKey = key.startsWith('images/') ? key : `images/${key}`;
-    const asset = await this.repo.findOne({ where: { storageBucket: bucket, storageKey: objectKey } });
-    if (!asset) throw new NotFoundException('image not found');
-    const mime = asset.mimeType ?? 'image/jpeg';
-    const size = asset.sizeBytes ? Number(asset.sizeBytes) : undefined;
-    const stream = await this.storage.getObject(bucket, asset.storageKey!);
-    if (mime) res.setHeader('Content-Type', mime);
-    if (size) res.setHeader('Content-Length', String(size));
-    stream.pipe(res);
+    const keyPrefix = process.env.S3_IMAGE_KEY_PREFIX ?? 'images';
+
+    if (!key) {
+      throw new BadRequestException('key is required');
+    }
+
+    // Path construction
+    const objectKey = `${keyPrefix}/${key}`;
+
+    // (Recommended) Check DB first to prevent key guessing
+    const asset = await this.repo.findOne({
+      where: {
+        storageBucket: bucket,
+        storageKey: objectKey,
+      },
+    });
+
+    if (!asset) {
+      throw new NotFoundException('image not found');
+    }
+
+    try {
+      const presignedUrl =
+        await this.storage.presignedGetObject(bucket, objectKey, 3600);
+
+      return { presignedUrl };
+    } catch (e) {
+      throw new NotFoundException('image file not found');
+    }
   }
 
   async deleteImageById(id: number) {
@@ -91,7 +103,7 @@ export class MediaImagesService {
     if (bucket && key) {
       try {
         await this.storage.removeObject(bucket, key);
-      } catch (err){
+      } catch (err) {
         // optional log error
       }
     }
@@ -108,8 +120,9 @@ export class MediaImagesService {
     if (bucket && key) {
       try {
         await this.storage.removeObject(bucket, key);
-      } catch {}
+      } catch { }
     }
+
     await this.repo.remove(asset);
     return { deleted: true };
   }

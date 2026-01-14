@@ -19,15 +19,6 @@ export class StorageService {
         });
     }
 
-    // Config helpers
-    get bucket(): string {
-        const bucket = this.config.get<string>('S3_BUCKET');
-        if (!bucket) {
-            throw new BadRequestException('S3_BUCKET is not configured');
-        }
-        return bucket;
-    }
-
     private getMinioConfig() {
         const endpointRaw = this.config.get<string>('S3_ENDPOINT');
         const explicitHost = this.config.get<string>('MINIO_ENDPOINT');
@@ -71,6 +62,29 @@ export class StorageService {
         await this.client.putObject(bucket, key, buffer, size ?? buffer.length, meta ?? {});
     }
 
+    // Config helpers
+    get bucket(): string {
+        const bucket = this.config.get<string>('S3_BUCKET');
+        if (!bucket) {
+            throw new BadRequestException('S3_BUCKET is not configured');
+        }
+        return bucket;
+    }
+
+    // Returns a presigned URL for accessing the object
+    async buildPublicUrl(bucket: string, key: string): Promise<string | undefined> {
+        const presign = this.config.get<string>('S3_SIGNED_URL_EXPIRES_SECONDS');
+        const expiresSeconds = presign ? Number(presign) : 900;
+        
+        try {
+            const url = await this.client.presignedGetObject(bucket, key, expiresSeconds);
+            return url;
+        } catch (e) {
+            this.logger.warn(`buildPublicUrl failed ${bucket}/${key}: ${String(e)}`);
+            return undefined;
+        }
+    }
+
     async removeObject(bucket: string, key: string) {
         try {
             await this.client.removeObject(bucket, key);
@@ -79,13 +93,4 @@ export class StorageService {
         }
     }
 
-    // Utility
-    buildPublicUrl(bucket: string, key: string): string | undefined {
-        const baseRaw = this.config.get<string>('S3_PUBLIC_BASE_URL') ?? this.config.get<string>('S3_ENDPOINT');
-        const base = baseRaw ? baseRaw.trim().split(/\s+/)[0] : undefined;
-        if (!base) return undefined;
-        const normalizedBase = base.replace(/\/$/, '');
-        const normalizedKey = key.replace(/^\//, '');
-        return `${normalizedBase}/${bucket}/${normalizedKey}`;
-    }
 }

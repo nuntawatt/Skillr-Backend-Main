@@ -18,7 +18,6 @@ const pdfFileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilte
   }
 };
 
-
 @ApiTags('Lessons')
 @Controller('lessons')
 export class LessonsController {
@@ -27,13 +26,14 @@ export class LessonsController {
   @Post()
   // @UseGuards(JwtAuthGuard, RolesGuard)
   // @Roles(UserRole.ADMIN)
-  @UseInterceptors(FileInterceptor('file_pdf', {
-    storage: multer.memoryStorage(),
-    limits: { fileSize: MAX_PDF_SIZE_BYTES },
-    fileFilter: pdfFileFilter,
-  }))
-  @ApiOperation({ summary: 'Create a new lesson with optional PDF file (max 50MB)' })
-  @ApiConsumes('multipart/form-data')
+  // @UseInterceptors(FileInterceptor('file_pdf', {
+  //   storage: multer.memoryStorage(),
+  //   limits: { fileSize: MAX_PDF_SIZE_BYTES },
+  //   fileFilter: pdfFileFilter,
+  // }))
+  @ApiOperation({ summary: 'Create a new lesson' })
+  // @ApiConsumes('multipart/form-data')
+  @ApiConsumes('application/json')
   @ApiBody({
     schema: {
       type: 'object',
@@ -41,11 +41,11 @@ export class LessonsController {
         title: { type: 'string', example: 'Introduction to NestJS' },
         content_text: { type: 'string', example: 'This is the content of the lesson.' },
         media_asset_id: { type: 'number', example: 42 },
-        file_pdf: {
-          type: 'string',
-          format: 'binary',
-          description: 'PDF file (max 50MB)',
-        },
+        // file_pdf: {
+        //   type: 'string',
+        //   format: 'binary',
+        //   description: 'PDF file (max 50MB)',
+        // },
       },
       required: ['title'],
     },
@@ -54,11 +54,40 @@ export class LessonsController {
   @ApiResponse({ status: 400, description: 'Invalid input data or file type.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
+
   create(
     @Body() createLessonDto: CreateLessonDto,
     @UploadedFile() filePdf?: Express.Multer.File,
   ) {
     return this.lessonsService.create(createLessonDto, filePdf);
+  }
+
+
+  @Post('article')
+  @UseInterceptors(
+    FileInterceptor('file_pdf', {
+      storage: multer.memoryStorage(),
+      limits: { fileSize: MAX_PDF_SIZE_BYTES },
+      fileFilter: pdfFileFilter,
+    }),
+  )
+  @ApiOperation({ summary: 'Create lesson from PDF article' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file_pdf: {
+          type: 'string',
+          format: 'binary',
+          description: 'PDF file (max 50MB)',
+        },
+      },
+      required: ['file_pdf'],
+    },
+  })
+  createArticle(@UploadedFile() filePdf: Express.Multer.File) {
+    return this.lessonsService.createArticle(filePdf);
   }
 
   @Get()
@@ -81,6 +110,17 @@ export class LessonsController {
   // ParseIntPipe converts & validates the path param before it reaches the service
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.lessonsService.findOne(id);
+  }
+
+  @Get('presign/:key')
+  @ApiOperation({ summary: 'Get a presigned URL for a lesson resource by key' })
+  @ApiParam({ name: 'key', example: 'abc-uuid' })
+  @ApiResponse({ status: 200, description: 'Presigned URL retrieved successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid key parameter' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
+
+  getPresignedUrl(@Param('key') key: string) {
+    return this.lessonsService.getPresignedUrlForResource(key);
   }
 
   // Flow: Create Lesson Resource
