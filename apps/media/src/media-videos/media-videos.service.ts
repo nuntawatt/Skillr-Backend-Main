@@ -22,7 +22,7 @@ interface VideoResolution {
 
 export interface VideoVersion {
   quality: string;
-  presignPath: string; // relative path returned to frontend: <uuid>/<quality>/video.mp4
+  presignPath: string;
   presigned?: string;
 }
 
