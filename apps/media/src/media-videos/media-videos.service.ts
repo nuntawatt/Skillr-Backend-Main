@@ -86,14 +86,14 @@ export class MediaVideosService {
           .outputOptions([
             // '-preset', 'veryfast',
             '-preset', 'ultrafast',
-            
+
             '-level', '3.0',
             '-profile:v', 'baseline',
             '-pix_fmt', 'yuv420p',
 
             '-movflags', 'frag_keyframe+empty_moov',
             '-threads', '1',
-            
+
           ])
           .on('end', resolve)
           .on('error', reject)
@@ -112,25 +112,35 @@ export class MediaVideosService {
   }
 
   // validate mime type for video uploads
-  private validateVideoMime(mimeType: string) {
-    if (!mimeType || typeof mimeType !== 'string') {
-      throw new BadRequestException('mime_type missing or invalid');
-    }
-
-    if (!mimeType.startsWith('video/')) {
-      throw new BadRequestException('file is not a video');
-    }
-
-    const allow = (process.env.VIDEO_MIME_ALLOWLIST ??
-      'video/mp4, video/webm, video/quicktime, video/x-matroska, video/x-msvideo, video/x-flv, video/x-ms-wmv, video/mpeg, video/3gpp'
-    )
-      .split(',')
-      .map((x) => x.trim().toLowerCase());
-
-    if (!allow.includes(mimeType.trim().toLowerCase())) {
-      throw new BadRequestException('mime_type is not allowed');
-    }
+  private validateVideoMime(mimeType: string, originalName?: string) {
+  if (!mimeType || typeof mimeType !== 'string') {
+    throw new BadRequestException('mime_type missing or invalid');
   }
+
+  const ext = (originalName ?? '')
+    .split('.')
+    .pop()
+    ?.toLowerCase();
+
+  const allowedExt = ['mp4', 'webm', 'mov', 'mkv', 'avi', 'flv', 'wmv', 'mpeg', '3gp'];
+
+  const allowMime = (
+    process.env.VIDEO_MIME_ALLOWLIST ??
+    'video/mp4, video/webm, video/quicktime, video/x-matroska,video/x-msvideo, video/avi, application/octet-stream,video/x-flv, video/x-ms-wmv, video/mpeg, video/3gpp')
+    .split(',')
+    .map((x) => x.trim().toLowerCase());
+
+  // mime is allowed
+  if (allowMime.includes(mimeType.toLowerCase())) return;
+
+  if (mimeType === 'application/octet-stream' && ext && allowedExt.includes(ext)) {
+    return;
+  }
+
+  throw new BadRequestException(
+    `mime_type not allowed: ${mimeType} (${ext})`,
+  );
+}
 
   // create video upload entry and return upload info
   async createVideoUpload(
@@ -193,7 +203,7 @@ export class MediaVideosService {
     }
 
     const mime = file.mimetype ?? '';
-    this.validateVideoMime(mime);
+    this.validateVideoMime(mime, file.originalname);
 
     const maxSizeBytes = Number(
       process.env.VIDEO_MAX_SIZE_BYTES ?? String(2 * 1024 * 1024 * 1024),
