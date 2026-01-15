@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Repository } from 'typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
 import { Quiz } from './entities/quiz.entity';
 import { Question, QuestionType } from './entities/question.entity';
 import { QuizAttempt } from './entities/quiz-attempt.entity';
@@ -40,9 +40,9 @@ export class LearningService {
       0,
     );
 
-    if (totalExistingQuestions + questions.length > 10) {
+    if (totalExistingQuestions + questions.length > 3) {
       throw new BadRequestException(
-        `1 Lesson สามารถมีคำถามรวมได้สูงสุด 10 ข้อ (ปัจจุบันมีแล้ว ${totalExistingQuestions} ข้อ)`,
+        `1 Lesson สามารถมีคำถามรวมได้สูงสุด 3 ข้อ (ปัจจุบันมีแล้ว ${totalExistingQuestions} ข้อ)`,
       );
     }
 
@@ -176,8 +176,8 @@ export class LearningService {
   }
 
   async updateQuiz(id: string, updateQuizDto: UpdateQuizDto): Promise<Quiz> {
-    if (updateQuizDto.questions && updateQuizDto.questions.length > 10) {
-      throw new BadRequestException('1 Lesson สามารถมี Quiz ได้สูงสุด 10 ข้อ');
+    if (updateQuizDto.questions && updateQuizDto.questions.length > 3) {
+      throw new BadRequestException('1 Lesson สามารถมี Quiz ได้สูงสุด 3 ข้อ');
     }
 
     const quiz = await this.findOneQuiz(id);
@@ -253,16 +253,100 @@ export class LearningService {
     }
   }
 
-  async startQuiz(quizId: string, userId: string): Promise<QuizAttempt> {
+  async startQuiz(
+    quizId: string,
+    userId: string,
+    options?: { retry?: boolean },
+  ): Promise<QuizAttempt> {
     const quiz = await this.findOneQuiz(quizId);
+    const numericQuizId = Number(quizId);
     const numericUserId = Number(userId);
+    const isRetry = Boolean(options?.retry);
 
+    // 1. เช็คว่าเคยทำเสร็จไปแล้วหรือยัง
+    const completedAttempt = await this.attemptRepository.findOne({
+      where: {
+        quizId: numericQuizId,
+        userId: numericUserId,
+        completedAt: Not(IsNull()),
+      },
+    });
+
+    if (completedAttempt && !isRetry) {
+      throw new BadRequestException(
+        'คุณได้ทำ Quiz นี้เสร็จสิ้นแล้ว ไม่สามารถทำซ้ำได้',
+      );
+    }
+
+    // 2. เช็คว่ามี Attempt ที่ทำค้างอยู่ไหม
+    const activeAttempt = await this.attemptRepository.findOne({
+      where: {
+        quizId: numericQuizId,
+        userId: numericUserId,
+        completedAt: IsNull(),
+      },
+      order: { startedAt: 'DESC' },
+    });
+
+    if (activeAttempt && !isRetry) {
+      return activeAttempt; // ส่งอันเดิมกลับไปให้ทำต่อ
+    }
+
+    // ถ้าเป็นการ retry และมี attempt ค้างอยู่ ให้ปิด attempt ค้างก่อน (กันการมีหลาย attempt เปิดพร้อมกัน)
+    if (activeAttempt && isRetry) {
+      activeAttempt.completedAt = new Date();
+      activeAttempt.score = null as any;
+      activeAttempt.passed = false;
+      await this.attemptRepository.save(activeAttempt);
+    }
+
+    // 3. ถ้าไม่มีเลย ถึงจะสร้างใหม่
     const attempt = this.attemptRepository.create({
       quizId: quiz.id,
       userId: numericUserId,
       startedAt: new Date(),
     });
 
+    return this.attemptRepository.save(attempt);
+  }
+
+  async hasCompletedQuiz(quizId: number | string, userId: string | number) {
+    const numericQuizId = Number(quizId);
+    const numericUserId = Number(userId);
+
+    const completed = await this.attemptRepository.findOne({
+      where: {
+        quizId: numericQuizId,
+        userId: numericUserId,
+        completedAt: Not(IsNull()),
+      },
+    });
+
+    return Boolean(completed);
+  }
+
+  async saveProgress(
+    quizId: string,
+    userId: string,
+    submitDto: SubmitQuizDto,
+  ): Promise<QuizAttempt> {
+    const numericQuizId = Number(quizId);
+    const numericUserId = Number(userId);
+
+    const attempt = await this.attemptRepository.findOne({
+      where: {
+        quizId: numericQuizId,
+        userId: numericUserId,
+        completedAt: IsNull(),
+      },
+      order: { startedAt: 'DESC' },
+    });
+
+    if (!attempt) {
+      throw new NotFoundException('ไม่พบรายการที่กำลังทำอยู่ กรุณาเริ่ม Quiz ใหม่');
+    }
+
+    attempt.answers = submitDto.answers;
     return this.attemptRepository.save(attempt);
   }
 
@@ -276,7 +360,7 @@ export class LearningService {
     const numericUserId = Number(userId);
 
     // 1. Find the active attempt
-    let attempt = await this.attemptRepository.findOne({
+    const attempt = await this.attemptRepository.findOne({
       where: {
         quizId: numericQuizId,
         userId: numericUserId,
@@ -286,12 +370,20 @@ export class LearningService {
     });
 
     if (!attempt) {
-      // If no active attempt, create one (or throw if you prefer strict flow)
-      attempt = this.attemptRepository.create({
-        quizId: numericQuizId,
-        userId: numericUserId,
-        startedAt: new Date(),
+      // เช็คว่าเพราะทำเสร็จไปแล้ว หรือเพราะยังไม่ได้เริ่ม
+      const hasCompleted = await this.attemptRepository.findOne({
+        where: {
+          quizId: numericQuizId,
+          userId: numericUserId,
+          completedAt: Not(IsNull()),
+        },
       });
+
+      if (hasCompleted) {
+        throw new BadRequestException('คุณได้ทำ Quiz นี้เสร็จสิ้นแล้ว ไม่สามารถส่งซ้ำได้');
+      }
+
+      throw new BadRequestException('ไม่พบรายการที่กำลังทำอยู่ กรุณาเริ่ม Quiz ก่อนส่งคำตอบ');
     }
 
     // 2. Calculate score and validate questions

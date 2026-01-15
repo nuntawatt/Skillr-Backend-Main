@@ -111,8 +111,6 @@ export class MediaVideosService {
     }
   }
 
-
-
   // validate mime type for video uploads
   private validateVideoMime(mimeType: string) {
     if (!mimeType || typeof mimeType !== 'string') {
@@ -124,7 +122,7 @@ export class MediaVideosService {
     }
 
     const allow = (process.env.VIDEO_MIME_ALLOWLIST ??
-      'video/mp4,video/webm,video/quicktime,video/x-matroska,video/x-msvideo,video/x-flv,video/x-ms-wmv,video/mpeg,video/3gpp'
+      'video/mp4, video/webm, video/quicktime, video/x-matroska, video/x-msvideo, video/x-flv, video/x-ms-wmv, video/mpeg, video/3gpp'
     )
       .split(',')
       .map((x) => x.trim().toLowerCase());
