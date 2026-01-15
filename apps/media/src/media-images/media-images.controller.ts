@@ -12,7 +12,7 @@ export class MediaImagesController {
   constructor(private readonly svc: MediaImagesService) { }
 
   @Post('upload')
-  @UseInterceptors(FileInterceptor('file', { storage: multer.memoryStorage() }))
+  @UseInterceptors(FileInterceptor('file', { storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } }))
   @ApiOperation({ summary: 'Upload an image file' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: UploadImageDto })

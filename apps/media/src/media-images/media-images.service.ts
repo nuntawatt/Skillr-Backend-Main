@@ -14,18 +14,41 @@ export class MediaImagesService {
     private readonly repo: Repository<ImageAsset>,
   ) { }
 
-  private validateImageMime(mime: string) {
-    const allow = (process.env.IMAGE_MIME_ALLOWLIST ?? 'image/png,image/jpeg,image/jpg')
-      .split(',')
-      .map((s) => s.trim().toLowerCase());
-    if (!allow.includes((mime ?? '').toLowerCase())) {
-      throw new BadRequestException('image mime_type is not allowed');
+  private validateImageMime(mime: string, originalName?: string) {
+    const ext = (originalName ?? '')
+      .split('.')
+      .pop()
+      ?.toLowerCase();
+
+    const allowMime = [
+      'image/jpeg',
+      'image/png',
+      'image/jpg',
+      'image/pjpeg',
+    ];
+
+    const allowExt = ['jpg', 'jpeg', 'png'];
+
+    // mime check mime success
+    if (allowMime.includes((mime ?? '').toLowerCase())) {
+      return;
     }
+
+    // mime check by extension
+    if (
+      (mime === 'application/octet-stream' || !mime) &&
+      ext &&
+      allowExt.includes(ext)
+    ) {
+      return;
+    }
+
+    throw new BadRequestException('รองรับเฉพาะไฟล์ JPG และ PNG เท่านั้น');
   }
 
   async uploadImageFileAndPersist(file: Express.Multer.File, ownerUserIdFromBody?: number) {
     if (!file) throw new BadRequestException('file missing');
-    this.validateImageMime(file.mimetype ?? '');
+    this.validateImageMime(file.mimetype ?? '', file.originalname);
 
     const maxSize = Number(process.env.IMAGE_MAX_SIZE_BYTES ?? String(5 * 1024 * 1024));
     if (file.size > maxSize) throw new BadRequestException('file size exceeds limit');
