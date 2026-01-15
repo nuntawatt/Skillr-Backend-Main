@@ -241,7 +241,7 @@ export class MediaVideosService {
 
       let presigned: string | undefined;
       try {
-        presigned = await this.storage.presignedGetObject(bucket, originalKey, 3600);
+        presigned = await this.storage.presignedGetObject(bucket, originalKey, 60 * 60 * 24);
       } catch {
         presigned = undefined;
       }
@@ -265,7 +265,7 @@ export class MediaVideosService {
 
           let presigned: string | undefined;
           try {
-            presigned = await this.storage.presignedGetObject(bucket, presignedKey, 3600);
+            presigned = await this.storage.presignedGetObject(bucket, presignedKey, 60 * 60 * 24);
           } catch {
             presigned = undefined;
           }
@@ -289,7 +289,7 @@ export class MediaVideosService {
 
         let presigned: string | undefined;
         try {
-          presigned = await this.storage.presignedGetObject(bucket, originalKey, 3600);
+          presigned = await this.storage.presignedGetObject(bucket, originalKey, 60 * 60 * 24);
         } catch {
           presigned = undefined;
         }
@@ -414,7 +414,7 @@ export class MediaVideosService {
 
     try {
       const presignedUrl =
-        await this.storage.presignedGetObject(bucket, objectKey, 3600);
+        await this.storage.presignedGetObject(bucket, objectKey, 60 * 60 * 24); // 24 hours
 
       return {
         key,

@@ -2,8 +2,8 @@ import { Type } from 'class-transformer';
 import { IsString, IsOptional, IsInt, Min } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
-// Max PDF file size: 50MB
-export const MAX_PDF_SIZE_BYTES = 50 * 1024 * 1024;
+// Max PDF file size: 51MB
+export const MAX_PDF_SIZE_BYTES = 51 * 1024 * 1024;
 
 export class CreateLessonDto {
   @ApiPropertyOptional({

@@ -31,7 +31,7 @@ export class LessonsService {
       }
 
       if (filePdf.size > MAX_PDF_SIZE_BYTES) {
-        throw new BadRequestException(`PDF file size exceeds ${MAX_PDF_SIZE_BYTES / (1024 * 1024)}MB limit`);
+        throw new BadRequestException(`PDF file size exceeds ${MAX_PDF_SIZE_BYTES / (51 * 1024 * 1024)}MB limit`);
       }
 
       // Upload PDF directly to MinIO
@@ -165,7 +165,7 @@ export class LessonsService {
         throw new BadRequestException('Only PDF files are allowed');
       }
       if (filePdf.size > MAX_PDF_SIZE_BYTES) {
-        throw new BadRequestException(`PDF file size exceeds ${MAX_PDF_SIZE_BYTES / (1024 * 1024)}MB limit`);
+        throw new BadRequestException(`PDF file size exceeds ${MAX_PDF_SIZE_BYTES / (51 * 1024 * 1024)}MB limit`);
       }
 
       // Upload PDF directly to MinIO

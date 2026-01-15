@@ -1,5 +1,6 @@
 import { NestFactory, Reflector } from '@nestjs/core';
 import { ValidationPipe, Logger, ClassSerializerInterceptor } from '@nestjs/common';
+import * as express from 'express';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './course.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -26,6 +27,11 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  // Increase global body parser limits to allow large multipart/form-data uploads
+  // (some clients or proxies may add small overhead; keep margin above MAX_PDF_SIZE_BYTES)
+  // app.use(express.json({ limit: '60mb' }));
+  // app.use(express.urlencoded({ limit: '60mb', extended: true }));
   
   const config = new DocumentBuilder()
     .setTitle('Skillr Course Service API')
