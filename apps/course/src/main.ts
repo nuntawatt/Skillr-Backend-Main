@@ -11,7 +11,13 @@ async function bootstrap() {
   });
 
   // Enable CORS for all origins (adjust as needed for production)
-  app.enableCors({ origin: true, credentials: true });
+  // app.enableCors({ origin: true, credentials: true });
+  app.enableCors({
+    origin: '*', // Allows all origins
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS', // Allows all common methods
+    allowedHeaders: '*', // Allows all headers
+    credentials: true, // If you need to support credentials
+  });
   
   app.useGlobalPipes(
     new ValidationPipe({

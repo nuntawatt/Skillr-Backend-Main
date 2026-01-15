@@ -29,7 +29,13 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   
-  app.enableCors({ origin: true, credentials: true });
+  // app.enableCors({ origin: true, credentials: true });
+  app.enableCors({
+    origin: '*', // Allows all origins
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS', // Allows all common methods
+    allowedHeaders: '*', // Allows all headers
+    credentials: true, // If you need to support credentials
+  });
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   
   app.setGlobalPrefix('api');
