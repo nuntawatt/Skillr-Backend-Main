@@ -80,12 +80,20 @@ export class MediaVideosService {
           .size(resolution)
           .videoBitrate(bitrate)
           .audioCodec('aac')
-          .audioBitrate('128k')
+          // .audioBitrate('128k')
+          .audioBitrate('96k')
           .format('mp4')
           .outputOptions([
+            // '-preset', 'veryfast',
+            '-preset', 'ultrafast',
+            
+            '-level', '3.0',
+            '-profile:v', 'baseline',
+            '-pix_fmt', 'yuv420p',
+
             '-movflags', 'frag_keyframe+empty_moov',
-            '-preset', 'veryfast',
             '-threads', '1',
+            
           ])
           .on('end', resolve)
           .on('error', reject)
