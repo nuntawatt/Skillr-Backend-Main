@@ -126,7 +126,7 @@ export class MediaVideosService {
 
   const allowMime = (
     process.env.VIDEO_MIME_ALLOWLIST ??
-    'video/mp4, video/webm, video/quicktime, video/x-matroska,video/x-msvideo, video/avi, application/octet-stream,video/x-flv, video/x-ms-wmv, video/mpeg, video/3gpp')
+    'video/mp4, video/webm, video/quicktime, video/x-matroska, video/x-msvideo, video/avi, application/octet-stream, video/x-flv, video/x-ms-wmv, video/mpeg, video/3gpp')
     .split(',')
     .map((x) => x.trim().toLowerCase());
 
@@ -150,7 +150,7 @@ export class MediaVideosService {
     this.validateVideoMime(dto.mime_type);
 
     const maxSizeBytes = Number(
-      process.env.VIDEO_MAX_SIZE_BYTES ?? String(2 * 1024 * 1024 * 1024),
+      process.env.VIDEO_MAX_SIZE_BYTES ?? String(2 * 1024 * 1024 * 1024), // 2GB default
     );
     if (dto.size_bytes > maxSizeBytes)
       throw new BadRequestException('size_bytes exceeds limit');
@@ -158,7 +158,7 @@ export class MediaVideosService {
     const bucket = this.storage.bucket;
     const keyPrefix = process.env.S3_VIDEO_KEY_PREFIX ?? 'videos';
     const videoId = randomUUID();
-    const folderKey = `${keyPrefix}/${videoId}`;
+    const folderKey = `${keyPrefix}/${videoId}`; 
 
     // Optional placeholder: if you want a visible "folder" in some UIs, create `.keep` inside folder.
     // Not required for S3/MinIO to work. If you don't want it, you can remove the following call.

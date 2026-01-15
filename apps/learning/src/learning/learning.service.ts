@@ -16,6 +16,8 @@ import { SubmitQuizDto } from './dto/submit-quiz.dto';
 
 @Injectable()
 export class LearningService {
+  private readonly maxQuestionsPerLesson = 30;
+
   constructor(
     @InjectRepository(Quiz)
     private readonly quizRepository: Repository<Quiz>,
@@ -40,9 +42,9 @@ export class LearningService {
       0,
     );
 
-    if (totalExistingQuestions + questions.length > 3) {
+    if (totalExistingQuestions + questions.length > this.maxQuestionsPerLesson) {
       throw new BadRequestException(
-        `1 Lesson สามารถมีคำถามรวมได้สูงสุด 3 ข้อ (ปัจจุบันมีแล้ว ${totalExistingQuestions} ข้อ)`,
+        `1 Lesson สามารถมีคำถามรวมได้สูงสุด ${this.maxQuestionsPerLesson} ข้อ (ปัจจุบันมีแล้ว ${totalExistingQuestions} ข้อ)`,
       );
     }
 
@@ -176,11 +178,35 @@ export class LearningService {
   }
 
   async updateQuiz(id: string, updateQuizDto: UpdateQuizDto): Promise<Quiz> {
-    if (updateQuizDto.questions && updateQuizDto.questions.length > 3) {
-      throw new BadRequestException('1 Lesson สามารถมี Quiz ได้สูงสุด 3 ข้อ');
+    const quiz = await this.findOneQuiz(id);
+
+    // Enforce total questions per lesson (across quizzes) when questions are being replaced/updated
+    if (updateQuizDto.questions) {
+      const targetLessonId =
+        typeof updateQuizDto.lessonId === 'number'
+          ? updateQuizDto.lessonId
+          : quiz.lessonId;
+
+      const existingQuizzes = await this.quizRepository.find({
+        where: { lessonId: Number(targetLessonId) },
+        relations: ['questions'],
+      });
+
+      const totalOtherQuestions = existingQuizzes.reduce((sum, q) => {
+        if (q.id === quiz.id) {
+          return sum;
+        }
+        return sum + (q.questions?.length ?? 0);
+      }, 0);
+
+      const nextTotal = totalOtherQuestions + updateQuizDto.questions.length;
+      if (nextTotal > this.maxQuestionsPerLesson) {
+        throw new BadRequestException(
+          `1 Lesson สามารถมีคำถามรวมได้สูงสุด ${this.maxQuestionsPerLesson} ข้อ (ปัจจุบันมีแล้ว ${totalOtherQuestions} ข้อ)`,
+        );
+      }
     }
 
-    const quiz = await this.findOneQuiz(id);
     Object.assign(quiz, updateQuizDto);
     await this.quizRepository.save(quiz);
     return this.findOneQuiz(id);

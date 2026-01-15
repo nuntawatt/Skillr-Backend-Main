@@ -121,7 +121,7 @@ export class LearningController {
         statusCode: 400,
         error: 'Bad Request',
         message:
-          '1 Lesson สามารถมีคำถามรวมได้สูงสุด 3 ข้อ (ปัจจุบันมีแล้ว 3 ข้อ)',
+          '1 Lesson สามารถมีคำถามรวมได้สูงสุด 30 ข้อ (ปัจจุบันมีแล้ว 30 ข้อ)',
       },
     },
   })
@@ -305,7 +305,7 @@ export class LearningController {
       example: {
         statusCode: 400,
         error: 'Bad Request',
-        message: '1 Lesson สามารถมี Quiz ได้สูงสุด 3 ข้อ',
+        message: '1 Lesson สามารถมีคำถามรวมได้สูงสุด 30 ข้อ',
       },
     },
   })

@@ -20,12 +20,7 @@ export class MediaImagesService {
       .pop()
       ?.toLowerCase();
 
-    const allowMime = [
-      'image/jpeg',
-      'image/png',
-      'image/jpg',
-      'image/pjpeg',
-    ];
+    const allowMime = ['image/jpeg', 'image/png', 'image/jpg', 'image/pjpeg'];
 
     const allowExt = ['jpg', 'jpeg', 'png'];
 
@@ -35,15 +30,11 @@ export class MediaImagesService {
     }
 
     // mime check by extension
-    if (
-      (mime === 'application/octet-stream' || !mime) &&
-      ext &&
-      allowExt.includes(ext)
-    ) {
+    if ((mime === 'application/octet-stream' || !mime) && ext && allowExt.includes(ext)) {
       return;
     }
 
-    throw new BadRequestException('รองรับเฉพาะไฟล์ JPG และ PNG เท่านั้น');
+    throw new BadRequestException('invalid image mime type');
   }
 
   async uploadImageFileAndPersist(file: Express.Multer.File, ownerUserIdFromBody?: number) {
@@ -95,7 +86,7 @@ export class MediaImagesService {
     // Path construction
     const objectKey = `${keyPrefix}/${key}`;
 
-    // (Recommended) Check DB first to prevent key guessing
+    // Check DB first to prevent key guessing
     const asset = await this.repo.findOne({
       where: {
         storageBucket: bucket,
@@ -108,8 +99,7 @@ export class MediaImagesService {
     }
 
     try {
-      const presignedUrl =
-        await this.storage.presignedGetObject(bucket, objectKey, 3600);
+      const presignedUrl = await this.storage.presignedGetObject(bucket, objectKey, 3600);
 
       return { presignedUrl };
     } catch (e) {
