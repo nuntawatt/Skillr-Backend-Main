@@ -21,7 +21,7 @@ async function bootstrap() {
     .setTitle('Skillr Auth Service API')
     .setDescription('API documentation for the Auth Service')
     .setVersion('1.0.0')
-    .addServer('http://localhost:3001', 'Local server')
+    .addServer('http://localhost:3001/api', 'Local server')
     .addBearerAuth() 
     .build();
 

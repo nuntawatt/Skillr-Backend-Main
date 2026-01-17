@@ -21,7 +21,7 @@ async function bootstrap() {
     .setTitle('Skllr Media Service API')
     .setDescription('API documentation for the Media Service')
     .setVersion('1.0.0')
-    .addServer('http://localhost:3004', 'Local server')
+    .addServer('http://localhost:3004/api', 'Local server')
     .addBearerAuth() 
     .build();
 

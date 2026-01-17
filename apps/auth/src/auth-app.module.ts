@@ -3,8 +3,8 @@ import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { MailerModule } from '@nestjs-modules/mailer';
 import { getDatabaseConfig } from '@config/database.config';
+import * as path from 'path';
 
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
@@ -13,7 +13,10 @@ import { UsersModule } from './users/users.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: process.env.NODE_ENV === 'development' ? ['apps/auth/.env', '.env'] : undefined,
+      envFilePath: [
+        path.resolve(process.cwd(), 'apps/auth/.env'),
+        path.resolve(process.cwd(), '.env'),
+      ],
     }),
     ThrottlerModule.forRoot([
       {
@@ -22,26 +25,6 @@ import { UsersModule } from './users/users.module';
         limit: 100,
       },
     ]),
-    MailerModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        transport: {
-          host: configService.get<string>('SMTP_HOST'),
-          port: Number(configService.get<string>('SMTP_PORT') ?? 587),
-          secure: configService.get<string>('SMTP_SECURE') === 'true',
-          auth: configService.get('SMTP_USER')
-            ? {
-                user: configService.get<string>('SMTP_USER'),
-                pass: configService.get<string>('SMTP_PASS'),
-              }
-            : undefined,
-        },
-        defaults: {
-          from: configService.get<string>('MAIL_FROM') ?? 'no-reply@skillr.local',
-        },
-      }),
-      inject: [ConfigService],
-    }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: getDatabaseConfig,

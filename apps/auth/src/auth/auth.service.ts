@@ -1,23 +1,23 @@
-import {
-  Injectable,
-  UnauthorizedException,
-  BadRequestException,
-  ConflictException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, ConflictException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
-import { MailerService } from '@nestjs-modules/mailer';
 
 import * as crypto from 'crypto';
+import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { User } from '../users/entities/user.entity';
 import { Session } from '../users/entities/session.entity';
 import { PasswordResetToken } from '../users/entities/password-reset-token.entity';
 import { RegisterDto, LoginDto } from './dto';
 import { LoginAttemptsService } from './login-attempts.service';
+import { EmailService } from './email.service';
+
+// Constants for OTP/Token configuration
+const OTP_EXPIRY_MINUTES = 10;
+const RESET_TOKEN_EXPIRY_MINUTES = 15;
+const BCRYPT_SALT_ROUNDS = 10;
 
 export interface TokenResponse {
   accessToken: string;
@@ -43,8 +43,8 @@ export class AuthService {
     @InjectRepository(PasswordResetToken)
     private readonly passwordResetTokenRepository: Repository<PasswordResetToken>,
     private readonly loginAttemptsService: LoginAttemptsService,
-    private readonly mailerService: MailerService,
-  ) {}
+    private readonly emailService: EmailService,
+  ) { }
 
   // Register a new user
   async register(registerDto: RegisterDto): Promise<AuthResponse> {
@@ -69,16 +69,10 @@ export class AuthService {
   }
 
   // Login with email and password
-  async login(
-    loginDto: LoginDto,
-    userAgent?: string,
-    ipAddress?: string,
-  ): Promise<AuthResponse> {
+  async login(loginDto: LoginDto, userAgent?: string, ipAddress?: string): Promise<AuthResponse> {
     const invalidMessage = 'Invalid email or password';
 
-    const lockStatus = await this.loginAttemptsService.getLockStatus(
-      loginDto.email,
-    );
+    const lockStatus = await this.loginAttemptsService.getLockStatus(loginDto.email);
     if (lockStatus.isLocked) {
       throw new UnauthorizedException(
         this.formatLockMessage(lockStatus.remainingMs),
@@ -87,28 +81,19 @@ export class AuthService {
 
     const user = await this.usersService.findByEmail(loginDto.email);
     if (!user) {
-      const nextStatus = await this.loginAttemptsService.recordFailure(
-        loginDto.email,
-      );
-      throw new UnauthorizedException(
-        nextStatus.isLocked
-          ? this.formatLockMessage(nextStatus.remainingMs)
-          : invalidMessage,
+      const nextStatus = await this.loginAttemptsService.recordFailure(loginDto.email);
+      throw new UnauthorizedException(nextStatus.isLocked
+        ? this.formatLockMessage(nextStatus.remainingMs)
+        : invalidMessage,
       );
     }
 
-    const isPasswordValid = await this.usersService.verifyPassword(
-      user,
-      loginDto.password,
-    );
+    const isPasswordValid = await this.usersService.verifyPassword(user, loginDto.password);
     if (!isPasswordValid) {
-      const nextStatus = await this.loginAttemptsService.recordFailure(
-        loginDto.email,
-      );
-      throw new UnauthorizedException(
-        nextStatus.isLocked
-          ? this.formatLockMessage(nextStatus.remainingMs)
-          : invalidMessage,
+      const nextStatus = await this.loginAttemptsService.recordFailure(loginDto.email);
+      throw new UnauthorizedException(nextStatus.isLocked
+        ? this.formatLockMessage(nextStatus.remainingMs)
+        : invalidMessage,
       );
     }
 
@@ -116,29 +101,14 @@ export class AuthService {
       throw new UnauthorizedException('Account is inactive or suspended');
     }
 
-    const tokens = await this.generateTokens(
-      user,
-      userAgent,
-      ipAddress,
-      loginDto.rememberMe,
-    );
-
+    const tokens = await this.generateTokens(user, userAgent, ipAddress);
     await this.loginAttemptsService.resetAttempts(loginDto.email);
 
-    return {
-      user: this.sanitizeUser(user),
-      tokens,
-    };
+    return { user: this.sanitizeUser(user), tokens };
   }
 
   // Login - Register with Google OAuth
-  async googleLogin(profile: {
-    googleId: string;
-    email: string;
-    firstName?: string;
-    lastName?: string;
-    avatar?: string;
-  }): Promise<AuthResponse> {
+  async googleLogin(profile: { googleId: string; email: string; firstName?: string; lastName?: string; avatar?: string; }): Promise<AuthResponse> {
     const user = await this.usersService.findOrCreateFromGoogle(profile);
 
     if ((user.status ?? '').toLowerCase() !== 'active') {
@@ -147,10 +117,7 @@ export class AuthService {
 
     const tokens = await this.generateTokens(user);
 
-    return {
-      user: this.sanitizeUser(user),
-      tokens,
-    };
+    return { user: this.sanitizeUser(user), tokens };
   }
 
   // Refresh access token using refresh token
@@ -158,9 +125,9 @@ export class AuthService {
     const session = await this.sessionRepository.findOne({
       where: {
         refreshToken: refreshTokenValue,
-        expiresAt: MoreThan(new Date()),
+        expiresAt: MoreThan(new Date())
       },
-      relations: ['user'],
+      relations: ['user']
     });
 
     if (!session) {
@@ -171,99 +138,162 @@ export class AuthService {
     return this.generateTokens(session.user);
   }
 
-  // Logout
-  async logout(refreshTokenValue: string): Promise<void> {
-    await this.sessionRepository.delete({ refreshToken: refreshTokenValue });
-  }
-
   // Logout from all devices
   async logoutAll(userId: number): Promise<void> {
     await this.sessionRepository.delete({ userId });
   }
 
-  // Forgot password
+  // Logout
+  async logout(refreshTokenValue: string): Promise<void> {
+    await this.sessionRepository.delete({ refreshToken: refreshTokenValue });
+  }
+
+
+  // Forgot password - send OTP (hashed before storage)
   async forgotPassword(email: string): Promise<{ message: string }> {
+    const genericMessage = 'If the email exists, an OTP will be sent.';
+
     const user = await this.usersService.findByEmail(email);
     if (!user) {
-      return {
-        message: 'If the email exists, a password reset link will be sent.',
-      };
+      return { message: genericMessage };
     }
 
+    // Invalidate any existing OTPs for this user
     await this.passwordResetTokenRepository.update(
       { userId: user.id, isUsed: false },
       { isUsed: true },
     );
 
-    // Generate reset token
-    const token = crypto.randomBytes(32).toString('hex');
+    // Generate 6-digit OTP and hash it before storage
+    const otp = this.generateOtp();
+    const otpHash = await bcrypt.hash(otp, BCRYPT_SALT_ROUNDS);
+
     const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 1);
+    expiresAt.setMinutes(expiresAt.getMinutes() + OTP_EXPIRY_MINUTES);
 
     const resetToken = this.passwordResetTokenRepository.create({
-      token,
+      token: otpHash, // Store hashed OTP, never plain text
       userId: user.id,
       expiresAt,
     });
 
     await this.passwordResetTokenRepository.save(resetToken);
 
-    await this.safeSendResetEmail(user.email, token);
+    // Send plain OTP to user via email
+    await this.emailService.sendOtpEmail(user.email, otp);
 
-    return {
-      message: 'If the email exists, a password reset link will be sent.',
-    };
+    return { message: genericMessage };
   }
 
-  async resetPassword(
-    token: string,
-    newPassword: string,
-  ): Promise<{ message: string }> {
-    const resetToken = await this.passwordResetTokenRepository.findOne({
+  // Verify OTP using bcrypt comparison
+  async verifyOtp(email: string, otp: string): Promise<{ resetToken: string }> {
+    const invalidMessage = 'Invalid or expired OTP';
+
+    const user = await this.usersService.findByEmail(email);
+    if (!user) {
+      throw new BadRequestException(invalidMessage);
+    }
+
+    // Find non-expired, unused tokens for this user
+    const tokens = await this.passwordResetTokenRepository.find({
       where: {
-        token,
+        userId: user.id,
         isUsed: false,
         expiresAt: MoreThan(new Date()),
       },
-      relations: ['user'],
+      order: { createdAt: 'DESC' },
     });
 
-    if (!resetToken) {
-      throw new BadRequestException('Invalid or expired reset token');
+    // Compare OTP with stored hashes using bcrypt
+    let matchedToken: PasswordResetToken | null = null;
+    for (const token of tokens) {
+      const isMatch = await bcrypt.compare(otp, token.token);
+      if (isMatch) {
+        matchedToken = token;
+        break;
+      }
     }
 
-    await this.usersService.updatePassword(resetToken.userId, newPassword);
+    if (!matchedToken) {
+      throw new BadRequestException(invalidMessage);
+    }
 
-    resetToken.isUsed = true;
-    await this.passwordResetTokenRepository.save(resetToken);
-    await this.logoutAll(resetToken.userId);
+    // Generate reset token and hash before storage
+    const resetTokenPlain = crypto.randomBytes(32).toString('hex');
+    const resetTokenHash = await bcrypt.hash(resetTokenPlain, BCRYPT_SALT_ROUNDS);
 
-    await this.safeSendPasswordChangedEmail(resetToken.user.email);
-    this.logger.log(`Password reset for userId=${resetToken.userId}`);
+    // Update expiry for reset token phase
+    const resetTokenExpiresAt = new Date();
+    resetTokenExpiresAt.setMinutes(resetTokenExpiresAt.getMinutes() + RESET_TOKEN_EXPIRY_MINUTES);
+
+    // Replace OTP hash with reset token hash
+    matchedToken.token = resetTokenHash;
+    matchedToken.expiresAt = resetTokenExpiresAt;
+    await this.passwordResetTokenRepository.save(matchedToken);
+
+    // Return plain reset token to client
+    return { resetToken: resetTokenPlain };
+  }
+
+  // Reset password with verified token
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+    const invalidMessage = 'Invalid or expired reset token';
+
+    // Find all non-expired, unused tokens
+    const tokens = await this.passwordResetTokenRepository.find({
+      where: {
+        isUsed: false,
+        expiresAt: MoreThan(new Date()),
+      },
+      relations: ['user']
+    });
+
+    // Compare reset token with stored hashes using bcrypt
+    let matchedToken: PasswordResetToken | null = null;
+    for (const t of tokens) {
+      const isMatch = await bcrypt.compare(token, t.token);
+      if (isMatch) {
+        matchedToken = t;
+        break;
+      }
+    }
+
+    if (!matchedToken) {
+      throw new BadRequestException(invalidMessage);
+    }
+
+    // Update user password
+    await this.usersService.updatePassword(matchedToken.userId, newPassword);
+
+    // Mark token as used (clear sensitive fields)
+    matchedToken.isUsed = true;
+    await this.passwordResetTokenRepository.save(matchedToken);
+
+    // Logout from all sessions for security
+    await this.logoutAll(matchedToken.userId);
+
+    await this.emailService.sendPasswordChangedEmail(matchedToken.user.email);
+    this.logger.log(`Password reset for userId=${matchedToken.userId}`);
 
     return { message: 'Password has been reset successfully' };
   }
 
+  // Generate 6-digit OTP
+  private generateOtp(): string {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  }
+
   // Generate access and refresh tokens
-  private async generateTokens(
-    user: User,
-    userAgent?: string,
-    ipAddress?: string,
-    rememberMe?: boolean,
-  ): Promise<TokenResponse> {
+  private async generateTokens(user: User, userAgent?: string, ipAddress?: string): Promise<TokenResponse> {
     const role = String(user.role);
     const normalizedRole = role === 'INSTRUCTOR' ? 'ADMIN' : role;
-    const payload = {
-      sub: user.id,
-      email: user.email,
-      role: normalizedRole,
-    };
+
+    const payload = { sub: user.id, email: user.email, role: normalizedRole };
 
     const accessToken = this.jwtService.sign(payload);
 
-    const refreshExpiresIn = rememberMe ? 30 : 7;
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + refreshExpiresIn);
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days refresh token expiry
 
     const refreshTokenValue = crypto.randomBytes(48).toString('hex');
     const session = this.sessionRepository.create({
@@ -275,12 +305,7 @@ export class AuthService {
     });
 
     await this.sessionRepository.save(session);
-
-    return {
-      accessToken,
-      refreshToken: refreshTokenValue,
-      expiresIn: 15 * 60,
-    };
+    return { accessToken, refreshToken: refreshTokenValue, expiresIn: 15 * 60 };
   }
 
   // Remove sensitive fields user object
@@ -293,52 +318,5 @@ export class AuthService {
   private formatLockMessage(remainingMs: number): string {
     const secondsRemaining = Math.max(1, Math.ceil(remainingMs / 1000));
     return `Account locked. Please try again in ${secondsRemaining} seconds`;
-  }
-
-  private buildResetLink(token: string): string {
-    const base =
-      this.configService.get<string>('RESET_PASSWORD_URL') ??
-      'http://localhost:3000/reset-password';
-    const separator = base.includes('?') ? '&' : '?';
-    return `${base}${separator}token=${encodeURIComponent(token)}`;
-  }
-
-  private async safeSendResetEmail(email: string, token: string): Promise<void> {
-    const resetLink = this.buildResetLink(token);
-    try {
-      await this.mailerService.sendMail({
-        to: email,
-        subject: 'Reset your password',
-        html: `
-          <p>We received a request to reset your password.</p>
-          <p><a href="${resetLink}">Click here to reset your password</a></p>
-          <p>If you did not request this, you can safely ignore this email.</p>
-        `,
-        text: `Reset your password: ${resetLink}`,
-      });
-      this.logger.log(`Sent reset email to ${email}`);
-    } catch (error) {
-      this.logger.error(`Failed to send reset email to ${email}`, error as Error);
-    }
-  }
-
-  private async safeSendPasswordChangedEmail(email: string): Promise<void> {
-    try {
-      await this.mailerService.sendMail({
-        to: email,
-        subject: 'Your password was changed',
-        html: `
-          <p>Your password was changed successfully.</p>
-          <p>If this wasn't you, please reset your password immediately.</p>
-        `,
-        text: 'Your password was changed successfully. If this was not you, please reset it immediately.',
-      });
-      this.logger.log(`Sent password-changed email to ${email}`);
-    } catch (error) {
-      this.logger.error(
-        `Failed to send password-changed email to ${email}`,
-        error as Error,
-      );
-    }
   }
 }

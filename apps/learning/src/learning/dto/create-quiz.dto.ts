@@ -1,19 +1,4 @@
-import {
-  ArrayMaxSize,
-  ArrayMinSize,
-  IsArray,
-  IsBoolean,
-  IsEnum,
-  IsInt,
-  IsNumber,
-  IsOptional,
-  IsString,
-  MaxLength,
-  ValidateIf,
-  ValidateNested,
-  Min,
-  Max,
-} from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsEnum, IsInt, IsNumber, IsOptional, IsString, MaxLength, ValidateIf, ValidateNested, Min, Max } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { QuestionType } from '../entities/question.entity';

@@ -12,6 +12,7 @@ import { Session } from '../users/entities/session.entity';
 import { PasswordResetToken } from '../users/entities/password-reset-token.entity';
 import { LoginAttempt } from './entities/login-attempt.entity';
 import { LoginAttemptsService } from './login-attempts.service';
+import { EmailService } from './email.service';
 import { getJwtConfig } from '@config/jwt.config';
 
 @Module({
@@ -26,7 +27,7 @@ import { getJwtConfig } from '@config/jwt.config';
     TypeOrmModule.forFeature([Session, PasswordResetToken, LoginAttempt]),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, GoogleStrategy, LoginAttemptsService],
+  providers: [AuthService, JwtStrategy, GoogleStrategy, LoginAttemptsService, EmailService],
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

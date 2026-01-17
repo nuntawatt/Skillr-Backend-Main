@@ -6,16 +6,23 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '@common/enums';
+import { ApiTags, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger';
 
 type AuthedRequest = ExpressRequest & { user: { id: number } };
 
+@ApiTags('Users')
 @Controller('users')
 @UseGuards(JwtAuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) { }
 
   // Get current user profile
-  @Get('me')
+  @Get('profile')
+  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiResponse({ status: 200, description: 'Current user profile retrieved successfully.' })
+  @ApiResponse({ status: 400, description: 'Bad Request.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized. Invalid or missing JWT token.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async getProfile(@Request() req: AuthedRequest) {
     const user = await this.usersService.findById(req.user.id);
     if (!user) {
@@ -27,7 +34,13 @@ export class UsersController {
   }
 
   // Update current user profile
-  @Patch('me')
+  @Patch('profile')
+  @ApiOperation({ summary: 'Update current user profile' })
+  @ApiBody({ type: UpdateUserDto })
+  @ApiResponse({ status: 200, description: 'User profile updated successfully.' })
+  @ApiResponse({ status: 400, description: 'Bad Request. Invalid input data.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized. Invalid or missing JWT token.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async updateProfile(
     @Request() req: AuthedRequest,
     @Body() updateUserDto: UpdateUserDto,
@@ -38,18 +51,29 @@ export class UsersController {
     return result;
   }
 
-  // Get all users (Admin)
+  // Get all users (Admin only)
   @Get()
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get all users' })
+  @ApiResponse({ status: 200, description: 'List of all users retrieved successfully.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized. Invalid or missing JWT token.' })
+  @ApiResponse({ status: 403, description: 'Forbidden. Insufficient permissions.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async findAll() {
     return this.usersService.findAll();
   }
 
-  // Get user by ID (Admin)
+  // Get user by ID (Admin only)
   @Get(':id')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get user by ID' })
+  @ApiResponse({ status: 200, description: 'User retrieved successfully.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized. Invalid or missing JWT token.' })
+  @ApiResponse({ status: 403, description: 'Forbidden. Insufficient permissions.' })
+  @ApiResponse({ status: 404, description: 'Not Found. User does not exist.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async findOne(@Param('id') id: string) {
     const user = await this.usersService.findById(id);
     if (!user) {
@@ -60,25 +84,17 @@ export class UsersController {
     return result;
   }
 
-  // Delete user (Admin)
-  @Delete(':id')
+  // Update user role (Admin only)
+  @Patch(':id/role')
   @UseGuards(RolesGuard)
   @Roles(UserRole.ADMIN)
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id') id: string) {
-    await this.usersService.delete(id);
-  }
-}
-
-// Admin Controller for role management
-@Controller('admin/users')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN)
-export class AdminUsersController {
-  constructor(private readonly usersService: UsersService) { }
-
-  // Update user role (Admin)
-  @Patch(':id/role')
+  @ApiOperation({ summary: 'Update user role' })
+  @ApiBody({ type: UpdateRoleDto })
+  @ApiResponse({ status: 200, description: 'User role updated successfully.' })
+  @ApiResponse({ status: 400, description: 'Bad Request. Invalid input data.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized. Invalid or missing JWT token.' })
+  @ApiResponse({ status: 403, description: 'Forbidden. Insufficient permissions.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async updateRole(
     @Param('id') id: string,
     @Body() updateRoleDto: UpdateRoleDto,
@@ -86,9 +102,20 @@ export class AdminUsersController {
     const user = await this.usersService.updateRole(id, updateRoleDto);
     const { passwordHash: _passwordHash, ...result } = user;
     void _passwordHash;
-    return {
-      message: 'User role updated successfully',
-      user: result,
-    };
+    return result;
+  }
+
+  // Delete user (Admin only)
+  @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Delete user' })
+  @ApiResponse({ status: 204, description: 'User deleted successfully.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized. Invalid or missing JWT token.' })
+  @ApiResponse({ status: 403, description: 'Forbidden. Insufficient permissions.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(@Param('id') id: string) {
+    await this.usersService.delete(id);
   }
 }

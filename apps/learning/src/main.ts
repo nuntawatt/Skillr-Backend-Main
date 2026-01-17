@@ -14,6 +14,7 @@ async function bootstrap() {
     .setTitle('Skillr Learning Service API')
     .setDescription('API documentation for Quiz and Learning Progress')
     .setVersion('1.0.0')
+    .addServer('http://localhost:3003/api', 'Local server')
     .addBearerAuth() 
     .build();
 

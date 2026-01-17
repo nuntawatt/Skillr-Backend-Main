@@ -1,67 +1,109 @@
-import { Body, Controller, Get, Param, Post, Req, UploadedFile, UseInterceptors, Res, Delete, NotFoundException } from '@nestjs/common';
+// apps/media/src/media-videos/media-videos.controller.ts
+import {
+  Body,
+  Controller,
+  Post,
+  Req,
+  UploadedFile,
+  UseInterceptors,
+  Get,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiCreatedResponse,
+  ApiResponse,
+  ApiConsumes,
+  ApiBody,
+} from '@nestjs/swagger';
+
 import { MediaVideosService } from './media-videos.service';
 import { CreateVideoUploadDto } from './dto/create-video-upload.dto';
-import type { Response } from 'express';
-import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiParam, ApiResponse, ApiCreatedResponse } from '@nestjs/swagger';
 
-type RequestWithUserAndBody = { user?: any; body?: any; url?: string };
+type RequestWithUser = { user?: { sub?: number } };
 
 @ApiTags('Media Videos')
 @Controller('media/videos')
 export class MediaVideosController {
-  constructor(private readonly svc: MediaVideosService) { }
+  constructor(private readonly svc: MediaVideosService) {}
 
+  /**
+   * 🎬 Upload video via form-data (server-side upload)
+   */
   @Post('upload')
-  @UseInterceptors(FileInterceptor('file', { storage: multer.memoryStorage() }))
-  @ApiOperation({ summary: 'Upload video file' })
+  @ApiOperation({ summary: 'Upload video file via form-data' })
   @ApiConsumes('multipart/form-data')
-  @ApiBody({ type: CreateVideoUploadDto })
-  @ApiCreatedResponse({ description: 'Video uploaded' })
-  @ApiResponse({ status: 201, description: 'Video uploaded' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-
-  uploadFile(@UploadedFile() file: Express.Multer.File, @Req() req: RequestWithUserAndBody) {
-    const body = typeof req.body === 'object' && req.body !== null ? req.body : {};
-    const rawId = body['media_asset_id'] ?? body['mediaAssetId'];
-    const mediaAssetId = typeof rawId === 'string' && rawId.trim() !== '' ? Number(rawId) : typeof rawId === 'number' ? rawId : undefined;
-    const rawOwner = body['owner_user_id'] ?? body['ownerUserId'];
-    const ownerUserId = typeof rawOwner === 'string' && rawOwner.trim() !== '' ? Number(rawOwner) : typeof rawOwner === 'number' ? rawOwner : undefined;
-    return this.svc.uploadVideoFileAndPersist(file, req.user, mediaAssetId);
-  }
-
-  @Get('presign/:key/:quality')
-  @ApiOperation({ summary: 'Get presigned URL for a video file' })
-  @ApiParam({
-    name: 'key',
-    description: 'Video UUID',
-    example: 'e012551d-75ba-4c70-8704-81eb62057402',
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary', description: 'Video file' },
+        owner_user_id: { type: 'number', description: 'Owner user ID (optional)' },
+      },
+      required: ['file'],
+    },
   })
-  @ApiParam({
-    name: 'quality',
-    description: 'Video file name (e.g. 360p.mp4)',
-    example: '360p.mp4',
-  })
-  @ApiResponse({ status: 200, description: 'Presigned URL generated' })
-  @ApiResponse({ status: 404, description: 'Video not found' })
-  async getPresignedUrl(
-    @Param('key') key: string,
-    @Param('quality') quality: string,
+  @ApiCreatedResponse({ description: 'Video uploaded successfully' })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: multer.memoryStorage(),
+      limits: { fileSize: 500 * 1024 * 1024 }, // 500MB limit for form upload
+    }),
+  )
+  async uploadVideo(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: Record<string, any>,
   ) {
-    return this.svc.getPresignedUrl(key, quality);
+    const ownerUserId = body?.owner_user_id ? Number(body.owner_user_id) : undefined;
+    return this.svc.uploadVideoFileAndPersist(file, ownerUserId);
   }
 
+  /**
+   * 1️⃣ ขอ presigned URL สำหรับ upload (สำหรับไฟล์ใหญ่)
+   */
+  @Post('presign')
+  @ApiOperation({ summary: 'Create presigned URL for video upload (for large files)' })
+  @ApiCreatedResponse({ description: 'Presigned URL created' })
+  async presign(
+    @Body() dto: CreateVideoUploadDto,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.svc.createPresignedUpload(dto, req.user);
+  }
+
+  /**
+   * 2️⃣ แจ้ง backend ว่า upload เสร็จแล้ว
+   */
+  @Post('confirm')
+  @ApiOperation({ summary: 'Confirm video upload' })
+  @ApiResponse({ status: 200, description: 'Upload confirmed' })
+  async confirm(
+    @Body('media_asset_id') mediaAssetId: number,
+  ) {
+    return this.svc.confirmUpload(mediaAssetId);
+  }
+
+  /**
+   * 3️⃣ Get presigned URL to view/download video by ID
+   */
+  @Get('view/:id')
+  @ApiOperation({ summary: 'Get presigned URL to view video by ID' })
+  @ApiResponse({ status: 200, description: 'Presigned URL for viewing' })
+  async getViewUrl(@Param('id') id: string) {
+    return this.svc.getPresignedViewUrl(Number(id));
+  }
+
+  /**
+   * 4️⃣ Delete video by ID
+   */
   @Delete(':id')
-  @ApiParam({ name: 'id', example: 10 })
-  @ApiOperation({ summary: 'Delete a video asset by ID' })
-  @ApiResponse({ status: 200, description: 'Video asset deleted' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 404, description: 'Video asset not found' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  async deleteVideoById(@Param('id') id: string) {
-    const assetId = Number(id);
-    return this.svc.deleteVideoById(assetId);
+  @ApiOperation({ summary: 'Delete video by ID' })
+  @ApiResponse({ status: 200, description: 'Video deleted' })
+  async deleteVideo(@Param('id') id: string) {
+    return this.svc.deleteVideoById(Number(id));
   }
 }
