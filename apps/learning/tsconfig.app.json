@@ -1,8 +1,8 @@
 {
   "extends": "../../tsconfig.build.json",
   "compilerOptions": {
-    "outDir": "../../dist"
+    "outDir": "../../dist/apps/learning"
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "../../libs/**/*.ts"],
+  "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
 }

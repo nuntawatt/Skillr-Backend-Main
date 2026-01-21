@@ -1,5 +1,25 @@
-import {Controller,Get,Post,Body,Patch,Param,Delete,UseGuards,Request,Query,UnauthorizedException} from '@nestjs/common';
-import {ApiTags,ApiOperation,ApiBearerAuth,ApiQuery,ApiResponse,ApiBody,ApiParam} from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Request,
+  Query,
+  UnauthorizedException,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiQuery,
+  ApiResponse,
+  ApiBody,
+  ApiParam,
+} from '@nestjs/swagger';
 import { LearningService } from './learning.service';
 import { LearningDashboardService } from './learning-dashboard.service';
 import { LearningProgressService } from './learning-progress.service';
@@ -46,6 +66,7 @@ export class LearningController {
         summary: 'Create quiz (3 questions: MC + T/F + MatchPairs)',
         value: {
           lessonId: 1,
+          title: 'แบบทดสอบพื้นฐาน TypeScript',
           questions: [
             {
               question: 'TypeScript คืออะไร?',
@@ -74,18 +95,87 @@ export class LearningController {
           ],
         },
       },
-      correct_order_only: {
-        summary: 'Create quiz (Correct Order only)',
+      multiple_choice_only: {
+        summary: 'Create quiz (Multiple Choice Only)',
         value: {
-          lessonId: 1,
+          lessonId: 2,
+          title: 'Quiz: JavaScript ES6+',
           questions: [
             {
-              question: 'จงเรียงลำดับขั้นตอนการติดตั้งโปรเจกต์',
+              question: 'Keyword ใดใช้ประกาศตัวแปรที่เปลี่ยนค่าไม่ได้?',
+              type: 'multiple_choice',
+              options: ['var', 'let', 'const', 'static'],
+              correctAnswer: 'const',
+            },
+            {
+              question: 'ข้อใดไม่ใช่คุณสมบัติของ Arrow Function?',
+              type: 'multiple_choice',
+              options: [
+                'เขียนสั้นลง',
+                'ไม่มี arguments object',
+                'มีตัวแปร this เป็นของตัวเอง',
+                'ไม่สามารถใช้เป็น Constructor ได้',
+              ],
+              correctAnswer: 'มีตัวแปร this เป็นของตัวเอง',
+            },
+          ],
+        },
+      },
+      true_false_only: {
+        summary: 'Create quiz (True/False Only)',
+        value: {
+          lessonId: 3,
+          title: 'แบบทดสอบความเข้าใจพื้นฐาน IT',
+          questions: [
+            {
+              question: 'RAM คือหน่วยความจำถาวร ข้อมูลจะไม่หายไปเมื่อปิดเครื่อง',
+              type: 'true_false',
+              correctAnswerBool: false,
+            },
+            {
+              question: 'HTTP เป็นโปรโตคอลที่ปลอดภัยกว่า HTTPS',
+              type: 'true_false',
+              correctAnswerBool: false,
+            },
+            {
+              question: 'CPU ทำหน้าที่ประมวลผลคำสั่งต่างๆ ของคอมพิวเตอร์',
+              type: 'true_false',
+              correctAnswerBool: true,
+            },
+          ],
+        },
+      },
+      match_pairs_only: {
+        summary: 'Create quiz (Match Pairs Only)',
+        value: {
+          lessonId: 4,
+          title: 'แบบทดสอบการจับคู่คำศัพท์',
+          questions: [
+            {
+              question: 'จงจับคู่เครื่องมือกับหน้าที่ให้ถูกต้อง',
+              type: 'match_pairs',
+              optionsPairs: [
+                { left: 'Git', right: 'Version Control' },
+                { left: 'Docker', right: 'Containerization' },
+                { left: 'Postman', right: 'API Testing' },
+              ],
+            },
+          ],
+        },
+      },
+      correct_order_only: {
+        summary: 'Create quiz (Correct Order Only)',
+        value: {
+          lessonId: 5,
+          title: 'ลำดับการล้างมือที่ถูกต้อง',
+          questions: [
+            {
+              question: 'จงเรียงลำดับขั้นตอนการล้างมือให้ถูกต้องตามหลักอนามัย',
               type: 'correct_order',
               optionsOrder: [
-                { text: 'git clone' },
-                { text: 'npm install' },
-                { text: 'npm run dev' },
+                { text: 'ชโลมสบู่ลงบนฝ่ามือ' },
+                { text: 'ถูมือให้สะอาดทุกซอกมุม' },
+                { text: 'ล้างออกด้วยน้ำสะอาด' },
               ],
             },
           ],
@@ -101,7 +191,7 @@ export class LearningController {
         statusCode: 400,
         error: 'Bad Request',
         message:
-          '1 Lesson สามารถมีคำถามรวมได้สูงสุด 30 ข้อ (ปัจจุบันมีแล้ว 30 ข้อ)',
+          '1 Lesson สามารถมีคำถามรวมได้สูงสุด 3 ข้อ (ปัจจุบันมีแล้ว 3 ข้อ)',
       },
     },
   })
@@ -163,14 +253,17 @@ export class LearningController {
     @Request() req: RequestWithUser,
     @Query('lessonId') lessonId?: string,
   ) {
-    const quizzes = this.learningService.findAllQuizzes(lessonId);
-    return quizzes.then((list) => {
+    const quizzesPromise = this.learningService.findAllQuizzes(lessonId);
+    return quizzesPromise.then(async (list) => {
       const user = req.user;
       const isAdminOrInstructor =
         user?.role === UserRole.ADMIN || user?.role === UserRole.INSTRUCTOR;
+      const userId = getUserIdOrThrow(user);
 
       if (!isAdminOrInstructor) {
-        return list.map((q) => this.learningService.stripAnswers(q));
+        return Promise.all(
+          list.map((q) => this.learningService.stripAnswers(q, userId)),
+        );
       }
       return list;
     });
@@ -224,12 +317,7 @@ export class LearningController {
       const user = req.user;
       const isAdminOrInstructor =
         user?.role === UserRole.ADMIN || user?.role === UserRole.INSTRUCTOR;
-      const userId =
-        typeof user?.id === 'string' || typeof user?.id === 'number'
-          ? String(user.id)
-          : typeof user?.sub === 'string' || typeof user?.sub === 'number'
-          ? String(user.sub)
-          : undefined;
+      const userId = getUserIdOrThrow(user);
 
       // ถ้าเป็นแอดมิน/ผู้สอน ส่งข้อมูลเต็ม (มีเฉลย)
       if (isAdminOrInstructor) {
@@ -244,11 +332,11 @@ export class LearningController {
         );
         if (hasCompleted) {
           return quiz;
-      }
+        }
       }
 
       // กรณียังไม่ทำหรือยังไม่จบ -> ซ่อนเฉลย + สลับตัวเลือก
-      return this.learningService.stripAnswers(quiz);
+      return this.learningService.stripAnswers(quiz, userId);
     });
   }
 
@@ -285,7 +373,7 @@ export class LearningController {
       example: {
         statusCode: 400,
         error: 'Bad Request',
-        message: '1 Lesson สามารถมีคำถามรวมได้สูงสุด 30 ข้อ',
+        message: '1 Lesson สามารถมีคำถามรวมได้สูงสุด 3 ข้อ',
       },
     },
   })
@@ -477,7 +565,26 @@ export class LearningController {
   @Post('quizzes/:id/save-progress')
   @ApiOperation({ summary: 'Save quiz progress (Draft)' })
   @ApiParam({ name: 'id', example: 7 })
-  @ApiBody({ type: SubmitQuizDto })
+  @ApiBody({
+    type: SubmitQuizDto,
+    examples: {
+      save_single_answer: {
+        summary: 'Save just one answer (Draft)',
+        value: {
+          answers: [{ questionId: 31, answer: 'JavaScript' }],
+        },
+      },
+      save_multiple_answers: {
+        summary: 'Save multiple answers (Merge with existing)',
+        value: {
+          answers: [
+            { questionId: 32, answer: true },
+            { questionId: 33, answer: 'const' },
+          ],
+        },
+      },
+    },
+  })
   saveProgress(
     @Param('id') id: string,
     @Body() submitDto: SubmitQuizDto,
@@ -495,12 +602,67 @@ export class LearningController {
   @ApiBody({
     type: SubmitQuizDto,
     examples: {
-      submit_mixed: {
-        summary: 'Submit answers (mixed types)',
+      submit_mc_only: {
+        summary: 'Submit Multiple Choice answers',
         value: {
           answers: [
-            { questionId: 1, answer: 'Superset ของ JavaScript' },
-            { questionId: 2, answer: true },
+            { questionId: 31, answer: 'JavaScript' },
+            { questionId: 32, answer: 'const' },
+          ],
+        },
+      },
+      submit_tf_only: {
+        summary: 'Submit True/False answers',
+        value: {
+          answers: [
+            { questionId: 35, answer: true },
+            { questionId: 36, answer: false },
+          ],
+        },
+      },
+      submit_match_pairs_only: {
+        summary: 'Submit Match Pairs answers',
+        value: {
+          answers: [
+            {
+              questionId: 32,
+              answer: [
+                { left: 'Git', right: 'Version Control' },
+                { left: 'Docker', right: 'Containerization' },
+                { left: 'Postman', right: 'API Testing' },
+              ],
+            },
+          ],
+        },
+      },
+      submit_correct_order_only: {
+        summary: 'Submit Correct Order answers',
+        value: {
+          answers: [
+            {
+              questionId: 33,
+              answer: [
+                'ชโลมสบู่ลงบนฝ่ามือ',
+                'ถูมือให้สะอาดทุกซอกมุม',
+                'ล้างออกด้วยน้ำสะอาด',
+              ],
+            },
+          ],
+        },
+      },
+      submit_mixed: {
+        summary: 'Submit mixed types (MC + T/F + Match)',
+        value: {
+          answers: [
+            { questionId: 31, answer: 'Superset ของ JavaScript' },
+            { questionId: 32, answer: true },
+            {
+              questionId: 33,
+              answer: [
+                { left: 'เจ้าตูบ', right: 'กระดูก' },
+                { left: 'เจ้าเหมียว', right: 'ปลาทู' },
+              ],
+            },
           ],
         },
       },

@@ -16,7 +16,7 @@ import { SubmitQuizDto } from './dto/submit-quiz.dto';
 
 @Injectable()
 export class LearningService {
-  private readonly maxQuestionsPerLesson = 30;
+  private readonly maxQuestionsPerLesson = 3;
 
   constructor(
     @InjectRepository(Quiz)
@@ -50,6 +50,7 @@ export class LearningService {
 
     const quiz = this.quizRepository.create({
       lessonId: Number(createQuizDto.lessonId),
+      title: createQuizDto.title,
     });
 
     const savedQuiz = await this.quizRepository.save(quiz);
@@ -131,17 +132,45 @@ export class LearningService {
   /**
    * Stips correct answers from quiz questions for students and SHUFFLES options for challenge.
    */
-  stripAnswers(quiz: Quiz): Quiz {
+  async stripAnswers(quiz: Quiz, userId?: string): Promise<Quiz> {
+    let activeAttempt: QuizAttempt | null = null;
+    if (userId) {
+      activeAttempt = await this.attemptRepository.findOne({
+        where: {
+          quizId: quiz.id,
+          userId: Number(userId),
+          completedAt: IsNull(),
+        },
+        order: { startedAt: 'DESC' },
+      });
+    }
+
     if (quiz.questions) {
       quiz.questions = quiz.questions.map((q) => {
         const { correctAnswer, ...rest } = q;
         const stripped = { ...rest } as Question;
 
-        // --- Shuffle options for students ---
-        if (stripped.options && Array.isArray(stripped.options)) {
+        // Ensure TRUE_FALSE always has options ['True', 'False'] (Derived for students)
+        if (q.type === QuestionType.TRUE_FALSE) {
+          stripped.options = ['True', 'False'];
+        }
+
+        // --- Persist Presentation Order Logic ---
+        const hasAnswered = activeAttempt?.answers?.some(
+          (a) => a.questionId === q.id,
+        );
+        const savedOrder = activeAttempt?.shuffledOrders?.[q.id];
+
+        // ถ้ามีการตอบแล้ว และเคยเซฟลำดับไว้ -> ใช้ลำดับเดิม (จะไม่สุ่มซ้ำ)
+        if (hasAnswered && savedOrder) {
+          stripped.options = savedOrder;
+        } else if (stripped.options && Array.isArray(stripped.options)) {
+          // ถ้ายังไม่ตอบ หรือยังไม่เคยเซฟลำดับ -> สุ่มใหม่
           if (q.type === QuestionType.MULTIPLE_CHOICE) {
             // สลับตัวเลือก ก ข ค ง
-            stripped.options = this.shuffleArray([...(stripped.options as string[])]);
+            stripped.options = this.shuffleArray([
+              ...(stripped.options as string[]),
+            ]);
           } else if (q.type === QuestionType.CORRECT_ORDER) {
             // สลับขั้นตอนการเรียงลำดับให้มั่ว
             stripped.options = this.shuffleArray([...(stripped.options as any[])]);
@@ -156,11 +185,23 @@ export class LearningService {
               right: right,
             }));
           }
+
+          // อัปเดตลำดับที่สุ่มได้กลับเข้าไปใน Attempt (Draft) เพื่อให้ครั้งหน้าเรียกแล้วได้ลำดับเดิมถ้ามีการเซฟ
+          if (activeAttempt) {
+            if (!activeAttempt.shuffledOrders) activeAttempt.shuffledOrders = {};
+            activeAttempt.shuffledOrders[q.id] = stripped.options as any[];
+          }
         }
         // ------------------------------------
 
         return stripped;
       });
+
+      // เซฟลำดับที่สุ่มได้ลง Attempt ถ้ามี (เพื่อให้คงที่แม้ยังไม่กด save-progress)
+      if (activeAttempt) {
+        activeAttempt.shuffledOrders = { ...activeAttempt.shuffledOrders };
+        await this.attemptRepository.save(activeAttempt);
+      }
     }
     return quiz;
   }
@@ -369,10 +410,35 @@ export class LearningService {
     });
 
     if (!attempt) {
-      throw new NotFoundException('ไม่พบรายการที่กำลังทำอยู่ กรุณาเริ่ม Quiz ใหม่');
+      throw new NotFoundException(
+        'ไม่พบรายการที่กำลังทำอยู่ กรุณาเริ่ม Quiz ใหม่',
+      );
     }
 
-    attempt.answers = submitDto.answers;
+    // Merge incoming answers with current saved answers to support skipping/editing/partial pairing without data loss
+    const currentAnswers = attempt.answers || [];
+    const incomingAnswers = submitDto.answers;
+
+    // Use a Map for efficient merging based on questionId
+    const answerMap = new Map(
+      currentAnswers.map((a) => [a.questionId, a]),
+    );
+
+    for (const newAns of incomingAnswers) {
+      // Handle "Unpair" or "Clear Answer" logic
+      // If answer is null, undefined, or empty array, it means user cleared the answer
+      if (
+        newAns.answer === null ||
+        newAns.answer === undefined ||
+        (Array.isArray(newAns.answer) && newAns.answer.length === 0)
+      ) {
+        answerMap.delete(newAns.questionId);
+      } else {
+        answerMap.set(newAns.questionId, newAns);
+      }
+    }
+
+    attempt.answers = Array.from(answerMap.values());
     return this.attemptRepository.save(attempt);
   }
 
@@ -406,15 +472,44 @@ export class LearningService {
       });
 
       if (hasCompleted) {
-        throw new BadRequestException('คุณได้ทำ Quiz นี้เสร็จสิ้นแล้ว ไม่สามารถส่งซ้ำได้');
+        throw new BadRequestException(
+          'คุณได้ทำ Quiz นี้เสร็จสิ้นแล้ว ไม่สามารถส่งซ้ำได้',
+        );
       }
 
-      throw new BadRequestException('ไม่พบรายการที่กำลังทำอยู่ กรุณาเริ่ม Quiz ก่อนส่งคำตอบ');
+      throw new BadRequestException(
+        'ไม่พบรายการที่กำลังทำอยู่ กรุณาเริ่ม Quiz ก่อนส่งคำตอบ',
+      );
     }
 
-    // 2. Calculate score and validate questions
-    let correctAnswers = 0;
+    // 2. Check if all questions are answered (Acceptance Criteria: การป้องกันการส่งคำตอบเมื่อยังตอบไม่ครบ)
     const totalQuestions = quiz.questions.length;
+    const answeredQuestionIds = new Set(
+      submitDto.answers
+        .filter((a) => {
+          const val = a.answer;
+          if (val === null || val === undefined) return false;
+          if (typeof val === 'string' && val.trim() === '') return false;
+          if (Array.isArray(val) && val.length === 0) return false;
+          // For True/False, false is a valid answer, so it will return true here
+          return true;
+        })
+        .map((a) => a.questionId),
+    );
+
+    if (answeredQuestionIds.size < totalQuestions) {
+      const missingIds = quiz.questions
+        .filter((q) => !answeredQuestionIds.has(q.id))
+        .map((q) => q.id);
+
+      throw new BadRequestException({
+        message: 'กรุณาตอบคำถามให้ครบทุกข้อก่อนส่งคำตอบ',
+        missingQuestionIds: missingIds,
+      });
+    }
+
+    // 3. Calculate score and validate questions
+    let correctAnswers = 0;
     const results: { questionId: number; isCorrect: boolean }[] = [];
 
     for (const answer of submitDto.answers) {
@@ -424,6 +519,133 @@ export class LearningService {
           `Question ID ${answer.questionId} does not belong to this quiz`,
         );
       }
+
+      // --- Validate Answer Format per Type ---
+      if (question.type === QuestionType.MULTIPLE_CHOICE) {
+        if (typeof answer.answer !== 'string') {
+          throw new BadRequestException(
+            `คำตอบของข้อที่ ${question.id} ต้องเป็นตัวหนังสือ (String) เท่านั้น`,
+          );
+        }
+
+        const submitted = answer.answer.trim();
+        const options = (question.options as string[]) || [];
+
+        if (options.length === 0) {
+          throw new BadRequestException(
+            `คำถามข้อที่ ${question.id} ไม่มีตัวเลือก (Options) ในระบบ`,
+          );
+        }
+
+        // ใช้การเทียบแบบ trim เพื่อความแม่นยำ (กันช่องว่างส่วนเกิน)
+        const isValidOption = options.some(
+          (opt) => String(opt).trim() === submitted,
+        );
+
+        if (!isValidOption) {
+          throw new BadRequestException(
+            `คำตอบ "${submitted}" ของคำถามที่ ${question.id} ไม่ได้อยู่ในรายการตัวเลือกที่มีให้`,
+          );
+        }
+      }
+
+      if (question.type === QuestionType.TRUE_FALSE) {
+        const val = String(answer.answer).toLowerCase();
+        if (val !== 'true' && val !== 'false') {
+          throw new BadRequestException(
+            `คำตอบของคำถามประเภท True/False (ID: ${question.id}) ต้องเป็น true หรือ false เท่านั้น`,
+          );
+        }
+      }
+
+      if (question.type === QuestionType.MATCH_PAIRS) {
+        const submittedPairs = answer.answer;
+        if (!Array.isArray(submittedPairs)) {
+          throw new BadRequestException(
+            `คำตอบของข้อที่ ${question.id} (Match Pairs) ต้องเป็นรายการคู่จับคู่ (Array)`,
+          );
+        }
+
+        const options = (question.options as any[]) || [];
+        // AC Requirement: ต้องจับคู่ให้ครบทุกคู่
+        if (submittedPairs.length !== options.length) {
+          throw new BadRequestException(
+            `กรุณาจับคู่คำตอบให้ครบทุกข้อ (ข้อที่ ${question.id} ยังจับคู่ไม่ครบ)`,
+          );
+        }
+
+        const lefts = new Set();
+        const rights = new Set();
+
+        for (const p of submittedPairs) {
+          if (!p || p.left === undefined || p.right === undefined) {
+            throw new BadRequestException(
+              `รูปแบบการจับคู่ในข้อที่ ${question.id} ไม่ถูกต้อง (ต้องมีทั้ง left และ right)`,
+            );
+          }
+
+          const left = String(p.left).trim();
+          const right = String(p.right).trim();
+
+          // Red Case: ป้องกันการเลือกคำตอบซ้ำ
+          if (lefts.has(left)) {
+            throw new BadRequestException(
+              `คำถามฝั่งซ้าย "${left}" ในข้อที่ ${question.id} ถูกใช้ซ้ำ`,
+            );
+          }
+          if (rights.has(right)) {
+            throw new BadRequestException(
+              `คำตอบฝั่งขวา "${right}" ในข้อที่ ${question.id} ถูกใช้ซ้ำ (คำตอบนี้ถูกใช้แล้ว)`,
+            );
+          }
+
+          lefts.add(left);
+          rights.add(right);
+
+          // ตรวจสอบว่าค่าที่ส่งมามีอยู่ใน Options จริงหรือไม่
+          const isValidPair = options.some(
+            (opt) =>
+              String(opt.left).trim() === left ||
+              String(opt.right).trim() === right,
+          );
+
+          if (!isValidPair) {
+            throw new BadRequestException(
+              `การจับคู่ "${left}" - "${right}" ในข้อที่ ${question.id} ไม่มีอยู่ในตัวเลือกที่มีให้`,
+            );
+          }
+        }
+      }
+
+      if (question.type === QuestionType.CORRECT_ORDER) {
+        const submittedOrder = answer.answer;
+        if (!Array.isArray(submittedOrder)) {
+          throw new BadRequestException(
+            `คำตอบของข้อที่ ${question.id} (Correct Order) ต้องเป็นรายการเรียงลำดับ (Array)`,
+          );
+        }
+
+        const options = (question.options as any[]) || [];
+        // AC Requirement: ต้องเรียงลำดับให้ครบทุกรายการ
+        if (submittedOrder.length !== options.length) {
+          throw new BadRequestException(
+            `กรุณาเรียงลำดับรายการให้ครบทุกข้อ (ข้อที่ ${question.id} ยังเรียงไม่ครบ)`,
+          );
+        }
+
+        // ตรวจสอบว่ารายการที่ส่งมา ตรงกับที่มีในโจทย์จริงๆ หรือไม่
+        const optionTexts = options.map((o) => String(o.text).trim());
+        const isValid = submittedOrder.every((item) =>
+          optionTexts.includes(String(item).trim()),
+        );
+
+        if (!isValid) {
+          throw new BadRequestException(
+            `รายการที่ส่งมาในข้อที่ ${question.id} ไม่ถูกต้อง (ไม่ตรงกับตัวเลือกที่มี)`,
+          );
+        }
+      }
+      // ----------------------------------------
 
       const isCorrect = this.isAnswerCorrect(question, answer.answer);
       results.push({ questionId: answer.questionId, isCorrect });
@@ -436,7 +658,7 @@ export class LearningService {
       totalQuestions > 0 ? (correctAnswers / totalQuestions) * 100 : 0;
     const passed = score >= 60; // Default passing score is now 60%
 
-    // 3. Update and save attempt
+    // 4. Update and save attempt
     attempt.answers = submitDto.answers;
     attempt.results = results;
     attempt.score = score;
@@ -445,7 +667,7 @@ export class LearningService {
 
     const savedAttempt = await this.attemptRepository.save(attempt);
 
-    // 4. Auto-update Lesson Progress if passed
+    // 5. Auto-update Lesson Progress if passed
     if (passed) {
       await this.learningProgressService.completeLesson(
         userId,

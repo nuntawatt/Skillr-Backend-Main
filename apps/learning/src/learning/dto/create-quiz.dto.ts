@@ -1,4 +1,19 @@
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsEnum, IsInt, IsNumber, IsOptional, IsString, MaxLength, ValidateIf, ValidateNested, Min, Max } from 'class-validator';
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MaxLength,
+  ValidateIf,
+  ValidateNested,
+  Min,
+  Max,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { QuestionType } from '../entities/question.entity';
@@ -88,9 +103,15 @@ export class CreateQuizDto {
   @Type(() => Number)
   lessonId: number;
 
+  @ApiPropertyOptional({ example: 'แบบทดสอบพื้นฐาน TypeScript' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  title?: string;
+
   @ApiPropertyOptional({
     type: [CreateQuestionDto],
-    description: 'รายการคำถาม (สูงสุด 30 ข้อต่อ 1 บทเรียน)',
+    description: 'รายการคำถาม (สูงสุด 3 ข้อต่อ 1 บทเรียน)',
     example: [
       {
         question: 'ผลไม้ในข้อใดมีสีแดง?',

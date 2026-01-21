@@ -16,6 +16,9 @@ export class Quiz {
   @Column({ name: 'lesson_id' })
   lessonId: number;
 
+  @Column({ nullable: true })
+  title: string;
+
   @OneToMany(() => Question, (question) => question.quiz, { cascade: true })
   questions: Question[];
 

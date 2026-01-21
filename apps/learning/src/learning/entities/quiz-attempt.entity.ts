@@ -29,6 +29,9 @@ export class QuizAttempt {
   @Column({ type: 'jsonb', nullable: true })
   results: { questionId: number; isCorrect: boolean }[];
 
+  @Column({ type: 'jsonb', nullable: true })
+  shuffledOrders: { [questionId: number]: any[] };
+
   @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
   score: number;
 
