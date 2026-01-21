@@ -1,25 +1,19 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, Index } from 'typeorm';
 import { Exclude } from 'class-transformer';
-import { AuthProvider, UserRole } from '@common/enums';
+import { UserRole } from '@common/enums';
 import { PasswordResetToken } from './password-reset-token.entity';
 import { Session } from './session.entity';
+import { AuthAccount } from './auth-account.entity';
 
 // User Entity
 @Entity('users')
 export class User {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column({ unique: true })
-  email: string;
-
-  @Exclude()
-  @Column({ name: 'password_hash', nullable: true })
-  passwordHash: string;
-
-  @Exclude()
-  @Column({ name: 'google_id', nullable: true, unique: true })
-  googleId: string;
+  @Index({ unique: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  email: string | null;
 
   @Index({ unique: true })
   @Column({ nullable: true })
@@ -33,14 +27,6 @@ export class User {
 
   @Column({ name: 'last_name', nullable: true })
   lastName: string;
-
-  @Column({
-    name: 'auth_provider',
-    type: 'enum',
-    enum: AuthProvider,
-    default: AuthProvider.LOCAL,
-  })
-  provider: AuthProvider;
 
   @Column({
     type: 'varchar',
@@ -64,6 +50,10 @@ export class User {
   @Exclude()
   @OneToMany(() => Session, (session) => session.user)
   sessions: Session[];
+
+  @Exclude()
+  @OneToMany(() => AuthAccount, (account) => account.user)
+  authAccounts: AuthAccount[];
 
   @Exclude()
   @OneToMany(() => PasswordResetToken, (token) => token.user)

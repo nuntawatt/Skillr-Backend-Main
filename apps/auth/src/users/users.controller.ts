@@ -8,7 +8,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '@common/enums';
 import { ApiTags, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger';
 
-type AuthedRequest = ExpressRequest & { user: { id: number } };
+type AuthedRequest = ExpressRequest & { user: { id: string } };
 
 @ApiTags('Users')
 @Controller('users')
@@ -28,9 +28,7 @@ export class UsersController {
     if (!user) {
       return null;
     }
-    const { passwordHash: _passwordHash, ...result } = user;
-    void _passwordHash;
-    return result;
+    return user;
   }
 
   // Update current user profile
@@ -46,9 +44,7 @@ export class UsersController {
     @Body() updateUserDto: UpdateUserDto,
   ) {
     const user = await this.usersService.update(req.user.id, updateUserDto);
-    const { passwordHash: _passwordHash, ...result } = user;
-    void _passwordHash;
-    return result;
+    return user;
   }
 
   // Get all users (Admin only)
@@ -79,9 +75,7 @@ export class UsersController {
     if (!user) {
       return null;
     }
-    const { passwordHash: _passwordHash, ...result } = user;
-    void _passwordHash;
-    return result;
+    return user;
   }
 
   // Update user role (Admin only)
@@ -100,9 +94,7 @@ export class UsersController {
     @Body() updateRoleDto: UpdateRoleDto,
   ) {
     const user = await this.usersService.updateRole(id, updateRoleDto);
-    const { passwordHash: _passwordHash, ...result } = user;
-    void _passwordHash;
-    return result;
+    return user;
   }
 
   // Delete user (Admin only)

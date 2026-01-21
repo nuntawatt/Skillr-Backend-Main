@@ -1,8 +1,7 @@
 import { Injectable, UnauthorizedException, BadRequestException, ConflictException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThan } from 'typeorm';
+import { Repository, MoreThan, IsNull } from 'typeorm';
 
 import * as crypto from 'crypto';
 import * as bcrypt from 'bcrypt';
@@ -13,6 +12,7 @@ import { PasswordResetToken } from '../users/entities/password-reset-token.entit
 import { RegisterDto, LoginDto } from './dto';
 import { LoginAttemptsService } from './login-attempts.service';
 import { EmailService } from './email.service';
+import { AuthProvider } from '@common/enums';
 
 // Constants for OTP/Token configuration
 const OTP_EXPIRY_MINUTES = 10;
@@ -37,7 +37,6 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
-    private readonly configService: ConfigService,
     @InjectRepository(Session)
     private readonly sessionRepository: Repository<Session>,
     @InjectRepository(PasswordResetToken)
@@ -48,17 +47,28 @@ export class AuthService {
 
   // Register a new user
   async register(registerDto: RegisterDto): Promise<AuthResponse> {
-    const existingUser = await this.usersService.findByEmail(registerDto.email);
-    if (existingUser) {
+    const existingAccount = await this.usersService.findAuthAccountByProviderAndEmail(
+      AuthProvider.LOCAL,
+      registerDto.email,
+    );
+    if (existingAccount) {
       throw new ConflictException('Email already exists');
     }
 
-    const user = await this.usersService.create({
-      firstName: registerDto.firstName,
-      lastName: registerDto.lastName,
-      email: registerDto.email,
-      password: registerDto.password,
-    });
+    let user = await this.usersService.findByEmail(registerDto.email);
+    if (!user) {
+      user = await this.usersService.create({
+        firstName: registerDto.firstName,
+        lastName: registerDto.lastName,
+        email: registerDto.email,
+      });
+    }
+
+    await this.usersService.createLocalAuthAccount(
+      user,
+      registerDto.email,
+      registerDto.password,
+    );
 
     const tokens = await this.generateTokens(user);
 
@@ -79,8 +89,11 @@ export class AuthService {
       );
     }
 
-    const user = await this.usersService.findByEmail(loginDto.email);
-    if (!user) {
+    const authAccount = await this.usersService.findAuthAccountByProviderAndEmail(
+      AuthProvider.LOCAL,
+      loginDto.email,
+    );
+    if (!authAccount?.user) {
       const nextStatus = await this.loginAttemptsService.recordFailure(loginDto.email);
       throw new UnauthorizedException(nextStatus.isLocked
         ? this.formatLockMessage(nextStatus.remainingMs)
@@ -88,7 +101,10 @@ export class AuthService {
       );
     }
 
-    const isPasswordValid = await this.usersService.verifyPassword(user, loginDto.password);
+    const isPasswordValid = await this.usersService.verifyPasswordHash(
+      authAccount.passwordHash,
+      loginDto.password,
+    );
     if (!isPasswordValid) {
       const nextStatus = await this.loginAttemptsService.recordFailure(loginDto.email);
       throw new UnauthorizedException(nextStatus.isLocked
@@ -97,14 +113,14 @@ export class AuthService {
       );
     }
 
-    if ((user.status ?? '').toLowerCase() !== 'active') {
+    if ((authAccount.user.status ?? '').toLowerCase() !== 'active') {
       throw new UnauthorizedException('Account is inactive or suspended');
     }
 
-    const tokens = await this.generateTokens(user, userAgent, ipAddress);
+    const tokens = await this.generateTokens(authAccount.user, userAgent, ipAddress);
     await this.loginAttemptsService.resetAttempts(loginDto.email);
 
-    return { user: this.sanitizeUser(user), tokens };
+    return { user: this.sanitizeUser(authAccount.user), tokens };
   }
 
   // Login - Register with Google OAuth
@@ -122,10 +138,12 @@ export class AuthService {
 
   // Refresh access token using refresh token
   async refreshTokens(refreshTokenValue: string): Promise<TokenResponse> {
+    const refreshTokenHash = this.hashRefreshToken(refreshTokenValue);
     const session = await this.sessionRepository.findOne({
       where: {
-        refreshToken: refreshTokenValue,
-        expiresAt: MoreThan(new Date())
+        refreshTokenHash,
+        revokedAt: IsNull(),
+        expiresAt: MoreThan(new Date()),
       },
       relations: ['user']
     });
@@ -134,18 +152,26 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
-    await this.sessionRepository.delete(session.id);
+    session.revokedAt = new Date();
+    await this.sessionRepository.save(session);
     return this.generateTokens(session.user);
   }
 
   // Logout from all devices
-  async logoutAll(userId: number): Promise<void> {
-    await this.sessionRepository.delete({ userId });
+  async logoutAll(userId: string): Promise<void> {
+    await this.sessionRepository.update(
+      { userId, revokedAt: IsNull() },
+      { revokedAt: new Date() },
+    );
   }
 
   // Logout
   async logout(refreshTokenValue: string): Promise<void> {
-    await this.sessionRepository.delete({ refreshToken: refreshTokenValue });
+    const refreshTokenHash = this.hashRefreshToken(refreshTokenValue);
+    await this.sessionRepository.update(
+      { refreshTokenHash, revokedAt: IsNull() },
+      { revokedAt: new Date() },
+    );
   }
 
 
@@ -153,14 +179,17 @@ export class AuthService {
   async forgotPassword(email: string): Promise<{ message: string }> {
     const genericMessage = 'If the email exists, an OTP will be sent.';
 
-    const user = await this.usersService.findByEmail(email);
-    if (!user) {
+    const authAccount = await this.usersService.findAuthAccountByProviderAndEmail(
+      AuthProvider.LOCAL,
+      email,
+    );
+    if (!authAccount?.user) {
       return { message: genericMessage };
     }
 
     // Invalidate any existing OTPs for this user
     await this.passwordResetTokenRepository.update(
-      { userId: user.id, isUsed: false },
+      { userId: authAccount.user.id, isUsed: false },
       { isUsed: true },
     );
 
@@ -173,14 +202,14 @@ export class AuthService {
 
     const resetToken = this.passwordResetTokenRepository.create({
       token: otpHash, // Store hashed OTP, never plain text
-      userId: user.id,
+      userId: authAccount.user.id,
       expiresAt,
     });
 
     await this.passwordResetTokenRepository.save(resetToken);
 
     // Send plain OTP to user via email
-    await this.emailService.sendOtpEmail(user.email, otp);
+    await this.emailService.sendOtpEmail(email, otp);
 
     return { message: genericMessage };
   }
@@ -189,15 +218,18 @@ export class AuthService {
   async verifyOtp(email: string, otp: string): Promise<{ resetToken: string }> {
     const invalidMessage = 'Invalid or expired OTP';
 
-    const user = await this.usersService.findByEmail(email);
-    if (!user) {
+    const authAccount = await this.usersService.findAuthAccountByProviderAndEmail(
+      AuthProvider.LOCAL,
+      email,
+    );
+    if (!authAccount?.user) {
       throw new BadRequestException(invalidMessage);
     }
 
     // Find non-expired, unused tokens for this user
     const tokens = await this.passwordResetTokenRepository.find({
       where: {
-        userId: user.id,
+        userId: authAccount.user.id,
         isUsed: false,
         expiresAt: MoreThan(new Date()),
       },
@@ -272,7 +304,7 @@ export class AuthService {
     // Logout from all sessions for security
     await this.logoutAll(matchedToken.userId);
 
-    await this.emailService.sendPasswordChangedEmail(matchedToken.user.email);
+    await this.emailService.sendPasswordChangedEmail(matchedToken.user.email || '');
     this.logger.log(`Password reset for userId=${matchedToken.userId}`);
 
     return { message: 'Password has been reset successfully' };
@@ -296,12 +328,14 @@ export class AuthService {
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days refresh token expiry
 
     const refreshTokenValue = crypto.randomBytes(48).toString('hex');
+    const refreshTokenHash = this.hashRefreshToken(refreshTokenValue);
     const session = this.sessionRepository.create({
-      refreshToken: refreshTokenValue,
+      refreshTokenHash,
       userId: user.id,
       expiresAt,
       userAgent: userAgent ?? null,
       ipAddress: ipAddress ?? null,
+      revokedAt: null,
     });
 
     await this.sessionRepository.save(session);
@@ -310,9 +344,11 @@ export class AuthService {
 
   // Remove sensitive fields user object
   private sanitizeUser(user: User): Partial<User> {
-    const { passwordHash: passwordHashRemoved, ...sanitizedUser } = user;
-    void passwordHashRemoved;
-    return sanitizedUser;
+    return { ...user };
+  }
+
+  private hashRefreshToken(token: string): string {
+    return crypto.createHash('sha256').update(token).digest('hex');
   }
 
   private formatLockMessage(remainingMs: number): string {

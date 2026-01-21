@@ -10,6 +10,7 @@ import { GoogleStrategy } from './strategies/google.strategy';
 import { UsersModule } from '../users/users.module';
 import { Session } from '../users/entities/session.entity';
 import { PasswordResetToken } from '../users/entities/password-reset-token.entity';
+import { AuthAccount } from '../users/entities/auth-account.entity';
 import { LoginAttempt } from './entities/login-attempt.entity';
 import { LoginAttemptsService } from './login-attempts.service';
 import { EmailService } from './email.service';
@@ -24,7 +25,7 @@ import { getJwtConfig } from '@config/jwt.config';
       useFactory: getJwtConfig,
       inject: [ConfigService],
     }),
-    TypeOrmModule.forFeature([Session, PasswordResetToken, LoginAttempt]),
+    TypeOrmModule.forFeature([Session, PasswordResetToken, LoginAttempt, AuthAccount]),
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, GoogleStrategy, LoginAttemptsService, EmailService],

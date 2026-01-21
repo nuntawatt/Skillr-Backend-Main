@@ -9,8 +9,8 @@ export class PasswordResetToken {
   @Column({ unique: true })
   token: string;
 
-  @Column({ name: 'user_id' })
-  userId: number;
+  @Column({ name: 'user_id', type: 'uuid' })
+  userId: string;
 
   @Column({ name: 'expires_at', type: 'timestamptz' })
   expiresAt: Date;

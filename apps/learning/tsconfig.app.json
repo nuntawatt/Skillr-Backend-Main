@@ -3,6 +3,6 @@
   "compilerOptions": {
     "outDir": "../../dist/apps/learning"
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "../../libs/**/*.ts"],
   "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
 }

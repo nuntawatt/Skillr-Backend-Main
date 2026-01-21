@@ -242,7 +242,7 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Bad Request.' })
   @ApiResponse({ status: 401, description: 'Unauthorized. Invalid or expired token.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
-  async logoutAll(@CurrentUser('id') userId: number, @Res({ passthrough: true }) res: Response) {
+  async logoutAll(@CurrentUser('id') userId: string, @Res({ passthrough: true }) res: Response) {
     await this.authService.logoutAll(userId);
 
     res.clearCookie('refreshToken', { httpOnly: true, secure: true, sameSite: 'strict' });

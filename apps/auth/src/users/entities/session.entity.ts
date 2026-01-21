@@ -3,28 +3,31 @@ import { User } from './user.entity';
 
 @Entity('sessions')
 export class Session {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column({ name: 'user_id' })
-  userId: number;
+  @Column({ name: 'user_id', type: 'uuid' })
+  userId: string;
 
   @ManyToOne(() => User, (user) => user.sessions, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;
 
   @Index({ unique: true })
-  @Column({ name: 'refresh_token', type: 'varchar', length: 255, unique: true })
-  refreshToken: string;
+  @Column({ name: 'refresh_token_hash', type: 'text', unique: true })
+  refreshTokenHash: string;
 
-  @Column({ name: 'user_agent', type: 'varchar', length: 255, nullable: true })
+  @Column({ name: 'user_agent', type: 'text', nullable: true })
   userAgent: string | null;
 
-  @Column({ name: 'ip_address', type: 'varchar', length: 50, nullable: true })
+  @Column({ name: 'ip_address', type: 'inet', nullable: true })
   ipAddress: string | null;
 
   @Column({ name: 'expires_at', type: 'timestamptz' })
   expiresAt: Date;
+
+  @Column({ name: 'revoked_at', type: 'timestamptz', nullable: true })
+  revokedAt: Date | null;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

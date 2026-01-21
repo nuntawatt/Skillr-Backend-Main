@@ -2,8 +2,8 @@ import { Injectable, ConflictException, NotFoundException } from '@nestjs/common
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as argon2 from 'argon2';
-import * as crypto from 'crypto';
 import { User } from './entities/user.entity';
+import { AuthAccount } from './entities/auth-account.entity';
 import { CreateUserDto, UpdateUserDto, UpdateRoleDto } from './dto';
 import { AuthProvider } from '@common/enums';
 
@@ -12,26 +12,25 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(AuthAccount)
+    private readonly authAccountRepository: Repository<AuthAccount>,
   ) { }
 
   // Create a new user
   async create(createUserDto: CreateUserDto): Promise<User> {
-    const existingUser = await this.findByEmail(createUserDto.email);
-    if (existingUser) {
-      throw new ConflictException('Email already exists');
+    if (createUserDto.email) {
+      const existingUser = await this.findByEmail(createUserDto.email);
+      if (existingUser) {
+        throw new ConflictException('Email already exists');
+      }
     }
 
     const user = this.userRepository.create({
       email: createUserDto.email,
       firstName: createUserDto.firstName,
       lastName: createUserDto.lastName,
-      googleId: createUserDto.googleId,
       avatar: createUserDto.avatar,
-      provider: createUserDto.provider,
       role: createUserDto.role,
-      passwordHash: createUserDto.password
-        ? await argon2.hash(createUserDto.password)
-        : undefined,
     });
 
     return this.userRepository.save(user);
@@ -39,11 +38,11 @@ export class UsersService {
 
   // Find user by ID
   async findById(id: number | string): Promise<User | null> {
-    const numericId = typeof id === 'string' ? Number(id) : id;
-    if (!Number.isFinite(numericId)) {
+    const lookupId = typeof id === 'string' ? id : String(id);
+    if (!lookupId) {
       return null;
     }
-    return this.userRepository.findOne({ where: { id: numericId } });
+    return this.userRepository.findOne({ where: { id: lookupId } });
   }
 
   // Find user by email
@@ -51,9 +50,41 @@ export class UsersService {
     return this.userRepository.findOne({ where: { email } });
   }
 
-  // Find user by Google ID
-  async findByGoogleId(googleId: string): Promise<User | null> {
-    return this.userRepository.findOne({ where: { googleId } });
+  async findAuthAccountByProviderAndEmail(
+    provider: AuthProvider,
+    email: string,
+  ): Promise<AuthAccount | null> {
+    return this.authAccountRepository.findOne({
+      where: { provider, email },
+      relations: ['user'],
+    });
+  }
+
+  async findAuthAccountByProviderUserId(
+    provider: AuthProvider,
+    providerUserId: string,
+  ): Promise<AuthAccount | null> {
+    return this.authAccountRepository.findOne({
+      where: { provider, providerUserId },
+      relations: ['user'],
+    });
+  }
+
+  async createLocalAuthAccount(
+    user: User,
+    email: string,
+    password: string,
+  ): Promise<AuthAccount> {
+    const passwordHash = await argon2.hash(password);
+    const account = this.authAccountRepository.create({
+      userId: user.id,
+      user,
+      provider: AuthProvider.LOCAL,
+      providerUserId: null,
+      email,
+      passwordHash,
+    });
+    return this.authAccountRepository.save(account);
   }
 
   // Find or create user from Google OAuth
@@ -64,35 +95,40 @@ export class UsersService {
     lastName?: string;
     avatar?: string;
   }): Promise<User> {
-    let user = await this.findByGoogleId(profile.googleId);
-    if (user) {
-      return user;
+    const existingAccount = await this.findAuthAccountByProviderUserId(
+      AuthProvider.GOOGLE,
+      profile.googleId,
+    );
+    if (existingAccount?.user) {
+      return existingAccount.user;
     }
 
-    // Then try to find by email and link Google account
-    user = await this.findByEmail(profile.email);
-    if (user) {
-      user.googleId = profile.googleId;
-      user.provider = AuthProvider.GOOGLE;
-      if (!user.avatar && profile.avatar) {
-        user.avatar = profile.avatar;
-      }
-      return this.userRepository.save(user);
+    let user = profile.email ? await this.findByEmail(profile.email) : null;
+    if (!user) {
+      user = this.userRepository.create({
+        email: profile.email || null,
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        avatar: profile.avatar,
+        isVerified: true,
+      });
+      user = await this.userRepository.save(user);
+    } else if (!user.avatar && profile.avatar) {
+      user.avatar = profile.avatar;
+      user = await this.userRepository.save(user);
     }
 
-    // Create new user
-    const newUser = this.userRepository.create({
-      email: profile.email,
-      googleId: profile.googleId,
-      firstName: profile.firstName,
-      lastName: profile.lastName,
-      avatar: profile.avatar,
+    const account = this.authAccountRepository.create({
+      userId: user.id,
+      user,
       provider: AuthProvider.GOOGLE,
-      passwordHash: await argon2.hash(crypto.randomBytes(32).toString('hex')),
-      isVerified: true
+      providerUserId: profile.googleId,
+      email: profile.email || null,
+      passwordHash: null,
     });
+    await this.authAccountRepository.save(account);
 
-    return this.userRepository.save(newUser);
+    return user;
   }
 
   // Update user details
@@ -133,16 +169,23 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    user.passwordHash = await argon2.hash(newPassword);
-    await this.userRepository.save(user);
+    const account = await this.authAccountRepository.findOne({
+      where: { userId: user.id, provider: AuthProvider.LOCAL },
+    });
+    if (!account) {
+      throw new NotFoundException('Local auth account not found');
+    }
+
+    account.passwordHash = await argon2.hash(newPassword);
+    await this.authAccountRepository.save(account);
   }
 
   // Verify user password
-  async verifyPassword(user: User, password: string): Promise<boolean> {
-    if (!user.passwordHash) {
+  async verifyPasswordHash(passwordHash: string | null, password: string): Promise<boolean> {
+    if (!passwordHash) {
       return false;
     }
-    return argon2.verify(user.passwordHash, password);
+    return argon2.verify(passwordHash, password);
   }
 
   // Get all users
@@ -155,7 +198,6 @@ export class UsersService {
         'lastName',
         'avatar',
         'role',
-        'provider',
         'isVerified',
         'createdAt',
       ],
@@ -164,8 +206,8 @@ export class UsersService {
 
   // Delete user
   async delete(id: number | string): Promise<void> {
-    const numericId = typeof id === 'string' ? Number(id) : id;
-    const result = await this.userRepository.delete(numericId);
+    const lookupId = typeof id === 'string' ? id : String(id);
+    const result = await this.userRepository.delete(lookupId);
     if (result.affected === 0) {
       throw new NotFoundException('User not found');
     }

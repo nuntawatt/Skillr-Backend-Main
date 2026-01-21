@@ -1,17 +1,12 @@
-import { IsEmail, IsString, MinLength, IsOptional, IsEnum } from 'class-validator';
-import { UserRole, AuthProvider } from '@common/enums';
+import { IsEmail, IsString, IsOptional, IsEnum } from 'class-validator';
+import { UserRole } from '@common/enums';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateUserDto {
-  @ApiProperty({ example: 'user@example.com' })
+  @ApiProperty({ example: 'user@example.com', required: false })
   @IsEmail()
-  email: string;
-
-  @ApiProperty({ example: 'StrongPassword123' })
-  @IsString()
-  @MinLength(8)
   @IsOptional()
-  password?: string;
+  email?: string;
 
   @ApiProperty({ example: 'skllr' })
   @IsString()
@@ -23,20 +18,10 @@ export class CreateUserDto {
   @IsOptional()
   lastName?: string;
 
-  @ApiProperty({ example: 'google-oauth2|1234567890' })
-  @IsString()
-  @IsOptional()
-  googleId?: string;
-
   @ApiProperty({ example: 'https://example.com/avatar.jpg' })
   @IsString()
   @IsOptional()
   avatar?: string;
-
-  @ApiProperty({ example: 'GOOGLE', enum: AuthProvider })
-  @IsEnum(AuthProvider)
-  @IsOptional()
-  provider?: AuthProvider;
 
   @ApiProperty({ example: 'USER', enum: UserRole })
   @IsEnum(UserRole)
