@@ -8,10 +8,12 @@ import { AuthLibModule } from '@auth/auth-lib.module';
 // controllers
 import { CoursesController } from './courses/courses.controller';
 import { LessonsController } from './lessons/lessons.controller';
+import { ArticlesController } from './articles/articles.controller';
 
 // services
 import { CoursesService } from './courses/courses.service';
 import { LessonsService } from './lessons/lessons.service';
+import { ArticlesService } from './articles/articles.service';
 
 // storage
 import { StorageModule } from './storage/storage.module';
@@ -20,6 +22,8 @@ import { StorageModule } from './storage/storage.module';
 import { Course } from './courses/entities/course.entity';
 import { Lesson } from './lessons/entities/lesson.entity';
 import { LessonResource } from './lessons/entities/lesson-resource.entity';
+import { Article } from './articles/entities/article.entity';
+
 
 const isTest =
   process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
@@ -44,6 +48,7 @@ const isTest =
             Course,
             Lesson,
             LessonResource,
+            Article,
           ]),
 
           AuthLibModule,
@@ -54,11 +59,13 @@ const isTest =
   controllers: [
     CoursesController,
     LessonsController,
+    ArticlesController,
   ],
 
   providers: [
     CoursesService,
     LessonsService,
+    ArticlesService,
   ],
 })
 export class AppModule {}

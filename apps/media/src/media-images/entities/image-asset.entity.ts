@@ -32,9 +32,6 @@ export class ImageAsset {
   @Column({ name: 'storage_key' })
   storageKey: string;
 
-  @Column({ name: 'public_url', nullable: true })
-  publicUrl?: string;
-
   @Column({
     type: 'enum',
     enum: ImageAssetStatus,

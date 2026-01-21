@@ -2,7 +2,7 @@ import { Type } from 'class-transformer';
 import { IsString, IsOptional, IsInt, Min } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
-// Max PDF file size: 51MB
+// maximum PDF size: 51 MB
 export const MAX_PDF_SIZE_BYTES = 51 * 1024 * 1024;
 
 export class CreateLessonDto {
@@ -30,4 +30,14 @@ export class CreateLessonDto {
   @Min(1)
   @Type(() => Number)
   media_asset_id?: number;
+
+  @ApiPropertyOptional({
+    description: 'PDF media asset ID (media service ID). We store only the id here.',
+    example: 123,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  pdf_media_asset_id?: number;
 }

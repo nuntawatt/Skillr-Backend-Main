@@ -1,17 +1,14 @@
-// apps/media/src/media-videos/media-videos.service.ts
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-  Logger,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
+import * as path from 'path';
 
 import { StorageFactory } from '../storage/storage.factory';
 import { VideoAsset, VideoAssetStatus } from './entities/video-asset.entity';
 import { CreateVideoUploadDto } from './dto/create-video-upload.dto';
+import { AwsService } from '../storage/aws.service';
+import { CreateVideoPresignDto } from './dto/create-video-presign.dto';
 
 @Injectable()
 export class MediaVideosService {
@@ -21,11 +18,59 @@ export class MediaVideosService {
     private readonly storageFactory: StorageFactory,
     @InjectRepository(VideoAsset)
     private readonly repo: Repository<VideoAsset>,
-  ) {}
+    private readonly aws: AwsService
+  ) { }
 
-  /**
-   * 🎬 Upload video via form-data (server-side upload)
-   */
+  // helper: sanitize filename to avoid path traversal / weird chars
+  private sanitizeFilename(filename: string) {
+    if (!filename) return `${randomUUID()}.mp4`;
+    // remove path parts, replace spaces with underscore, remove control chars
+    const base = path.basename(filename);
+    return base
+      .replace(/[\/\\?%*:|"<>]/g, '')   // remove illegal chars
+      .replace(/\s+/g, '_')             // space → _
+      .slice(0, 200); // limit length
+  }
+
+  // [DEV] simple presign (kept for backwards compatibility if used)
+  async createPresign(dto: CreateVideoPresignDto) {
+    // prefer dto.original_filename if present
+    const id = this.aws.generateVideoId();
+    const originalName = this.sanitizeFilename(dto.original_filename ?? `${id}.mp4`);
+    const originalKey = `videos/original/${id}/${originalName}`;
+    const expires = Number(process.env.PRESIGN_EXPIRES_SECONDS || 3600);
+
+    const uploadUrl = await this.aws.createPresignedUploadUrl(originalKey, dto.mime_type, expires);
+
+    // optional: create DB record with status UPLOADING
+    // await this.repo.save({ id: id, original_key: originalKey, status: 'UPLOADING' });
+
+    return {
+      video_id: id,
+      key: originalKey,
+      upload_url: uploadUrl,
+      expires_in: expires,
+    };
+  }
+
+  // Trigger video transcode
+  async triggerTranscode(videoId: string) {
+    if (!videoId) throw new BadRequestException('video_id required');
+
+    const inputS3 = `s3://${process.env.S3_BUCKET}/videos/original/${videoId}.mp4`;
+    const outputPrefix = `videos/hls/${videoId}/`;
+    const role = process.env.MEDIACONVERT_ROLE_ARN!;
+    if (!role) throw new BadRequestException('MEDIACONVERT_ROLE_ARN not configured');
+
+    const job = await this.aws.createMediaConvertJob(inputS3, outputPrefix, role);
+
+    return {
+      jobId: job?.Id,
+      status: 'SUBMITTED',
+    };
+  }
+
+  // Upload video file (form upload)
   async uploadVideoFileAndPersist(file: Express.Multer.File, ownerUserIdFromBody?: number) {
     if (!file) throw new BadRequestException('file missing');
     this.validateVideoMime(file.mimetype ?? '');
@@ -36,7 +81,8 @@ export class MediaVideosService {
     const storage = this.storageFactory.video();
     const bucket = storage.bucket;
     const videoId = randomUUID();
-    const key = `videos/${videoId}/original.mp4`;
+    const safeName = this.sanitizeFilename(file.originalname || `${videoId}.mp4`);
+    const key = `videos/${videoId}/${safeName}`;
 
     // Upload to storage
     await storage.putObject(bucket, key, file.buffer, file.size, { 'Content-Type': file.mimetype });
@@ -50,7 +96,7 @@ export class MediaVideosService {
         originalFilename: file.originalname,
         mimeType: file.mimetype,
         sizeBytes: String(file.size),
-        storageProvider: process.env.STORAGE_PROVIDER_VIDEO ?? process.env.STORAGE_PROVIDER ?? 'minio',
+        storageProvider: process.env.STORAGE_PROVIDER_VIDEO ?? 's3',
         storageBucket: bucket,
         storageKey: key,
         publicUrl,
@@ -58,30 +104,18 @@ export class MediaVideosService {
       }),
     );
 
-    this.logger.log(`Video uploaded: id=${saved.id}, key=${key}, size=${file.size}`);
-
     return {
       media_asset_id: saved.id,
-      key: key.split('/').slice(-2).join('/'),
-      storage_key: key,
-      public_url: saved.publicUrl,
+      filename: saved.originalFilename,
       status: saved.status,
     };
   }
 
-  /**
-   * 1️⃣ สร้าง presigned URL
-   */
-  async createPresignedUpload(
-    dto: CreateVideoUploadDto,
-    user?: { sub?: number },
-  ) {
+  // 1. Create presigned upload URL
+  async createPresignedUpload(dto: CreateVideoUploadDto, user?: { sub?: number }) {
     this.validateVideoMime(dto.mime_type);
 
-    const maxSize = Number(
-      process.env.VIDEO_MAX_SIZE_BYTES ??
-        2 * 1024 * 1024 * 1024, // 2GB
-    );
+    const maxSize = Number(process.env.VIDEO_MAX_SIZE_BYTES ?? 2 * 1024 * 1024 * 1024); // 2GB
 
     if (dto.size_bytes > maxSize) {
       throw new BadRequestException('file size exceeds limit');
@@ -89,23 +123,24 @@ export class MediaVideosService {
 
     const storage = this.storageFactory.video();
     const videoId = randomUUID();
-    const key = `videos/${videoId}/original.mp4`;
+    const safeName = this.sanitizeFilename(dto.original_filename ?? `${videoId}.mp4`);
+    const key = `videos/${videoId}/${safeName}`;
 
-    // สร้าง presigned PUT URL
+    // Create presigned PUT URL (client will PUT file to this key)
     const uploadUrl = await storage.presignPut!(
       storage.bucket,
       key,
       dto.mime_type,
-      60 * 15, // 15 นาที
+      60 * 15, // 15 minutes
     );
 
-    // บันทึก DB
+    // Save DB record with UPLOADING status
     const asset = this.repo.create({
       ownerUserId: Number(user?.sub ?? 0),
-      originalFilename: dto.original_filename,
+      originalFilename: dto.original_filename ?? safeName,
       mimeType: dto.mime_type,
       sizeBytes: String(dto.size_bytes),
-      storageProvider: 's3',
+      storageProvider: process.env.STORAGE_PROVIDER_VIDEO ?? 's3',
       storageBucket: storage.bucket,
       storageKey: key,
       status: VideoAssetStatus.UPLOADING,
@@ -115,19 +150,16 @@ export class MediaVideosService {
 
     return {
       media_asset_id: saved.id,
-      uploadUrl,
-      storageKey: key,
+      filename: saved.originalFilename,
+      upload_url: uploadUrl,
+      storage_key: key,
       expires_in: 900,
     };
   }
 
-  /**
-   * 2️⃣ confirm upload
-   */
+  // 2. Confirm upload completed
   async confirmUpload(mediaAssetId: number) {
-    const asset = await this.repo.findOne({
-      where: { id: mediaAssetId },
-    });
+    const asset = await this.repo.findOne({ where: { id: mediaAssetId } });
 
     if (!asset) {
       throw new NotFoundException('video asset not found');
@@ -146,9 +178,7 @@ export class MediaVideosService {
     };
   }
 
-  /**
-   * 3️⃣ cleanup delete asset (called by cleanup service)
-   */
+  // 3. Cleanup and delete asset
   async cleanupDeleteAsset(id: number) {
     const asset = await this.repo.findOne({ where: { id } });
     if (!asset) return { deleted: false };
@@ -169,9 +199,7 @@ export class MediaVideosService {
     return { deleted: true };
   }
 
-  /**
-   * 4️⃣ Get presigned URL to view/download video
-   */
+  // 4. Get presigned view URL
   async getPresignedViewUrl(id: number) {
     const asset = await this.repo.findOne({ where: { id } });
     if (!asset) throw new NotFoundException('video asset not found');
@@ -182,7 +210,7 @@ export class MediaVideosService {
 
     if (!key) throw new NotFoundException('video file not found');
 
-    // Get presigned GET URL
+    // Get presigned GET URL (AwsService provides presignGet / presignedGetObject)
     const presignGet = (storage as any).presignGet ?? (storage as any).presignedGetObject;
     if (!presignGet || typeof presignGet !== 'function') {
       throw new BadRequestException('presign GET not supported by storage provider');
@@ -193,16 +221,15 @@ export class MediaVideosService {
 
     return {
       media_asset_id: asset.id,
+      original_filename: asset.originalFilename,
       presigned_url: presignedUrl,
       expires_in: expiresSeconds,
       mime_type: asset.mimeType,
-      original_filename: asset.originalFilename,
+      storage_key: asset.storageKey,
     };
   }
 
-  /**
-   * 5️⃣ Delete video by ID
-   */
+  // 5. Delete video by ID
   async deleteVideoById(id: number) {
     const asset = await this.repo.findOne({ where: { id } });
     if (!asset) throw new NotFoundException('video asset not found');
@@ -223,13 +250,10 @@ export class MediaVideosService {
     return { deleted: true, media_asset_id: id };
   }
 
-  /**
-   * validation
-   */
+  // Validate video mime type
   private validateVideoMime(mimeType: string) {
     const allow = (
-      process.env.VIDEO_MIME_ALLOWLIST ??
-      'video/mp4,video/webm,video/quicktime,application/octet-stream'
+      process.env.VIDEO_MIME_ALLOWLIST ?? 'video/mp4,video/webm,video/quicktime,application/octet-stream'
     )
       .split(',')
       .map((x) => x.trim().toLowerCase());

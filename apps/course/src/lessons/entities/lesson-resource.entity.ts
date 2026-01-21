@@ -14,7 +14,6 @@ export class LessonResource {
   @PrimaryGeneratedColumn()
   id: number;
 
-  // Relation is the single source of truth for lesson_id
   @ManyToOne(() => Lesson, lesson => lesson.resources, {
     onDelete: 'CASCADE',
   })
@@ -27,24 +26,16 @@ export class LessonResource {
   @Column({ nullable: true })
   title?: string;
 
-  @Column({ type: 'varchar', length: 1024, nullable: true })
-  url?: string;
-
-  @Column({ nullable: true })
-  filename?: string;
-
-  @Column({ name: 'mime_type', nullable: true })
-  mimeType?: string;
-
   @Column({ name: 'media_asset_id', type: 'int', nullable: true })
-  mediaAssetId?: number | null;
+  mediaAssetId?: number | null; // ✅ PDF file ID
 
   @Column({ type: 'json', nullable: true })
-  meta?: unknown;
+  meta?: {
+    pages?: number;
+    size?: number;
+  };
 
   @Column({ nullable: true })
   position?: number;
-
-  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
-  createdAt: Date;
 }
+

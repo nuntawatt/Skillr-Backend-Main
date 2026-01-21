@@ -1,14 +1,11 @@
 import { BadRequestException, Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { randomUUID } from 'crypto';
-import * as path from 'path';
 import { Lesson } from './entities/lesson.entity';
-import { CreateLessonDto, MAX_PDF_SIZE_BYTES } from './dto/create-lesson.dto';
+import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
 import { LessonResource, LessonResourceType } from './entities/lesson-resource.entity';
 import { CreateLessonResourceDto } from './dto/create-lesson-resource.dto';
-import { StorageService } from '../storage/storage.service';
 
 @Injectable()
 export class LessonsService {
@@ -19,26 +16,9 @@ export class LessonsService {
     private readonly lessonRepository: Repository<Lesson>,
     @InjectRepository(LessonResource)
     private readonly lessonResourceRepository: Repository<LessonResource>,
-    private readonly storageService: StorageService,
   ) { }
 
-  async create(createLessonDto: CreateLessonDto, filePdf?: Express.Multer.File): Promise<Lesson> {
-    let pdfKey: string | null = null;
-
-    if (filePdf) {
-      if (filePdf.mimetype !== 'application/pdf') {
-        throw new BadRequestException('Only PDF files are allowed');
-      }
-
-      if (filePdf.size > MAX_PDF_SIZE_BYTES) {
-        throw new BadRequestException(`PDF file size exceeds ${MAX_PDF_SIZE_BYTES / (51 * 1024 * 1024)}MB limit`);
-      }
-
-      // Upload PDF directly to MinIO
-      pdfKey = await this.uploadPdfToStorage(filePdf);
-
-    }
-
+  async create(createLessonDto: CreateLessonDto): Promise<Lesson> {
     // Auto-generate position (get max position + 1)
     const maxPositionResult = await this.lessonRepository
       .createQueryBuilder('lesson')
@@ -53,36 +33,14 @@ export class LessonsService {
         createLessonDto.media_asset_id !== undefined && createLessonDto.media_asset_id !== null
           ? Number(createLessonDto.media_asset_id)
           : null,
-      pdfKey,
+      pdfMediaAssetId:
+        createLessonDto.pdf_media_asset_id !== undefined && createLessonDto.pdf_media_asset_id !== null
+          ? Number(createLessonDto.pdf_media_asset_id)
+          : null,
       position: nextPosition,
     });
 
     return this.lessonRepository.save(lesson);
-  }
-
-  private async uploadPdfToStorage(file: Express.Multer.File): Promise<string> {
-    const bucket = this.storageService.bucket;
-    const fileExt = path.extname(file.originalname);
-
-    const fileName = `${randomUUID()}${fileExt}`;
-    const objectKey = `lessons/pdf/${fileName}`;
-
-    await this.storageService.putObject(bucket, objectKey, file.buffer, file.size, {
-      'Content-Type': file.mimetype,
-    });
-
-
-    return fileName;
-  }
-
-  async createArticle(filePdf: Express.Multer.File): Promise<Lesson> {
-    if (!filePdf) {
-      throw new BadRequestException('PDF file is required');
-    }
-    const createLessonDto: CreateLessonDto = {
-      title: filePdf.originalname,
-    };
-    return this.create(createLessonDto, filePdf);
   }
 
   async findAll(courseId?: number): Promise<Lesson[]> {
@@ -92,7 +50,7 @@ export class LessonsService {
       .orderBy('lesson.position', 'ASC');
 
     if (courseId !== undefined) {
-      query.where('lesson.courseId = :courseId', { courseId });
+      query.where('lesson.course_id = :courseId', { courseId });
     }
 
     return query.getMany();
@@ -109,32 +67,14 @@ export class LessonsService {
     return lesson;
   }
 
-  async getPresignedUrlForResource(key: string): Promise<{ presignedUrl: string }> {
-    const bucket = this.storageService.bucket;
-    const objectKey = `lessons/pdf/${key}`;
-
-    const presignedUrl = await this.storageService.buildPublicUrl(bucket, objectKey);
-
-    if (!presignedUrl) {
-      throw new NotFoundException(`Resource with key ${key} not found`);
-    }
-
-    return { presignedUrl };
-  }
-
-  async createResource(
-    lessonId: number,
-    dto: CreateLessonResourceDto,
-    authorization?: string
-  ) {
-    // reuse findOne to validate lesson exists
+  async createResource(lessonId: number, dto: CreateLessonResourceDto) {
+    // validate lesson exists
     const lesson = await this.findOne(lessonId);
 
     if (dto.type === LessonResourceType.VIDEO) {
       if (!dto.media_asset_id) {
         throw new BadRequestException('media_asset_id is required for video');
       }
-      // Note: media asset validation can be added here if needed
     }
 
     const resource = this.lessonResourceRepository.create({
@@ -146,33 +86,20 @@ export class LessonsService {
       mimeType: dto.mime_type,
       mediaAssetId: dto.media_asset_id ?? null,
       meta: dto.meta,
-      position: dto.position
-    });
+      position: dto.position,
+    }as Partial<LessonResource>);
 
     const saved = await this.lessonResourceRepository.save(resource);
     return { resourceId: saved.id };
   }
 
-  async update(id: number, updateLessonDto: UpdateLessonDto, filePdf?: Express.Multer.File): Promise<Lesson> {
+  async update(id: number, updateLessonDto: UpdateLessonDto): Promise<Lesson> {
     const lesson = await this.lessonRepository.findOne({ where: { id } });
     if (!lesson) {
       throw new NotFoundException(`Lesson with ID ${id} not found`);
     }
 
-    // Handle PDF upload if provided
-    if (filePdf) {
-      if (filePdf.mimetype !== 'application/pdf') {
-        throw new BadRequestException('Only PDF files are allowed');
-      }
-      if (filePdf.size > MAX_PDF_SIZE_BYTES) {
-        throw new BadRequestException(`PDF file size exceeds ${MAX_PDF_SIZE_BYTES / (51 * 1024 * 1024)}MB limit`);
-      }
-
-      // Upload PDF directly to MinIO
-      lesson.pdfKey = await this.uploadPdfToStorage(filePdf);
-    }
-
-    // apply patch-only updates (do not overwrite with undefined)
+    // patch-only updates
     if (updateLessonDto.title !== undefined) {
       lesson.title = updateLessonDto.title;
     }
@@ -180,9 +107,14 @@ export class LessonsService {
       lesson.contentText = updateLessonDto.content_text;
     }
     if (updateLessonDto.media_asset_id !== undefined) {
-      lesson.mediaAssetId =
-        updateLessonDto.media_asset_id !== null && updateLessonDto.media_asset_id !== undefined
-          ? Number(updateLessonDto.media_asset_id)
+      lesson.mediaAssetId = updateLessonDto.media_asset_id !== null && updateLessonDto.media_asset_id !== undefined
+        ? Number(updateLessonDto.media_asset_id)
+        : null;
+    }
+    if (updateLessonDto.pdf_media_asset_id !== undefined) {
+      lesson.pdfMediaAssetId =
+        updateLessonDto.pdf_media_asset_id !== null && updateLessonDto.pdf_media_asset_id !== undefined
+          ? Number(updateLessonDto.pdf_media_asset_id)
           : null;
     }
 
@@ -191,17 +123,6 @@ export class LessonsService {
 
   async remove(id: number): Promise<void> {
     const lesson = await this.findOne(id);
-
-    if (lesson.pdfKey) {
-      try {
-        const bucket = this.storageService.bucket;
-        const objectKey = `lessons/pdf/${lesson.pdfKey}`;
-        await this.storageService.removeObject(this.storageService.bucket, objectKey);
-      } catch (e) {
-        this.logger.warn(`Failed to delete PDF for lesson ID ${id}: ${String(e)}`);
-      }
-    }
-
     await this.lessonRepository.remove(lesson);
   }
 }

@@ -31,9 +31,7 @@ function getExpiresIn(
   return fallback;
 }
 
-export const getJwtConfig = (
-  configService: ConfigService,
-): JwtModuleOptions => {
+export const getJwtConfig = (configService: ConfigService): JwtModuleOptions => {
   const secret = configService.get<string>('JWT_ACCESS_SECRET');
   if (!secret) {
     throw new Error('JWT_ACCESS_SECRET is not configured');
