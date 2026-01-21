@@ -26,7 +26,7 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  SwaggerModule.setup('docs/media', app, document);
 
   // app.enableCors({ origin: true, credentials: true });
   app.enableCors({
@@ -44,7 +44,7 @@ async function bootstrap() {
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
 
   logger.log(`Media service listening on http://localhost:${port}/api`);
-  logger.log(`Swagger docs available at http://localhost:${port}/api/docs`);
+  logger.log(`Swagger docs available at http://localhost:${port}/docs/media`);
 }
 
 void bootstrap();

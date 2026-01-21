@@ -26,14 +26,12 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  SwaggerModule.setup('docs/auth', app, document);
 
   app.enableCors({ origin: true, credentials: true });
   app.use(cookieParser());
   
-  app.setGlobalPrefix('api');
-
-  
+  app.setGlobalPrefix('api');  
 
   const port = Number(process.env.PORT ?? 3001);
   await app.listen(port);
@@ -41,7 +39,7 @@ async function bootstrap() {
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
 
   logger.log(`Auth service listening on http://localhost:${port}/api`);
-  logger.log(`Swagger docs available at http://localhost:${port}/api/docs`);
+  logger.log(`Swagger docs available at http://localhost:${port}/docs/auth`);
 }
 
 void bootstrap();

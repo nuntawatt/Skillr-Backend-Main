@@ -18,7 +18,7 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  SwaggerModule.setup('docs/learning', app, document);
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -28,8 +28,12 @@ async function bootstrap() {
     }),
   );
   
-  // Enable CORS for all origins (adjust as needed for production)
-  app.enableCors({ origin: true, credentials: true });
+  app.enableCors({
+    origin: '*', // Allows all origins
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS', // Allows all common methods
+    allowedHeaders: '*', // Allows all headers
+    credentials: true, // If you need to support credentials
+  });
   
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.setGlobalPrefix('api');
@@ -39,7 +43,7 @@ async function bootstrap() {
   
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
   logger.log(`Learning service listening on http://localhost:${port}/api`);
-  logger.log(`Swagger docs available at http://localhost:${port}/api/docs`);
+  logger.log(`Swagger docs available at http://localhost:${port}/docs/learning`);
 }
 
 void bootstrap();
