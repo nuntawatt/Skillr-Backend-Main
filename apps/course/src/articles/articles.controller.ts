@@ -1,6 +1,6 @@
 import { Controller, Post, UploadedFile, UseInterceptors, BadRequestException, Get, Param, Patch, Delete } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiConsumes, ApiTags, ApiBody, ApiResponse } from '@nestjs/swagger';
 import * as multer from 'multer';
 
 import { ArticlesService } from './articles.service';
@@ -30,7 +30,12 @@ export class ArticlesController {
         }),
     )
     @ApiConsumes('multipart/form-data')
-    createArticle(@UploadedFile() file: Express.Multer.File) {
+    @ApiOperation({ summary: 'Create a new article with PDF upload' })
+    @ApiBody({ description: 'PDF file', type: 'file' })
+    @ApiResponse({ status: 201, description: 'Article created successfully.' })
+    @ApiResponse({ status: 400, description: 'Bad Request.' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error.' })
+    async createArticle(@UploadedFile() file: Express.Multer.File) {
         if (!file) {
             throw new BadRequestException('PDF file is required');
         }
@@ -39,11 +44,22 @@ export class ArticlesController {
     }
 
     @Get(':id')
+    @ApiOperation({ summary: 'Get article by ID' })
+    @ApiResponse({ status: 200, description: 'Article retrieved successfully.' })
+    @ApiResponse({ status: 404, description: 'Article not found.' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error.' })
     async getArticle(@Param('id') id: number) {
-        return this.articlesService.getArticleById(id);        
+        return this.articlesService.getArticleById(id);
     }
 
     @Patch(':id')
+    @ApiOperation({ summary: 'Update article PDF by ID' })
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({ description: 'PDF file', type: 'file' })
+    @ApiResponse({ status: 200, description: 'Article PDF updated successfully.' })
+    @ApiResponse({ status: 400, description: 'Bad Request.' })
+    @ApiResponse({ status: 404, description: 'Article not found.' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error.' })
     @UseInterceptors(
         FileInterceptor('file', {
             storage: multer.memoryStorage(),
@@ -68,10 +84,14 @@ export class ArticlesController {
     }
 
     @Delete(':id')
+    @ApiOperation({ summary: 'Delete article by ID' })
+    @ApiResponse({ status: 200, description: 'Article deleted successfully.' })
+    @ApiResponse({ status: 404, description: 'Article not found.' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error.' })
     async deleteArticle(@Param('id') id: number) {
         if (!id) {
             throw new BadRequestException('Article ID is required');
         }
-        return this.articlesService.deleteArticleById(id);       
+        return this.articlesService.deleteArticleById(id);
     }
 }
