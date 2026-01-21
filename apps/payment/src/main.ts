@@ -23,6 +23,7 @@ async function bootstrap() {
 
   const port = Number(process.env.PORT ?? 3005);
   await app.listen(port);
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
 
   logger.log(`Payment service listening on http://localhost:${port}/api`);
 }

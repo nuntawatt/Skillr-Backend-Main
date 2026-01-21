@@ -21,7 +21,7 @@ async function bootstrap() {
     .setTitle('Skillr Auth Service API')
     .setDescription('API documentation for the Auth Service')
     .setVersion('1.0.0')
-    .addServer('http://localhost:3001/api', 'Local server')
+    .addServer('/api')
     .addBearerAuth() 
     .build();
 
@@ -33,8 +33,12 @@ async function bootstrap() {
   
   app.setGlobalPrefix('api');
 
+  
+
   const port = Number(process.env.PORT ?? 3001);
   await app.listen(port);
+  
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
 
   logger.log(`Auth service listening on http://localhost:${port}/api`);
   logger.log(`Swagger docs available at http://localhost:${port}/api/docs`);

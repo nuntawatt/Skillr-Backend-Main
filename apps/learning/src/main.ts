@@ -13,6 +13,7 @@ async function bootstrap() {
     .setTitle('Skillr Learning Service API')
     .setDescription('API documentation for Quiz and Learning Progress')
     .setVersion('1.0.0')
+    .addServer('/api')
     .addBearerAuth()
     .build();
 
@@ -35,7 +36,8 @@ async function bootstrap() {
 
   const port = Number(process.env.PORT ?? 3003);
   await app.listen(port);
-
+  
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
   logger.log(`Learning service listening on http://localhost:${port}/api`);
   logger.log(`Swagger docs available at http://localhost:${port}/api/docs`);
 }

@@ -18,7 +18,7 @@ export class AuthAccount {
   @ManyToOne(() => User, (user) => user.authAccounts, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;
-
+  
   @Column({ type: 'varchar', length: 20 })
   provider: AuthProvider;
 

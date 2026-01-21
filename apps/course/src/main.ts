@@ -28,16 +28,12 @@ async function bootstrap() {
     }),
   );
 
-  // Increase global body parser limits to allow large multipart/form-data uploads
-  // (some clients or proxies may add small overhead; keep margin above MAX_PDF_SIZE_BYTES)
-  // app.use(express.json({ limit: '60mb' }));
-  // app.use(express.urlencoded({ limit: '60mb', extended: true }));
   
   const config = new DocumentBuilder()
     .setTitle('Skillr Course Service API')
     .setDescription('API documentation for the Course Service')
     .setVersion('1.0.0')
-    .addServer('http://localhost:3002/api', 'Local server')
+    .addServer('/api')
     .addBearerAuth() 
     .build();
 
@@ -53,9 +49,10 @@ async function bootstrap() {
 
 
   const port = Number(process.env.PORT ?? 3002);
-  await app.listen(port, '0.0.0.0');
+  await app.listen(port);
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
 
-  logger.log(`Application is running on http://localhost:${port}/api`);
+  logger.log(`Course service listening on http://localhost:${port}/api`);
   logger.log(`Swagger docs available at http://localhost:${port}/api/docs`);
 }
 void bootstrap();
