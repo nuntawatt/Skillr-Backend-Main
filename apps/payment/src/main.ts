@@ -19,11 +19,12 @@ async function bootstrap() {
   app.enableCors({ origin: true, credentials: true });
   
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
   app.setGlobalPrefix('api');
 
   const port = Number(process.env.PORT ?? 3005);
   await app.listen(port);
-  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+  
 
   logger.log(`Payment service listening on http://localhost:${port}/api`);
 }

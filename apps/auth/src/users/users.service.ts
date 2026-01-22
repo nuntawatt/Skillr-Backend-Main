@@ -83,6 +83,7 @@ export class UsersService {
       providerUserId: null,
       email,
       passwordHash,
+      
     });
     return this.authAccountRepository.save(account);
   }
@@ -132,11 +133,9 @@ export class UsersService {
   }
 
   // Update user details
-  async update(
-    id: number | string,
-    updateUserDto: UpdateUserDto,
-  ): Promise<User> {
+  async update(id: number | string, updateUserDto: UpdateUserDto,): Promise<User> {
     const user = await this.findById(id);
+    
     if (!user) {
       throw new NotFoundException('User not found');
     }

@@ -34,7 +34,6 @@ export class UsersController {
   // Update current user profile
   @Patch('profile')
   @ApiOperation({ summary: 'Update current user profile' })
-  @ApiBody({ type: UpdateUserDto })
   @ApiResponse({ status: 200, description: 'User profile updated successfully.' })
   @ApiResponse({ status: 400, description: 'Bad Request. Invalid input data.' })
   @ApiResponse({ status: 401, description: 'Unauthorized. Invalid or missing JWT token.' })

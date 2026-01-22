@@ -5,9 +5,9 @@ import { User } from './user.entity';
 @Entity('auth_accounts')
 @Index(['provider', 'providerUserId'], { unique: true })
 @Index(['provider', 'email'], { unique: true })
-@Check(`"provider" IN ('EMAIL','GOOGLE')`)
-@Check(`("provider" = 'EMAIL' AND "password_hash" IS NOT NULL) OR ("provider" <> 'EMAIL')`)
-@Check(`("provider" <> 'EMAIL' AND "provider_user_id" IS NOT NULL) OR ("provider" = 'EMAIL')`)
+@Check(`"provider" IN ('LOCAL','GOOGLE')`)
+@Check(`("provider" = 'LOCAL' AND "password_hash" IS NOT NULL) OR ("provider" <> 'LOCAL')`)
+@Check(`("provider" <> 'LOCAL' AND "provider_user_id" IS NOT NULL) OR ("provider" = 'LOCAL')`)
 export class AuthAccount {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -18,7 +18,7 @@ export class AuthAccount {
   @ManyToOne(() => User, (user) => user.authAccounts, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;
-  
+
   @Column({ type: 'varchar', length: 20 })
   provider: AuthProvider;
 

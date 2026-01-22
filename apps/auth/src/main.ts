@@ -31,12 +31,11 @@ async function bootstrap() {
   app.enableCors({ origin: true, credentials: true });
   app.use(cookieParser());
   
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
   app.setGlobalPrefix('api');  
 
   const port = Number(process.env.PORT ?? 3001);
   await app.listen(port);
-  
-  app.getHttpAdapter().getInstance().set('trust proxy', 1);
 
   logger.log(`Auth service listening on http://localhost:${port}/api`);
   logger.log(`Swagger docs available at http://localhost:${port}/docs/auth`);
