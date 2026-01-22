@@ -4,11 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { getDatabaseConfig } from '@config/database.config';
 import { AuthLibModule } from '@auth/auth-lib.module';
 
-import { ActivitiesModule } from './activities/activities.module';
-import { AssignmentsModule } from './assignments/assignments.module';
-import { EnrollmentsModule } from './enrollments/enrollments.module';
 import { LearningModule } from './learning/learning.module';
-import { NotificationsModule } from './notifications/notifications.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -21,11 +17,7 @@ import { NotificationsModule } from './notifications/notifications.module';
       inject: [ConfigService],
     }),
     AuthLibModule,
-    ActivitiesModule,
-    AssignmentsModule,
-    EnrollmentsModule,
     LearningModule,
-    NotificationsModule,
   ],
 })
 export class AppModule {}

@@ -45,7 +45,7 @@ function getUserIdOrThrow(user?: AuthUser): string {
   // throw new UnauthorizedException();
 }
 
-@ApiTags('Learning & Quizzes')
+@ApiTags('Quiz & Learning Progress')
 @ApiBearerAuth()
 @Controller('learning')
 // @UseGuards(JwtAuthGuard)
