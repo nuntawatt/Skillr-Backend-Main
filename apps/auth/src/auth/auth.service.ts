@@ -333,8 +333,6 @@ export class AuthService {
       refreshTokenHash,
       userId: user.id,
       expiresAt,
-      userAgent: userAgent ?? null,
-      ipAddress: ipAddress ?? null,
       revokedAt: null,
     });
 
