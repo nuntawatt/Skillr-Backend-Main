@@ -4,12 +4,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { getDatabaseConfig } from '@config/database.config';
 import { AuthLibModule } from '@auth/auth-lib.module';
 
-import { LearningModule } from './learning/learning.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['apps/learning/.env', '.env'],
+      envFilePath: process.env.NODE_ENV === 'development' ? ['apps/payment/.env', '.env'] : undefined,
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -17,7 +16,6 @@ import { LearningModule } from './learning/learning.module';
       inject: [ConfigService],
     }),
     AuthLibModule,
-    LearningModule,
   ],
 })
 export class AppModule {}

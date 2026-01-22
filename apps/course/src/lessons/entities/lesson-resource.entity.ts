@@ -27,7 +27,7 @@ export class LessonResource {
   title?: string;
 
   @Column({ name: 'media_asset_id', type: 'int', nullable: true })
-  mediaAssetId?: number | null; // ✅ PDF file ID
+  mediaAssetId?: number | null;
 
   @Column({ type: 'json', nullable: true })
   meta?: {

@@ -5,7 +5,7 @@ import * as multer from 'multer';
 
 import { ArticlesService } from './articles.service';
 
-const MAX_PDF_SIZE_BYTES = 51 * 1024 * 1024; // 51MB
+const MAX_PDF_SIZE_BYTES = 51 * 1024 * 1024;
 
 @ApiTags('Articles')
 @Controller('articles')

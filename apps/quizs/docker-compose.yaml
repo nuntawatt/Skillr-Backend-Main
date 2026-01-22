@@ -1,33 +1,33 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: skillr_payment_postgres
+    container_name: skillr_quizs_postgres
     env_file:
       - .env.docker
     ports:
-      - "5450:5432"
+      - "5440:5432"
     volumes:
-      - payment_pg_data:/var/lib/postgresql/data
+      - quizs_pg_data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d quizs_db"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  payment:
-    container_name: skillr_payment_api
+  quizs:
+    container_name: skillr_quizs_api
     build:
       context: ../..
-      dockerfile: apps/payment/dockerfile.payment
+      dockerfile: apps/quizs/dockerfile.quizs
     env_file:
       - .env.docker
     ports:
-      - "3005:3005"
+      - "3003:3003"
     depends_on:
       postgres:
         condition: service_healthy
     restart: unless-stopped
 
 volumes:
-  payment_pg_data:
+  quizs_pg_data:
