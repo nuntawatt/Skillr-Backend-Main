@@ -70,7 +70,7 @@ export class UsersService {
     });
   }
 
-  async createLocalAuthAccount(
+  async createEmailAuthAccount(
     user: User,
     email: string,
     password: string,
@@ -79,7 +79,7 @@ export class UsersService {
     const account = this.authAccountRepository.create({
       userId: user.id,
       user,
-      provider: AuthProvider.LOCAL,
+      provider: AuthProvider.EMAIL,
       providerUserId: null,
       email,
       passwordHash,
@@ -170,7 +170,7 @@ export class UsersService {
     }
 
     const account = await this.authAccountRepository.findOne({
-      where: { userId: user.id, provider: AuthProvider.LOCAL },
+      where: { userId: user.id, provider: AuthProvider.EMAIL },
     });
     if (!account) {
       throw new NotFoundException('Local auth account not found');

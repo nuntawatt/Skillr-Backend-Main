@@ -5,9 +5,9 @@ import { User } from './user.entity';
 @Entity('auth_accounts')
 @Index(['provider', 'providerUserId'], { unique: true })
 @Index(['provider', 'email'], { unique: true })
-@Check(`"provider" IN ('LOCAL','GOOGLE')`)
-@Check(`("provider" = 'LOCAL' AND "password_hash" IS NOT NULL) OR ("provider" <> 'LOCAL')`)
-@Check(`("provider" <> 'LOCAL' AND "provider_user_id" IS NOT NULL) OR ("provider" = 'LOCAL')`)
+@Check(`"provider" IN ('EMAIL','GOOGLE')`)
+@Check(`("provider" = 'EMAIL' AND "password_hash" IS NOT NULL) OR ("provider" <> 'EMAIL')`)
+@Check(`("provider" <> 'EMAIL' AND "provider_user_id" IS NOT NULL) OR ("provider" = 'EMAIL')`)
 export class AuthAccount {
   @PrimaryGeneratedColumn('uuid')
   id: string;

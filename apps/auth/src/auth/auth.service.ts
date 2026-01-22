@@ -48,7 +48,7 @@ export class AuthService {
   // Register a new user
   async register(registerDto: RegisterDto): Promise<AuthResponse> {
     const existingAccount = await this.usersService.findAuthAccountByProviderAndEmail(
-      AuthProvider.LOCAL,
+      AuthProvider.EMAIL,
       registerDto.email,
     );
     if (existingAccount) {
@@ -64,7 +64,7 @@ export class AuthService {
       });
     }
 
-    await this.usersService.createLocalAuthAccount(
+    await this.usersService.createEmailAuthAccount(
       user,
       registerDto.email,
       registerDto.password,
@@ -90,7 +90,7 @@ export class AuthService {
     }
 
     const authAccount = await this.usersService.findAuthAccountByProviderAndEmail(
-      AuthProvider.LOCAL,
+      AuthProvider.EMAIL,
       loginDto.email,
     );
     if (!authAccount?.user) {
@@ -180,7 +180,7 @@ export class AuthService {
     const genericMessage = 'If the email exists, an OTP will be sent.';
 
     const authAccount = await this.usersService.findAuthAccountByProviderAndEmail(
-      AuthProvider.LOCAL,
+      AuthProvider.EMAIL,
       email,
     );
     if (!authAccount?.user) {
@@ -219,7 +219,7 @@ export class AuthService {
     const invalidMessage = 'Invalid or expired OTP';
 
     const authAccount = await this.usersService.findAuthAccountByProviderAndEmail(
-      AuthProvider.LOCAL,
+      AuthProvider.EMAIL,
       email,
     );
     if (!authAccount?.user) {
