@@ -26,6 +26,7 @@ import { LearningProgressService } from './learning-progress.service';
 import { CreateQuizDto } from './dto/create-quiz.dto';
 import { UpdateQuizDto } from './dto/update-quiz.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
+import { QuizSolutionResponseDto } from './dto/quiz-solution.dto';
 import { SubmitQuizDto } from './dto/submit-quiz.dto';
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import type { AuthUser } from '@auth';
@@ -324,8 +325,19 @@ export class LearningController {
         return quiz;
       }
 
-      // ถ้าเป็นนักเรียน: ถ้าเคยทำจบแล้ว ให้แสดงเฉลยได้
+      // ถ้าเป็นนักเรียน:
       if (userId) {
+        // 1. ถ้ามี Attempt ที่กำลังทำค้างอยู่ (Active) -> ต้องซ่อนเฉลยเสมอ
+        // (เพื่อให้ Scenario 4 Retake สามารถทำใหม่ได้โดยไม่เห็นเฉลยก่อนส่ง)
+        const activeAttempt = await this.learningService.getActiveAttempt(
+          quiz.id,
+          userId,
+        );
+        if (activeAttempt) {
+          return this.learningService.stripAnswers(quiz, userId);
+        }
+
+        // 2. ถ้าไม่มี Active Attempt แต่เคยทำเสร็จแล้ว -> ให้ดูเฉลยได้
         const hasCompleted = await this.learningService.hasCompletedQuiz(
           quiz.id,
           userId,
@@ -670,7 +682,57 @@ export class LearningController {
   })
   @ApiResponse({
     status: 200,
-    description: 'ตรวจคะแนนและปิด Attempt สำเร็จ',
+    description: 'ตรวจคะแนนและปิด Attempt สำเร็จ (คืนค่าผลคะแนนและเฉลย)',
+    type: QuizSolutionResponseDto,
+    schema: {
+      example: {
+        attemptId: 21,
+        quizId: 7,
+        correctCount: 2,
+        totalQuestions: 3,
+        score: 66.67,
+        passed: true,
+        completedAt: '2026-01-21T10:02:00.000Z',
+        solutions: [
+          {
+            questionId: 31,
+            question: 'TypeScript คืออะไร?',
+            type: 'multiple_choice',
+            options: ['Superset ของ JS', 'เกม', 'กาแฟ'],
+            userAnswer: 'Superset ของ JS',
+            isCorrect: true,
+            correctAnswer: 'Superset ของ JS',
+          },
+          {
+            questionId: 32,
+            question: '2 + 2 = 4 ใช่หรือไม่?',
+            type: 'true_false',
+            options: ['True', 'False'],
+            userAnswer: false,
+            isCorrect: false,
+            correctAnswer: true,
+          },
+          {
+            questionId: 33,
+            question: 'จงจับคู่สัตว์กับเสียง',
+            type: 'match_pairs',
+            options: [
+              { left: 'สุนัข', right: 'โฮ่ง' },
+              { left: 'แมว', right: 'เมี๊ยว' },
+            ],
+            userAnswer: [
+              { left: 'สุนัข', right: 'โฮ่ง' },
+              { left: 'แมว', right: 'เมี๊ยว' },
+            ],
+            isCorrect: true,
+            correctAnswer: [
+              { left: 'สุนัข', right: 'โฮ่ง' },
+              { left: 'แมว', right: 'เมี๊ยว' },
+            ],
+          },
+        ],
+      },
+    },
   })
   @ApiResponse({
     status: 400,
@@ -696,6 +758,54 @@ export class LearningController {
       id,
       getUserIdOrThrow(req.user),
       submitDto,
+    );
+  }
+
+  @Get('quizzes/:id/solution')
+  @ApiOperation({ summary: 'Get solution details for latest completed attempt' })
+  @ApiParam({ name: 'id', example: 7 })
+  @ApiResponse({
+    status: 200,
+    description: 'เฉลยคำตอบล่าสุด (คำตอบที่เลือก vs เฉลยที่ถูกต้อง)',
+    type: QuizSolutionResponseDto,
+    schema: {
+      example: {
+        attemptId: 21,
+        quizId: 7,
+        correctCount: 3,
+        totalQuestions: 3,
+        score: 100.0,
+        passed: true,
+        completedAt: '2026-01-21T10:02:00.000Z',
+        solutions: [
+          {
+            questionId: 31,
+            question: 'TypeScript คืออะไร?',
+            type: 'multiple_choice',
+            options: ['Superset ของ JS', 'เกม', 'กาแฟ'],
+            userAnswer: 'Superset ของ JS',
+            isCorrect: true,
+            correctAnswer: 'Superset ของ JS',
+          },
+        ],
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'ยังไม่มีผลการทำแบบทดสอบสำหรับ Quiz นี้',
+    schema: {
+      example: {
+        statusCode: 404,
+        message: 'ยังไม่มีผลการทำแบบทดสอบสำหรับ Quiz นี้',
+        error: 'Not Found',
+      },
+    },
+  })
+  getQuizSolution(@Param('id') id: string, @Request() req: RequestWithUser) {
+    return this.learningService.getQuizSolution(
+      id,
+      getUserIdOrThrow(req.user),
     );
   }
 

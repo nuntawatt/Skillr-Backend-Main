@@ -12,6 +12,7 @@ import { LearningProgressService } from './learning-progress.service';
 import { CreateQuestionDto, CreateQuizDto } from './dto/create-quiz.dto';
 import { UpdateQuizDto } from './dto/update-quiz.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
+import { QuizSolutionResponseDto } from './dto/quiz-solution.dto';
 import { SubmitQuizDto } from './dto/submit-quiz.dto';
 
 @Injectable()
@@ -392,6 +393,20 @@ export class LearningService {
     return Boolean(completed);
   }
 
+  async getActiveAttempt(
+    quizId: number | string,
+    userId: string | number,
+  ): Promise<QuizAttempt | null> {
+    return this.attemptRepository.findOne({
+      where: {
+        quizId: Number(quizId),
+        userId: Number(userId),
+        completedAt: IsNull(),
+      },
+      order: { startedAt: 'DESC' },
+    });
+  }
+
   async saveProgress(
     quizId: string,
     userId: string,
@@ -446,7 +461,7 @@ export class LearningService {
     quizId: string,
     userId: string,
     submitDto: SubmitQuizDto,
-  ): Promise<QuizAttempt> {
+  ): Promise<QuizSolutionResponseDto> {
     const quiz = await this.findOneQuiz(quizId);
     const numericQuizId = Number(quizId);
     const numericUserId = Number(userId);
@@ -675,7 +690,78 @@ export class LearningService {
       );
     }
 
-    return savedAttempt;
+    // Return structured solution response for Scenario 2 & 3
+    return this.getQuizSolution(String(quiz.id), userId);
+  }
+
+  async getQuizSolution(
+    quizId: string,
+    userId: string,
+  ): Promise<QuizSolutionResponseDto> {
+    const numericQuizId = Number(quizId);
+    const numericUserId = Number(userId);
+
+    const quiz = await this.findOneQuiz(quizId);
+    const attempt = await this.attemptRepository.findOne({
+      where: {
+        quizId: numericQuizId,
+        userId: numericUserId,
+        completedAt: Not(IsNull()),
+      },
+      order: { completedAt: 'DESC' },
+    });
+
+    if (!attempt) {
+      throw new NotFoundException(
+        'ยังไม่มีผลการทำแบบทดสอบสำหรับ Quiz นี้',
+      );
+    }
+
+    const answersByQuestion = new Map(
+      (attempt.answers || []).map((ans) => [ans.questionId, ans.answer]),
+    );
+    const resultsByQuestion = new Map(
+      (attempt.results || []).map((result) => [
+        result.questionId,
+        result.isCorrect,
+      ]),
+    );
+
+    const solutions = quiz.questions.map((question) => {
+      const userAnswer = answersByQuestion.get(question.id);
+      let isCorrect = resultsByQuestion.get(question.id);
+
+      if (isCorrect === undefined) {
+        isCorrect =
+          userAnswer === undefined
+            ? false
+            : this.isAnswerCorrect(question, userAnswer);
+      }
+
+      return {
+        questionId: question.id,
+        question: question.question,
+        type: question.type,
+        options: question.options,
+        userAnswer: userAnswer ?? null,
+        isCorrect,
+        correctAnswer: question.correctAnswer,
+      };
+    });
+
+    const totalQuestions = quiz.questions.length;
+    const correctCount = solutions.filter((s) => s.isCorrect).length;
+
+    return {
+      attemptId: attempt.id,
+      quizId: numericQuizId,
+      correctCount,
+      totalQuestions,
+      score: Number(attempt.score ?? 0),
+      passed: attempt.passed,
+      completedAt: attempt.completedAt?.toISOString(),
+      solutions,
+    };
   }
 
   private isAnswerCorrect(question: Question, submittedAnswer: any): boolean {
