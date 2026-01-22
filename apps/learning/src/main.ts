@@ -36,12 +36,13 @@ async function bootstrap() {
   });
   
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
   app.setGlobalPrefix('api');
 
   const port = Number(process.env.PORT ?? 3003);
   await app.listen(port);
   
-  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+  
   logger.log(`Learning service listening on http://localhost:${port}/api`);
   logger.log(`Swagger docs available at http://localhost:${port}/docs/learning`);
 }
