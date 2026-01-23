@@ -9,20 +9,10 @@ import {
   UseGuards,
   Request,
   Query,
-  UnauthorizedException,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiBearerAuth,
-  ApiQuery,
-  ApiResponse,
-  ApiBody,
-  ApiParam,
+import {ApiTags,ApiOperation,ApiBearerAuth,ApiQuery,ApiResponse,ApiBody,ApiParam,
 } from '@nestjs/swagger';
-import { LearningService } from './learning.service';
-import { LearningDashboardService } from './learning-dashboard.service';
-import { LearningProgressService } from './learning-progress.service';
+import { QuizService } from './quiz.service';
 import { CreateQuizDto } from './dto/create-quiz.dto';
 import { UpdateQuizDto } from './dto/update-quiz.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
@@ -46,19 +36,16 @@ function getUserIdOrThrow(user?: AuthUser): string {
   // throw new UnauthorizedException();
 }
 
-@ApiTags('Quiz & Learning Progress')
+@ApiTags('Quiz')
 @ApiBearerAuth()
-@Controller('learning')
-// @UseGuards(JwtAuthGuard)
-export class LearningController {
+@Controller('quizzes')
+export class QuizController {
   constructor(
-    private readonly learningService: LearningService,
-    private readonly learningProgressService: LearningProgressService,
-    private readonly learningDashboardService: LearningDashboardService,
+    private readonly quizService: QuizService,
   ) {}
 
   // Quiz CRUD
-  @Post('quizzes')
+  @Post()
   @ApiOperation({ summary: 'Create a new quiz with questions' })
   @ApiBody({
     type: CreateQuizDto,
@@ -185,31 +172,32 @@ export class LearningController {
     },
   })
   @ApiResponse({
+    status: 201,
+    description: 'Quiz created successfully.',
+  })
+  @ApiResponse({
     status: 400,
-    description: 'Validation error / quota exceeded',
+    description: 'Invalid input data.',
     schema: {
       example: {
         statusCode: 400,
         error: 'Bad Request',
-        message:
-          '1 Lesson สามารถมีคำถามรวมได้สูงสุด 3 ข้อ (ปัจจุบันมีแล้ว 3 ข้อ)',
+        message: '1 Lesson สามารถมีคำถามรวมได้สูงสุด 3 ข้อ (ปัจจุบันมีแล้ว 3 ข้อ)',
       },
     },
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal Server Error.',
   })
   // @UseGuards(RolesGuard)
   // @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
   createQuiz(@Body() createQuizDto: CreateQuizDto) {
-    return this.learningService.createQuiz(createQuizDto);
+    return this.quizService.createQuiz(createQuizDto);
   }
 
-  @Get('quizzes')
-  @ApiOperation({ summary: 'Get all quizzes, optionally filtered by lessonId' })
-  @ApiQuery({
-    name: 'lessonId',
-    required: false,
-    example: 1,
-    description: 'กรองรายการ Quiz ตาม lessonId',
-  })
+  @Get()
+  @ApiOperation({ summary: 'Get all quizzes' })
   @ApiResponse({
     status: 200,
     description: 'รายการ Quiz (questions จะถูกเรียงตาม order ASC)',
@@ -241,7 +229,7 @@ export class LearningController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Invalid query param',
+    description: 'Invalid input data.',
     schema: {
       example: {
         statusCode: 400,
@@ -250,11 +238,14 @@ export class LearningController {
       },
     },
   })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal Server Error.',
+  })
   findAllQuizzes(
     @Request() req: RequestWithUser,
-    @Query('lessonId') lessonId?: string,
   ) {
-    const quizzesPromise = this.learningService.findAllQuizzes(lessonId);
+    const quizzesPromise = this.quizService.findAllQuizzes();
     return quizzesPromise.then(async (list) => {
       const user = req.user;
       const isAdminOrInstructor =
@@ -263,14 +254,14 @@ export class LearningController {
 
       if (!isAdminOrInstructor) {
         return Promise.all(
-          list.map((q) => this.learningService.stripAnswers(q, userId)),
+          list.map((q) => this.quizService.stripAnswers(q, userId)),
         );
       }
       return list;
     });
   }
 
-  @Get('quizzes/:id')
+  @Get(':id')
   @ApiOperation({ summary: 'Get quiz by id' })
   @ApiParam({ name: 'id', example: 7 })
   @ApiResponse({
@@ -311,8 +302,12 @@ export class LearningController {
       },
     },
   })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal Server Error.',
+  })
   findOneQuiz(@Param('id') id: string, @Request() req: RequestWithUser) {
-    const quizPromise = this.learningService.findOneQuiz(id);
+    const quizPromise = this.quizService.findOneQuiz(id);
 
     return quizPromise.then(async (quiz) => {
       const user = req.user;
@@ -329,16 +324,16 @@ export class LearningController {
       if (userId) {
         // 1. ถ้ามี Attempt ที่กำลังทำค้างอยู่ (Active) -> ต้องซ่อนเฉลยเสมอ
         // (เพื่อให้ Scenario 4 Retake สามารถทำใหม่ได้โดยไม่เห็นเฉลยก่อนส่ง)
-        const activeAttempt = await this.learningService.getActiveAttempt(
+        const activeAttempt = await this.quizService.getActiveAttempt(
           quiz.id,
           userId,
         );
         if (activeAttempt) {
-          return this.learningService.stripAnswers(quiz, userId);
+          return this.quizService.stripAnswers(quiz, userId);
         }
 
         // 2. ถ้าไม่มี Active Attempt แต่เคยทำเสร็จแล้ว -> ให้ดูเฉลยได้
-        const hasCompleted = await this.learningService.hasCompletedQuiz(
+        const hasCompleted = await this.quizService.hasCompletedQuiz(
           quiz.id,
           userId,
         );
@@ -348,11 +343,11 @@ export class LearningController {
       }
 
       // กรณียังไม่ทำหรือยังไม่จบ -> ซ่อนเฉลย + สลับตัวเลือก
-      return this.learningService.stripAnswers(quiz, userId);
+      return this.quizService.stripAnswers(quiz, userId);
     });
   }
 
-  @Patch('quizzes/:id')
+  @Patch(':id')
   // @UseGuards(RolesGuard)
   // @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
   @ApiBody({
@@ -380,7 +375,7 @@ export class LearningController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Validation error / too many questions',
+    description: 'Invalid input data.',
     schema: {
       example: {
         statusCode: 400,
@@ -400,11 +395,15 @@ export class LearningController {
       },
     },
   })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal Server Error.',
+  })
   updateQuiz(@Param('id') id: string, @Body() updateQuizDto: UpdateQuizDto) {
-    return this.learningService.updateQuiz(id, updateQuizDto);
+    return this.quizService.updateQuiz(id, updateQuizDto);
   }
 
-  @Delete('quizzes/:id')
+  @Delete(':id')
   // @UseGuards(RolesGuard)
   // @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
   @ApiOperation({ summary: 'Delete quiz' })
@@ -425,114 +424,15 @@ export class LearningController {
       },
     },
   })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal Server Error.',
+  })
   removeQuiz(@Param('id') id: string) {
-    return this.learningService.removeQuiz(id);
+    return this.quizService.removeQuiz(id);
   }
 
-  @Delete('questions/:id')
-  // @UseGuards(RolesGuard)
-  // @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
-  @ApiOperation({ summary: 'Delete question (and re-index remaining questions)' })
-  @ApiParam({ name: 'id', example: 13 })
-  @ApiResponse({
-    status: 200,
-    description: 'ลบคำถามสำเร็จ และระบบจะ re-index order ของคำถามที่เหลือใน quiz เดียวกัน',
-    schema: { example: { success: true } },
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Question not found',
-    schema: {
-      example: {
-        statusCode: 404,
-        error: 'Not Found',
-        message: 'Question not found',
-      },
-    },
-  })
-  removeQuestion(@Param('id') id: string) {
-    return this.learningService.removeQuestion(Number(id));
-  }
-
-  @Patch('questions/:id')
-  // @UseGuards(RolesGuard)
-  // @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
-  @ApiBody({
-    type: UpdateQuestionDto,
-    examples: {
-      update_mc: {
-        summary: 'Update question (Multiple Choice)',
-        value: {
-          question: 'ข้อใดคือหน่วยประมวลผลกลาง?',
-          type: 'multiple_choice',
-          options: ['RAM', 'CPU', 'GPU', 'SSD'],
-          correctAnswer: 'CPU',
-        },
-      },
-      update_true_false: {
-        summary: 'Update question (True/False)',
-        value: {
-          question: 'อินเทอร์เน็ตคือเครือข่ายคอมพิวเตอร์ที่เชื่อมโยงกันทั่วโลก',
-          type: 'true_false',
-          correctAnswerBool: true,
-        },
-      },
-      update_match_pairs: {
-        summary: 'Update question (Match Pairs)',
-        value: {
-          question: 'จงจับคู่เครื่องหมายกับชื่อเรียกให้ถูกต้อง',
-          type: 'match_pairs',
-          optionsPairs: [
-            { left: '[]', right: 'Array' },
-            { left: '{}', right: 'Object' },
-          ],
-        },
-      },
-      update_correct_order: {
-        summary: 'Update question (Correct Order)',
-        value: {
-          question: 'จงเรียงลำดับขั้นตอนตอนเช้า',
-          type: 'correct_order',
-          optionsOrder: [
-            { text: 'ตื่นนอน' },
-            { text: 'แปรงฟัน' },
-            { text: 'ไปทำงาน' },
-          ],
-        },
-      },
-    },
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Validation error',
-    schema: {
-      example: {
-        statusCode: 400,
-        error: 'Bad Request',
-        message: ['options must contain at least 3 elements'],
-      },
-    },
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Question not found',
-    schema: {
-      example: {
-        statusCode: 404,
-        error: 'Not Found',
-        message: 'Question not found',
-      },
-    },
-  })
-  updateQuestion(
-    @Param('id') id: string,
-    @Body() updateQuestionDto: UpdateQuestionDto,
-  ) {
-    return this.learningService.updateQuestion(Number(id), updateQuestionDto);
-  }
-
-  // Quiz attempts
-  @Post('quizzes/:id/start')
+  @Post(':id/start')
   @ApiOperation({ summary: 'Start a quiz attempt (or continue existing one)' })
   @ApiParam({ name: 'id', example: 7 })
   @ApiQuery({
@@ -566,7 +466,7 @@ export class LearningController {
     @Request() req: RequestWithUser,
     @Query('retry') retry?: string,
   ) {
-    return this.learningService.startQuiz(id, getUserIdOrThrow(req.user), {
+    return this.quizService.startQuiz(id, getUserIdOrThrow(req.user), {
       retry:
         typeof retry === 'string'
           ? ['true', '1'].includes(retry.trim().toLowerCase())
@@ -574,42 +474,7 @@ export class LearningController {
     });
   }
 
-  @Post('quizzes/:id/save-progress')
-  @ApiOperation({ summary: 'Save quiz progress (Draft)' })
-  @ApiParam({ name: 'id', example: 7 })
-  @ApiBody({
-    type: SubmitQuizDto,
-    examples: {
-      save_single_answer: {
-        summary: 'Save just one answer (Draft)',
-        value: {
-          answers: [{ questionId: 31, answer: 'JavaScript' }],
-        },
-      },
-      save_multiple_answers: {
-        summary: 'Save multiple answers (Merge with existing)',
-        value: {
-          answers: [
-            { questionId: 32, answer: true },
-            { questionId: 33, answer: 'const' },
-          ],
-        },
-      },
-    },
-  })
-  saveProgress(
-    @Param('id') id: string,
-    @Body() submitDto: SubmitQuizDto,
-    @Request() req: RequestWithUser,
-  ) {
-    return this.learningService.saveProgress(
-      id,
-      getUserIdOrThrow(req.user),
-      submitDto,
-    );
-  }
-
-  @Post('quizzes/:id/submit')
+  @Post(':id/submit')
   @ApiOperation({ summary: 'Submit answers for a quiz attempt (Finalize)' })
   @ApiBody({
     type: SubmitQuizDto,
@@ -736,7 +601,7 @@ export class LearningController {
   })
   @ApiResponse({
     status: 400,
-    description: 'กรณีที่ไม่มี Attempt ค้างอยู่ หรือเคยทำเสร็จไปแล้ว (ห้ามส่งซ้ำ)',
+    description: 'Invalid input data.',
     schema: {
       example: {
         statusCode: 400,
@@ -749,19 +614,23 @@ export class LearningController {
     status: 404,
     description: 'Quiz not found',
   })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal Server Error.',
+  })
   submitQuiz(
     @Param('id') id: string,
     @Body() submitDto: SubmitQuizDto,
     @Request() req: RequestWithUser,
   ) {
-    return this.learningService.submitQuiz(
+    return this.quizService.submitQuiz(
       id,
       getUserIdOrThrow(req.user),
       submitDto,
     );
   }
 
-  @Get('quizzes/:id/solution')
+  @Get(':id/solution')
   @ApiOperation({ summary: 'Get solution details for latest completed attempt' })
   @ApiParam({ name: 'id', example: 7 })
   @ApiResponse({
@@ -803,13 +672,13 @@ export class LearningController {
     },
   })
   getQuizSolution(@Param('id') id: string, @Request() req: RequestWithUser) {
-    return this.learningService.getQuizSolution(
+    return this.quizService.getQuizSolution(
       id,
       getUserIdOrThrow(req.user),
     );
   }
 
-  @Get('quizzes/:id/attempts')
+  @Get(':id/attempts')
   @ApiOperation({ summary: 'Get my attempts for a quiz' })
   @ApiParam({ name: 'id', example: 7 })
   @ApiResponse({
@@ -850,121 +719,136 @@ export class LearningController {
     },
   })
   getMyAttempts(@Param('id') id: string, @Request() req: RequestWithUser) {
-    return this.learningService.getAttempts(id, getUserIdOrThrow(req.user));
+    return this.quizService.getAttempts(id, getUserIdOrThrow(req.user));
   }
+}
 
-  @Post('lessons/:id/complete')
-  @ApiOperation({ summary: 'Mark lesson as completed' })
-  @ApiParam({ name: 'id', example: 1 })
+@ApiTags('Question')
+@ApiBearerAuth()
+@Controller('questions')
+export class QuestionController {
+  constructor(private readonly quizService: QuizService) {}
+
+  @Delete(':id')
+  // @UseGuards(RolesGuard)
+  // @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
+  @ApiOperation({ summary: 'Delete question (and re-index remaining questions)' })
+  @ApiParam({ name: 'id', example: 13 })
   @ApiResponse({
     status: 200,
-    description: 'บันทึก lesson completed (upsert)',
+    description: 'ลบคำถามสำเร็จ และระบบจะ re-index order ของคำถามที่เหลือใน quiz เดียวกัน',
+    schema: { example: { success: true } },
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Question not found',
     schema: {
       example: {
-        id: 5,
-        userId: 1,
-        lessonId: 1,
-        completedAt: '2026-01-14T10:05:00.000Z',
+        statusCode: 404,
+        error: 'Not Found',
+        message: 'Question not found',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal Server Error.',
+  })
+  removeQuestion(@Param('id') id: string) {
+    return this.quizService.removeQuestion(Number(id));
+  }
+
+  @Patch(':id')
+  // @UseGuards(RolesGuard)
+  // @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
+  @ApiBody({
+    type: UpdateQuestionDto,
+    examples: {
+      update_mc: {
+        summary: 'Update question (Multiple Choice)',
+        value: {
+          question: 'ข้อใดคือหน่วยประมวลผลกลาง?',
+          type: 'multiple_choice',
+          options: ['RAM', 'CPU', 'GPU', 'SSD'],
+          correctAnswer: 'CPU',
+        },
+      },
+      update_true_false: {
+        summary: 'Update question (True/False)',
+        value: {
+          question: 'อินเทอร์เน็ตคือเครือข่ายคอมพิวเตอร์ที่เชื่อมโยงกันทั่วโลก',
+          type: 'true_false',
+          correctAnswerBool: true,
+        },
+      },
+      update_match_pairs: {
+        summary: 'Update question (Match Pairs)',
+        value: {
+          question: 'จงจับคู่เครื่องหมายกับชื่อเรียกให้ถูกต้อง',
+          type: 'match_pairs',
+          optionsPairs: [
+            { left: '[]', right: 'Array' },
+            { left: '{}', right: 'Object' },
+          ],
+        },
+      },
+      update_correct_order: {
+        summary: 'Update question (Correct Order)',
+        value: {
+          question: 'จงเรียงลำดับขั้นตอนตอนเช้า',
+          type: 'correct_order',
+          optionsOrder: [
+            { text: 'ตื่นนอน' },
+            { text: 'แปรงฟัน' },
+            { text: 'ไปทำงาน' },
+          ],
+        },
       },
     },
   })
   @ApiResponse({
     status: 400,
-    description: 'Invalid id param',
+    description: 'Invalid input data.',
     schema: {
       example: {
         statusCode: 400,
         error: 'Bad Request',
-        message: 'Validation failed (numeric string is expected)',
+        message: ['options must contain at least 3 elements'],
       },
     },
   })
-  completeLesson(@Param('id') id: string, @Request() req: RequestWithUser) {
-    return this.learningProgressService.completeLesson(
-      getUserIdOrThrow(req.user),
-      id,
-    );
+  @ApiResponse({
+    status: 404,
+    description: 'Question not found',
+    schema: {
+      example: {
+        statusCode: 404,
+        error: 'Not Found',
+        message: 'Question not found',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal Server Error.',
+  })
+  updateQuestion(
+    @Param('id') id: string,
+    @Body() updateQuestionDto: UpdateQuestionDto,
+  ) {
+    return this.quizService.updateQuestion(Number(id), updateQuestionDto);
   }
+}
 
-  @Get('progress')
-  @ApiOperation({ summary: 'Get progress summary' })
-  @ApiResponse({
-    status: 200,
-    description: 'สรุป progress ของ user',
-    schema: {
-      example: {
-        totalCompleted: 5,
-        streakDays: 3,
-        lastCompletedAt: '2026-01-14T10:05:00.000Z',
-      },
-    },
-  })
-  getProgressSummary(@Request() req: RequestWithUser) {
-    return this.learningProgressService.getSummary(getUserIdOrThrow(req.user));
-  }
+@ApiTags('Internal')
+@Controller('users')
+export class InternalController {
+  constructor(private readonly quizService: QuizService) {}
 
-  @Get('lessons/:id/progress')
-  @ApiOperation({ summary: 'Get progress for a specific lesson' })
-  @ApiParam({ name: 'id', example: 1 })
-  @ApiResponse({
-    status: 200,
-    description:
-      'สถานะ progress ของ lesson นี้ (ถ้ายังไม่เคย complete อาจเป็น null)',
-    schema: {
-      example: {
-        id: 5,
-        userId: 1,
-        lessonId: 1,
-        completedAt: '2026-01-14T10:05:00.000Z',
-      },
-    },
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid id param',
-    schema: {
-      example: {
-        statusCode: 400,
-        error: 'Bad Request',
-        message: 'Validation failed (numeric string is expected)',
-      },
-    },
-  })
-  getLessonProgress(@Param('id') id: string, @Request() req: RequestWithUser) {
-    return this.learningProgressService.getLessonProgress(
-      getUserIdOrThrow(req.user),
-      id,
-    );
-  }
-
-  @Get('dashboard')
-  @ApiOperation({ summary: 'Get learning dashboard' })
-  @ApiResponse({
-    status: 200,
-    description: 'Dashboard รวม progress + สถิติการทำ quiz',
-    schema: {
-      example: {
-        progress: {
-          totalCompleted: 5,
-          streakDays: 3,
-          lastCompletedAt: '2026-01-14T10:05:00.000Z',
-        },
-        quizzes: {
-          totalAttempts: 12,
-          passedAttempts: 8,
-          latestAttempt: {
-            quizId: 7,
-            score: 100,
-            passed: true,
-            completedAt: '2026-01-14T10:02:00.000Z',
-          },
-        },
-      },
-    },
-  })
-  getDashboard(@Request() req: RequestWithUser) {
-    return this.learningDashboardService.getDashboard(
-      getUserIdOrThrow(req.user),
-    );
+  @Get(':userId/stats')
+  @ApiOperation({ summary: 'Get quiz stats for a user (Internal)' })
+  @ApiParam({ name: 'userId', example: '1' })
+  getUserStats(@Param('userId') userId: string) {
+    return this.quizService.getUserAttemptStats(userId);
   }
 }
