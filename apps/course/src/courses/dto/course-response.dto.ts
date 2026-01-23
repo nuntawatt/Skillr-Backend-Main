@@ -1,42 +1,36 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CourseResponseDto {
-  @ApiProperty()
+  @ApiProperty({ description: 'Course ID', example: 1 })
   id: number;
 
-  @ApiPropertyOptional()
-  cover_media_asset_id?: number;
-
-  @ApiProperty()
-  title: string;
-
-  @ApiPropertyOptional()
-  media_assets_id?: number;
-
-  @ApiPropertyOptional()
-  description?: string;
-
-  @ApiProperty()
-  level: string;
-
-  @ApiProperty()
-  price: number;
-
-  @ApiProperty()
-  tags: string[];
-
-  @ApiProperty()
+  @ApiProperty({ description: 'Owner user ID', example: 1 })
   ownerUserId: number;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Course title', example: 'Introduction to TypeScript' })
+  title: string;
+
+  @ApiPropertyOptional({ description: 'Course description' })
+  description?: string;
+
+  @ApiPropertyOptional({ description: 'Cover image media asset ID' })
+  coverMediaAssetId?: number;
+
+  @ApiPropertyOptional({ description: 'Intro video media asset ID' })
+  introMediaAssetId?: number;
+
+  @ApiProperty({ description: 'Estimated time in seconds', example: 3600 })
+  estimateTimeSeconds: number;
+
+  @ApiProperty({ description: 'Is the course published', example: false })
   isPublished: boolean;
 
-  @ApiProperty()
-  durationSeconds: number;
+  @ApiPropertyOptional({ description: 'Category ID' })
+  categoryId?: number;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Creation timestamp' })
   createdAt: Date;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Last update timestamp' })
   updatedAt: Date;
 }
