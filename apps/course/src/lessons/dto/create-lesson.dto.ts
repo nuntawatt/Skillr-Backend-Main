@@ -1,43 +1,48 @@
-import { Type } from 'class-transformer';
-import { IsString, IsOptional, IsInt, Min } from 'class-validator';
-import { ApiPropertyOptional } from '@nestjs/swagger';
-
-// maximum PDF size: 51 MB
-export const MAX_PDF_SIZE_BYTES = 51 * 1024 * 1024;
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsOptional, IsNumber, IsEnum, MaxLength, Min } from 'class-validator';
+import { LessonType, LessonRefSource } from '../entities/lesson.entity';
 
 export class CreateLessonDto {
-  @ApiPropertyOptional({
-    description: 'Title of the lesson',
-    example: 'Introduction to NestJS',
-  })
+  @ApiProperty({ description: 'Lesson title', example: 'Introduction to Variables' })
   @IsString()
+  @MaxLength(255)
   title: string;
 
-  @ApiPropertyOptional({
-    description: 'Content text of the lesson',
-    example: 'This is the content of the lesson.',
-  })
+  @ApiPropertyOptional({ description: 'Lesson description', example: 'Learn about variable types' })
   @IsOptional()
   @IsString()
-  content_text?: string;
+  description?: string;
 
-  @ApiPropertyOptional({
-    description: 'Media asset ID (e.g., uploaded video id) associated with the lesson',
-    example: 42,
-  })
-  @IsOptional()
-  @IsInt()
+  @ApiProperty({ description: 'Chapter ID this lesson belongs to', example: 1 })
+  @IsNumber()
   @Min(1)
-  @Type(() => Number)
-  media_asset_id?: number;
+  chapterId: number;
 
-  @ApiPropertyOptional({
-    description: 'PDF media asset ID (media service ID). We store only the id here.',
-    example: 123,
+  @ApiProperty({
+    description: 'Lesson type',
+    enum: LessonType,
+    example: LessonType.ARTICLE,
   })
-  @IsOptional()
-  @IsInt()
+  @IsEnum(LessonType)
+  type: LessonType;
+
+  @ApiProperty({
+    description: 'Reference source where content is stored',
+    enum: LessonRefSource,
+    example: LessonRefSource.COURSE,
+  })
+  @IsEnum(LessonRefSource)
+  refSource: LessonRefSource;
+
+  @ApiProperty({ description: 'Reference ID pointing to the content', example: 1 })
+  @IsNumber()
   @Min(1)
-  @Type(() => Number)
-  pdf_media_asset_id?: number;
+  refId: number;
+
+  @ApiPropertyOptional({ description: 'Order index within the chapter', example: 0, default: 0 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  orderIndex?: number;
 }
+

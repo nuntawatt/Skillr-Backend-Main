@@ -1,128 +1,228 @@
-import { BadRequestException, Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Lesson } from './entities/lesson.entity';
-import { CreateLessonDto } from './dto/create-lesson.dto';
-import { UpdateLessonDto } from './dto/update-lesson.dto';
-import { LessonResource, LessonResourceType } from './entities/lesson-resource.entity';
-import { CreateLessonResourceDto } from './dto/create-lesson-resource.dto';
+import { Repository, DataSource } from 'typeorm';
+import { Lesson, LessonType, LessonRefSource } from './entities/lesson.entity';
+import { Chapter } from '../chapters/entities/chapter.entity';
+import { Article } from '../articles/entities/article.entity';
+import { CreateLessonDto, UpdateLessonDto, LessonResponseDto } from './dto/lesson';
 
 @Injectable()
 export class LessonsService {
-  private readonly logger = new Logger(LessonsService.name);
-
   constructor(
     @InjectRepository(Lesson)
     private readonly lessonRepository: Repository<Lesson>,
-    @InjectRepository(LessonResource)
-    private readonly lessonResourceRepository: Repository<LessonResource>,
-  ) { }
+    @InjectRepository(Chapter)
+    private readonly chapterRepository: Repository<Chapter>,
+    @InjectRepository(Article)
+    private readonly articleRepository: Repository<Article>,
+    private readonly dataSource: DataSource,
+  ) {}
 
-  async create(createLessonDto: CreateLessonDto): Promise<Lesson> {
-    // Auto-generate position (get max position + 1)
-    const maxPositionResult = await this.lessonRepository
-      .createQueryBuilder('lesson')
-      .select('MAX(lesson.position)', 'maxPosition')
-      .getRawOne();
-    const nextPosition = (maxPositionResult?.maxPosition ?? -1) + 1;
+  // Create a new lesson for a chapter
+  async create(createLessonDto: CreateLessonDto): Promise<LessonResponseDto> {
+    // Verify chapter exists
+    const chapter = await this.chapterRepository.findOne({
+      where: { id: createLessonDto.chapterId },
+    });
+
+    if (!chapter) {
+      throw new NotFoundException(`Chapter with ID ${createLessonDto.chapterId} not found`);
+    }
+
+    // Validate refSource matches type
+    if (createLessonDto.type === LessonType.ARTICLE && createLessonDto.refSource !== LessonRefSource.COURSE) {
+      throw new BadRequestException('Article lessons must have refSource = course');
+    }
+
+    if (createLessonDto.type === LessonType.VIDEO && createLessonDto.refSource !== LessonRefSource.MEDIA) {
+      throw new BadRequestException('Video lessons must have refSource = media');
+    }
+
+    if (createLessonDto.type === LessonType.QUIZ && createLessonDto.refSource !== LessonRefSource.QUIZ) {
+      throw new BadRequestException('Quiz lessons must have refSource = quiz');
+    }
+
+    // Auto-generate orderIndex if not provided
+    let orderIndex = createLessonDto.orderIndex;
+    if (orderIndex === undefined) {
+      const maxOrderResult = await this.lessonRepository
+        .createQueryBuilder('lesson')
+        .where('lesson.chapterId = :chapterId', { chapterId: createLessonDto.chapterId })
+        .select('MAX(lesson.orderIndex)', 'maxOrder')
+        .getRawOne();
+      orderIndex = (maxOrderResult?.maxOrder ?? -1) + 1;
+    }
 
     const lesson = this.lessonRepository.create({
       title: createLessonDto.title,
-      contentText: createLessonDto.content_text,
-      mediaAssetId:
-        createLessonDto.media_asset_id !== undefined && createLessonDto.media_asset_id !== null
-          ? Number(createLessonDto.media_asset_id)
-          : null,
-      pdfMediaAssetId:
-        createLessonDto.pdf_media_asset_id !== undefined && createLessonDto.pdf_media_asset_id !== null
-          ? Number(createLessonDto.pdf_media_asset_id)
-          : null,
-      position: nextPosition,
+      description: createLessonDto.description,
+      chapterId: createLessonDto.chapterId,
+      type: createLessonDto.type,
+      refSource: createLessonDto.refSource,
+      refId: createLessonDto.refId,
+      orderIndex,
     });
 
-    return this.lessonRepository.save(lesson);
+    const saved = await this.lessonRepository.save(lesson);
+    return this.toResponseDto(saved);
   }
 
-  async findAll(courseId?: number): Promise<Lesson[]> {
-    const query = this.lessonRepository
-      .createQueryBuilder('lesson')
-      .leftJoinAndSelect('lesson.course', 'course')
-      .orderBy('lesson.position', 'ASC');
+  // Create a new article lesson along with its Article entity
+  async createArticleLesson(
+    createLessonDto: Omit<CreateLessonDto, 'type' | 'refSource' | 'refId'>,
+    content: any,
+  ): Promise<LessonResponseDto> {
+    return await this.dataSource.transaction(async (manager) => {
+      // Verify chapter exists
+      const chapter = await manager.findOne(Chapter, {
+        where: { id: createLessonDto.chapterId },
+      });
 
-    if (courseId !== undefined) {
-      query.where('lesson.course_id = :courseId', { courseId });
-    }
-
-    return query.getMany();
-  }
-
-  async findOne(id: number): Promise<Lesson> {
-    const lesson = await this.lessonRepository.findOne({
-      where: { id },
-      relations: ['course', 'resources'],
-    });
-    if (!lesson) {
-      throw new NotFoundException(`Lesson with ID ${id} not found`);
-    }
-    return lesson;
-  }
-
-  async createResource(lessonId: number, dto: CreateLessonResourceDto) {
-    // validate lesson exists
-    const lesson = await this.findOne(lessonId);
-
-    if (dto.type === LessonResourceType.VIDEO) {
-      if (!dto.media_asset_id) {
-        throw new BadRequestException('media_asset_id is required for video');
+      if (!chapter) {
+        throw new NotFoundException(`Chapter with ID ${createLessonDto.chapterId} not found`);
       }
-    }
 
-    const resource = this.lessonResourceRepository.create({
-      lesson: lesson,
-      type: dto.type,
-      title: dto.title,
-      url: dto.url,
-      filename: dto.filename,
-      mimeType: dto.mime_type,
-      mediaAssetId: dto.media_asset_id ?? null,
-      meta: dto.meta,
-      position: dto.position,
-    }as Partial<LessonResource>);
+      // Auto-generate orderIndex if not provided
+      let orderIndex = createLessonDto.orderIndex;
+      if (orderIndex === undefined) {
+        const maxOrderResult = await manager
+          .createQueryBuilder(Lesson, 'lesson')
+          .where('lesson.chapterId = :chapterId', { chapterId: createLessonDto.chapterId })
+          .select('MAX(lesson.orderIndex)', 'maxOrder')
+          .getRawOne();
+        orderIndex = (maxOrderResult?.maxOrder ?? -1) + 1;
+      }
 
-    const saved = await this.lessonResourceRepository.save(resource);
-    return { resourceId: saved.id };
+      // Create article first to get its ID
+      const article = manager.create(Article, {
+        content,
+        lessonId: 0, // Will be updated after lesson creation
+      });
+
+      // We need to save the lesson first to get its ID
+      const lesson = manager.create(Lesson, {
+        title: createLessonDto.title,
+        description: createLessonDto.description,
+        chapterId: createLessonDto.chapterId,
+        type: LessonType.ARTICLE,
+        refSource: LessonRefSource.COURSE,
+        refId: 0, // Will be updated
+        orderIndex,
+      });
+
+      const savedLesson = await manager.save(lesson);
+
+      // Now create the article with the lesson ID
+      article.lessonId = savedLesson.id;
+      const savedArticle = await manager.save(article);
+
+      // Update the lesson with the article's ID
+      savedLesson.refId = savedArticle.id;
+      await manager.save(savedLesson);
+
+      return this.toResponseDto(savedLesson);
+    });
   }
 
-  async update(id: number, updateLessonDto: UpdateLessonDto): Promise<Lesson> {
+  // Find all lessons for a chapter
+  async findByChapter(chapterId: number): Promise<LessonResponseDto[]> {
+    const lessons = await this.lessonRepository.find({
+      where: { chapterId },
+      order: { orderIndex: 'ASC' },
+    });
+
+    return lessons.map((l) => this.toResponseDto(l));
+  }
+
+  // Find a lesson by ID
+  async findOne(id: number): Promise<LessonResponseDto> {
     const lesson = await this.lessonRepository.findOne({ where: { id } });
+
     if (!lesson) {
       throw new NotFoundException(`Lesson with ID ${id} not found`);
     }
 
-    // patch-only updates
+    return this.toResponseDto(lesson);
+  }
+
+  // Update a lesson
+  async update(id: number, updateLessonDto: UpdateLessonDto): Promise<LessonResponseDto> {
+    const lesson = await this.lessonRepository.findOne({ where: { id } });
+
+    if (!lesson) {
+      throw new NotFoundException(`Lesson with ID ${id} not found`);
+    }
+
     if (updateLessonDto.title !== undefined) {
       lesson.title = updateLessonDto.title;
     }
-    if (updateLessonDto.content_text !== undefined) {
-      lesson.contentText = updateLessonDto.content_text;
-    }
-    if (updateLessonDto.media_asset_id !== undefined) {
-      lesson.mediaAssetId = updateLessonDto.media_asset_id !== null && updateLessonDto.media_asset_id !== undefined
-        ? Number(updateLessonDto.media_asset_id)
-        : null;
-    }
-    if (updateLessonDto.pdf_media_asset_id !== undefined) {
-      lesson.pdfMediaAssetId =
-        updateLessonDto.pdf_media_asset_id !== null && updateLessonDto.pdf_media_asset_id !== undefined
-          ? Number(updateLessonDto.pdf_media_asset_id)
-          : null;
+
+    if (updateLessonDto.description !== undefined) {
+      lesson.description = updateLessonDto.description;
     }
 
-    return this.lessonRepository.save(lesson);
+    if (updateLessonDto.type !== undefined) {
+      lesson.type = updateLessonDto.type;
+    }
+
+    if (updateLessonDto.refSource !== undefined) {
+      lesson.refSource = updateLessonDto.refSource;
+    }
+
+    if (updateLessonDto.refId !== undefined) {
+      lesson.refId = updateLessonDto.refId;
+    }
+
+    if (updateLessonDto.orderIndex !== undefined) {
+      lesson.orderIndex = updateLessonDto.orderIndex;
+    }
+
+    const saved = await this.lessonRepository.save(lesson);
+    return this.toResponseDto(saved);
   }
 
+  // Delete a lesson
   async remove(id: number): Promise<void> {
-    const lesson = await this.findOne(id);
+    const lesson = await this.lessonRepository.findOne({ where: { id } });
+
+    if (!lesson) {
+      throw new NotFoundException(`Lesson with ID ${id} not found`);
+    }
+
     await this.lessonRepository.remove(lesson);
+  }
+
+  // Reorder lessons within a chapter
+  async reorder(chapterId: number, lessonIds: number[]): Promise<LessonResponseDto[]> {
+    const lessons = await this.lessonRepository.find({
+      where: { chapterId },
+    });
+
+    const lessonMap = new Map(lessons.map((l) => [l.id, l]));
+
+    for (let i = 0; i < lessonIds.length; i++) {
+      const lesson = lessonMap.get(lessonIds[i]);
+      if (lesson) {
+        lesson.orderIndex = i;
+        await this.lessonRepository.save(lesson);
+      }
+    }
+
+    return this.findByChapter(chapterId);
+  }
+
+  // Helper to convert Lesson entity to LessonResponseDto
+  private toResponseDto(lesson: Lesson): LessonResponseDto {
+    return {
+      id: lesson.id,
+      title: lesson.title,
+      description: lesson.description,
+      type: lesson.type,
+      refSource: lesson.refSource,
+      refId: lesson.refId,
+      orderIndex: lesson.orderIndex,
+      chapterId: lesson.chapterId,
+      createdAt: lesson.createdAt,
+    };
   }
 }
