@@ -28,7 +28,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs/auth', app, document);
 
-  app.enableCors({ origin: true, credentials: true });
+  app.enableCors({ origin: [process.env.FRONTEND_URL], credentials: true });
   app.use(cookieParser());
   
   app.getHttpAdapter().getInstance().set('trust proxy', 1);

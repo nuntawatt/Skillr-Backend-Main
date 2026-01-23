@@ -16,26 +16,21 @@ async function bootstrap() {
       transform: true,
     }),
   );
-  
+
   const config = new DocumentBuilder()
     .setTitle('Skillr Learning Service API')
     .setDescription('API documentation for the Learning Service')
     .setVersion('1.0.0')
     .addServer('/api')
-    .addBearerAuth() 
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs/learning', app, document);
 
 
-  app.enableCors({
-    origin: '*', // Allows all origins
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS', // Allows all common methods
-    allowedHeaders: '*', // Allows all headers
-    credentials: true, // If you need to support credentials
-  });
-  
+  app.enableCors({ origin: true, credentials: true });
+
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
   app.setGlobalPrefix('api');
