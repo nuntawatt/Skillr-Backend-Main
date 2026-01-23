@@ -5,25 +5,27 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { getDatabaseConfig } from '@config/database.config';
 import { AuthLibModule } from '@auth/auth-lib.module';
 
-// controllers
+// Controllers
 import { CoursesController } from './courses/courses.controller';
+import { LevelsController } from './levels/levels.controller';
+import { ChaptersController } from './chapters/chapters.controller';
 import { LessonsController } from './lessons/lessons.controller';
 import { ArticlesController } from './articles/articles.controller';
 
-// services
+// Services
 import { CoursesService } from './courses/courses.service';
+import { LevelsService } from './levels/levels.service';
+import { ChaptersService } from './chapters/chapters.service';
 import { LessonsService } from './lessons/lessons.service';
 import { ArticlesService } from './articles/articles.service';
+import { StorageService } from './storage/storage.service';
 
-// storage
-import { StorageModule } from './storage/storage.module';
-
-// entities
+// Entities
 import { Course } from './courses/entities/course.entity';
+import { Level } from './levels/entities/level.entity';
+import { Chapter } from './chapters/entities/chapter.entity';
 import { Lesson } from './lessons/entities/lesson.entity';
-import { LessonResource } from './lessons/entities/lesson-resource.entity';
 import { Article } from './articles/entities/article.entity';
-
 
 const isTest =
   process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
@@ -46,26 +48,31 @@ const isTest =
 
           TypeOrmModule.forFeature([
             Course,
+            Level,
+            Chapter,
             Lesson,
-            LessonResource,
             Article,
           ]),
 
           AuthLibModule,
-          StorageModule,
         ]),
   ],
 
   controllers: [
     CoursesController,
+    LevelsController,
+    ChaptersController,
     LessonsController,
     ArticlesController,
   ],
 
   providers: [
     CoursesService,
+    LevelsService,
+    ChaptersService,
     LessonsService,
     ArticlesService,
+    StorageService,
   ],
 })
 export class AppModule {}

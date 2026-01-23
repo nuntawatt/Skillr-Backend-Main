@@ -1,9 +1,9 @@
-import { Controller, Post, UploadedFile, UseInterceptors, BadRequestException, Get, Param, Patch, Delete } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiOperation, ApiConsumes, ApiTags, ApiBody, ApiResponse } from '@nestjs/swagger';
-import * as multer from 'multer';
-
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, HttpCode, HttpStatus, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiQuery, ApiNoContentResponse } from '@nestjs/swagger';
 import { ArticlesService } from './articles.service';
+import { CreateArticleDto, UpdateArticleDto, ArticleResponseDto } from './dto';
+import { FileInterceptor } from '@nestjs/platform-express';
+import * as multer from 'multer';
 
 const MAX_PDF_SIZE_BYTES = 51 * 1024 * 1024;
 
@@ -12,86 +12,119 @@ const MAX_PDF_SIZE_BYTES = 51 * 1024 * 1024;
 export class ArticlesController {
     constructor(private readonly articlesService: ArticlesService) { }
 
-    // Create article with PDF upload
     @Post()
+    @ApiOperation({ summary: 'Create a new article for a lesson' })
+    @ApiCreatedResponse({ type: ArticleResponseDto, description: 'Article created successfully' })
+    create(@Body() dto: CreateArticleDto): Promise<ArticleResponseDto> {
+        return this.articlesService.create(dto);
+    }
+
+    @Post('upload')
     @UseInterceptors(
         FileInterceptor('file', {
             storage: multer.memoryStorage(),
             limits: { fileSize: MAX_PDF_SIZE_BYTES },
-            fileFilter: (req, file, decide) => {
+            fileFilter: (req, file, cb) => {
                 if (file.mimetype !== 'application/pdf') {
-                    return decide(
-                        new BadRequestException('Only PDF files are allowed'),
-                        false,
-                    );
+                    return cb(new BadRequestException('Only PDF files are allowed'), false);
                 }
-                decide(null, true);
+                cb(null, true);
             },
         }),
     )
-    @ApiConsumes('multipart/form-data')
-    @ApiOperation({ summary: 'Create a new article with PDF upload' })
-    @ApiBody({ description: 'PDF file', type: 'file' })
-    @ApiResponse({ status: 201, description: 'Article created successfully.' })
-    @ApiResponse({ status: 400, description: 'Bad Request.' })
-    @ApiResponse({ status: 500, description: 'Internal Server Error.' })
-    async createArticle(@UploadedFile() file: Express.Multer.File) {
-        if (!file) {
-            throw new BadRequestException('PDF file is required');
+    @ApiOperation({ summary: 'Create article with uploaded PDF (multipart/form-data)' })
+    @ApiCreatedResponse({ type: ArticleResponseDto })
+    async createWithPdf(@Body() body: any, @UploadedFile() file: Express.Multer.File) {
+        if (!file) throw new BadRequestException('PDF file is required');
+
+        const lessonId = Number(body.lessonId);
+        if (!Number.isFinite(lessonId) || lessonId <= 0) throw new BadRequestException('lessonId is required');
+
+        let content: any = undefined;
+        if (body.content) {
+            try {
+                content = typeof body.content === 'string' ? JSON.parse(body.content) : body.content;
+            } catch {
+                throw new BadRequestException('content must be valid JSON');
+            }
         }
 
-        return this.articlesService.createWithPdf(file);
+        return this.articlesService.createWithPdf({ lessonId, content }, file.buffer);
+    }
+
+    @Post(':id/pdf')
+    @UseInterceptors(
+        FileInterceptor('file', {
+            storage: multer.memoryStorage(),
+            limits: { fileSize: MAX_PDF_SIZE_BYTES },
+            fileFilter: (req, file, cb) => {
+                if (file.mimetype !== 'application/pdf') {
+                    return cb(new BadRequestException('Only PDF files are allowed'), false);
+                }
+                cb(null, true);
+            },
+        }),
+    )
+    @ApiOperation({ summary: 'Upload or replace PDF for an existing article (multipart/form-data)' })
+    @ApiOkResponse({ type: ArticleResponseDto })
+    async uploadPdf(@Param('id', ParseIntPipe) id: number, @UploadedFile() file: Express.Multer.File) {
+        if (!file) throw new BadRequestException('PDF file is required');
+        return this.articlesService.uploadPdfToArticle(id, file.buffer);
+    }
+
+    @Get()
+    @ApiOperation({ summary: 'Get all articles with pagination' })
+    @ApiQuery({ name: 'limit', required: false, type: Number })
+    @ApiQuery({ name: 'offset', required: false, type: Number })
+    @ApiOkResponse({ type: ArticleResponseDto, isArray: true })
+    findAll(@Query('limit') limit?: string, @Query('offset') offset?: string): Promise<ArticleResponseDto[]> {
+        return this.articlesService.findAll({
+            limit: limit ? parseInt(limit, 10) : undefined,
+            offset: offset ? parseInt(offset, 10) : undefined,
+        });
     }
 
     @Get(':id')
-    @ApiOperation({ summary: 'Get article by ID' })
-    @ApiResponse({ status: 200, description: 'Article retrieved successfully.' })
-    @ApiResponse({ status: 404, description: 'Article not found.' })
-    @ApiResponse({ status: 500, description: 'Internal Server Error.' })
-    async getArticle(@Param('id') id: number) {
-        return this.articlesService.getArticleById(id);
+    @ApiOperation({ summary: 'Get an article by ID' })
+    @ApiParam({ name: 'id', type: Number })
+    @ApiOkResponse({ type: ArticleResponseDto })
+    findOne(@Param('id', ParseIntPipe) id: number): Promise<ArticleResponseDto> {
+        return this.articlesService.findOne(id);
+    }
+
+    @Get(':id/pdf-url')
+    @ApiOperation({ summary: 'Get presigned URL for article PDF' })
+    @ApiParam({ name: 'id', type: Number })
+    async getPdfUrl(@Param('id', ParseIntPipe) id: number) {
+        const url = await this.articlesService.getPdfUrl(id);
+        return { url };
+    }
+
+    @Get('lesson/:lessonId')
+    @ApiOperation({ summary: 'Get an article by lesson ID' })
+    @ApiParam({ name: 'lessonId', type: Number })
+    @ApiOkResponse({ type: ArticleResponseDto })
+    findByLessonId(@Param('lessonId', ParseIntPipe) lessonId: number): Promise<ArticleResponseDto> {
+        return this.articlesService.findByLessonId(lessonId);
     }
 
     @Patch(':id')
-    @ApiOperation({ summary: 'Update article PDF by ID' })
-    @ApiConsumes('multipart/form-data')
-    @ApiBody({ description: 'PDF file', type: 'file' })
-    @ApiResponse({ status: 200, description: 'Article PDF updated successfully.' })
-    @ApiResponse({ status: 400, description: 'Bad Request.' })
-    @ApiResponse({ status: 404, description: 'Article not found.' })
-    @ApiResponse({ status: 500, description: 'Internal Server Error.' })
-    @UseInterceptors(
-        FileInterceptor('file', {
-            storage: multer.memoryStorage(),
-            limits: { fileSize: MAX_PDF_SIZE_BYTES },
-            fileFilter: (req, file, decide) => {
-                if (file.mimetype !== 'application/pdf') {
-                    return decide(
-                        new BadRequestException('Only PDF files are allowed'),
-                        false,
-                    );
-                }
-                decide(null, true);
-            },
-        }),
-    )
-    @ApiConsumes('multipart/form-data')
-    async updateArticlePdf(@Param('id') id: number, @UploadedFile() file: Express.Multer.File) {
-        if (!file) {
-            throw new BadRequestException('PDF file is required');
-        }
-        return this.articlesService.updateArticlePdf(id, file);
+    @ApiOperation({ summary: 'Update an article by ID' })
+    @ApiParam({ name: 'id', type: Number })
+    @ApiOkResponse({ type: ArticleResponseDto })
+    update(
+        @Param('id', ParseIntPipe) id: number,
+        @Body() updateArticleDto: UpdateArticleDto,
+    ): Promise<ArticleResponseDto> {
+        return this.articlesService.update(id, updateArticleDto);
     }
 
     @Delete(':id')
-    @ApiOperation({ summary: 'Delete article by ID' })
-    @ApiResponse({ status: 200, description: 'Article deleted successfully.' })
-    @ApiResponse({ status: 404, description: 'Article not found.' })
-    @ApiResponse({ status: 500, description: 'Internal Server Error.' })
-    async deleteArticle(@Param('id') id: number) {
-        if (!id) {
-            throw new BadRequestException('Article ID is required');
-        }
-        return this.articlesService.deleteArticleById(id);
+    @HttpCode(HttpStatus.NO_CONTENT)
+    @ApiOperation({ summary: 'Delete an article by ID' })
+    @ApiParam({ name: 'id', type: Number })
+    @ApiNoContentResponse({ description: 'Article deleted successfully' })
+    remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
+        return this.articlesService.remove(id);
     }
 }

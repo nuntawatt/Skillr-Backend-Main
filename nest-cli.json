@@ -44,13 +44,13 @@
         "tsConfigPath": "apps/media/tsconfig.app.json"
       }
     },
-    "payment": {
+    "quizs": {
       "type": "application",
-      "root": "apps/payment",
+      "root": "apps/quizs",
       "entryFile": "main",
-      "sourceRoot": "apps/payment/src",
+      "sourceRoot": "apps/quizs/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/payment/tsconfig.app.json"
+        "tsConfigPath": "apps/quizs/tsconfig.app.json"
       }
     },
     "common": {

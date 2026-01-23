@@ -1,23 +1,21 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Not, Repository } from 'typeorm';
 import { Quiz } from './entities/quiz.entity';
 import { Question, QuestionType } from './entities/question.entity';
 import { QuizAttempt } from './entities/quiz-attempt.entity';
-import { LearningProgressService } from './learning-progress.service';
 import { CreateQuestionDto, CreateQuizDto } from './dto/create-quiz.dto';
 import { UpdateQuizDto } from './dto/update-quiz.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { QuizSolutionResponseDto } from './dto/quiz-solution.dto';
 import { SubmitQuizDto } from './dto/submit-quiz.dto';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable()
-export class LearningService {
+export class QuizService {
   private readonly maxQuestionsPerLesson = 3;
+  private readonly learningServiceUrl = process.env.LEARNING_SERVICE_URL ?? 'http://localhost:3003';
 
   constructor(
     @InjectRepository(Quiz)
@@ -26,8 +24,8 @@ export class LearningService {
     private readonly questionRepository: Repository<Question>,
     @InjectRepository(QuizAttempt)
     private readonly attemptRepository: Repository<QuizAttempt>,
-    private readonly learningProgressService: LearningProgressService,
-  ) {}
+    private readonly httpService: HttpService,
+  ) { }
 
   async createQuiz(createQuizDto: CreateQuizDto): Promise<Quiz> {
     const questions: CreateQuestionDto[] = createQuizDto.questions ?? [];
@@ -266,17 +264,17 @@ export class LearningService {
     // Handle options and correct answer mapping if they are being updated
     const mappedOptions =
       updateDto.type ||
-      updateDto.options ||
-      updateDto.optionsPairs ||
-      updateDto.optionsOrder
+        updateDto.options ||
+        updateDto.optionsPairs ||
+        updateDto.optionsOrder
         ? this.mapOptionsByType(updateDto as any)
         : question.options;
 
     const mappedAnswer =
       updateDto.type ||
-      updateDto.correctAnswer ||
-      updateDto.correctAnswerBool ||
-      updateDto.optionsPairs
+        updateDto.correctAnswer ||
+        updateDto.correctAnswerBool ||
+        updateDto.optionsPairs
         ? this.mapCorrectAnswerByType(updateDto as any)
         : question.correctAnswer;
 
@@ -405,56 +403,6 @@ export class LearningService {
       },
       order: { startedAt: 'DESC' },
     });
-  }
-
-  async saveProgress(
-    quizId: string,
-    userId: string,
-    submitDto: SubmitQuizDto,
-  ): Promise<QuizAttempt> {
-    const numericQuizId = Number(quizId);
-    const numericUserId = Number(userId);
-
-    const attempt = await this.attemptRepository.findOne({
-      where: {
-        quizId: numericQuizId,
-        userId: numericUserId,
-        completedAt: IsNull(),
-      },
-      order: { startedAt: 'DESC' },
-    });
-
-    if (!attempt) {
-      throw new NotFoundException(
-        'ไม่พบรายการที่กำลังทำอยู่ กรุณาเริ่ม Quiz ใหม่',
-      );
-    }
-
-    // Merge incoming answers with current saved answers to support skipping/editing/partial pairing without data loss
-    const currentAnswers = attempt.answers || [];
-    const incomingAnswers = submitDto.answers;
-
-    // Use a Map for efficient merging based on questionId
-    const answerMap = new Map(
-      currentAnswers.map((a) => [a.questionId, a]),
-    );
-
-    for (const newAns of incomingAnswers) {
-      // Handle "Unpair" or "Clear Answer" logic
-      // If answer is null, undefined, or empty array, it means user cleared the answer
-      if (
-        newAns.answer === null ||
-        newAns.answer === undefined ||
-        (Array.isArray(newAns.answer) && newAns.answer.length === 0)
-      ) {
-        answerMap.delete(newAns.questionId);
-      } else {
-        answerMap.set(newAns.questionId, newAns);
-      }
-    }
-
-    attempt.answers = Array.from(answerMap.values());
-    return this.attemptRepository.save(attempt);
   }
 
   async submitQuiz(
@@ -684,10 +632,23 @@ export class LearningService {
 
     // 5. Auto-update Lesson Progress if passed
     if (passed) {
-      await this.learningProgressService.completeLesson(
-        userId,
-        String(quiz.lessonId),
-      );
+      try {
+        await firstValueFrom(
+          this.httpService.post(
+            `${this.learningServiceUrl}/api/learning/lessons/${quiz.lessonId}/complete`,
+            {},
+            {
+              headers: {
+                // Pass user context if needed, here we assume internal call or handled by userId in body if API allowed
+                'x-user-id': userId,
+              },
+            },
+          ),
+        );
+      } catch (error) {
+        console.error('Failed to update lesson progress via HTTP:', error.message);
+        // We don't throw here to not break quiz submission if progress service is down
+      }
     }
 
     // Return structured solution response for Scenario 2 & 3
@@ -871,11 +832,11 @@ export class LearningService {
       passedAttempts,
       latestAttempt: latestAttempt
         ? {
-            quizId: latestAttempt.quizId,
-            score: latestAttempt.score ?? undefined,
-            passed: Boolean(latestAttempt.passed),
-            completedAt: latestAttempt.completedAt,
-          }
+          quizId: latestAttempt.quizId,
+          score: latestAttempt.score ?? undefined,
+          passed: Boolean(latestAttempt.passed),
+          completedAt: latestAttempt.completedAt,
+        }
         : undefined,
     };
   }
