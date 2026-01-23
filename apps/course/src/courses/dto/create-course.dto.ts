@@ -1,136 +1,46 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsBoolean, IsNotEmpty, IsInt, IsIn, IsArray, Min } from 'class-validator';
-import { Transform } from 'class-transformer';
-
-function transformOptionalNumber({ value }: { value: unknown }) {
-  if (value === null || value === undefined || value === '') return undefined;
-  const n = typeof value === 'number' ? value : Number(value);
-  return Number.isFinite(n) ? n : value;
-}
-
-export function transformOptionalBoolean({ value }: { value: unknown }) {
-  if (value === null || value === undefined || value === '') return undefined;
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'string') {
-  const lower = value.toLowerCase();
-  if (lower === 'true') return true;
-  if (lower === 'false') return false;
-  }
-  return value;
-}
-
-function transformTags({ value, obj }: { value: unknown; obj: any }) {
-  const v = obj?.course_tags ?? obj?.tags ?? value;
-  if (v == null) return undefined;
-  if (Array.isArray(v)) return v;
-  if (typeof v === 'string') {
-    try {
-      const parsed = JSON.parse(v);
-      if (Array.isArray(parsed)) return parsed;
-    } catch {
-      // Ignore JSON parse errors
-    }
-    return v.split(',').map((s) => String(s).trim()).filter(Boolean);
-  }
-  return v as unknown as string[];
-}
+import { IsString, IsOptional, IsNumber, IsBoolean, MaxLength, Min } from 'class-validator';
 
 export class CreateCourseDto {
-  @ApiProperty({
-    example: 'Introduction to Programming'
-  })
-  @IsNotEmpty()
+  @ApiProperty({ description: 'Course title', example: 'Introduction to TypeScript' })
   @IsString()
-  course_name: string;
+  @MaxLength(255)
+  title: string;
 
-  @ApiPropertyOptional({
-    description: 'Detailed description of the course',
-    example: 'This course covers the basics of programming using Python.',
-  })
+  @ApiPropertyOptional({ description: 'Course description', example: 'Learn TypeScript from scratch' })
   @IsOptional()
   @IsString()
-  course_detail?: string;
+  description?: string;
 
-  @ApiPropertyOptional({
-    description: 'Level of the course',
-    example: 'beginner',
-    enum: ['beginner', 'intermediate', 'advanced']
-  })
+  @ApiPropertyOptional({ description: 'Owner user ID', example: 0 })
   @IsOptional()
-  @IsIn(['beginner', 'intermediate', 'advanced'])
-  course_level?: 'beginner' | 'intermediate' | 'advanced';
+  @IsNumber()
+  @Min(0)
+  ownerUserId?: number;
 
-  @ApiPropertyOptional({
-    description: 'Price of the course (integer only, must be greater than 0)',
-    example: 100,
-  })
+  @ApiPropertyOptional({ description: 'Cover image media asset ID', example: 123 })
   @IsOptional()
-  @IsInt()
-  @Min(1, { message: 'price must be greater than 0' })
-  @Transform(transformOptionalNumber)
-  course_price?: number;
+  @IsNumber()
+  coverMediaAssetId?: number;
 
-  @ApiPropertyOptional({
-    description: 'ID of the cover media asset',
-    example: 1,
-  })
+  @ApiPropertyOptional({ description: 'Intro video media asset ID', example: 456 })
   @IsOptional()
-  @IsInt()
-  @Transform(transformOptionalNumber)
-  course_cover_id?: number;
+  @IsNumber()
+  introMediaAssetId?: number;
 
-  @ApiPropertyOptional({
-    description: 'Whether the course is published',
-    example: true,
-  })
+  @ApiPropertyOptional({ description: 'Estimated time in seconds', example: 3600, default: 0 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  estimateTimeSeconds?: number;
+
+  @ApiPropertyOptional({ description: 'Is the course published', default: false })
   @IsOptional()
   @IsBoolean()
-  @Transform(transformOptionalBoolean)
-  is_published?: boolean;
+  isPublished?: boolean;
 
-  @ApiPropertyOptional({
-    description: 'Category ID of the course',
-    example: 3,
-  })
+  @ApiPropertyOptional({ description: 'Category ID', example: 5 })
   @IsOptional()
-  @IsInt()
-  @Transform(transformOptionalNumber)
+  @IsNumber()
   categoryId?: number;
-
-  @ApiPropertyOptional({
-    description: 'ID of the intro media asset',
-    example: 10,
-  })
-  @IsOptional()
-  @IsInt()
-  @Transform(transformOptionalNumber)
-  course_coverMediaId?: number;
-
-  @ApiPropertyOptional({
-    description: 'ID of the intro video media asset',
-    example: 12,
-  })
-  @IsOptional()
-  @IsInt()
-  @Transform(transformOptionalNumber)
-  course_introMediaId?: number;
-
-  @ApiPropertyOptional({
-    description: 'Tags associated with the course',
-    example: ['programming', 'python', 'basics'],
-  })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  @Transform(transformTags)
-  tags?: string[];
-
-  @ApiPropertyOptional({
-    description: 'Owner user id of the course',
-    example: 5,
-  })
-  @IsOptional()
-  @IsInt()
-  @Transform(transformOptionalNumber)
-  ownerId?: number;
 }

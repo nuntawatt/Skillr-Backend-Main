@@ -1,15 +1,41 @@
-import { CreateCourseDto } from './create-course.dto';
-import { IsBoolean, IsOptional } from 'class-validator';
-import { PartialType } from '@nestjs/mapped-types';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsOptional, IsNumber, IsBoolean, MaxLength, Min } from 'class-validator';
 
-import { Transform } from 'class-transformer';
-import { transformOptionalBoolean } from './create-course.dto';
+export class UpdateCourseDto {
+  @ApiPropertyOptional({ description: 'Course title', example: 'Introduction to TypeScript' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  title?: string;
 
-export class UpdateCourseDto extends PartialType(CreateCourseDto) {
-  @ApiPropertyOptional({ description: 'Publish status of the course' })
+  @ApiPropertyOptional({ description: 'Course description', example: 'Learn TypeScript from scratch' })
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiPropertyOptional({ description: 'Cover image media asset ID', example: 123 })
+  @IsOptional()
+  @IsNumber()
+  coverMediaAssetId?: number | null;
+
+  @ApiPropertyOptional({ description: 'Intro video media asset ID', example: 456 })
+  @IsOptional()
+  @IsNumber()
+  introMediaAssetId?: number | null;
+
+  @ApiPropertyOptional({ description: 'Estimated time in seconds', example: 3600 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  estimateTimeSeconds?: number;
+
+  @ApiPropertyOptional({ description: 'Is the course published', default: false })
   @IsOptional()
   @IsBoolean()
-  @Transform(transformOptionalBoolean)
-  is_published?: boolean;
+  isPublished?: boolean;
+
+  @ApiPropertyOptional({ description: 'Category ID', example: 5 })
+  @IsOptional()
+  @IsNumber()
+  categoryId?: number | null;
 }

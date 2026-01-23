@@ -1,8 +1,22 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
-import { Course } from '../../courses/entities/course.entity';
-import { LessonResource } from './lesson-resource.entity';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToOne, CreateDateColumn, Index } from 'typeorm';
+import { Chapter } from '../../chapters/entities/chapter.entity';
+import { Article } from '../../articles/entities/article.entity';
+
+export enum LessonType {
+  ARTICLE = 'article',
+  VIDEO = 'video',
+  QUIZ = 'quiz',
+  ASSIGNMENT = 'assignment',
+}
+
+export enum LessonRefSource {
+  COURSE = 'course', // article content stored in course service
+  MEDIA = 'media',   // media service id
+  QUIZ = 'quiz',     // quiz service id
+}
 
 @Entity('lessons')
+@Index('idx_lessons_chapter_id', ['chapterId'])
 export class Lesson {
   @PrimaryGeneratedColumn()
   id: number;
@@ -10,33 +24,42 @@ export class Lesson {
   @Column()
   title: string;
 
-  @Column({ name: 'content_text', type: 'text', nullable: true })
-  contentText?: string;
+  // short description (optional)
+  @Column({ name: 'description', type: 'text', nullable: true })
+  description?: string;
 
-  @Column({ name: 'media_asset_id', type: 'int', nullable: true })
-  mediaAssetId?: number | null;
+  @Column({
+    type: 'enum',
+    enum: LessonType,
+    default: LessonType.ARTICLE,
+  })
+  type: LessonType;
 
-  @Column({ name: 'pdf_media_asset_id', type: 'int', nullable: true })
-  pdfMediaAssetId?: number | null;
+  @Column({ name: 'order_index', type: 'int', default: 0 })
+  orderIndex: number;
 
-  @Column({ name: 'position', type: 'int', default: 0 })
-  position: number;
+  // where actual content lives and id of that resource
+  @Column({
+    name: 'ref_source',
+    type: 'enum',
+    enum: LessonRefSource,
+    default: LessonRefSource.COURSE,
+  })
+  refSource: LessonRefSource;
 
-  // Nullable to allow draft lessons without course
-  @Column({ name: 'course_id', type: 'int', nullable: true })
-  courseId?: number | null;
+  @Column({ name: 'ref_id', type: 'int' })
+  refId: number;
 
-  @ManyToOne(() => Course, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'course_id' })
-  course: Course;
+  @ManyToOne(() => Chapter, (chapter) => chapter.lessons, { onDelete: 'CASCADE' })
+  chapter: Chapter;
 
-  // Inverse side must reference the relation property, not the FK column
-  @OneToMany(() => LessonResource, (resource) => resource.lesson)
-  resources: LessonResource[];
+  @Column({ name: 'chapter_id', type: 'int' })
+  chapterId: number;
+
+  // ONE-TO-ONE optional link to Article only when type === 'article'
+  @OneToOne(() => Article, (article) => article.lesson, { cascade: true })
+  article?: Article;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
-
-  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
-  updatedAt: Date;
 }
