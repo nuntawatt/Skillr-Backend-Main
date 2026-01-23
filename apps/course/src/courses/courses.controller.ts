@@ -1,13 +1,21 @@
 import { CoursesService } from './courses.service';
-import { Controller, Get, Post, Put, Body, Patch, Param, Delete, Query, ParseIntPipe, HttpCode, HttpStatus } from '@nestjs/common';
-import { CreateCourseDto, UpdateCourseDto, CourseResponseDto, CourseStructureResponseDto } from './dto';
+import {Controller,Get,Post,Put,Body,Patch,Param,Delete,Query,ParseIntPipe,HttpCode,HttpStatus} from '@nestjs/common';
+import {CreateCourseDto,UpdateCourseDto,CourseResponseDto,CourseStructureResponseDto} from './dto';
 import { CourseStructureSaveDto } from './dto/course-structure-save.dto';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiQuery, ApiNoContentResponse } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiOkResponse,
+  ApiCreatedResponse,
+  ApiParam,
+  ApiQuery,
+  ApiNoContentResponse,
+} from '@nestjs/swagger';
 
 @ApiTags('Courses')
 @Controller('courses')
 export class CoursesController {
-  constructor(private readonly coursesService: CoursesService) { }
+  constructor(private readonly coursesService: CoursesService) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new course' })
@@ -62,7 +70,10 @@ export class CoursesController {
   @Put(':id/structure')
   @ApiOperation({ summary: 'Save full course structure (transactional)' })
   @ApiParam({ name: 'id', type: Number })
-  async saveStructure(@Param('id', ParseIntPipe) id: number, @Body() dto: CourseStructureSaveDto): Promise<CourseStructureResponseDto> {
+  async saveStructure(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CourseStructureSaveDto,
+  ): Promise<CourseStructureResponseDto> {
     return this.coursesService.saveStructure(id, dto);
   }
 
@@ -70,7 +81,10 @@ export class CoursesController {
   @ApiOperation({ summary: 'Update a course by ID' })
   @ApiParam({ name: 'id', type: Number })
   @ApiOkResponse({ type: CourseResponseDto })
-  update(@Param('id', ParseIntPipe) id: number, @Body() updateCourseDto: UpdateCourseDto): Promise<CourseResponseDto> {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateCourseDto: UpdateCourseDto,
+  ): Promise<CourseResponseDto> {
     return this.coursesService.update(id, updateCourseDto);
   }
 

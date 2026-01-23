@@ -18,7 +18,10 @@ export class LessonsService {
     private readonly dataSource: DataSource,
   ) {}
 
-  // Create a new lesson for a chapter
+  /**
+   * Create a new lesson for a chapter
+   * For article type, also creates the Article entity in a transaction
+   */
   async create(createLessonDto: CreateLessonDto): Promise<LessonResponseDto> {
     // Verify chapter exists
     const chapter = await this.chapterRepository.findOne({
@@ -67,7 +70,9 @@ export class LessonsService {
     return this.toResponseDto(saved);
   }
 
-  // Create a new article lesson along with its Article entity
+  /**
+   * Create an article lesson with content in a single transaction
+   */
   async createArticleLesson(
     createLessonDto: Omit<CreateLessonDto, 'type' | 'refSource' | 'refId'>,
     content: any,
@@ -124,7 +129,9 @@ export class LessonsService {
     });
   }
 
-  // Find all lessons for a chapter
+  /**
+   * Find all lessons for a chapter
+   */
   async findByChapter(chapterId: number): Promise<LessonResponseDto[]> {
     const lessons = await this.lessonRepository.find({
       where: { chapterId },
@@ -134,7 +141,9 @@ export class LessonsService {
     return lessons.map((l) => this.toResponseDto(l));
   }
 
-  // Find a lesson by ID
+  /**
+   * Find a single lesson by ID
+   */
   async findOne(id: number): Promise<LessonResponseDto> {
     const lesson = await this.lessonRepository.findOne({ where: { id } });
 
@@ -145,7 +154,9 @@ export class LessonsService {
     return this.toResponseDto(lesson);
   }
 
-  // Update a lesson
+  /**
+   * Update a lesson
+   */
   async update(id: number, updateLessonDto: UpdateLessonDto): Promise<LessonResponseDto> {
     const lesson = await this.lessonRepository.findOne({ where: { id } });
 
@@ -181,7 +192,9 @@ export class LessonsService {
     return this.toResponseDto(saved);
   }
 
-  // Delete a lesson
+  /**
+   * Delete a lesson (cascades to article if exists)
+   */
   async remove(id: number): Promise<void> {
     const lesson = await this.lessonRepository.findOne({ where: { id } });
 
@@ -192,7 +205,9 @@ export class LessonsService {
     await this.lessonRepository.remove(lesson);
   }
 
-  // Reorder lessons within a chapter
+  /**
+   * Reorder lessons within a chapter
+   */
   async reorder(chapterId: number, lessonIds: number[]): Promise<LessonResponseDto[]> {
     const lessons = await this.lessonRepository.find({
       where: { chapterId },
@@ -211,7 +226,9 @@ export class LessonsService {
     return this.findByChapter(chapterId);
   }
 
-  // Helper to convert Lesson entity to LessonResponseDto
+  /**
+   * Map entity to response DTO
+   */
   private toResponseDto(lesson: Lesson): LessonResponseDto {
     return {
       id: lesson.id,

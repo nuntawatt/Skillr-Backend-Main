@@ -8,6 +8,5 @@ export class UpdateArticleDto {
     })
     @IsOptional()
     content?: any;
-
 }
 

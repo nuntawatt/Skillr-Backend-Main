@@ -1,12 +1,32 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiQuery, ApiNoContentResponse } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  ParseIntPipe,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiOkResponse,
+  ApiCreatedResponse,
+  ApiParam,
+  ApiQuery,
+  ApiNoContentResponse,
+} from '@nestjs/swagger';
 import { LessonsService } from './lessons.service';
 import { CreateLessonDto, UpdateLessonDto, LessonResponseDto } from './dto/lesson';
 
 @ApiTags('Lessons')
 @Controller('lessons')
 export class LessonsController {
-  constructor(private readonly lessonsService: LessonsService) { }
+  constructor(private readonly lessonsService: LessonsService) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new lesson' })
@@ -18,7 +38,9 @@ export class LessonsController {
   @Post('article')
   @ApiOperation({ summary: 'Create a new article lesson with content' })
   @ApiCreatedResponse({ type: LessonResponseDto, description: 'Article lesson created successfully' })
-  createArticleLesson(@Body() body: { title: string; description?: string; chapterId: number; orderIndex?: number; content: any }): Promise<LessonResponseDto> {
+  createArticleLesson(
+    @Body() body: { title: string; description?: string; chapterId: number; orderIndex?: number; content: any },
+  ): Promise<LessonResponseDto> {
     const { content, ...lessonData } = body;
     return this.lessonsService.createArticleLesson(lessonData, content);
   }
@@ -43,7 +65,10 @@ export class LessonsController {
   @ApiOperation({ summary: 'Update a lesson by ID' })
   @ApiParam({ name: 'id', type: Number })
   @ApiOkResponse({ type: LessonResponseDto })
-  update(@Param('id', ParseIntPipe) id: number, @Body() updateLessonDto: UpdateLessonDto): Promise<LessonResponseDto> {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateLessonDto: UpdateLessonDto,
+  ): Promise<LessonResponseDto> {
     return this.lessonsService.update(id, updateLessonDto);
   }
 
@@ -59,7 +84,9 @@ export class LessonsController {
   @Post('reorder')
   @ApiOperation({ summary: 'Reorder lessons within a chapter' })
   @ApiOkResponse({ type: LessonResponseDto, isArray: true })
-  reorder(@Body() body: { chapterId: number; lessonIds: number[] }): Promise<LessonResponseDto[]> {
+  reorder(
+    @Body() body: { chapterId: number; lessonIds: number[] },
+  ): Promise<LessonResponseDto[]> {
     return this.lessonsService.reorder(body.chapterId, body.lessonIds);
   }
 }

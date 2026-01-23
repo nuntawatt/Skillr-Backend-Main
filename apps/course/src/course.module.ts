@@ -40,22 +40,22 @@ const isTest =
     ...(isTest
       ? []
       : [
-          TypeOrmModule.forRootAsync({
-            imports: [ConfigModule],
-            useFactory: getDatabaseConfig,
-            inject: [ConfigService],
-          }),
+        TypeOrmModule.forRootAsync({
+          imports: [ConfigModule],
+          useFactory: getDatabaseConfig,
+          inject: [ConfigService],
+        }),
 
-          TypeOrmModule.forFeature([
-            Course,
-            Level,
-            Chapter,
-            Lesson,
-            Article,
-          ]),
-
-          AuthLibModule,
+        TypeOrmModule.forFeature([
+          Course,
+          Level,
+          Chapter,
+          Lesson,
+          Article,
         ]),
+
+        AuthLibModule,
+      ]),
   ],
 
   controllers: [
@@ -75,4 +75,4 @@ const isTest =
     StorageService,
   ],
 })
-export class AppModule {}
+export class AppModule { }
