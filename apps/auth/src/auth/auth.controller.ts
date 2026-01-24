@@ -86,7 +86,7 @@ export class AuthController {
       path: '/'
     });
 
-    return res.redirect(`${this.configService.get('FRONTEND_URL')}/oauth/callback`);
+    return res.redirect(`${this.configService.get('FRONTEND_URL')}/login`);
   }
 
   // Google OAuth - Token Exchange
