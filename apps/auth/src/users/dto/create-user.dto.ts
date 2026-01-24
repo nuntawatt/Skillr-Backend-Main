@@ -23,6 +23,11 @@ export class CreateUserDto {
   @IsOptional()
   avatar?: string;
 
+  @ApiProperty({ example: '6f1d2c9e-...' , required: false })
+  @IsString()
+  @IsOptional()
+  avatar_media_id?: string;
+
   @ApiProperty({ example: 'USER', enum: UserRole })
   @IsEnum(UserRole)
   @IsOptional()
