@@ -2,41 +2,36 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 import { Level } from '../../levels/entities/level.entity';
 
 @Entity('courses')
-@Index('idx_courses_owner_user_id', ['ownerUserId'])
+@Index('idx_courses_course_owner_id', ['course_ownerId'])
 @Index('idx_courses_is_published', ['isPublished'])
 export class Course {
   @PrimaryGeneratedColumn()
-  id: number;
+  course_id: number;
 
-  @Column({ name: 'owner_user_id', type: 'int' })
-  ownerUserId: number;
+  @Column({ name: 'course_owner_id', type: 'int' })
+  course_ownerId: number;
 
   @Column()
-  title: string;
+  course_title: string;
 
   @Column({ type: 'text', nullable: true })
-  description?: string;
+  course_description?: string;
 
   // keep cover reference only (media service id)
-  @Column({ name: 'cover_media_asset_id', type: 'int', nullable: true })
-  coverMediaAssetId?: number | null;
+  @Column({ name: 'course_image_id', type: 'int', nullable: true })
+  course_imageId?: number | null;
 
-  @Column({ name: 'intro_media_asset_id', type: 'int', nullable: true })
-  introMediaAssetId?: number | null;
+  @Column({ name: 'course_tags', type: 'text', array: true, nullable: true })
+  course_tags?: string[] | null;
 
-  // estimated duration of whole course in seconds
-  @Column({ name: 'estimate_time_seconds', type: 'int', default: 0 })
-  estimateTimeSeconds: number;
+  // @Column({ name: 'intro_media_asset_id', type: 'int', nullable: true })
+  // introMediaAssetId?: number | null;
 
   @Column({ name: 'is_published', default: false })
   isPublished: boolean;
 
-  // keep categoryId if you need filtering; tags should be normalized later
-  @Column({ name: 'category_id', type: 'int', nullable: true })
-  categoryId?: number | null;
-
   @OneToMany(() => Level, (level) => level.course, { cascade: true })
-  levels: Level[];
+  course_levels: Level[];
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

@@ -112,10 +112,7 @@ export class ArticlesController {
     @ApiOperation({ summary: 'Update an article by ID' })
     @ApiParam({ name: 'id', type: Number })
     @ApiOkResponse({ type: ArticleResponseDto })
-    update(
-        @Param('id', ParseIntPipe) id: number,
-        @Body() updateArticleDto: UpdateArticleDto,
-    ): Promise<ArticleResponseDto> {
+    update(@Param('id', ParseIntPipe) id: number, @Body() updateArticleDto: UpdateArticleDto): Promise<ArticleResponseDto> {
         return this.articlesService.update(id, updateArticleDto);
     }
 

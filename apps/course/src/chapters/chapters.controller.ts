@@ -17,10 +17,10 @@ export class ChaptersController {
 
     @Get()
     @ApiOperation({ summary: 'Get all chapters for a level' })
-    @ApiQuery({ name: 'levelId', required: true, type: Number })
+    @ApiQuery({ name: 'level_id', required: true, type: Number })
     @ApiOkResponse({ type: ChapterResponseDto, isArray: true })
-    findByLevel(@Query('levelId', ParseIntPipe) levelId: number): Promise<ChapterResponseDto[]> {
-        return this.chaptersService.findByLevel(levelId);
+    findByLevel(@Query('level_id', ParseIntPipe) level_id: number): Promise<ChapterResponseDto[]> {
+        return this.chaptersService.findByLevel(level_id);
     }
 
     @Get(':id')
@@ -51,7 +51,7 @@ export class ChaptersController {
     @Post('reorder')
     @ApiOperation({ summary: 'Reorder chapters within a level' })
     @ApiOkResponse({ type: ChapterResponseDto, isArray: true })
-    reorder(@Body() body: { levelId: number; chapterIds: number[] }): Promise<ChapterResponseDto[]> {
-        return this.chaptersService.reorder(body.levelId, body.chapterIds);
+    reorder(@Body() body: { level_id: number; chapter_ids: number[] }): Promise<ChapterResponseDto[]> {
+        return this.chaptersService.reorder(body.level_id, body.chapter_ids);
     }
 }

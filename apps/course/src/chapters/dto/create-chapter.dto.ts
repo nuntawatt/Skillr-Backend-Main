@@ -5,16 +5,16 @@ export class CreateChapterDto {
     @ApiProperty({ description: 'Chapter title', example: 'Getting Started' })
     @IsString()
     @MaxLength(255)
-    title: string;
+    chapter_title: string;
 
     @ApiProperty({ description: 'Level ID this chapter belongs to', example: 1 })
     @IsNumber()
     @Min(1)
-    levelId: number;
+    level_id: number;
 
     @ApiPropertyOptional({ description: 'Order index within the level', example: 0, default: 0 })
     @IsOptional()
     @IsNumber()
     @Min(0)
-    orderIndex?: number;
+    chapter_orderIndex?: number;
 }

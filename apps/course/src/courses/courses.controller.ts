@@ -1,21 +1,13 @@
 import { CoursesService } from './courses.service';
-import {Controller,Get,Post,Put,Body,Patch,Param,Delete,Query,ParseIntPipe,HttpCode,HttpStatus} from '@nestjs/common';
-import {CreateCourseDto,UpdateCourseDto,CourseResponseDto,CourseStructureResponseDto} from './dto';
+import { Controller, Get, Post, Put, Body, Patch, Param, Delete, Query, ParseIntPipe, HttpCode, HttpStatus } from '@nestjs/common';
+import { CreateCourseDto, UpdateCourseDto, CourseResponseDto, CourseStructureResponseDto } from './dto';
 import { CourseStructureSaveDto } from './dto/course-structure-save.dto';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiOkResponse,
-  ApiCreatedResponse,
-  ApiParam,
-  ApiQuery,
-  ApiNoContentResponse,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiQuery, ApiNoContentResponse } from '@nestjs/swagger';
 
 @ApiTags('Courses')
 @Controller('courses')
 export class CoursesController {
-  constructor(private readonly coursesService: CoursesService) {}
+  constructor(private readonly coursesService: CoursesService) { }
 
   @Post()
   @ApiOperation({ summary: 'Create a new course' })
@@ -28,23 +20,21 @@ export class CoursesController {
   @ApiOperation({ summary: 'List courses with optional filters' })
   @ApiOkResponse({ type: CourseResponseDto, isArray: true })
   @ApiQuery({ name: 'isPublished', required: false, type: Boolean })
-  @ApiQuery({ name: 'ownerUserId', required: false, type: Number })
+  @ApiQuery({ name: 'course_ownerId', required: false, type: Number })
   @ApiQuery({ name: 'categoryId', required: false, type: Number })
   @ApiQuery({ name: 'search', required: false, type: String })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'offset', required: false, type: Number })
   findAll(
     @Query('isPublished') isPublished?: string,
-    @Query('ownerUserId') ownerUserId?: string,
-    @Query('categoryId') categoryId?: string,
+    @Query('course_ownerId') course_ownerId?: string,
     @Query('search') search?: string,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ): Promise<CourseResponseDto[]> {
     return this.coursesService.findAll({
       isPublished: isPublished === 'true' ? true : isPublished === 'false' ? false : undefined,
-      ownerUserId: ownerUserId ? parseInt(ownerUserId, 10) : undefined,
-      categoryId: categoryId ? parseInt(categoryId, 10) : undefined,
+      course_ownerId: course_ownerId ? parseInt(course_ownerId, 10) : undefined,
       search,
       limit: limit ? parseInt(limit, 10) : undefined,
       offset: offset ? parseInt(offset, 10) : undefined,

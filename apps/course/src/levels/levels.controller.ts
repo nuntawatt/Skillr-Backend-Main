@@ -19,8 +19,8 @@ export class LevelsController {
     @ApiOperation({ summary: 'Get all levels for a course' })
     @ApiQuery({ name: 'courseId', required: true, type: Number })
     @ApiOkResponse({ type: LevelResponseDto, isArray: true })
-    findByCourse(@Query('courseId', ParseIntPipe) courseId: number): Promise<LevelResponseDto[]> {
-        return this.levelsService.findByCourse(courseId);
+    findByCourse(@Query('course_id', ParseIntPipe) course_id: number): Promise<LevelResponseDto[]> {
+        return this.levelsService.findByCourse(course_id);
     }
 
     @Get(':id')
@@ -51,7 +51,7 @@ export class LevelsController {
     @Post('reorder')
     @ApiOperation({ summary: 'Reorder levels within a course' })
     @ApiOkResponse({ type: LevelResponseDto, isArray: true })
-    reorder(@Body() body: { courseId: number; levelIds: number[] }): Promise<LevelResponseDto[]> {
-        return this.levelsService.reorder(body.courseId, body.levelIds);
+    reorder(@Body() body: { course_id: number; level_ids: number[] }): Promise<LevelResponseDto[]> {
+        return this.levelsService.reorder(body.course_id, body.level_ids);
     }
 }

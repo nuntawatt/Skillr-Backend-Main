@@ -18,28 +18,28 @@ export class ChaptersService {
   async create(createChapterDto: CreateChapterDto): Promise<ChapterResponseDto> {
     // Verify level exists
     const level = await this.levelRepository.findOne({
-      where: { id: createChapterDto.levelId },
+      where: { level_id: createChapterDto.level_id },
     });
 
     if (!level) {
-      throw new NotFoundException(`Level with ID ${createChapterDto.levelId} not found`);
+      throw new NotFoundException(`Level with ID ${createChapterDto.level_id} not found`);
     }
 
     // Auto-generate orderIndex if not provided
-    let orderIndex = createChapterDto.orderIndex;
+    let orderIndex = createChapterDto.chapter_orderIndex;
     if (orderIndex === undefined) {
       const maxOrderResult = await this.chapterRepository
         .createQueryBuilder('chapter')
-        .where('chapter.levelId = :levelId', { levelId: createChapterDto.levelId })
-        .select('MAX(chapter.orderIndex)', 'maxOrder')
+        .where('chapter.level_id = :levelId', { levelId: createChapterDto.level_id })
+        .select('MAX(chapter.chapter_orderIndex)', 'maxOrder')
         .getRawOne();
       orderIndex = (maxOrderResult?.maxOrder ?? -1) + 1;
     }
 
     const chapter = this.chapterRepository.create({
-      title: createChapterDto.title,
-      levelId: createChapterDto.levelId,
-      orderIndex,
+      chapter_title: createChapterDto.chapter_title,
+      levelId: createChapterDto.level_id,
+      chapter_orderIndex: orderIndex,
     });
 
     const saved = await this.chapterRepository.save(chapter);
@@ -50,7 +50,7 @@ export class ChaptersService {
   async findByLevel(levelId: number): Promise<ChapterResponseDto[]> {
     const chapters = await this.chapterRepository.find({
       where: { levelId },
-      order: { orderIndex: 'ASC' },
+      order: { chapter_orderIndex: 'ASC' },
     });
 
     return chapters.map((c) => this.toResponseDto(c));
@@ -58,7 +58,7 @@ export class ChaptersService {
 
   // Find a chapter by ID
   async findOne(id: number): Promise<ChapterResponseDto> {
-    const chapter = await this.chapterRepository.findOne({ where: { id } });
+    const chapter = await this.chapterRepository.findOne({ where: { chapter_id: id } });
 
     if (!chapter) {
       throw new NotFoundException(`Chapter with ID ${id} not found`);
@@ -69,18 +69,18 @@ export class ChaptersService {
 
   // Update a chapter by ID
   async update(id: number, updateChapterDto: UpdateChapterDto): Promise<ChapterResponseDto> {
-    const chapter = await this.chapterRepository.findOne({ where: { id } });
+    const chapter = await this.chapterRepository.findOne({ where: { chapter_id: id } });
 
     if (!chapter) {
       throw new NotFoundException(`Chapter with ID ${id} not found`);
     }
 
-    if (updateChapterDto.title !== undefined) {
-      chapter.title = updateChapterDto.title;
+    if (updateChapterDto.chapter_title !== undefined) {
+      chapter.chapter_title = updateChapterDto.chapter_title;
     }
 
-    if (updateChapterDto.orderIndex !== undefined) {
-      chapter.orderIndex = updateChapterDto.orderIndex;
+    if (updateChapterDto.chapter_orderIndex !== undefined) {
+      chapter.chapter_orderIndex = updateChapterDto.chapter_orderIndex;
     }
 
     const saved = await this.chapterRepository.save(chapter);
@@ -89,7 +89,7 @@ export class ChaptersService {
 
   // Delete a chapter by ID
   async remove(id: number): Promise<void> {
-    const chapter = await this.chapterRepository.findOne({ where: { id } });
+    const chapter = await this.chapterRepository.findOne({ where: { chapter_id: id } });
 
     if (!chapter) {
       throw new NotFoundException(`Chapter with ID ${id} not found`);
@@ -104,12 +104,12 @@ export class ChaptersService {
       where: { levelId },
     });
 
-    const chapterMap = new Map(chapters.map((c) => [c.id, c]));
+    const chapterMap = new Map(chapters.map((c) => [c.chapter_id, c]));
 
     for (let i = 0; i < chapterIds.length; i++) {
       const chapter = chapterMap.get(chapterIds[i]);
       if (chapter) {
-        chapter.orderIndex = i;
+        chapter.chapter_orderIndex = i;
         await this.chapterRepository.save(chapter);
       }
     }
@@ -120,10 +120,10 @@ export class ChaptersService {
   // Convert Chapter entity to ChapterResponseDto
   private toResponseDto(chapter: Chapter): ChapterResponseDto {
     return {
-      id: chapter.id,
-      title: chapter.title,
-      orderIndex: chapter.orderIndex,
-      levelId: chapter.levelId,
+      chapter_id: chapter.chapter_id,
+      chapter_title: chapter.chapter_title,
+      chapter_orderIndex: chapter.chapter_orderIndex,
+      level_id: chapter.levelId,
     };
   }
 }

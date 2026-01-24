@@ -12,6 +12,6 @@ export class CreateArticleDto {
     example: { blocks: [{ type: 'paragraph', data: { text: 'Hello world' } }] },
   })
   @IsOptional()
-  content?: any;
+  article_content?: any;
 
 }
