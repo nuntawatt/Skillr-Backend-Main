@@ -258,7 +258,7 @@ export class UsersService {
     this.minioClient = new Minio.Client({
       endPoint: url.hostname,
       port: Number(url.port || 9000),
-      useSSL: url.protocol === 'https:',
+      useSSL: url.protocol === 'http:',
       accessKey,
       secretKey,
     });
