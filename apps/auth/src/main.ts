@@ -28,7 +28,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs/auth', app, document);
 
-  const allowedOrigins = [process.env.FRONTEND_URL, 'http://localhost:3000'].filter(Boolean);
+  const allowedOrigins = [process.env.FRONTEND_URL, 'http://157.85.98.100:3001','http://localhost:3000'].filter(Boolean);
 
   app.enableCors({
     origin: (origin, callback) => {
