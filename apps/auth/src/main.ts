@@ -17,19 +17,18 @@ async function bootstrap() {
       transform: true,
     }),
   );
-  const config = new DocumentBuilder()  
+  const config = new DocumentBuilder()
     .setTitle('Skillr Auth Service API')
     .setDescription('API documentation for the Auth Service')
     .setVersion('1.0.0')
     .addServer('/api')
-    .addBearerAuth() 
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs/auth', app, document);
 
-  const allowedOrigins = [process.env.FRONTEND_URL];
-  if (process.env.NODE_ENV === 'development') allowedOrigins.push('http://localhost:3000');
+  const allowedOrigins = [process.env.FRONTEND_URL, 'http://localhost:3000'].filter(Boolean);
 
   app.enableCors({
     origin: (origin, callback) => {
@@ -42,9 +41,9 @@ async function bootstrap() {
   });
 
   app.use(cookieParser());
-  
+
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
-  app.setGlobalPrefix('api');  
+  app.setGlobalPrefix('api');
 
   const port = Number(process.env.PORT ?? 3001);
   await app.listen(port);
