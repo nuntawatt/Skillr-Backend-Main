@@ -1,12 +1,23 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNumber, IsOptional, MaxLength, Min } from 'class-validator';
+import { IsString, IsNumber, IsOptional, MaxLength, Min, Max } from 'class-validator';
 
 export class UpdateChapterDto {
-    @ApiPropertyOptional({ description: 'Chapter title', example: 'Getting Started' })
-    @IsOptional()
     @IsString()
-    @MaxLength(255)
+    @IsOptional()
     chapter_title?: string;
+
+    @IsString()
+    @IsOptional()
+    chapter_name?: string;
+
+    @IsString()
+    @IsOptional()
+    chapter_type?: string;
+
+    @IsString()
+    @IsOptional()
+    @MaxLength(255)
+    chapter_description?: string;
 
     @ApiPropertyOptional({ description: 'Order index within the level', example: 0 })
     @IsOptional()

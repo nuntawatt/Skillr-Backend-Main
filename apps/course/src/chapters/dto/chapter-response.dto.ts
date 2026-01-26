@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ChapterResponseDto {
     @ApiProperty({ description: 'Chapter ID', example: 1 })
@@ -6,6 +6,15 @@ export class ChapterResponseDto {
 
     @ApiProperty({ description: 'Chapter title', example: 'Getting Started' })
     chapter_title: string;
+
+    @ApiProperty({ description: 'Chapter type', example: 'theory' })
+    chapter_type: string;
+
+    @ApiProperty({ description: 'Chapter name', example: 'getting-started' })
+    chapter_name: string;
+
+    @ApiPropertyOptional({ description: 'Chapter description', example: 'An introduction to the course.' })
+    chapter_description?: string;
 
     @ApiProperty({ description: 'Order index within level', example: 0 })
     chapter_orderIndex: number;

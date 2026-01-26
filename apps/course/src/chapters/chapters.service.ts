@@ -22,7 +22,9 @@ export class ChaptersService {
     });
 
     if (!level) {
-      throw new NotFoundException(`Level with ID ${createChapterDto.level_id} not found`);
+      throw new NotFoundException(
+        `Level with ID ${createChapterDto.level_id} not found`,
+      );
     }
 
     // Auto-generate orderIndex if not provided
@@ -31,13 +33,22 @@ export class ChaptersService {
       const maxOrderResult = await this.chapterRepository
         .createQueryBuilder('chapter')
         .where('chapter.level_id = :levelId', { levelId: createChapterDto.level_id })
-        .select('MAX(chapter.chapter_orderIndex)', 'maxOrder')
+        .select('MAX(chapter.order_index)', 'maxOrder') // note: maps to column name; adjust if your column alias differs
         .getRawOne();
-      orderIndex = (maxOrderResult?.maxOrder ?? -1) + 1;
+
+      // maxOrder may be a string depending on DB; coerce to number
+      const maxOrder = maxOrderResult && maxOrderResult.maxOrder !== null
+        ? Number(maxOrderResult.maxOrder)
+        : -1;
+
+      orderIndex = maxOrder + 1;
     }
 
     const chapter = this.chapterRepository.create({
       chapter_title: createChapterDto.chapter_title,
+      chapter_name: createChapterDto.chapter_name,
+      chapter_type: createChapterDto.chapter_type,
+      chapter_description: createChapterDto.chapter_description,
       levelId: createChapterDto.level_id,
       chapter_orderIndex: orderIndex,
     });
@@ -58,7 +69,9 @@ export class ChaptersService {
 
   // Find a chapter by ID
   async findOne(id: number): Promise<ChapterResponseDto> {
-    const chapter = await this.chapterRepository.findOne({ where: { chapter_id: id } });
+    const chapter = await this.chapterRepository.findOne({
+      where: { chapter_id: id },
+    });
 
     if (!chapter) {
       throw new NotFoundException(`Chapter with ID ${id} not found`);
@@ -68,8 +81,13 @@ export class ChaptersService {
   }
 
   // Update a chapter by ID
-  async update(id: number, updateChapterDto: UpdateChapterDto): Promise<ChapterResponseDto> {
-    const chapter = await this.chapterRepository.findOne({ where: { chapter_id: id } });
+  async update(
+    id: number,
+    updateChapterDto: UpdateChapterDto,
+  ): Promise<ChapterResponseDto> {
+    const chapter = await this.chapterRepository.findOne({
+      where: { chapter_id: id },
+    });
 
     if (!chapter) {
       throw new NotFoundException(`Chapter with ID ${id} not found`);
@@ -77,6 +95,18 @@ export class ChaptersService {
 
     if (updateChapterDto.chapter_title !== undefined) {
       chapter.chapter_title = updateChapterDto.chapter_title;
+    }
+
+    if (updateChapterDto.chapter_name !== undefined) {
+      chapter.chapter_name = updateChapterDto.chapter_name;
+    }
+
+    if (updateChapterDto.chapter_type !== undefined) {
+      chapter.chapter_type = updateChapterDto.chapter_type;
+    }
+
+    if (updateChapterDto.chapter_description !== undefined) {
+      chapter.chapter_description = updateChapterDto.chapter_description;
     }
 
     if (updateChapterDto.chapter_orderIndex !== undefined) {
@@ -89,7 +119,9 @@ export class ChaptersService {
 
   // Delete a chapter by ID
   async remove(id: number): Promise<void> {
-    const chapter = await this.chapterRepository.findOne({ where: { chapter_id: id } });
+    const chapter = await this.chapterRepository.findOne({
+      where: { chapter_id: id },
+    });
 
     if (!chapter) {
       throw new NotFoundException(`Chapter with ID ${id} not found`);
@@ -106,6 +138,7 @@ export class ChaptersService {
 
     const chapterMap = new Map(chapters.map((c) => [c.chapter_id, c]));
 
+    // Optionally: do this in a transaction to keep it atomic
     for (let i = 0; i < chapterIds.length; i++) {
       const chapter = chapterMap.get(chapterIds[i]);
       if (chapter) {
@@ -122,6 +155,9 @@ export class ChaptersService {
     return {
       chapter_id: chapter.chapter_id,
       chapter_title: chapter.chapter_title,
+      chapter_name: chapter.chapter_name,
+      chapter_type: chapter.chapter_type,
+      chapter_description: chapter.chapter_description,
       chapter_orderIndex: chapter.chapter_orderIndex,
       level_id: chapter.levelId,
     };

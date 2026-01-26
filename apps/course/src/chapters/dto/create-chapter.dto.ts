@@ -1,20 +1,33 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNumber, IsOptional, MaxLength, Min } from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateChapterDto {
-    @ApiProperty({ description: 'Chapter title', example: 'Getting Started' })
+    @ApiProperty({ description: 'Title of the chapter' })
     @IsString()
-    @MaxLength(255)
+    @IsNotEmpty()
     chapter_title: string;
 
-    @ApiProperty({ description: 'Level ID this chapter belongs to', example: 1 })
-    @IsNumber()
-    @Min(1)
+    @ApiProperty({ description: 'Name of the chapter' })
+    @IsString()
+    @IsNotEmpty()
+    chapter_name: string;
+
+    @ApiProperty({ description: 'Type of the chapter' })
+    @IsString()
+    @IsNotEmpty()
+    chapter_type: string;
+
+    @ApiPropertyOptional({ description: 'Description of the chapter' })
+    @IsString()
+    @IsOptional()
+    chapter_description?: string;
+
+    @ApiProperty({ description: 'ID of the level this chapter belongs to' })
+    @IsInt()
     level_id: number;
 
-    @ApiPropertyOptional({ description: 'Order index within the level', example: 0, default: 0 })
+    @ApiPropertyOptional({ description: 'Order index of the chapter within the level' })
+    @IsInt()
     @IsOptional()
-    @IsNumber()
-    @Min(0)
     chapter_orderIndex?: number;
 }
