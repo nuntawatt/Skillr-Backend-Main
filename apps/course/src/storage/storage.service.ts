@@ -92,5 +92,4 @@ export class StorageService {
             this.logger.warn(`removeObject failed ${bucket}/${key}: ${String(e)}`);
         }
     }
-
 }

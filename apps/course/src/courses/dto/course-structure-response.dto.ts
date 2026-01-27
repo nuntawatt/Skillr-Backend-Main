@@ -2,19 +2,19 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class LessonStructureDto {
     @ApiProperty({ description: 'Lesson ID', example: 1 })
-    id: number;
+    lesson_id: number;
 
     @ApiProperty({ description: 'Lesson title', example: 'Introduction to Variables' })
-    title: string;
+    lesson_title: string;
 
     @ApiProperty({ description: 'Lesson type', example: 'article', enum: ['article', 'video', 'quiz', 'assignment'] })
-    type: string;
+    lesson_type: string;
 
     // @ApiProperty({ description: 'Reference source', example: 'course', enum: ['course', 'media', 'quiz'] })
     // refSource: string;
 
     @ApiProperty({ description: 'Reference ID', example: 1 })
-    refId: number;
+    ref_id: number;
 
     @ApiProperty({ description: 'Order index within chapter', example: 0 })
     orderIndex: number;
@@ -22,10 +22,10 @@ export class LessonStructureDto {
 
 export class ChapterStructureDto {
     @ApiProperty({ description: 'Chapter ID', example: 1 })
-    id: number;
+    chapter_id: number;
 
     @ApiProperty({ description: 'Chapter title', example: 'Getting Started' })
-    title: string;
+    chapter_title: string;
 
     @ApiProperty({ description: 'Order index within level', example: 0 })
     orderIndex: number;
@@ -36,10 +36,10 @@ export class ChapterStructureDto {
 
 export class LevelStructureDto {
     @ApiProperty({ description: 'Level ID', example: 1 })
-    id: number;
+    level_id: number;
 
     @ApiProperty({ description: 'Level title', example: 'Beginner' })
-    title: string;
+    level_title: string;
 
     @ApiProperty({ description: 'Order index within course', example: 0 })
     orderIndex: number;

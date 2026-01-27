@@ -2,10 +2,10 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ArticleResponseDto {
   @ApiProperty({ description: 'Article ID', example: 1 })
-  id: number;
+  article_id: number;
 
   @ApiProperty({ description: 'Lesson ID this article belongs to', example: 1 })
-  lessonId: number;
+  lesson_id: number;
 
   @ApiProperty({
     description: 'Article content as JSONB',

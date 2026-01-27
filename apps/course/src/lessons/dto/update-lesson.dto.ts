@@ -7,12 +7,12 @@ export class UpdateLessonDto {
   @IsOptional()
   @IsString()
   @MaxLength(255)
-  title?: string;
+  lesson_title?: string;
 
   @ApiPropertyOptional({ description: 'Lesson description', example: 'Learn about variable types' })
   @IsOptional()
   @IsString()
-  description?: string;
+  lesson_description?: string;
 
   @ApiPropertyOptional({
     description: 'Lesson type',
@@ -21,13 +21,13 @@ export class UpdateLessonDto {
   })
   @IsOptional()
   @IsEnum(LessonType)
-  type?: LessonType;
+  lesson_type?: LessonType;
 
   @ApiPropertyOptional({ description: 'Reference ID pointing to the content', example: 1 })
   @IsOptional()
   @IsNumber()
   @Min(1)
-  refId?: number;
+  ref_id?: number;
 
   @ApiPropertyOptional({ description: 'Order index within the chapter', example: 0 })
   @IsOptional()

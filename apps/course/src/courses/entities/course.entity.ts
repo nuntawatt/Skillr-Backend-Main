@@ -24,7 +24,6 @@ export class Course {
   @Column({ name: 'course_tags', type: 'text', array: true, nullable: true })
   course_tags?: string[] | null;
 
-
   @Column({ name: 'is_published', default: false })
   isPublished: boolean;
 

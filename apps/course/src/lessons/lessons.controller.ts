@@ -39,8 +39,7 @@ export class LessonsController {
   @ApiOperation({ summary: 'Create a new article lesson with content' })
   @ApiCreatedResponse({ type: LessonResponseDto, description: 'Article lesson created successfully' })
   createArticleLesson(
-    @Body() body: { title: string; description?: string; chapterId: number; orderIndex?: number; content: any },
-  ): Promise<LessonResponseDto> {
+    @Body() body: { lesson_title: string; lesson_description?: string; chapter_id: number; orderIndex?: number; content: any  }): Promise<LessonResponseDto> {
     const { content, ...lessonData } = body;
     return this.lessonsService.createArticleLesson(lessonData, content);
   }

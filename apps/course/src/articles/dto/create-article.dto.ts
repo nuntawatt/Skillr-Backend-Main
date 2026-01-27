@@ -5,7 +5,7 @@ export class CreateArticleDto {
   @ApiProperty({ description: 'Lesson ID this article belongs to', example: 1 })
   @IsNumber()
   @Min(1)
-  lessonId: number;
+  lesson_id: number;
 
   @ApiPropertyOptional({
     description: 'Article content as JSONB (editor blocks or structured content)',
@@ -13,5 +13,4 @@ export class CreateArticleDto {
   })
   @IsOptional()
   article_content?: any;
-
 }

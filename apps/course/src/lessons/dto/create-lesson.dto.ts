@@ -6,17 +6,17 @@ export class CreateLessonDto {
   @ApiProperty({ description: 'Lesson title', example: 'Introduction to Variables' })
   @IsString()
   @MaxLength(255)
-  title: string;
+  lesson_title: string;
 
   @ApiPropertyOptional({ description: 'Lesson description', example: 'Learn about variable types' })
   @IsOptional()
   @IsString()
-  description?: string;
+  lesson_description?: string;
 
   @ApiProperty({ description: 'Chapter ID this lesson belongs to', example: 1 })
   @IsNumber()
   @Min(1)
-  chapterId: number;
+  chapter_id: number;
 
   @ApiProperty({
     description: 'Lesson type',
@@ -24,12 +24,12 @@ export class CreateLessonDto {
     example: LessonType.ARTICLE,
   })
   @IsEnum(LessonType)
-  type: LessonType;
+  lesson_type: LessonType;
 
   @ApiProperty({ description: 'Reference ID pointing to the content', example: 1 })
   @IsNumber()
   @Min(1)
-  refId: number;
+  ref_id: number;
 
   @ApiPropertyOptional({ description: 'Order index within the chapter', example: 0, default: 0 })
   @IsOptional()

@@ -22,11 +22,11 @@ export class LessonsService {
   async create(createLessonDto: CreateLessonDto): Promise<LessonResponseDto> {
     // Verify chapter exists
     const chapter = await this.chapterRepository.findOne({
-      where: { chapter_id: createLessonDto.chapterId },
+      where: { chapter_id: createLessonDto.chapter_id },
     });
 
     if (!chapter) {
-      throw new NotFoundException(`Chapter with ID ${createLessonDto.chapterId} not found`);
+      throw new NotFoundException(`Chapter with ID ${createLessonDto.chapter_id} not found`);
     }
 
     // Auto-generate orderIndex if not provided
@@ -34,19 +34,19 @@ export class LessonsService {
     if (orderIndex === undefined) {
       const maxOrderResult = await this.lessonRepository
         .createQueryBuilder('lesson')
-        .where('lesson.chapter_id = :chapterId', { chapterId: createLessonDto.chapterId })
+        .where('lesson.chapter_id = :chapterId', { chapterId: createLessonDto.chapter_id })
         .select('MAX(lesson.order_index)', 'maxOrder')
         .getRawOne();
       orderIndex = (maxOrderResult?.maxOrder ?? -1) + 1;
     }
 
     const lesson = this.lessonRepository.create({
-      lesson_title: createLessonDto.title,
-      lesson_description: createLessonDto.description,
-      chapter_id: createLessonDto.chapterId,
-      type: createLessonDto.type,
-      ref_id: createLessonDto.refId,
-      order_index: orderIndex,
+      lesson_title: createLessonDto.lesson_title,
+      lesson_description: createLessonDto.lesson_description,
+      chapter_id: createLessonDto.chapter_id,
+      lesson_type: createLessonDto.lesson_type,
+      ref_id: createLessonDto.ref_id,
+      orderIndex: orderIndex,
     });
 
     const saved = await this.lessonRepository.save(lesson);
@@ -55,17 +55,17 @@ export class LessonsService {
 
   // Create a new article lesson with content in a transaction
   async createArticleLesson(
-    createLessonDto: Omit<CreateLessonDto, 'type' | 'refSource' | 'refId'>,
+    createLessonDto: Omit<CreateLessonDto, 'lesson_type' | 'ref_id'>,
     content: any,
   ): Promise<LessonResponseDto> {
     return await this.dataSource.transaction(async (manager) => {
       // Verify chapter exists
       const chapter = await manager.findOne(Chapter, {
-        where: { chapter_id: createLessonDto.chapterId },
+        where: { chapter_id: createLessonDto.chapter_id },
       });
 
       if (!chapter) {
-        throw new NotFoundException(`Chapter with ID ${createLessonDto.chapterId} not found`);
+        throw new NotFoundException(`Chapter with ID ${createLessonDto.chapter_id} not found`);
       }
 
       // Auto-generate orderIndex if not provided
@@ -73,7 +73,7 @@ export class LessonsService {
       if (orderIndex === undefined) {
         const maxOrderResult = await manager
           .createQueryBuilder(Lesson, 'lesson')
-          .where('lesson.chapter_id = :chapterId', { chapterId: createLessonDto.chapterId })
+          .where('lesson.chapter_id = :chapterId', { chapterId: createLessonDto.chapter_id })
           .select('MAX(lesson.order_index)', 'maxOrder')
           .getRawOne();
         orderIndex = (maxOrderResult?.maxOrder ?? -1) + 1;
@@ -82,23 +82,23 @@ export class LessonsService {
       // Create article first to get its ID
       const article = manager.create(Article, {
         content,
-        lessonId: 0, // Will be updated after lesson creation
+        lesson_id: 0, // Will be updated after lesson creation
       });
 
       // We need to save the lesson first to get its ID
       const lesson = manager.create(Lesson, {
-        lesson_title: createLessonDto.title,
-        lesson_description: createLessonDto.description,
-        chapter_id: createLessonDto.chapterId,
-        type: LessonType.ARTICLE,
+        lesson_title: createLessonDto.lesson_title,
+        lesson_description: createLessonDto.lesson_description,
+        chapter_id: createLessonDto.chapter_id,
+        lesson_type: LessonType.ARTICLE,
         ref_id: 0, // Will be updated
-        order_index: orderIndex,
+        orderIndex: orderIndex,
       });
 
       const savedLesson = await manager.save(lesson);
 
       // Now create the article with the lesson ID
-      article.lessonId = savedLesson.lesson_id;
+      article.lesson_id = savedLesson.lesson_id;
       const savedArticle = await manager.save(article);
 
       // Update the lesson with the article's ID
@@ -113,7 +113,7 @@ export class LessonsService {
   async findByChapter(chapterId: number): Promise<LessonResponseDto[]> {
     const lessons = await this.lessonRepository.find({
       where: { chapter_id: chapterId },
-      order: { order_index: 'ASC' },
+      order: { orderIndex: 'ASC' },
     });
 
     return lessons.map((l) => this.toResponseDto(l));
@@ -138,24 +138,24 @@ export class LessonsService {
       throw new NotFoundException(`Lesson with ID ${id} not found`);
     }
 
-    if (updateLessonDto.title !== undefined) {
-      lesson.lesson_title = updateLessonDto.title;
+    if (updateLessonDto.lesson_title !== undefined) {
+      lesson.lesson_title = updateLessonDto.lesson_title;
     }
 
-    if (updateLessonDto.description !== undefined) {
-      lesson.lesson_description = updateLessonDto.description;
+    if (updateLessonDto.lesson_description !== undefined) {
+      lesson.lesson_description = updateLessonDto.lesson_description;
     }
 
-    if (updateLessonDto.type !== undefined) {
-      lesson.type = updateLessonDto.type;
+    if (updateLessonDto.lesson_type !== undefined) {
+      lesson.lesson_type = updateLessonDto.lesson_type;
     }
 
-    if (updateLessonDto.refId !== undefined) {
-      lesson.ref_id = updateLessonDto.refId;
+    if (updateLessonDto.ref_id !== undefined) {
+      lesson.ref_id = updateLessonDto.ref_id;
     }
 
     if (updateLessonDto.orderIndex !== undefined) {
-      lesson.order_index = updateLessonDto.orderIndex;
+      lesson.orderIndex = updateLessonDto.orderIndex;
     }
 
     const saved = await this.lessonRepository.save(lesson);
@@ -184,7 +184,7 @@ export class LessonsService {
     for (let i = 0; i < lessonIds.length; i++) {
       const lesson = lessonMap.get(lessonIds[i]);
       if (lesson) {
-        lesson.order_index = i;
+        lesson.orderIndex = i;
         await this.lessonRepository.save(lesson);
       }
     }
@@ -195,12 +195,12 @@ export class LessonsService {
   // Convert Lesson entity to LessonResponseDto
   private toResponseDto(lesson: Lesson): LessonResponseDto {
     return {
-      id: lesson.lesson_id,
-      title: lesson.lesson_title,
-      description: lesson.lesson_description,
-      type: lesson.type,
-      refId: lesson.ref_id,
-      orderIndex: lesson.order_index,
+      lesson_id: lesson.lesson_id,
+      lesson_title: lesson.lesson_title,
+      lesson_description: lesson.lesson_description,
+      lesson_type: lesson.lesson_type,
+      ref_id: lesson.ref_id,
+      orderIndex: lesson.orderIndex,
       chapter_id: lesson.chapter_id,
       createdAt: lesson.createdAt,
     };

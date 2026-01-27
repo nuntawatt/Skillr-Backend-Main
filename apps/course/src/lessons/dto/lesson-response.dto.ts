@@ -2,22 +2,19 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class LessonResponseDto {
   @ApiProperty({ description: 'Lesson ID', example: 1 })
-  id: number;
+  lesson_id: number;
 
   @ApiProperty({ description: 'Lesson title', example: 'Introduction to Variables' })
-  title: string;
+  lesson_title: string;
 
   @ApiPropertyOptional({ description: 'Lesson description' })
-  description?: string;
+  lesson_description?: string;
 
   @ApiProperty({ description: 'Lesson type', example: 'article' })
-  type: string;
-
-  // @ApiProperty({ description: 'Reference source', example: 'course' })
-  // refSource: string;
+  lesson_type: string;
 
   @ApiProperty({ description: 'Reference ID', example: 1 })
-  refId: number;
+  ref_id: number;
 
   @ApiProperty({ description: 'Order index within the chapter', example: 0 })
   orderIndex: number;

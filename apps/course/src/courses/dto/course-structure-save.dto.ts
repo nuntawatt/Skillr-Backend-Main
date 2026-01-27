@@ -23,7 +23,7 @@ export class LessonSaveDto {
     @ApiPropertyOptional({ description: 'Reference id (optional)' })
     @IsOptional()
     @IsInt()
-    refId?: number;
+    ref_id?: number;
 
     @ApiProperty({ description: 'Order index within chapter' })
     @IsInt()

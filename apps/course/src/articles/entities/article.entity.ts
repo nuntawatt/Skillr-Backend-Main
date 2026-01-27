@@ -8,11 +8,7 @@ export class Article {
 
     @OneToOne(() => Lesson, (lesson) => lesson.lesson_article, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'lesson_id' })
-    lesson: Lesson;
-
-    @Column({ name: 'lesson_id', type: 'int', unique: true })
-    lessonId: number;
-
+    lesson_id: number;
 
     @Column({ name: 'pdf_article', type: 'bytea', nullable: true })
     pdfArticle?: Buffer;

@@ -110,29 +110,28 @@ export class CoursesService {
       const chapters: ChapterStructureDto[] = sortedChapters.map((chapter) => {
         // Sort lessons by orderIndex
         const sortedLessons = (chapter.lessons || []).sort(
-          (a, b) => a.order_index - b.order_index,
+          (a, b) => a.orderIndex - b.orderIndex,
         );
 
         const lessons: LessonStructureDto[] = sortedLessons.map((lesson) => ({
-          id: lesson.lesson_id,
-          title: lesson.lesson_title,
-          type: lesson.type,
-          // refSource: lesson.ref_source,
-          refId: lesson.ref_id,
-          orderIndex: lesson.order_index,
+          lesson_id: lesson.lesson_id,
+          lesson_title: lesson.lesson_title,
+          lesson_type: lesson.lesson_type,
+          ref_id: lesson.ref_id,
+          orderIndex: lesson.orderIndex,
         }));
 
         return {
-          id: chapter.chapter_id,
-          title: chapter.chapter_title,
+          chapter_id: chapter.chapter_id,
+          chapter_title: chapter.chapter_title,
           orderIndex: chapter.chapter_orderIndex,
           lessons,
         };
       });
 
       return {
-        id: level.level_id,
-        title: level.level_title,
+        level_id: level.level_id,
+        level_title: level.level_title,
         orderIndex: level.level_orderIndex,
         chapters,
       };
@@ -160,11 +159,6 @@ export class CoursesService {
     if (updateCourseDto.course_description !== undefined) course.course_description = updateCourseDto.course_description;
     if (updateCourseDto.course_imageId !== undefined) course.course_imageId = updateCourseDto.course_imageId;
     if (updateCourseDto.course_tags !== undefined) course.course_tags = updateCourseDto.course_tags ?? null;
-
-    // if (updateCourseDto.introMediaAssetId !== undefined) {
-    //   course.introMediaAssetId = updateCourseDto.introMediaAssetId;
-    // }
-
 
     if (updateCourseDto.isPublished !== undefined) {
       course.isPublished = updateCourseDto.isPublished;
@@ -216,10 +210,9 @@ export class CoursesService {
           for (const les of ch.lessons || []) {
             const lesson = this.lessonRepository.create({
               lesson_title: les.title,
-              type: les.type as any,
-              // ref_source: (les.refSource as any) ?? 'course',
-              ref_id: les.refId ?? 0,
-              order_index: les.orderIndex,
+              lesson_type: les.type as any,
+              ref_id: les.ref_id ?? 0,
+              orderIndex: les.orderIndex,
               chapter_id: savedChapter.chapter_id,
             });
 

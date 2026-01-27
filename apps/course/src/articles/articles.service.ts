@@ -15,34 +15,34 @@ export class ArticlesService {
     @InjectRepository(Lesson)
     private readonly lessonRepository: Repository<Lesson>,
     private readonly storageService: StorageService,
-  ) {}
+  ) { }
 
   // Create a new article
   async create(createArticleDto: CreateArticleDto): Promise<ArticleResponseDto> {
     // Verify lesson exists and is of type article
     const lesson = await this.lessonRepository.findOne({
-      where: { lesson_id: createArticleDto.lessonId },
+      where: { lesson_id: createArticleDto.lesson_id },
     });
 
     if (!lesson) {
-      throw new NotFoundException(`Lesson with ID ${createArticleDto.lessonId} not found`);
+      throw new NotFoundException(`Lesson with ID ${createArticleDto.lesson_id} not found`);
     }
 
-    if (lesson.type !== LessonType.ARTICLE) {
-      throw new BadRequestException(`Lesson with ID ${createArticleDto.lessonId} is not of type 'article'`);
+    if (lesson.lesson_type !== LessonType.ARTICLE) {
+      throw new BadRequestException(`Lesson with ID ${createArticleDto.lesson_id} is not of type 'article'`);
     }
 
     // Check if article already exists for this lesson
     const existingArticle = await this.articleRepository.findOne({
-      where: { lessonId: createArticleDto.lessonId },
+      where: { lesson_id: createArticleDto.lesson_id },
     });
 
     if (existingArticle) {
-      throw new BadRequestException(`Article already exists for lesson with ID ${createArticleDto.lessonId}`);
+      throw new BadRequestException(`Article already exists for lesson with ID ${createArticleDto.lesson_id}`);
     }
 
     const article = this.articleRepository.create({
-      lessonId: createArticleDto.lessonId,
+      lesson_id: createArticleDto.lesson_id,
       article_content: createArticleDto.article_content,
     });
 
@@ -63,17 +63,17 @@ export class ArticlesService {
       throw new NotFoundException(`Lesson with ID ${body.lessonId} not found`);
     }
 
-    if (lesson.type !== LessonType.ARTICLE) {
+    if (lesson.lesson_type !== LessonType.ARTICLE) {
       throw new BadRequestException(`Lesson with ID ${body.lessonId} is not of type 'article'`);
     }
 
-    const existing = await this.articleRepository.findOne({ where: { lessonId: body.lessonId } });
+    const existing = await this.articleRepository.findOne({ where: { lesson_id: body.lessonId } });
     if (existing) throw new BadRequestException(`Article already exists for lesson ${body.lessonId}`);
 
     const pdfKey = `articles/pdf/${randomUUID()}.pdf`;
     await this.storageService.putObject(this.storageService.bucket, pdfKey, fileBuffer, fileBuffer.length, { 'Content-Type': 'application/pdf' });
 
-    const article = this.articleRepository.create({ lessonId: body.lessonId, article_content: body.content ?? null, pdfArticle: Buffer.from(pdfKey, 'utf8') });
+    const article = this.articleRepository.create({ lesson_id: body.lessonId, article_content: body.content, pdfArticle: Buffer.from(pdfKey, 'utf8') });
     const saved = await this.articleRepository.save(article);
 
     lesson.ref_id = saved.article_id;
@@ -93,7 +93,7 @@ export class ArticlesService {
       if (prev && prev.startsWith('articles/')) {
         await this.storageService.removeObject(this.storageService.bucket, prev);
       }
-    } catch {}
+    } catch { }
 
     const pdfKey = `articles/pdf/${randomUUID()}.pdf`;
     await this.storageService.putObject(this.storageService.bucket, pdfKey, fileBuffer, fileBuffer.length, { 'Content-Type': 'application/pdf' });
@@ -143,7 +143,7 @@ export class ArticlesService {
 
   // Find an article by lesson ID
   async findByLessonId(lessonId: number): Promise<ArticleResponseDto> {
-    const article = await this.articleRepository.findOne({ where: { lessonId } });
+    const article = await this.articleRepository.findOne({ where: { lesson_id: lessonId } });
 
     if (!article) {
       throw new NotFoundException(`Article for lesson with ID ${lessonId} not found`);
@@ -184,8 +184,8 @@ export class ArticlesService {
   // Convert Article entity to ArticleResponseDto
   private toResponseDto(article: Article): ArticleResponseDto {
     return {
-      id: article.article_id,
-      lessonId: article.lessonId,
+      article_id: article.article_id,
+      lesson_id: article.lesson_id,
       article_content: article.article_content,
       hasPdfArticle: !!article.pdfArticle,
       updatedAt: article.updatedAt,

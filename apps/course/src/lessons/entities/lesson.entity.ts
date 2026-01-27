@@ -25,13 +25,13 @@ export class Lesson {
     enum: LessonType,
     default: LessonType.ARTICLE,
   })
-  type: LessonType;
+  lesson_type: LessonType;
 
   @Column({ name: 'ref_id', type: 'int' })
   ref_id: number;
 
   @Column({ name: 'order_index', type: 'int', default: 0 })
-  order_index: number;
+  orderIndex: number;
 
   @ManyToOne(() => Chapter, (chapter) => chapter.lessons, { onDelete: 'CASCADE' })
   chapter: Chapter;
@@ -39,7 +39,7 @@ export class Lesson {
   chapter_id: number;
 
   // One-to-one relation with Article (if type is ARTICLE)
-  @OneToOne(() => Article, (article) => article.lesson, { cascade: true })
+  @OneToOne(() => Article, (article) => article.lesson_id, { cascade: true })
   lesson_article?: Article;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
