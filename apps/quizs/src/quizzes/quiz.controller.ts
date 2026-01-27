@@ -51,39 +51,6 @@ export class QuizController {
   @ApiBody({
     type: CreateQuizDto,
     examples: {
-      mixed_3_types: {
-        summary: 'Create quiz (3 questions: MC + T/F + MatchPairs)',
-        value: {
-          lessonId: 1,
-          title: 'แบบทดสอบพื้นฐาน TypeScript',
-          questions: [
-            {
-              question: 'TypeScript คืออะไร?',
-              type: 'multiple_choice',
-              options: [
-                'Superset ของ JavaScript',
-                'ชื่อตัวละครในเกม',
-                'ยี่ห้อกาแฟ',
-                'ระบบปฏิบัติการ',
-              ],
-              correctAnswer: 'Superset ของ JavaScript',
-            },
-            {
-              question: 'TypeScript ต้อง compile เป็น JavaScript ก่อนรันใช่หรือไม่?',
-              type: 'true_false',
-              correctAnswerBool: true,
-            },
-            {
-              question: 'จงจับคู่สัตว์กับอาหารที่ชอบให้ถูกต้อง',
-              type: 'match_pairs',
-              optionsPairs: [
-                { left: 'เจ้าตูบ', right: 'กระดูก' },
-                { left: 'เจ้าเหมียว', right: 'ปลาทู' },
-              ],
-            },
-          ],
-        },
-      },
       multiple_choice_only: {
         summary: 'Create quiz (Multiple Choice Only)',
         value: {
@@ -96,17 +63,6 @@ export class QuizController {
               options: ['var', 'let', 'const', 'static'],
               correctAnswer: 'const',
             },
-            {
-              question: 'ข้อใดไม่ใช่คุณสมบัติของ Arrow Function?',
-              type: 'multiple_choice',
-              options: [
-                'เขียนสั้นลง',
-                'ไม่มี arguments object',
-                'มีตัวแปร this เป็นของตัวเอง',
-                'ไม่สามารถใช้เป็น Constructor ได้',
-              ],
-              correctAnswer: 'มีตัวแปร this เป็นของตัวเอง',
-            },
           ],
         },
       },
@@ -117,55 +73,9 @@ export class QuizController {
           title: 'แบบทดสอบความเข้าใจพื้นฐาน IT',
           questions: [
             {
-              question: 'RAM คือหน่วยความจำถาวร ข้อมูลจะไม่หายไปเมื่อปิดเครื่อง',
-              type: 'true_false',
-              correctAnswerBool: false,
-            },
-            {
-              question: 'HTTP เป็นโปรโตคอลที่ปลอดภัยกว่า HTTPS',
-              type: 'true_false',
-              correctAnswerBool: false,
-            },
-            {
               question: 'CPU ทำหน้าที่ประมวลผลคำสั่งต่างๆ ของคอมพิวเตอร์',
               type: 'true_false',
               correctAnswerBool: true,
-            },
-          ],
-        },
-      },
-      match_pairs_only: {
-        summary: 'Create quiz (Match Pairs Only)',
-        value: {
-          lessonId: 4,
-          title: 'แบบทดสอบการจับคู่คำศัพท์',
-          questions: [
-            {
-              question: 'จงจับคู่เครื่องมือกับหน้าที่ให้ถูกต้อง',
-              type: 'match_pairs',
-              optionsPairs: [
-                { left: 'Git', right: 'Version Control' },
-                { left: 'Docker', right: 'Containerization' },
-                { left: 'Postman', right: 'API Testing' },
-              ],
-            },
-          ],
-        },
-      },
-      correct_order_only: {
-        summary: 'Create quiz (Correct Order Only)',
-        value: {
-          lessonId: 5,
-          title: 'ลำดับการล้างมือที่ถูกต้อง',
-          questions: [
-            {
-              question: 'จงเรียงลำดับขั้นตอนการล้างมือให้ถูกต้องตามหลักอนามัย',
-              type: 'correct_order',
-              optionsOrder: [
-                { text: 'ชโลมสบู่ลงบนฝ่ามือ' },
-                { text: 'ถูมือให้สะอาดทุกซอกมุม' },
-                { text: 'ล้างออกด้วยน้ำสะอาด' },
-              ],
             },
           ],
         },
@@ -183,7 +93,7 @@ export class QuizController {
       example: {
         statusCode: 400,
         error: 'Bad Request',
-        message: '1 Lesson สามารถมีคำถามรวมได้สูงสุด 3 ข้อ (ปัจจุบันมีแล้ว 3 ข้อ)',
+        message: '1 Lesson สามารถมีคำถามรวมได้สูงสุด 1 ข้อ (ปัจจุบันมีแล้ว 1 ข้อ)',
       },
     },
   })
@@ -381,7 +291,7 @@ export class QuizController {
       example: {
         statusCode: 400,
         error: 'Bad Request',
-        message: '1 Lesson สามารถมีคำถามรวมได้สูงสุด 3 ข้อ',
+        message: '1 Lesson สามารถมีคำถามรวมได้สูงสุด 1 ข้อ',
       },
     },
   })
@@ -536,7 +446,6 @@ export class QuizController {
         value: {
           answers: [
             { questionId: 31, answer: 'JavaScript' },
-            { questionId: 32, answer: 'const' },
           ],
         },
       },
@@ -545,53 +454,15 @@ export class QuizController {
         value: {
           answers: [
             { questionId: 35, answer: true },
-            { questionId: 36, answer: false },
-          ],
-        },
-      },
-      submit_match_pairs_only: {
-        summary: 'Submit Match Pairs answers',
-        value: {
-          answers: [
-            {
-              questionId: 32,
-              answer: [
-                { left: 'Git', right: 'Version Control' },
-                { left: 'Docker', right: 'Containerization' },
-                { left: 'Postman', right: 'API Testing' },
-              ],
-            },
-          ],
-        },
-      },
-      submit_correct_order_only: {
-        summary: 'Submit Correct Order answers',
-        value: {
-          answers: [
-            {
-              questionId: 33,
-              answer: [
-                'ชโลมสบู่ลงบนฝ่ามือ',
-                'ถูมือให้สะอาดทุกซอกมุม',
-                'ล้างออกด้วยน้ำสะอาด',
-              ],
-            },
           ],
         },
       },
       submit_mixed: {
-        summary: 'Submit mixed types (MC + T/F + Match)',
+        summary: 'Submit mixed types (MC + T/F)',
         value: {
           answers: [
             { questionId: 31, answer: 'Superset ของ JavaScript' },
             { questionId: 32, answer: true },
-            {
-              questionId: 33,
-              answer: [
-                { left: 'เจ้าตูบ', right: 'กระดูก' },
-                { left: 'เจ้าเหมียว', right: 'ปลาทู' },
-              ],
-            },
           ],
         },
       },
@@ -628,24 +499,6 @@ export class QuizController {
             userAnswer: false,
             isCorrect: false,
             correctAnswer: true,
-          },
-          {
-            questionId: 33,
-            question: 'จงจับคู่สัตว์กับเสียง',
-            type: 'match_pairs',
-            options: [
-              { left: 'สุนัข', right: 'โฮ่ง' },
-              { left: 'แมว', right: 'เมี๊ยว' },
-            ],
-            userAnswer: [
-              { left: 'สุนัข', right: 'โฮ่ง' },
-              { left: 'แมว', right: 'เมี๊ยว' },
-            ],
-            isCorrect: true,
-            correctAnswer: [
-              { left: 'สุนัข', right: 'โฮ่ง' },
-              { left: 'แมว', right: 'เมี๊ยว' },
-            ],
           },
         ],
       },
@@ -831,29 +684,6 @@ export class QuestionController {
           question: 'อินเทอร์เน็ตคือเครือข่ายคอมพิวเตอร์ที่เชื่อมโยงกันทั่วโลก',
           type: 'true_false',
           correctAnswerBool: true,
-        },
-      },
-      update_match_pairs: {
-        summary: 'Update question (Match Pairs)',
-        value: {
-          question: 'จงจับคู่เครื่องหมายกับชื่อเรียกให้ถูกต้อง',
-          type: 'match_pairs',
-          optionsPairs: [
-            { left: '[]', right: 'Array' },
-            { left: '{}', right: 'Object' },
-          ],
-        },
-      },
-      update_correct_order: {
-        summary: 'Update question (Correct Order)',
-        value: {
-          question: 'จงเรียงลำดับขั้นตอนตอนเช้า',
-          type: 'correct_order',
-          optionsOrder: [
-            { text: 'ตื่นนอน' },
-            { text: 'แปรงฟัน' },
-            { text: 'ไปทำงาน' },
-          ],
         },
       },
     },

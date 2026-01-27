@@ -15,7 +15,7 @@ import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class QuizService {
-  private readonly maxQuestionsPerLesson = 3;
+  private readonly maxQuestionsPerLesson = 1;
   private readonly learningServiceUrl = process.env.LEARNING_SERVICE_URL;
 
   constructor(
@@ -79,13 +79,7 @@ export class QuizService {
             { optionText: 'False', isCorrect: q.correctAnswerBool === false },
           ] as any;
         } else {
-          // For other types (Match Pairs, Correct Order), still using correctAnswer as JSONB for now
           question.correctAnswer = this.mapCorrectAnswerByType(q);
-          // And mapping options if any
-          const mappedOpts = this.mapOptionsByType(q);
-          if (Array.isArray(mappedOpts)) {
-            question.correctAnswer = mappedOpts; // Wait, this logic seems slightly different from before but follow original map
-          }
         }
 
         await this.questionRepository.save(question);
@@ -99,10 +93,6 @@ export class QuizService {
     switch (question.type) {
       case QuestionType.TRUE_FALSE:
         return ['True', 'False'];
-      case QuestionType.MATCH_PAIRS:
-        return question.optionsPairs;
-      case QuestionType.CORRECT_ORDER:
-        return question.optionsOrder;
       default:
         return question.options;
     }
@@ -112,11 +102,6 @@ export class QuizService {
     switch (question.type) {
       case QuestionType.TRUE_FALSE:
         return question.correctAnswerBool;
-      case QuestionType.MATCH_PAIRS:
-        return question.optionsPairs;
-      case QuestionType.CORRECT_ORDER:
-        // ใช้ลำดับของ optionsOrder ที่ส่งมาเป็นเฉลยโดยตรง (เก็บเป็น Array ของ Text)
-        return question.optionsOrder?.map((o) => o.text);
       default:
         return question.correctAnswer;
     }
@@ -199,19 +184,6 @@ export class QuizService {
             stripped.options = this.shuffleArray([
               ...(stripped.options as any[]),
             ]);
-          } else if (q.type === QuestionType.CORRECT_ORDER) {
-            // สลับขั้นตอนการเรียงลำดับให้มั่ว
-            stripped.options = this.shuffleArray([...(stripped.options as any[])]);
-          } else if (q.type === QuestionType.MATCH_PAIRS) {
-            // ตามโจทย์: ฝั่งขวาอยู่ที่เดิม แต่ฝั่งซ้ายสุ่มลำดับใหม่
-            const pairs = stripped.options as any[];
-            const shuffledLefts = this.shuffleArray(pairs.map((p) => p.left));
-            const originalRights = pairs.map((p) => p.right);
-
-            stripped.options = originalRights.map((right, i) => ({
-              left: shuffledLefts[i],
-              right: right,
-            })) as any;
           }
 
           // อัปเดตลำดับที่สุ่มได้กลับเข้าไปใน Attempt (Draft) เพื่อให้ครั้งหน้าเรียกแล้วได้ลำดับเดิมถ้ามีการเซฟ
@@ -292,18 +264,14 @@ export class QuizService {
 
     // Handle options and correct answer mapping if they are being updated
     const mappedOptions =
-      updateDto.type ||
-        updateDto.options ||
-        updateDto.optionsPairs ||
-        updateDto.optionsOrder
+      updateDto.type || updateDto.options
         ? this.mapOptionsByType(updateDto as any)
         : question.options;
 
     const mappedAnswer =
       updateDto.type ||
         updateDto.correctAnswer ||
-        updateDto.correctAnswerBool ||
-        updateDto.optionsPairs
+        updateDto.correctAnswerBool
         ? this.mapCorrectAnswerByType(updateDto as any)
         : question.correctAnswer;
 
@@ -549,95 +517,6 @@ export class QuizService {
           );
         }
       }
-
-      if (question.type === QuestionType.MATCH_PAIRS) {
-        const submittedPairs = answer.answer;
-        if (!Array.isArray(submittedPairs)) {
-          throw new BadRequestException(
-            `คำตอบของข้อที่ ${question.id} (Match Pairs) ต้องเป็นรายการคู่จับคู่ (Array)`,
-          );
-        }
-
-        const options = (question.options as any[]) || [];
-        // AC Requirement: ต้องจับคู่ให้ครบทุกคู่
-        if (submittedPairs.length !== options.length) {
-          throw new BadRequestException(
-            `กรุณาจับคู่คำตอบให้ครบทุกข้อ (ข้อที่ ${question.id} ยังจับคู่ไม่ครบ)`,
-          );
-        }
-
-        const lefts = new Set();
-        const rights = new Set();
-
-        for (const p of submittedPairs) {
-          if (!p || p.left === undefined || p.right === undefined) {
-            throw new BadRequestException(
-              `รูปแบบการจับคู่ในข้อที่ ${question.id} ไม่ถูกต้อง (ต้องมีทั้ง left และ right)`,
-            );
-          }
-
-          const left = String(p.left).trim();
-          const right = String(p.right).trim();
-
-          // Red Case: ป้องกันการเลือกคำตอบซ้ำ
-          if (lefts.has(left)) {
-            throw new BadRequestException(
-              `คำถามฝั่งซ้าย "${left}" ในข้อที่ ${question.id} ถูกใช้ซ้ำ`,
-            );
-          }
-          if (rights.has(right)) {
-            throw new BadRequestException(
-              `คำตอบฝั่งขวา "${right}" ในข้อที่ ${question.id} ถูกใช้ซ้ำ (คำตอบนี้ถูกใช้แล้ว)`,
-            );
-          }
-
-          lefts.add(left);
-          rights.add(right);
-
-          // ตรวจสอบว่าค่าที่ส่งมามีอยู่ใน Options จริงหรือไม่
-          const isValidPair = options.some(
-            (opt) =>
-              String(opt.left).trim() === left ||
-              String(opt.right).trim() === right,
-          );
-
-          if (!isValidPair) {
-            throw new BadRequestException(
-              `การจับคู่ "${left}" - "${right}" ในข้อที่ ${question.id} ไม่มีอยู่ในตัวเลือกที่มีให้`,
-            );
-          }
-        }
-      }
-
-      if (question.type === QuestionType.CORRECT_ORDER) {
-        const submittedOrder = answer.answer;
-        if (!Array.isArray(submittedOrder)) {
-          throw new BadRequestException(
-            `คำตอบของข้อที่ ${question.id} (Correct Order) ต้องเป็นรายการเรียงลำดับ (Array)`,
-          );
-        }
-
-        const options = (question.options as any[]) || [];
-        // AC Requirement: ต้องเรียงลำดับให้ครบทุกรายการ
-        if (submittedOrder.length !== options.length) {
-          throw new BadRequestException(
-            `กรุณาเรียงลำดับรายการให้ครบทุกข้อ (ข้อที่ ${question.id} ยังเรียงไม่ครบ)`,
-          );
-        }
-
-        // ตรวจสอบว่ารายการที่ส่งมา ตรงกับที่มีในโจทย์จริงๆ หรือไม่
-        const optionTexts = options.map((o) => String(o.text).trim());
-        const isValid = submittedOrder.every((item) =>
-          optionTexts.includes(String(item).trim()),
-        );
-
-        if (!isValid) {
-          throw new BadRequestException(
-            `รายการที่ส่งมาในข้อที่ ${question.id} ไม่ถูกต้อง (ไม่ตรงกับตัวเลือกที่มี)`,
-          );
-        }
-      }
-      // ----------------------------------------
 
       const isCorrect = this.isAnswerCorrect(question, answer.answer);
       results.push({ questionId: answer.questionId, isCorrect });
@@ -890,72 +769,10 @@ export class QuizService {
         return selectedOption?.isCorrect ?? false;
       }
 
-      case QuestionType.MATCH_PAIRS: {
-        const correct = question.correctAnswer;
-        if (!Array.isArray(correct) || !Array.isArray(submittedAnswer)) {
-          return false;
-        }
-
-        const normalizedCorrect = this.normalizePairs(correct);
-        const normalizedSubmitted = this.normalizePairs(submittedAnswer);
-
-        if (
-          !normalizedCorrect ||
-          !normalizedSubmitted ||
-          normalizedCorrect.length !== normalizedSubmitted.length
-        ) {
-          return false;
-        }
-
-        const sortFn = (a: any, b: any) =>
-          String(a.left).localeCompare(String(b.left));
-        normalizedCorrect.sort(sortFn);
-        normalizedSubmitted.sort(sortFn);
-
-        return (
-          JSON.stringify(normalizedCorrect) ===
-          JSON.stringify(normalizedSubmitted)
-        );
-      }
-
-      case QuestionType.CORRECT_ORDER: {
-        const correct = question.correctAnswer;
-        // For complex types, we compare as JSON strings (order-sensitive for Correct Order)
-        return JSON.stringify(correct) === JSON.stringify(submittedAnswer);
-      }
-
       default: {
         const correct = question.correctAnswer;
         return correct === submittedAnswer;
       }
-    }
-  }
-
-  /**
-   * Normalize matching pairs for comparison:
-   * - require left/right keys
-   * - trim + lowercase to avoid casing/spacing issues
-   */
-  private normalizePairs(
-    pairs: any[],
-  ): { left: string; right: string }[] | null {
-    try {
-      return pairs.map((p) => {
-        if (p === null || p === undefined) {
-          throw new Error('Invalid pair');
-        }
-        if (p.left === undefined || p.right === undefined) {
-          throw new Error('Pair must include left and right');
-        }
-        const left = String(p.left).trim().toLowerCase();
-        const right = String(p.right).trim().toLowerCase();
-        if (left === '' || right === '') {
-          throw new Error('Pair values cannot be empty');
-        }
-        return { left, right };
-      });
-    } catch {
-      return null;
     }
   }
 

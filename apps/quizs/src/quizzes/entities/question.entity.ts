@@ -5,9 +5,6 @@ import { QuizOption } from './quiz-option.entity';
 export enum QuestionType {
   MULTIPLE_CHOICE = 'multiple_choice',
   TRUE_FALSE = 'true_false',
-  // Keep existing for backward compatibility if needed, but primary focus is on MC and TF
-  MATCH_PAIRS = 'match_pairs',
-  CORRECT_ORDER = 'correct_order',
   SHORT_ANSWER = 'short_answer',
 }
 
