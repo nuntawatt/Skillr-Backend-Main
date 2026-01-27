@@ -3,9 +3,9 @@ import { Chapter } from '../../chapters/entities/chapter.entity';
 import { Article } from '../../articles/entities/article.entity';
 
 export enum LessonType {
-  ARTICLE = 'article',
-  VIDEO = 'video',
-  QUIZ = 'quiz',
+  ARTICLE = 'Article',
+  VIDEO = 'Video',
+  QUIZ = 'Quiz',
 }
 
 @Entity('lessons')
