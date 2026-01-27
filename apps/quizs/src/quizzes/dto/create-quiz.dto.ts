@@ -51,6 +51,16 @@ export class CreateQuestionDto {
   @IsEnum(QuestionType)
   type: QuestionType;
 
+  @ApiPropertyOptional({ example: 'https://example.com/image.png' })
+  @IsOptional()
+  @IsString()
+  mediaUrl?: string;
+
+  @ApiPropertyOptional({ example: 'เพราะ 1 + 1 = 2' })
+  @IsOptional()
+  @IsString()
+  correctExplanation?: string;
+
   // Multiple Choice options: 3-4 choices, each <= 150 chars
   @ApiPropertyOptional({ type: [String], example: ['1', '2', '3', '4'] })
   @ValidateIf((q) => q.type === QuestionType.MULTIPLE_CHOICE)

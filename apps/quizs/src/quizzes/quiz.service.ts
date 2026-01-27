@@ -9,6 +9,7 @@ import { UpdateQuizDto } from './dto/update-quiz.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { QuizSolutionResponseDto } from './dto/quiz-solution.dto';
 import { SubmitQuizDto } from './dto/submit-quiz.dto';
+import { CheckAnswerDto } from './dto/check-answer.dto';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 
@@ -58,14 +59,35 @@ export class QuizService {
     if (questions.length > 0) {
       for (const [index, q] of questions.entries()) {
         const question = this.questionRepository.create({
-          question: q.question,
+          questionText: q.question,
           type: q.type ?? QuestionType.MULTIPLE_CHOICE,
-          options: this.mapOptionsByType(q),
-          correctAnswer: this.mapCorrectAnswerByType(q),
-          points: 1, // backend-managed points
-          order: index + 1, // บังคับเรียงลำดับบนลงล่าง
+          mediaUrl: q.mediaUrl,
+          correctExplanation: q.correctExplanation,
+          orderIndex: index + 1,
           quizId: savedQuiz.id,
+          points: 1,
         });
+
+        if (q.type === QuestionType.MULTIPLE_CHOICE) {
+          question.options = (q.options || []).map((optText) => ({
+            optionText: optText,
+            isCorrect: optText === q.correctAnswer,
+          })) as any;
+        } else if (q.type === QuestionType.TRUE_FALSE) {
+          question.options = [
+            { optionText: 'True', isCorrect: q.correctAnswerBool === true },
+            { optionText: 'False', isCorrect: q.correctAnswerBool === false },
+          ] as any;
+        } else {
+          // For other types (Match Pairs, Correct Order), still using correctAnswer as JSONB for now
+          question.correctAnswer = this.mapCorrectAnswerByType(q);
+          // And mapping options if any
+          const mappedOpts = this.mapOptionsByType(q);
+          if (Array.isArray(mappedOpts)) {
+            question.correctAnswer = mappedOpts; // Wait, this logic seems slightly different from before but follow original map
+          }
+        }
+
         await this.questionRepository.save(question);
       }
     }
@@ -104,7 +126,9 @@ export class QuizService {
     const query = this.quizRepository
       .createQueryBuilder('quiz')
       .leftJoinAndSelect('quiz.questions', 'questions')
-      .addOrderBy('questions.order', 'ASC');
+      .leftJoinAndSelect('questions.options', 'options')
+      .addOrderBy('questions.orderIndex', 'ASC')
+      .addOrderBy('options.id', 'ASC');
 
     if (lessonId) {
       query.where('quiz.lessonId = :lessonId', { lessonId: Number(lessonId) });
@@ -118,8 +142,10 @@ export class QuizService {
     const quiz = await this.quizRepository
       .createQueryBuilder('quiz')
       .leftJoinAndSelect('quiz.questions', 'questions')
+      .leftJoinAndSelect('questions.options', 'options')
       .where('quiz.id = :id', { id: quizId })
-      .orderBy('questions.order', 'ASC')
+      .orderBy('questions.orderIndex', 'ASC')
+      .addOrderBy('options.id', 'ASC')
       .getOne();
 
     if (!quiz) {
@@ -149,9 +175,12 @@ export class QuizService {
         const { correctAnswer, ...rest } = q;
         const stripped = { ...rest } as Question;
 
-        // Ensure TRUE_FALSE always has options ['True', 'False'] (Derived for students)
-        if (q.type === QuestionType.TRUE_FALSE) {
-          stripped.options = ['True', 'False'];
+        // Strip isCorrect from options
+        if (stripped.options) {
+          stripped.options = stripped.options.map((opt) => {
+            const { isCorrect, ...optRest } = opt;
+            return optRest as any;
+          });
         }
 
         // --- Persist Presentation Order Logic ---
@@ -165,24 +194,24 @@ export class QuizService {
           stripped.options = savedOrder;
         } else if (stripped.options && Array.isArray(stripped.options)) {
           // ถ้ายังไม่ตอบ หรือยังไม่เคยเซฟลำดับ -> สุ่มใหม่
-          if (q.type === QuestionType.MULTIPLE_CHOICE) {
-            // สลับตัวเลือก ก ข ค ง
+          if (q.type === QuestionType.MULTIPLE_CHOICE || q.type === QuestionType.TRUE_FALSE) {
+            // สลับตัวเลือก
             stripped.options = this.shuffleArray([
-              ...(stripped.options as string[]),
+              ...(stripped.options as any[]),
             ]);
           } else if (q.type === QuestionType.CORRECT_ORDER) {
             // สลับขั้นตอนการเรียงลำดับให้มั่ว
             stripped.options = this.shuffleArray([...(stripped.options as any[])]);
           } else if (q.type === QuestionType.MATCH_PAIRS) {
             // ตามโจทย์: ฝั่งขวาอยู่ที่เดิม แต่ฝั่งซ้ายสุ่มลำดับใหม่
-            const pairs = stripped.options as { left: string; right: string }[];
+            const pairs = stripped.options as any[];
             const shuffledLefts = this.shuffleArray(pairs.map((p) => p.left));
             const originalRights = pairs.map((p) => p.right);
 
             stripped.options = originalRights.map((right, i) => ({
               left: shuffledLefts[i],
               right: right,
-            }));
+            })) as any;
           }
 
           // อัปเดตลำดับที่สุ่มได้กลับเข้าไปใน Attempt (Draft) เพื่อให้ครั้งหน้าเรียกแล้วได้ลำดับเดิมถ้ามีการเซฟ
@@ -306,14 +335,14 @@ export class QuizService {
     // Re-index remaining questions in order
     const remaining = await this.questionRepository.find({
       where: { quizId },
-      order: { order: 'ASC' },
+      order: { orderIndex: 'ASC' },
     });
 
     for (let i = 0; i < remaining.length; i++) {
       const q = remaining[i];
       const newOrder = i + 1;
-      if (q.order !== newOrder) {
-        q.order = newOrder;
+      if (q.orderIndex !== newOrder) {
+        q.orderIndex = newOrder;
         await this.questionRepository.save(q);
       }
     }
@@ -491,8 +520,8 @@ export class QuizService {
           );
         }
 
-        const submitted = answer.answer.trim();
-        const options = (question.options as string[]) || [];
+        const submitted = String(answer.answer).trim();
+        const options = question.options || [];
 
         if (options.length === 0) {
           throw new BadRequestException(
@@ -500,9 +529,9 @@ export class QuizService {
           );
         }
 
-        // ใช้การเทียบแบบ trim เพื่อความแม่นยำ (กันช่องว่างส่วนเกิน)
+        // Validate if submitted answer matches any option ID or text
         const isValidOption = options.some(
-          (opt) => String(opt).trim() === submitted,
+          (opt) => String(opt.id) === submitted || String(opt.optionText).trim() === submitted,
         );
 
         if (!isValidOption) {
@@ -632,27 +661,147 @@ export class QuizService {
 
     // 5. Auto-update Lesson Progress if passed
     if (passed) {
-      try {
-        await firstValueFrom(
-          this.httpService.post(
-            `${this.learningServiceUrl}/api/learning/lessons/${quiz.lessonId}/complete`,
-            {},
-            {
-              headers: {
-                // Pass user context if needed, here we assume internal call or handled by userId in body if API allowed
-                'x-user-id': userId,
-              },
-            },
-          ),
-        );
-      } catch (error) {
-        console.error('Failed to update lesson progress via HTTP:', error.message);
-        // We don't throw here to not break quiz submission if progress service is down
-      }
+      await this.completeLessonProgress(quiz.lessonId, userId);
     }
 
     // Return structured solution response for Scenario 2 & 3
     return this.getQuizSolution(String(quiz.id), userId);
+  }
+
+  async checkAnswer(
+    quizId: string,
+    userId: string,
+    checkDto: CheckAnswerDto,
+  ): Promise<{
+    isCorrect: boolean;
+    correctAnswer: any;
+    explanation: string;
+    isCompleted: boolean;
+  }> {
+    const quiz = await this.findOneQuiz(quizId);
+    const numericQuizId = Number(quizId);
+    const numericUserId = Number(userId);
+
+    // 1. Find or create active attempt
+    let attempt = await this.getActiveAttempt(numericQuizId, numericUserId);
+    if (!attempt) {
+      // Check if already completed
+      const hasCompleted = await this.hasCompletedQuiz(numericQuizId, numericUserId);
+      if (hasCompleted) {
+        throw new BadRequestException('คุณได้ทำ Quiz นี้เสร็จสิ้นแล้ว');
+      }
+      // Auto-start if not started
+      attempt = await this.startQuiz(quizId, userId);
+    }
+
+    // 2. Find question
+    const question = quiz.questions.find((q) => q.id === checkDto.questionId);
+    if (!question) {
+      throw new NotFoundException(`ไม่พบคำถาม ID ${checkDto.questionId}`);
+    }
+
+    // 3. Check answer
+    const submitted = checkDto.selectedOptionId ?? checkDto.answer;
+    const isCorrect = this.isAnswerCorrect(question, submitted);
+
+    // 4. Update attempt progress
+    if (!attempt.answers) attempt.answers = [];
+    if (!attempt.results) attempt.results = [];
+
+    // Remove existing answer for this question if any
+    attempt.answers = attempt.answers.filter((a) => a.questionId !== question.id);
+    attempt.results = attempt.results.filter((r) => r.questionId !== question.id);
+
+    attempt.answers.push({ questionId: question.id, answer: submitted });
+    attempt.results.push({ questionId: question.id, isCorrect });
+
+    // 5. Check completion
+    const totalQuestions = quiz.questions.length;
+    const answeredCount = attempt.answers.length;
+    const isCompleted = answeredCount >= totalQuestions;
+
+    if (isCompleted) {
+      attempt.completedAt = new Date();
+      attempt.isCompleted = true;
+      const correctCount = attempt.results.filter((r) => r.isCorrect).length;
+      attempt.score = (correctCount / totalQuestions) * 100;
+      attempt.passed = attempt.score >= 60;
+
+      if (attempt.passed) {
+        await this.completeLessonProgress(quiz.lessonId, userId);
+      }
+    }
+
+    await this.attemptRepository.save(attempt);
+
+    // Find correct answer text for feedback
+    let correctAnswerText = question.correctAnswer;
+    if (question.type === QuestionType.MULTIPLE_CHOICE || question.type === QuestionType.TRUE_FALSE) {
+      correctAnswerText = question.options?.find(o => o.isCorrect)?.optionText;
+    }
+
+    return {
+      isCorrect,
+      correctAnswer: correctAnswerText,
+      explanation: question.correctExplanation,
+      isCompleted,
+    };
+  }
+
+  async completeQuiz(
+    quizId: string,
+    userId: string,
+    status: 'COMPLETED' | 'SKIPPED',
+  ): Promise<{ success: boolean; score?: number }> {
+    const quiz = await this.findOneQuiz(quizId);
+    const numericQuizId = Number(quizId);
+    const numericUserId = Number(userId);
+
+    let attempt = await this.getActiveAttempt(numericQuizId, numericUserId);
+    if (!attempt) {
+      const hasCompleted = await this.hasCompletedQuiz(numericQuizId, numericUserId);
+      if (hasCompleted) return { success: true };
+      attempt = await this.startQuiz(quizId, userId);
+    }
+
+    attempt.completedAt = new Date();
+    attempt.isCompleted = true;
+
+    if (status === 'SKIPPED') {
+      attempt.passed = true;
+      if (attempt.score === null || attempt.score === undefined) {
+        attempt.score = 0;
+      }
+    } else {
+      // For COMPLETED status via this endpoint, we calculate final score
+      const totalQuestions = quiz.questions.length;
+      const correctCount = attempt.results?.filter((r) => r.isCorrect).length || 0;
+      attempt.score = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
+      attempt.passed = attempt.score >= 60;
+    }
+
+    await this.attemptRepository.save(attempt);
+    await this.completeLessonProgress(quiz.lessonId, userId);
+
+    return { success: true, score: attempt.score };
+  }
+
+  private async completeLessonProgress(lessonId: number, userId: string) {
+    try {
+      await firstValueFrom(
+        this.httpService.post(
+          `${this.learningServiceUrl}/api/learning/lessons/${lessonId}/complete`,
+          {},
+          {
+            headers: {
+              'x-user-id': userId,
+            },
+          },
+        ),
+      );
+    } catch (error) {
+      console.error('Failed to update lesson progress via HTTP:', error.message);
+    }
   }
 
   async getQuizSolution(
@@ -699,14 +848,19 @@ export class QuizService {
             : this.isAnswerCorrect(question, userAnswer);
       }
 
+      let correctAnswer = question.correctAnswer;
+      if (question.type === QuestionType.MULTIPLE_CHOICE || question.type === QuestionType.TRUE_FALSE) {
+        correctAnswer = question.options?.find(o => o.isCorrect)?.optionText;
+      }
+
       return {
         questionId: question.id,
-        question: question.question,
+        question: question.questionText,
         type: question.type,
         options: question.options,
         userAnswer: userAnswer ?? null,
         isCorrect,
-        correctAnswer: question.correctAnswer,
+        correctAnswer,
       };
     });
 
@@ -726,19 +880,18 @@ export class QuizService {
   }
 
   private isAnswerCorrect(question: Question, submittedAnswer: any): boolean {
-    const correct = question.correctAnswer;
-
     switch (question.type) {
       case QuestionType.MULTIPLE_CHOICE:
-        return String(correct) === String(submittedAnswer);
-
-      case QuestionType.TRUE_FALSE:
-        return (
-          String(correct).toLowerCase() ===
-          String(submittedAnswer).toLowerCase()
+      case QuestionType.TRUE_FALSE: {
+        // In the new system, submittedAnswer is the optionId (number or string)
+        const selectedOption = question.options?.find(
+          (opt) => String(opt.id) === String(submittedAnswer),
         );
+        return selectedOption?.isCorrect ?? false;
+      }
 
       case QuestionType.MATCH_PAIRS: {
+        const correct = question.correctAnswer;
         if (!Array.isArray(correct) || !Array.isArray(submittedAnswer)) {
           return false;
         }
@@ -765,12 +918,16 @@ export class QuizService {
         );
       }
 
-      case QuestionType.CORRECT_ORDER:
+      case QuestionType.CORRECT_ORDER: {
+        const correct = question.correctAnswer;
         // For complex types, we compare as JSON strings (order-sensitive for Correct Order)
         return JSON.stringify(correct) === JSON.stringify(submittedAnswer);
+      }
 
-      default:
+      default: {
+        const correct = question.correctAnswer;
         return correct === submittedAnswer;
+      }
     }
   }
 

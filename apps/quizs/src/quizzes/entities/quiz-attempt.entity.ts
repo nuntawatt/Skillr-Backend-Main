@@ -37,6 +37,9 @@ export class QuizAttempt {
   @Column({ name: 'completed_at', type: 'timestamptz', nullable: true })
   completedAt: Date;
 
+  @Column({ name: 'is_completed', default: false })
+  isCompleted: boolean;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 }

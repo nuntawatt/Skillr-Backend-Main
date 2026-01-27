@@ -160,7 +160,7 @@ export class LessonsService {
   // Check if student can access this lesson by checking completion of the previous lesson
   async validateLessonAccess(lessonId: number, userId: string): Promise<void> {
     const currentLesson = await this.lessonRepository.findOne({ 
-      where: { id: lessonId },
+      where: { lesson_id: lessonId },
       relations: ['chapter']
     });
 
@@ -179,7 +179,7 @@ export class LessonsService {
     
     try {
       const response = await firstValueFrom(
-        this.httpService.get(`${learningServiceUrl}/learning/lessons/${previousLesson.id}/progress`, {
+        this.httpService.get(`${learningServiceUrl}/learning/lessons/${previousLesson.lesson_id}/progress`, {
           headers: { 'x-user-id': userId }
         })
       );
@@ -188,8 +188,8 @@ export class LessonsService {
       if (!progress || !progress.completedAt) {
         throw new ForbiddenException({
           message: 'Please complete the previous lesson first.',
-          previousLessonId: previousLesson.id,
-          previousLessonTitle: previousLesson.title
+          previousLessonId: previousLesson.lesson_id,
+          previousLessonTitle: previousLesson.lesson_title
         });
       }
     } catch (error) {
@@ -198,8 +198,8 @@ export class LessonsService {
       // If progress record doesn't exist at all, it's definitely not completed
       throw new ForbiddenException({
         message: 'Please complete the previous lesson first.',
-        previousLessonId: previousLesson.id,
-        previousLessonTitle: previousLesson.title
+        previousLessonId: previousLesson.lesson_id,
+        previousLessonTitle: previousLesson.lesson_title
       });
     }
   }
@@ -209,10 +209,10 @@ export class LessonsService {
     // 1. Check if there's a lesson with a smaller orderIndex in the same chapter
     const prevInChapter = await this.lessonRepository.findOne({
       where: {
-        chapterId: lesson.chapterId,
-        orderIndex: lesson.orderIndex - 1 // Simplified assuming consecutive indexes, but let's be safer
+        chapter_id: lesson.chapter_id,
+        order_index: lesson.order_index - 1 // Simplified assuming consecutive indexes, but let's be safer
       },
-      order: { orderIndex: 'DESC' }
+      order: { order_index: 'DESC' }
     });
 
     if (prevInChapter) return prevInChapter;
@@ -220,16 +220,16 @@ export class LessonsService {
     // Alternative safer way if orderIndex is not exactly -1
     const prevInChapterSafer = await this.lessonRepository.findOne({
       where: {
-        chapterId: lesson.chapterId,
-        orderIndex: this.dataSource.getRepository(Lesson).createQueryBuilder().select('MAX(order_index)').where('chapter_id = :chapterId AND order_index < :orderIndex', { chapterId: lesson.chapterId, orderIndex: lesson.orderIndex }).getQuery() as any
+        chapter_id: lesson.chapter_id,
+        order_index: this.dataSource.getRepository(Lesson).createQueryBuilder().select('MAX(order_index)').where('chapter_id = :chapterId AND order_index < :orderIndex', { chapterId: lesson.chapter_id, orderIndex: lesson.order_index }).getQuery() as any
       }
     });
     // Let's use a simpler query builder approach
     const prevInChapterFinal = await this.lessonRepository
       .createQueryBuilder('lesson')
-      .where('lesson.chapterId = :chapterId', { chapterId: lesson.chapterId })
-      .andWhere('lesson.orderIndex < :orderIndex', { orderIndex: lesson.orderIndex })
-      .orderBy('lesson.orderIndex', 'DESC')
+      .where('lesson.chapter_id = :chapterId', { chapterId: lesson.chapter_id })
+      .andWhere('lesson.order_index < :orderIndex', { orderIndex: lesson.order_index })
+      .orderBy('lesson.order_index', 'DESC')
       .getOne();
 
     if (prevInChapterFinal) return prevInChapterFinal;
@@ -239,8 +239,8 @@ export class LessonsService {
     const prevChapter = await this.chapterRepository
       .createQueryBuilder('chapter')
       .where('chapter.levelId = :levelId', { levelId: currentChapter.levelId })
-      .andWhere('chapter.orderIndex < :orderIndex', { orderIndex: currentChapter.orderIndex })
-      .orderBy('chapter.orderIndex', 'DESC')
+      .andWhere('chapter.chapter_orderIndex < :orderIndex', { orderIndex: currentChapter.chapter_orderIndex })
+      .orderBy('chapter.chapter_orderIndex', 'DESC')
       .getOne();
 
     if (!prevChapter) return null;
@@ -248,8 +248,8 @@ export class LessonsService {
     // Get the last lesson of the previous chapter
     return await this.lessonRepository
       .createQueryBuilder('lesson')
-      .where('lesson.chapterId = :chapterId', { chapterId: prevChapter.id })
-      .orderBy('lesson.orderIndex', 'DESC')
+      .where('lesson.chapter_id = :chapterId', { chapterId: prevChapter.chapter_id })
+      .orderBy('lesson.order_index', 'DESC')
       .getOne();
   }
 

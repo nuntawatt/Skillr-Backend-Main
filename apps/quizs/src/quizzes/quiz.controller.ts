@@ -18,6 +18,7 @@ import { UpdateQuizDto } from './dto/update-quiz.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { QuizSolutionResponseDto } from './dto/quiz-solution.dto';
 import { SubmitQuizDto } from './dto/submit-quiz.dto';
+import { CheckAnswerDto } from './dto/check-answer.dto';
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import type { AuthUser } from '@auth';
 import { UserRole } from '@common/enums';
@@ -471,6 +472,57 @@ export class QuizController {
         typeof retry === 'string'
           ? ['true', '1'].includes(retry.trim().toLowerCase())
           : false,
+    });
+  }
+
+  @Post(':id/complete')
+  @ApiOperation({ summary: 'Complete or skip a quiz' })
+  @ApiParam({ name: 'id', example: 7 })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', enum: ['COMPLETED', 'SKIPPED'] },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'จบหรือข้ามแบบทดสอบสำเร็จ',
+  })
+  completeQuiz(
+    @Param('id') id: string,
+    @Body('status') status: 'COMPLETED' | 'SKIPPED',
+    @Request() req: RequestWithUser,
+  ) {
+    return this.quizService.completeQuiz(id, getUserIdOrThrow(req.user), status);
+  }
+
+  @Post('questions/:id/check')
+  @ApiOperation({ summary: 'Check answer for a single question' })
+  @ApiParam({ name: 'id', example: 10, description: 'Question ID' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        quizId: { type: 'number', example: 7 },
+        selectedOptionId: { type: 'number', example: 101 },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'ผลการตรวจคำถาม',
+  })
+  checkQuestion(
+    @Param('id') questionId: string,
+    @Body('quizId') quizId: string,
+    @Body('selectedOptionId') selectedOptionId: number,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.quizService.checkAnswer(String(quizId), getUserIdOrThrow(req.user), {
+      questionId: Number(questionId),
+      selectedOptionId,
     });
   }
 

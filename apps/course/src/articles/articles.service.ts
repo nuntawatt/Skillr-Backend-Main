@@ -46,7 +46,6 @@ export class ArticlesService {
 
     const article = this.articleRepository.create({
       lessonId: createArticleDto.lessonId,
-      content: createArticleDto.content,
       cards: createArticleDto.cards,
       article_content: createArticleDto.article_content,
     });
@@ -138,7 +137,7 @@ export class ArticlesService {
   // Find an article by ID
   async findOne(id: number): Promise<ArticleResponseDto> {
     const article = await this.articleRepository.findOne({ 
-      where: { id },
+      where: { article_id: id },
       relations: ['cards'],
       order: {
         cards: {
@@ -146,7 +145,6 @@ export class ArticlesService {
         }
       }
     });
-    const article = await this.articleRepository.findOne({ where: { article_id: id } });
 
     if (!article) {
       throw new NotFoundException(`Article with ID ${id} not found`);
@@ -177,7 +175,7 @@ export class ArticlesService {
   // Get only cards for an article
   async getCards(articleId: number): Promise<ArticleCardResponseDto[]> {
     const article = await this.articleRepository.findOne({
-      where: { id: articleId },
+      where: { article_id: articleId },
       relations: ['cards'],
       order: {
         cards: {
@@ -200,7 +198,7 @@ export class ArticlesService {
 
   // Get user state for an article from learning service
   async getUserState(articleId: number, userId: string): Promise<any> {
-    const article = await this.articleRepository.findOne({ where: { id: articleId } });
+    const article = await this.articleRepository.findOne({ where: { article_id: articleId } });
     if (!article) {
       throw new NotFoundException(`Article with ID ${articleId} not found`);
     }
@@ -231,7 +229,7 @@ export class ArticlesService {
   // Save progress for an article
   async saveProgress(articleId: number, userId: string, currentCardIndex: number): Promise<any> {
     const article = await this.articleRepository.findOne({ 
-      where: { id: articleId },
+      where: { article_id: articleId },
       relations: ['cards']
     });
 
@@ -298,7 +296,6 @@ export class ArticlesService {
     return {
       id: article.article_id,
       lessonId: article.lessonId,
-      content: article.content,
       cards: article.cards?.map(card => ({
         id: card.id,
         content: card.content,
