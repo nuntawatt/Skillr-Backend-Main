@@ -21,7 +21,7 @@ async function bootstrap() {
     .setTitle('Skllr Media Service API')
     .setDescription('API documentation for the Media Service')
     .setVersion('1.0.0')
-    .addServer('http://localhost:3004/api', 'Local server')
+    .addServer('/api', 'Media Service API server')
     .addBearerAuth() 
     .build();
 
@@ -36,12 +36,12 @@ async function bootstrap() {
     credentials: true, // If you need to support credentials
   });
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
-  
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
   app.setGlobalPrefix('api');
   
   const port = Number(process.env.PORT ?? 3004);
   await app.listen(port);
-  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+  
 
   logger.log(`Media service listening on http://localhost:${port}/api`);
   logger.log(`Swagger docs available at http://localhost:${port}/docs/media`);
