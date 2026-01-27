@@ -19,7 +19,7 @@ async function bootstrap() {
     allowedHeaders: '*', // Allows all headers
     credentials: true, // If you need to support credentials
   });
-  
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -28,19 +28,30 @@ async function bootstrap() {
     }),
   );
 
-  
+
   const config = new DocumentBuilder()
     .setTitle('Skillr Course Service API')
     .setDescription('API documentation for the Course Service')
     .setVersion('1.0.0')
     .addServer('/api')
-    .addBearerAuth() 
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs/course', app, document);
 
-  app.enableCors({ origin: true, credentials: true });
+  // app.enableCors({ origin: true, credentials: true });
+  const allowedOrigins = ['https://skllracademy.com', 'http://157.85.98.100:3001', 'http://localhost:3000'].filter(Boolean);
+
+  app.enableCors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true); // allow non-browser tools like Postman
+      return allowedOrigins.includes(origin)
+        ? callback(null, true)
+        : callback(new Error('Not allowed by CORS'), false);
+    },
+    credentials: true,
+  });
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.use(cookieParser());
 
@@ -49,7 +60,7 @@ async function bootstrap() {
 
   const port = Number(process.env.PORT ?? 3002);
   await app.listen(port);
-  
+
 
   logger.log(`Course service listening on http://localhost:${port}/api`);
   logger.log(`Swagger docs available at http://localhost:${port}/docs/course`);
