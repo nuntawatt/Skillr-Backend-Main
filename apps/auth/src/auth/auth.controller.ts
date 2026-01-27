@@ -82,11 +82,11 @@ export class AuthController {
     res.cookie('refreshToken', tokens.refreshToken, {
       httpOnly: true,
       secure: true,
-      sameSite: 'lax',
+      sameSite: 'none',
       path: '/'
     });
 
-    return res.redirect(`${this.configService.get('FRONTEND_URL')}/login`);
+    return res.redirect(`${this.configService.get('FRONTEND_URL')}/instructor`);
   }
 
   // Google OAuth - Token Exchange
