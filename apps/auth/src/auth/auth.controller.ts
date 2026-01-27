@@ -1,6 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
-import { Controller, Post, Get, Body, UseGuards, Req, Res, HttpCode, HttpStatus, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards, Req, Res, HttpCode, HttpStatus, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { RegisterDto, LoginDto, RefreshTokenDto, ForgotPasswordDto, VerifyOtpDto, ResetPasswordDto } from './dto';
 import { AuthService } from './auth.service';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
@@ -78,12 +78,14 @@ export class AuthController {
     };
 
     const { tokens } = await this.authService.googleLogin(user);
+    const isProd = this.configService.get('NODE_ENV') === 'production';
 
     res.cookie('refreshToken', tokens.refreshToken, {
       httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      path: '/'
+      secure: isProd,
+      sameSite: isProd ? 'none' : 'lax',
+      path: '/',
+      domain: isProd ? this.configService.get('COOKIE_DOMAIN') : undefined,
     });
 
     return res.redirect(`${this.configService.get('FRONTEND_URL')}/instructor`);
@@ -141,28 +143,17 @@ export class AuthController {
   // Refresh token
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Refresh access and refresh tokens' })
-  @ApiBody({ type: RefreshTokenDto })
-  @ApiResponse({ status: 200, description: 'Tokens refreshed successfully.' })
-  @ApiResponse({ status: 400, description: 'Bad Request. Refresh token is required.' })
-  @ApiResponse({ status: 401, description: 'Unauthorized. Invalid or expired refresh token.' })
-  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
-  async refreshTokens(@Body() refreshTokenDto: RefreshTokenDto, @Req() req: Request) {
-    const cookiesUnknown: unknown = (req as unknown as { cookies?: unknown }).cookies;
-
-    const cookies = typeof cookiesUnknown === 'object' && cookiesUnknown !== null
-      ? (cookiesUnknown as { refreshToken?: unknown })
-      : undefined;
-
-    const refreshTokenRaw = refreshTokenDto.refreshToken ?? cookies?.refreshToken;
-    const refreshToken = typeof refreshTokenRaw === 'string' ? refreshTokenRaw : undefined;
+  @ApiOperation({ summary: 'Refresh access token' })
+  async refreshTokens(@Req() req: Request) {
+    const refreshToken = req.cookies?.refreshToken;
 
     if (!refreshToken) {
-      throw new BadRequestException('Refresh token is required');
+      throw new UnauthorizedException('Refresh token not found');
     }
 
     return this.authService.refreshTokens(refreshToken);
   }
+
 
   // Forgot password - send OTP
   @Post('forgot-password')
