@@ -8,7 +8,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ['log', 'error', 'warn'],
   });
-
+  
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -16,13 +16,13 @@ async function bootstrap() {
       transform: true,
     }),
   );
-
+  
   const config = new DocumentBuilder()
     .setTitle('Skllr Media Service API')
     .setDescription('API documentation for the Media Service')
     .setVersion('1.0.0')
     .addServer('/api')
-    .addBearerAuth()
+    .addBearerAuth() 
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
@@ -30,25 +30,16 @@ async function bootstrap() {
 
   // app.enableCors({ origin: true, credentials: true });
   app.enableCors({
-    origin: (origin, callback) => {
-      const allowedOrigins = [
-        'https://skllracademy.com',
-        'http://localhost:3000',
-      ];
-
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    credentials: true,
+    origin: '*', // Allows all origins
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS', // Allows all common methods
+    allowedHeaders: '*', // Allows all headers
+    credentials: true, // If you need to support credentials
   });
-
+  
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
-
+  
   app.setGlobalPrefix('api');
-
+  
   const port = Number(process.env.PORT ?? 3004);
   await app.listen(port);
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
