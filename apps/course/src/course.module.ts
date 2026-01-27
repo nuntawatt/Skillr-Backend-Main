@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { HttpModule } from '@nestjs/axios';
 
 import { getDatabaseConfig } from '@config/database.config';
 import { AuthLibModule } from '@auth/auth-lib.module';
@@ -26,6 +27,7 @@ import { Level } from './levels/entities/level.entity';
 import { Chapter } from './chapters/entities/chapter.entity';
 import { Lesson } from './lessons/entities/lesson.entity';
 import { Article } from './articles/entities/article.entity';
+import { ArticleCard } from './articles/entities/article-card.entity';
 
 const isTest =
   process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
@@ -37,6 +39,8 @@ const isTest =
       envFilePath: ['apps/course/.env', '.env'],
     }),
 
+    HttpModule,
+
     ...(isTest
       ? []
       : [
@@ -46,6 +50,14 @@ const isTest =
           inject: [ConfigService],
         }),
 
+          TypeOrmModule.forFeature([
+            Course,
+            Level,
+            Chapter,
+            Lesson,
+            Article,
+            ArticleCard,
+          ]),
         TypeOrmModule.forFeature([
           Course,
           Level,

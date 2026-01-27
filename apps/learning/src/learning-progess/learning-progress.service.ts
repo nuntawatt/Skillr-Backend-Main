@@ -41,6 +41,37 @@ export class LearningProgressService {
     return this.progressRepository.save(progress);
   }
 
+  async saveLessonProgress(
+    userId: string,
+    lessonId: string,
+    lastReadCardIndex: number,
+    isCompleted?: boolean,
+  ): Promise<LessonProgress> {
+    const numericUserId = Number(userId);
+    const numericLessonId = Number(lessonId);
+    const now = new Date();
+
+    let progress = await this.progressRepository.findOne({
+      where: { userId: numericUserId, lessonId: numericLessonId },
+    });
+
+    if (!progress) {
+      progress = this.progressRepository.create({
+        userId: numericUserId,
+        lessonId: numericLessonId,
+        lastReadCardIndex,
+        completedAt: isCompleted ? now : null,
+      });
+    } else {
+      progress.lastReadCardIndex = lastReadCardIndex;
+      if (isCompleted && !progress.completedAt) {
+        progress.completedAt = now;
+      }
+    }
+
+    return this.progressRepository.save(progress);
+  }
+
   async getLessonProgress(
     userId: string,
     lessonId: string,
@@ -60,11 +91,13 @@ export class LearningProgressService {
       order: { completedAt: 'DESC' },
     });
 
-    const totalCompleted = completions.length;
-    const lastCompletedAt = completions[0]?.completedAt;
+    const completedOnly = completions.filter((p) => p.completedAt !== null);
+
+    const totalCompleted = completedOnly.length;
+    const lastCompletedAt = completedOnly[0]?.completedAt ?? undefined;
     const uniqueDays = new Set<string>(
-      completions.map((progress) =>
-        progress.completedAt.toISOString().slice(0, 10),
+      completedOnly.map((progress) =>
+        progress.completedAt!.toISOString().slice(0, 10),
       ),
     );
 

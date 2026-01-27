@@ -2,9 +2,11 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
+import { HttpService } from '@nestjs/axios';
+import { firstValueFrom } from 'rxjs';
 import { Article } from './entities/article.entity';
 import { Lesson, LessonType } from '../lessons/entities/lesson.entity';
-import { CreateArticleDto, UpdateArticleDto, ArticleResponseDto } from './dto';
+import { CreateArticleDto, UpdateArticleDto, ArticleResponseDto, ArticleCardResponseDto, ArticleProgressUpdateDto } from './dto';
 import { StorageService } from '../storage/storage.service';
 
 @Injectable()
@@ -15,6 +17,7 @@ export class ArticlesService {
     @InjectRepository(Lesson)
     private readonly lessonRepository: Repository<Lesson>,
     private readonly storageService: StorageService,
+    private readonly httpService: HttpService,
   ) {}
 
   // Create a new article
@@ -43,6 +46,8 @@ export class ArticlesService {
 
     const article = this.articleRepository.create({
       lessonId: createArticleDto.lessonId,
+      content: createArticleDto.content,
+      cards: createArticleDto.cards,
       article_content: createArticleDto.article_content,
     });
 
@@ -127,11 +132,20 @@ export class ArticlesService {
       order: { updatedAt: 'DESC' },
     });
 
-    return articles.map((a) => this.toResponseDto(a));
+    return Promise.all(articles.map((a) => this.toResponseDto(a)));
   }
 
   // Find an article by ID
   async findOne(id: number): Promise<ArticleResponseDto> {
+    const article = await this.articleRepository.findOne({ 
+      where: { id },
+      relations: ['cards'],
+      order: {
+        cards: {
+          sequenceOrder: 'ASC'
+        }
+      }
+    });
     const article = await this.articleRepository.findOne({ where: { article_id: id } });
 
     if (!article) {
@@ -143,13 +157,111 @@ export class ArticlesService {
 
   // Find an article by lesson ID
   async findByLessonId(lessonId: number): Promise<ArticleResponseDto> {
-    const article = await this.articleRepository.findOne({ where: { lessonId } });
+    const article = await this.articleRepository.findOne({ 
+      where: { lessonId },
+      relations: ['cards'],
+      order: {
+        cards: {
+          sequenceOrder: 'ASC'
+        }
+      }
+    });
 
     if (!article) {
       throw new NotFoundException(`Article for lesson with ID ${lessonId} not found`);
     }
 
     return this.toResponseDto(article);
+  }
+
+  // Get only cards for an article
+  async getCards(articleId: number): Promise<ArticleCardResponseDto[]> {
+    const article = await this.articleRepository.findOne({
+      where: { id: articleId },
+      relations: ['cards'],
+      order: {
+        cards: {
+          sequenceOrder: 'ASC'
+        }
+      }
+    });
+
+    if (!article) {
+      throw new NotFoundException(`Article with ID ${articleId} not found`);
+    }
+
+    return (article.cards || []).map(card => ({
+      id: card.id,
+      content: card.content,
+      mediaUrl: card.mediaUrl,
+      sequenceOrder: card.sequenceOrder,
+    }));
+  }
+
+  // Get user state for an article from learning service
+  async getUserState(articleId: number, userId: string): Promise<any> {
+    const article = await this.articleRepository.findOne({ where: { id: articleId } });
+    if (!article) {
+      throw new NotFoundException(`Article with ID ${articleId} not found`);
+    }
+
+    const learningServiceUrl = process.env.LEARNING_SERVICE_URL || 'http://localhost:3005';
+    
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(`${learningServiceUrl}/learning/lessons/${article.lessonId}/progress`, {
+          headers: { 'x-user-id': userId }
+        })
+      );
+      
+      const progress = response.data;
+      return {
+        currentCardIndex: progress?.lastReadCardIndex ?? 0,
+        isCompleted: !!progress?.completedAt
+      };
+    } catch (error) {
+      // Return default state if progress not found
+      return {
+        currentCardIndex: 0,
+        isCompleted: false
+      };
+    }
+  }
+
+  // Save progress for an article
+  async saveProgress(articleId: number, userId: string, currentCardIndex: number): Promise<any> {
+    const article = await this.articleRepository.findOne({ 
+      where: { id: articleId },
+      relations: ['cards']
+    });
+
+    if (!article) {
+      throw new NotFoundException(`Article with ID ${articleId} not found`);
+    }
+
+    const totalCards = article.cards?.length || 0;
+    const isCompleted = currentCardIndex + 1 >= totalCards;
+
+    const learningServiceUrl = process.env.LEARNING_SERVICE_URL || 'http://localhost:3005';
+    
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(`${learningServiceUrl}/learning/lessons/${article.lessonId}/progress`, {
+          lastReadCardIndex: currentCardIndex,
+          isCompleted: isCompleted
+        }, {
+          headers: { 'x-user-id': userId }
+        })
+      );
+      
+      return {
+        ...response.data,
+        isCompleted // explicitly return calculated status
+      };
+    } catch (error) {
+      console.error('Error saving progress to learning service:', error.response?.data || error.message);
+      throw new BadRequestException('Failed to update progress in learning service');
+    }
   }
 
   // Update an article by ID
@@ -182,10 +294,17 @@ export class ArticlesService {
   }
 
   // Convert Article entity to ArticleResponseDto
-  private toResponseDto(article: Article): ArticleResponseDto {
+  async toResponseDto(article: Article): Promise<ArticleResponseDto> {
     return {
       id: article.article_id,
       lessonId: article.lessonId,
+      content: article.content,
+      cards: article.cards?.map(card => ({
+        id: card.id,
+        content: card.content,
+        mediaUrl: card.mediaUrl,
+        sequenceOrder: card.sequenceOrder,
+      })),
       article_content: article.article_content,
       hasPdfArticle: !!article.pdfArticle,
       updatedAt: article.updatedAt,

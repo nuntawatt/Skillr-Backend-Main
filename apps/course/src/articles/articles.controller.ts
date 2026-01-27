@@ -1,7 +1,7 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, HttpCode, HttpStatus, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiQuery, ApiNoContentResponse } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Request, ParseIntPipe, HttpCode, HttpStatus, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiQuery, ApiNoContentResponse, ApiResponse } from '@nestjs/swagger';
 import { ArticlesService } from './articles.service';
-import { CreateArticleDto, UpdateArticleDto, ArticleResponseDto } from './dto';
+import { CreateArticleDto, UpdateArticleDto, ArticleResponseDto, ArticleCardResponseDto, ArticleProgressUpdateDto } from './dto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
 
@@ -90,6 +90,65 @@ export class ArticlesController {
     @ApiOkResponse({ type: ArticleResponseDto })
     findOne(@Param('id', ParseIntPipe) id: number): Promise<ArticleResponseDto> {
         return this.articlesService.findOne(id);
+    }
+
+    @Get(':id/cards')
+    @ApiOperation({ summary: 'Get all cards for an article ordered by sequence_order' })
+    @ApiParam({ name: 'id', type: Number, description: 'Article ID' })
+    @ApiOkResponse({ 
+        type: [ArticleCardResponseDto],
+        description: 'Returns an array of cards for the article' 
+    })
+    @ApiResponse({ status: 404, description: 'Article not found' })
+    getCards(@Param('id', ParseIntPipe) id: number): Promise<ArticleCardResponseDto[]> {
+        return this.articlesService.getCards(id);
+    }
+
+    @Get(':id/user-state')
+    @ApiOperation({ summary: 'Get user progress state for an article' })
+    @ApiParam({ name: 'id', type: Number, description: 'Article ID' })
+    @ApiOkResponse({ 
+        description: 'Returns the last read card index and completion status',
+        schema: { 
+            type: 'object', 
+            properties: { 
+                currentCardIndex: { type: 'number', example: 5, description: 'The index of the card last read by the user' }, 
+                isCompleted: { type: 'boolean', example: false, description: 'Whether the user has finished reading all cards' } 
+            } 
+        } 
+    })
+    @ApiResponse({ status: 404, description: 'Article not found' })
+    getUserState(@Param('id', ParseIntPipe) id: number, @Request() req: any) {
+        const userId = req.user?.id || req.headers['x-user-id'] || '1';
+        return this.articlesService.getUserState(id, userId);
+    }
+
+    @Post(':id/progress')
+    @ApiOperation({ summary: 'Save progress (current card) for an article and auto-complete if last card' })
+    @ApiParam({ name: 'id', type: Number, description: 'Article ID' })
+    @ApiOkResponse({ 
+        description: 'Progress saved successfully',
+        schema: {
+            type: 'object',
+            properties: {
+                id: { type: 'number', example: 1 },
+                userId: { type: 'number', example: 1 },
+                lessonId: { type: 'number', example: 10 },
+                lastReadCardIndex: { type: 'number', example: 2 },
+                completedAt: { type: 'string', format: 'date-time', example: '2026-01-27T10:00:00Z', nullable: true },
+                isCompleted: { type: 'boolean', example: true }
+            }
+        }
+    })
+    @ApiResponse({ status: 400, description: 'Invalid input or failure to update progress' })
+    @ApiResponse({ status: 404, description: 'Article not found' })
+    saveProgress(
+        @Param('id', ParseIntPipe) id: number,
+        @Body() dto: ArticleProgressUpdateDto,
+        @Request() req: any
+    ) {
+        const userId = req.user?.id || req.headers['x-user-id'] || '1';
+        return this.articlesService.saveProgress(id, userId, dto.current_card_index);
     }
 
     @Get(':id/pdf-url')

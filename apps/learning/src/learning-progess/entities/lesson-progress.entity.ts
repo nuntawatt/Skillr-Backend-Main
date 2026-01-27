@@ -12,6 +12,9 @@ export class LessonProgress {
   @Column()
   lessonId: number;
 
-  @Column({ type: 'timestamptz' })
-  completedAt: Date;
+  @Column({ name: 'completed_at', type: 'timestamptz', nullable: true })
+  completedAt: Date | null;
+
+  @Column({ name: 'last_read_card_index', type: 'int', default: 0 })
+  lastReadCardIndex: number;
 }

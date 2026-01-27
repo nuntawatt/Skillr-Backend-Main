@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, UpdateDateColumn, OneToMany } from 'typeorm';
 import { Lesson } from '../../lessons/entities/lesson.entity';
+import { ArticleCard } from './article-card.entity';
 
 @Entity('articles')
 export class Article {
@@ -17,6 +18,11 @@ export class Article {
     pdfArticle?: Buffer;
 
     // rich content: JSONB for editor content (blocks) or markdown HTML
+    @Column({ type: 'jsonb', nullable: true })
+    content: any;
+
+    @OneToMany(() => ArticleCard, (card) => card.article)
+    cards: ArticleCard[];
     @Column({ type: 'jsonb', nullable: false })
     article_content: any;
 

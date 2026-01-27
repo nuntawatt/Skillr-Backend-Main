@@ -1,3 +1,5 @@
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Request, ParseIntPipe, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiQuery, ApiNoContentResponse, ApiResponse } from '@nestjs/swagger';
 import {
   Controller,
   Get,
@@ -54,10 +56,28 @@ export class LessonsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get a lesson by ID' })
-  @ApiParam({ name: 'id', type: Number })
+  @ApiOperation({ summary: 'Get a lesson by ID with access check' })
+  @ApiParam({ name: 'id', type: Number, description: 'Lesson ID' })
   @ApiOkResponse({ type: LessonResponseDto })
-  findOne(@Param('id', ParseIntPipe) id: number): Promise<LessonResponseDto> {
+  @ApiResponse({ 
+    status: 403, 
+    description: 'Forbidden - Previous lesson not completed',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'Please complete the previous lesson first.' },
+        previousLessonId: { type: 'number', example: 5 },
+        previousLessonTitle: { type: 'string', example: 'Introduction to Markets' }
+      }
+    }
+  })
+  @ApiResponse({ status: 404, description: 'Lesson not found' })
+  async findOne(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req: any
+  ): Promise<LessonResponseDto> {
+    const userId = req.user?.id || req.headers['x-user-id'] || '1';
+    await this.lessonsService.validateLessonAccess(id, userId);
     return this.lessonsService.findOne(id);
   }
 

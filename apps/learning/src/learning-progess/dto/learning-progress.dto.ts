@@ -54,6 +54,17 @@ export class LessonProgressResponseDto {
   @ApiProperty({ example: 1 })
   lessonId: number;
 
-  @ApiProperty({ example: '2026-01-14T10:05:00.000Z' })
-  completedAt: Date;
+  @ApiProperty({ example: '2026-01-14T10:05:00.000Z', required: false })
+  completedAt?: Date;
+
+  @ApiProperty({ example: 0 })
+  lastReadCardIndex: number;
+}
+
+export class UpdateLessonProgressDto {
+  @ApiProperty({ example: 1 })
+  lastReadCardIndex: number;
+
+  @ApiProperty({ example: false })
+  isCompleted?: boolean;
 }
