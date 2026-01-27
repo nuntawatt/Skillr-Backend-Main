@@ -1,26 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
-import {
-  Controller,
-  Post,
-  Get,
-  Body,
-  UseGuards,
-  Req,
-  Res,
-  HttpCode,
-  HttpStatus,
-  BadRequestException,
-  UnauthorizedException,
-} from '@nestjs/common';
-import {
-  RegisterDto,
-  LoginDto,
-  RefreshTokenDto,
-  ForgotPasswordDto,
-  VerifyOtpDto,
-  ResetPasswordDto,
-} from './dto';
+import { Controller, Post, Get, Body, UseGuards, Req, Res, HttpCode, HttpStatus, BadRequestException } from '@nestjs/common';
+import { RegisterDto, LoginDto, RefreshTokenDto, ForgotPasswordDto, VerifyOtpDto, ResetPasswordDto } from './dto';
 import { AuthService } from './auth.service';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -44,60 +25,49 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
-  private cookieOptions(isProd: boolean) {
-    return {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: isProd ? 'none' as const : 'lax' as const,
-      path: '/',
-      domain: isProd ? this.configService.get<string>('COOKIE_DOMAIN') : undefined,
-    };
-  }
-
-  // Register
+  // Register a new user
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Register a new user' })
+  @ApiResponse({ status: 201, description: 'User registered successfully.' })
+  @ApiResponse({ status: 400, description: 'Invalid input data.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
   }
 
-  // Login (email/password) — set refreshToken cookie
+  // Login
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'User login & Admin login' })
   @ApiBody({ type: LoginDto })
-  async login(
-    @Body() loginDto: LoginDto,
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const userAgent = req.headers['user-agent'] as string | undefined;
+  @ApiResponse({ status: 200, description: 'User logged in successfully.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized. Invalid credentials.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
+  async login(@Body() loginDto: LoginDto, @Req() req: Request) {
+    const userAgent = req.headers['user-agent'];
     const ipAddress = req.ip;
 
-    const isProd = this.configService.get('NODE_ENV') === 'production';
-    const auth = await this.authService.login(loginDto, userAgent, ipAddress);
-    const { tokens } = auth;
-
-    // set refresh cookie
-    res.cookie('refreshToken', tokens.refreshToken, this.cookieOptions(isProd));
-
-    // return safe response (do not include refresh token)
-    return {
-      accessToken: tokens.accessToken,
-      expiresIn: tokens.expiresIn,
-      user: auth.user,
-    };
+    return this.authService.login(loginDto, userAgent, ipAddress);
   }
 
   // Google OAuth - Initiate
   @Get('google')
   @UseGuards(GoogleAuthGuard)
-  async googleAuth() {}
+  @ApiOperation({ summary: 'Initiate Google OAuth2 login' })
+  @ApiResponse({ status: 200, description: 'User authenticated via Google OAuth2.' })
+  @ApiResponse({ status: 400, description: 'Bad Request. Invalid Google OAuth2 request.' })
+  @ApiResponse({ status: 302, description: 'Redirect to Google OAuth2 consent screen.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
+  async googleAuth() { }
 
-  // Google OAuth - Callback (set cookie + redirect)
+  // Google OAuth - Callback
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
+  @ApiOperation({ summary: 'Google OAuth2 callback' })
+  @ApiResponse({ status: 302, description: 'Redirect to frontend after login' })
   async googleAuthCallback(@Req() req: Request, @Res() res: Response) {
     const user = req.user as {
       googleId: string;
@@ -108,27 +78,40 @@ export class AuthController {
     };
 
     const { tokens } = await this.authService.googleLogin(user);
-    const isProd = this.configService.get('NODE_ENV') === 'production';
 
-    res.cookie('refreshToken', tokens.refreshToken, this.cookieOptions(isProd));
+    res.cookie('refreshToken', tokens.refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+      path: '/'
+    });
+
     return res.redirect(`${this.configService.get('FRONTEND_URL')}/instructor`);
   }
 
-  // Google OAuth - Token Exchange (for token-only flows)
+  // Google OAuth - Token Exchange
   @Post('google/token')
   @HttpCode(HttpStatus.OK)
-  async googleToken(
-    @Body() body: { idToken?: string; id_token?: string },
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  @ApiOperation({ summary: 'Google OAuth2 token exchange' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { id_token: { type: 'string', example: 'eyJhbGciOiJSUzI1NiIsImtpZCI6Ij...' } },
+      required: ['id_token'],
+    },
+  })
+  @ApiResponse({ status: 200, description: 'User authenticated via Google OAuth2 token exchange.' })
+  @ApiResponse({ status: 302, description: 'Redirect after successful Google OAuth2 token exchange.' })
+  @ApiResponse({ status: 400, description: 'Bad Request. Invalid Google OAuth2 token.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
+
+  async googleToken(@Body() body: { idToken?: string; id_token?: string }) {
     const idToken = body.idToken || body.id_token;
     if (!idToken) {
       throw new BadRequestException('id_token is required');
     }
 
-    const tokenInfoUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(
-      idToken,
-    )}`;
+    const tokenInfoUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`;
 
     const resp = await fetch(tokenInfoUrl);
     if (!resp.ok) {
@@ -136,6 +119,8 @@ export class AuthController {
     }
 
     const info = (await resp.json()) as GoogleTokenInfo;
+
+    // Verify audience (client id)
     const aud = info.aud ?? info.audience;
     const expected = this.configService.get<string>('GOOGLE_CLIENT_ID');
     if (!expected || aud !== expected) {
@@ -150,41 +135,43 @@ export class AuthController {
       avatar: info.picture,
     };
 
-    const auth = await this.authService.googleLogin(profile);
-    const isProd = this.configService.get('NODE_ENV') === 'production';
-
-    // set refresh cookie for token-exchange flows too
-    res.cookie('refreshToken', auth.tokens.refreshToken, this.cookieOptions(isProd));
-
-    return {
-      accessToken: auth.tokens.accessToken,
-      expiresIn: auth.tokens.expiresIn,
-      user: auth.user,
-    };
+    return this.authService.googleLogin(profile);
   }
 
-  // Refresh token (read cookie) -> set new cookie and return access token
+  // Refresh token
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  async refreshTokens(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const refreshToken = req.cookies?.refreshToken;
+  @ApiOperation({ summary: 'Refresh access and refresh tokens' })
+  @ApiBody({ type: RefreshTokenDto })
+  @ApiResponse({ status: 200, description: 'Tokens refreshed successfully.' })
+  @ApiResponse({ status: 400, description: 'Bad Request. Refresh token is required.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized. Invalid or expired refresh token.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
+  async refreshTokens(@Body() refreshTokenDto: RefreshTokenDto, @Req() req: Request) {
+    const cookiesUnknown: unknown = (req as unknown as { cookies?: unknown }).cookies;
+
+    const cookies = typeof cookiesUnknown === 'object' && cookiesUnknown !== null
+      ? (cookiesUnknown as { refreshToken?: unknown })
+      : undefined;
+
+    const refreshTokenRaw = refreshTokenDto.refreshToken ?? cookies?.refreshToken;
+    const refreshToken = typeof refreshTokenRaw === 'string' ? refreshTokenRaw : undefined;
+
     if (!refreshToken) {
-      throw new UnauthorizedException('Refresh token not found');
+      throw new BadRequestException('Refresh token is required');
     }
 
-    const tokens = await this.authService.refreshTokens(refreshToken);
-    const isProd = this.configService.get('NODE_ENV') === 'production';
-
-    // set new refresh token cookie
-    res.cookie('refreshToken', tokens.refreshToken, this.cookieOptions(isProd));
-
-    // return access token to frontend
-    return { accessToken: tokens.accessToken, expiresIn: tokens.expiresIn };
+    return this.authService.refreshTokens(refreshToken);
   }
 
-  // Forgot password
+  // Forgot password - send OTP
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Initiate forgot password process by sending OTP' })
+  @ApiBody({ type: ForgotPasswordDto })
+  @ApiResponse({ status: 200, description: 'OTP sent successfully to the provided email.' })
+  @ApiResponse({ status: 400, description: 'Bad Request. Invalid email address.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   @Throttle({ short: { ttl: 60, limit: 2 }, medium: { ttl: 900, limit: 5 } })
   async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
     return this.authService.forgotPassword(forgotPasswordDto.email);
@@ -193,53 +180,77 @@ export class AuthController {
   // Verify OTP
   @Post('verify-otp')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify OTP sent to email' })
+  @ApiBody({ type: VerifyOtpDto })
+  @ApiResponse({ status: 200, description: 'OTP verified successfully.' })
+  @ApiResponse({ status: 400, description: 'Bad Request. Invalid email or OTP.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   @Throttle({ short: { ttl: 60, limit: 5 }, medium: { ttl: 900, limit: 10 } })
   async verifyOtp(@Body() verifyOtpDto: VerifyOtpDto) {
     return this.authService.verifyOtp(verifyOtpDto.email, verifyOtpDto.otp);
   }
 
-  // Reset password
+  // Reset password (after OTP verification)
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reset password using the reset token' })
+  @ApiBody({ type: ResetPasswordDto })
+  @ApiResponse({ status: 200, description: 'Password reset successfully.' })
+  @ApiResponse({ status: 400, description: 'Bad Request. Invalid reset token or password.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
-    return this.authService.resetPassword(resetPasswordDto.resetToken, resetPasswordDto.newPassword);
+    return this.authService.resetPassword(
+      resetPasswordDto.resetToken,
+      resetPasswordDto.newPassword,
+    );
   }
 
   // Logout
   @Post('logout')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async logout(
-    @Body() body: { refreshToken?: string },
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  @ApiOperation({ summary: 'Logout from current session' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: { refreshToken: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' } },
+      required: [],
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Logged out successfully.' })
+  @ApiResponse({ status: 400, description: 'Bad Request. Invalid refresh token.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
+  async logout(@Body() body: { refreshToken?: string }, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const cookiesUnknown: unknown = (req as unknown as { cookies?: unknown }).cookies;
     const cookies = typeof cookiesUnknown === 'object' && cookiesUnknown !== null
       ? (cookiesUnknown as { refreshToken?: unknown })
       : undefined;
 
     const refreshTokenRaw = body.refreshToken ?? cookies?.refreshToken;
-    const refreshToken = typeof refreshTokenRaw === 'string' ? refreshTokenRaw : undefined;
+    const refreshToken =
+      typeof refreshTokenRaw === 'string' ? refreshTokenRaw : undefined;
 
     if (refreshToken) {
       await this.authService.logout(refreshToken);
     }
+    res.clearCookie('refreshToken', { httpOnly: true, secure: true, sameSite: 'strict' });
 
-    const isProd = this.configService.get('NODE_ENV') === 'production';
-    res.clearCookie('refreshToken', this.cookieOptions(isProd) as any);
-
-    return { message: 'Logged out successfully' };
+    return { message: 'Logged out successfully', };
   }
 
-  // Logout all devices
+  // Logout from all devices
   @Post('logout-all')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Logout from all devices' })
+  @ApiResponse({ status: 200, description: 'Logged out from all devices successfully.' })
+  @ApiResponse({ status: 400, description: 'Bad Request.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized. Invalid or expired token.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async logoutAll(@CurrentUser('id') userId: string, @Res({ passthrough: true }) res: Response) {
     await this.authService.logoutAll(userId);
-    const isProd = this.configService.get('NODE_ENV') === 'production';
-    res.clearCookie('refreshToken', this.cookieOptions(isProd) as any);
+
+    res.clearCookie('refreshToken', { httpOnly: true, secure: true, sameSite: 'strict' });
     return { message: 'Logged out from all devices successfully' };
   }
 }

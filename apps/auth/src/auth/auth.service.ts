@@ -14,7 +14,7 @@ import { LoginAttemptsService } from './login-attempts.service';
 import { EmailService } from './email.service';
 import { AuthProvider } from '@common/enums';
 
-// Constants
+// Constants for OTP/Token configuration
 const OTP_EXPIRY_MINUTES = 10;
 const RESET_TOKEN_EXPIRY_MINUTES = 15;
 const BCRYPT_SALT_ROUNDS = 10;
@@ -43,11 +43,14 @@ export class AuthService {
     private readonly passwordResetTokenRepository: Repository<PasswordResetToken>,
     private readonly loginAttemptsService: LoginAttemptsService,
     private readonly emailService: EmailService,
-  ) {}
+  ) { }
 
-  // Register
+  // Register a new user
   async register(registerDto: RegisterDto): Promise<AuthResponse> {
-    const existingAccount = await this.usersService.findAuthAccountByProviderAndEmail(AuthProvider.LOCAL, registerDto.email);
+    const existingAccount = await this.usersService.findAuthAccountByProviderAndEmail(
+      AuthProvider.LOCAL,
+      registerDto.email,
+    );
     if (existingAccount) {
       throw new ConflictException('Email already exists');
     }
@@ -61,30 +64,53 @@ export class AuthService {
       });
     }
 
-    await this.usersService.createEmailAuthAccount(user, registerDto.email, registerDto.password);
+    await this.usersService.createEmailAuthAccount(
+      user,
+      registerDto.email,
+      registerDto.password,
+    );
+
     const tokens = await this.generateTokens(user);
-    return { user: this.sanitizeUser(user), tokens };
+
+    return {
+      user: this.sanitizeUser(user),
+      tokens,
+    };
   }
 
-  // Login (email)
+  // Login with email and password
   async login(loginDto: LoginDto, userAgent?: string, ipAddress?: string): Promise<AuthResponse> {
     const invalidMessage = 'Invalid email or password';
 
     const lockStatus = await this.loginAttemptsService.getLockStatus(loginDto.email);
     if (lockStatus.isLocked) {
-      throw new UnauthorizedException(this.formatLockMessage(lockStatus.remainingMs));
+      throw new UnauthorizedException(
+        this.formatLockMessage(lockStatus.remainingMs),
+      );
     }
 
-    const authAccount = await this.usersService.findAuthAccountByProviderAndEmail(AuthProvider.LOCAL, loginDto.email);
+    const authAccount = await this.usersService.findAuthAccountByProviderAndEmail(
+      AuthProvider.LOCAL,
+      loginDto.email,
+    );
     if (!authAccount?.user) {
       const nextStatus = await this.loginAttemptsService.recordFailure(loginDto.email);
-      throw new UnauthorizedException(nextStatus.isLocked ? this.formatLockMessage(nextStatus.remainingMs) : invalidMessage);
+      throw new UnauthorizedException(nextStatus.isLocked
+        ? this.formatLockMessage(nextStatus.remainingMs)
+        : invalidMessage,
+      );
     }
 
-    const isPasswordValid = await this.usersService.verifyPasswordHash(authAccount.passwordHash, loginDto.password);
+    const isPasswordValid = await this.usersService.verifyPasswordHash(
+      authAccount.passwordHash,
+      loginDto.password,
+    );
     if (!isPasswordValid) {
       const nextStatus = await this.loginAttemptsService.recordFailure(loginDto.email);
-      throw new UnauthorizedException(nextStatus.isLocked ? this.formatLockMessage(nextStatus.remainingMs) : invalidMessage);
+      throw new UnauthorizedException(nextStatus.isLocked
+        ? this.formatLockMessage(nextStatus.remainingMs)
+        : invalidMessage,
+      );
     }
 
     if ((authAccount.user.status ?? '').toLowerCase() !== 'active') {
@@ -97,7 +123,7 @@ export class AuthService {
     return { user: this.sanitizeUser(authAccount.user), tokens };
   }
 
-  // Google Login
+  // Login - Register with Google OAuth
   async googleLogin(profile: { googleId: string; email: string; firstName?: string; lastName?: string; avatar?: string; }): Promise<AuthResponse> {
     const user = await this.usersService.findOrCreateFromGoogle(profile);
 
@@ -106,10 +132,11 @@ export class AuthService {
     }
 
     const tokens = await this.generateTokens(user);
+
     return { user: this.sanitizeUser(user), tokens };
   }
 
-  // Refresh tokens: validate session, revoke old, create new session
+  // Refresh access token using refresh token
   async refreshTokens(refreshTokenValue: string): Promise<TokenResponse> {
     const refreshTokenHash = this.hashRefreshToken(refreshTokenValue);
     const session = await this.sessionRepository.findOne({
@@ -118,43 +145,55 @@ export class AuthService {
         revokedAt: IsNull(),
         expiresAt: MoreThan(new Date()),
       },
-      relations: ['user'],
+      relations: ['user']
     });
 
     if (!session) {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
-    // revoke old session
     session.revokedAt = new Date();
     await this.sessionRepository.save(session);
-
-    // generate new tokens for same user
     return this.generateTokens(session.user);
   }
 
-  // Logout all
+  // Logout from all devices
   async logoutAll(userId: string): Promise<void> {
-    await this.sessionRepository.update({ userId, revokedAt: IsNull() }, { revokedAt: new Date() });
+    await this.sessionRepository.update(
+      { userId, revokedAt: IsNull() },
+      { revokedAt: new Date() },
+    );
   }
 
-  // Logout single
+  // Logout
   async logout(refreshTokenValue: string): Promise<void> {
     const refreshTokenHash = this.hashRefreshToken(refreshTokenValue);
-    await this.sessionRepository.update({ refreshTokenHash, revokedAt: IsNull() }, { revokedAt: new Date() });
+    await this.sessionRepository.update(
+      { refreshTokenHash, revokedAt: IsNull() },
+      { revokedAt: new Date() },
+    );
   }
 
-  // Forgot password (send OTP)
+
+  // Forgot password - send OTP (hashed before storage)
   async forgotPassword(email: string): Promise<{ message: string }> {
     const genericMessage = 'If the email exists, an OTP will be sent.';
 
-    const authAccount = await this.usersService.findAuthAccountByProviderAndEmail(AuthProvider.LOCAL, email);
+    const authAccount = await this.usersService.findAuthAccountByProviderAndEmail(
+      AuthProvider.LOCAL,
+      email,
+    );
     if (!authAccount?.user) {
       return { message: genericMessage };
     }
 
-    await this.passwordResetTokenRepository.update({ userId: authAccount.user.id, isUsed: false }, { isUsed: true });
+    // Invalidate any existing OTPs for this user
+    await this.passwordResetTokenRepository.update(
+      { userId: authAccount.user.id, isUsed: false },
+      { isUsed: true },
+    );
 
+    // Generate 6-digit OTP and hash it before storage
     const otp = this.generateOtp();
     const otpHash = await bcrypt.hash(otp, BCRYPT_SALT_ROUNDS);
 
@@ -162,31 +201,42 @@ export class AuthService {
     expiresAt.setMinutes(expiresAt.getMinutes() + OTP_EXPIRY_MINUTES);
 
     const resetToken = this.passwordResetTokenRepository.create({
-      token: otpHash,
+      token: otpHash, // Store hashed OTP, never plain text
       userId: authAccount.user.id,
       expiresAt,
     });
 
     await this.passwordResetTokenRepository.save(resetToken);
+
+    // Send plain OTP to user via email
     await this.emailService.sendOtpEmail(email, otp);
 
     return { message: genericMessage };
   }
 
-  // Verify OTP
+  // Verify OTP using bcrypt comparison
   async verifyOtp(email: string, otp: string): Promise<{ resetToken: string }> {
     const invalidMessage = 'Invalid or expired OTP';
 
-    const authAccount = await this.usersService.findAuthAccountByProviderAndEmail(AuthProvider.LOCAL, email);
+    const authAccount = await this.usersService.findAuthAccountByProviderAndEmail(
+      AuthProvider.LOCAL,
+      email,
+    );
     if (!authAccount?.user) {
       throw new BadRequestException(invalidMessage);
     }
 
+    // Find non-expired, unused tokens for this user
     const tokens = await this.passwordResetTokenRepository.find({
-      where: { userId: authAccount.user.id, isUsed: false, expiresAt: MoreThan(new Date()) },
+      where: {
+        userId: authAccount.user.id,
+        isUsed: false,
+        expiresAt: MoreThan(new Date()),
+      },
       order: { createdAt: 'DESC' },
     });
 
+    // Compare OTP with stored hashes using bcrypt
     let matchedToken: PasswordResetToken | null = null;
     for (const token of tokens) {
       const isMatch = await bcrypt.compare(otp, token.token);
@@ -200,28 +250,37 @@ export class AuthService {
       throw new BadRequestException(invalidMessage);
     }
 
+    // Generate reset token and hash before storage
     const resetTokenPlain = crypto.randomBytes(32).toString('hex');
     const resetTokenHash = await bcrypt.hash(resetTokenPlain, BCRYPT_SALT_ROUNDS);
 
+    // Update expiry for reset token phase
     const resetTokenExpiresAt = new Date();
     resetTokenExpiresAt.setMinutes(resetTokenExpiresAt.getMinutes() + RESET_TOKEN_EXPIRY_MINUTES);
 
+    // Replace OTP hash with reset token hash
     matchedToken.token = resetTokenHash;
     matchedToken.expiresAt = resetTokenExpiresAt;
     await this.passwordResetTokenRepository.save(matchedToken);
 
+    // Return plain reset token to client
     return { resetToken: resetTokenPlain };
   }
 
-  // Reset password using verified token
+  // Reset password with verified token
   async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
     const invalidMessage = 'Invalid or expired reset token';
 
+    // Find all non-expired, unused tokens
     const tokens = await this.passwordResetTokenRepository.find({
-      where: { isUsed: false, expiresAt: MoreThan(new Date()) },
-      relations: ['user'],
+      where: {
+        isUsed: false,
+        expiresAt: MoreThan(new Date()),
+      },
+      relations: ['user']
     });
 
+    // Compare reset token with stored hashes using bcrypt
     let matchedToken: PasswordResetToken | null = null;
     for (const t of tokens) {
       const isMatch = await bcrypt.compare(token, t.token);
@@ -235,29 +294,34 @@ export class AuthService {
       throw new BadRequestException(invalidMessage);
     }
 
+    // Update user password
     await this.usersService.updatePassword(matchedToken.userId, newPassword);
 
+    // Mark token as used (clear sensitive fields)
     matchedToken.isUsed = true;
     await this.passwordResetTokenRepository.save(matchedToken);
 
+    // Logout from all sessions for security
     await this.logoutAll(matchedToken.userId);
+
     await this.emailService.sendPasswordChangedEmail(matchedToken.user.email || '');
     this.logger.log(`Password reset for userId=${matchedToken.userId}`);
 
     return { message: 'Password has been reset successfully' };
   }
 
-  // Generate OTP
+  // Generate 6-digit OTP
   private generateOtp(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
   }
 
-  // Generate tokens & persist refresh token hash as session
+  // Generate access and refresh tokens
   private async generateTokens(user: User, userAgent?: string, ipAddress?: string): Promise<TokenResponse> {
     const role = String(user.role);
     const normalizedRole = role === 'INSTRUCTOR' ? 'ADMIN' : role;
 
     const payload = { sub: user.id, email: user.email, role: normalizedRole };
+
     const accessToken = this.jwtService.sign(payload);
 
     const expiresAt = new Date();
@@ -277,6 +341,7 @@ export class AuthService {
     return { accessToken, refreshToken: refreshTokenValue, expiresIn: 15 * 60 };
   }
 
+  // Remove sensitive fields user object
   private sanitizeUser(user: User): Partial<User> {
     return { ...user };
   }
