@@ -23,12 +23,13 @@ async function bootstrap() {
     .setVersion('1.0.0')
     .addServer('/api')
     .addBearerAuth()
-    .build(); 
+    .build();
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs/auth', app, document);
+  app.use(cookieParser());
 
-  const allowedOrigins = [process.env.FRONTEND_URL, 'http://157.85.98.100:3001','http://localhost:3000'].filter(Boolean);
+  const allowedOrigins = [process.env.FRONTEND_URL, 'http://157.85.98.100:3001', 'http://localhost:3000'].filter(Boolean);
 
   app.enableCors({
     origin: (origin, callback) => {
@@ -39,8 +40,6 @@ async function bootstrap() {
     },
     credentials: true,
   });
-
-  app.use(cookieParser());
 
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
   app.setGlobalPrefix('api');
