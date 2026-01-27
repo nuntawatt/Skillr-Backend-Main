@@ -6,13 +6,6 @@ export enum LessonType {
   ARTICLE = 'article',
   VIDEO = 'video',
   QUIZ = 'quiz',
-  ASSIGNMENT = 'assignment',
-}
-
-export enum LessonRefSource {
-  COURSE = 'course', // article content stored in course service
-  MEDIA = 'media',   // media service id
-  QUIZ = 'quiz',     // quiz service id
 }
 
 @Entity('lessons')
@@ -24,7 +17,6 @@ export class Lesson {
   @Column()
   lesson_title: string;
 
-  // short description (optional)
   @Column({ name: 'lesson_description', type: 'text', nullable: true })
   lesson_description?: string;
 
@@ -35,28 +27,18 @@ export class Lesson {
   })
   type: LessonType;
 
-  @Column({ name: 'order_index', type: 'int', default: 0 })
-  order_index: number;
-
-  // where actual content lives and id of that resource
-  @Column({
-    name: 'ref_source',
-    type: 'enum',
-    enum: LessonRefSource,
-    default: LessonRefSource.COURSE,
-  })
-  ref_source: LessonRefSource;
-
   @Column({ name: 'ref_id', type: 'int' })
   ref_id: number;
 
+  @Column({ name: 'order_index', type: 'int', default: 0 })
+  order_index: number;
+
   @ManyToOne(() => Chapter, (chapter) => chapter.lessons, { onDelete: 'CASCADE' })
   chapter: Chapter;
-
   @Column({ name: 'chapter_id', type: 'int' })
   chapter_id: number;
 
-  // ONE-TO-ONE optional link to Article only when type === 'article'
+  // One-to-one relation with Article (if type is ARTICLE)
   @OneToOne(() => Article, (article) => article.lesson, { cascade: true })
   lesson_article?: Article;
 

@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import { Lesson, LessonType, LessonRefSource } from './entities/lesson.entity';
+import { Lesson, LessonType } from './entities/lesson.entity';
 import { Chapter } from '../chapters/entities/chapter.entity';
 import { Article } from '../articles/entities/article.entity';
 import { CreateLessonDto, UpdateLessonDto, LessonResponseDto } from './dto/lesson';
@@ -18,10 +18,7 @@ export class LessonsService {
     private readonly dataSource: DataSource,
   ) {}
 
-  /**
-   * Create a new lesson for a chapter
-   * For article type, also creates the Article entity in a transaction
-   */
+  // Create a new lesson
   async create(createLessonDto: CreateLessonDto): Promise<LessonResponseDto> {
     // Verify chapter exists
     const chapter = await this.chapterRepository.findOne({
@@ -30,19 +27,6 @@ export class LessonsService {
 
     if (!chapter) {
       throw new NotFoundException(`Chapter with ID ${createLessonDto.chapterId} not found`);
-    }
-
-    // Validate refSource matches type
-    if (createLessonDto.type === LessonType.ARTICLE && createLessonDto.refSource !== LessonRefSource.COURSE) {
-      throw new BadRequestException('Article lessons must have refSource = course');
-    }
-
-    if (createLessonDto.type === LessonType.VIDEO && createLessonDto.refSource !== LessonRefSource.MEDIA) {
-      throw new BadRequestException('Video lessons must have refSource = media');
-    }
-
-    if (createLessonDto.type === LessonType.QUIZ && createLessonDto.refSource !== LessonRefSource.QUIZ) {
-      throw new BadRequestException('Quiz lessons must have refSource = quiz');
     }
 
     // Auto-generate orderIndex if not provided
@@ -61,7 +45,6 @@ export class LessonsService {
       lesson_description: createLessonDto.description,
       chapter_id: createLessonDto.chapterId,
       type: createLessonDto.type,
-      ref_source: createLessonDto.refSource,
       ref_id: createLessonDto.refId,
       order_index: orderIndex,
     });
@@ -70,9 +53,7 @@ export class LessonsService {
     return this.toResponseDto(saved);
   }
 
-  /**
-   * Create an article lesson with content in a single transaction
-   */
+  // Create a new article lesson with content in a transaction
   async createArticleLesson(
     createLessonDto: Omit<CreateLessonDto, 'type' | 'refSource' | 'refId'>,
     content: any,
@@ -110,7 +91,6 @@ export class LessonsService {
         lesson_description: createLessonDto.description,
         chapter_id: createLessonDto.chapterId,
         type: LessonType.ARTICLE,
-        ref_source: LessonRefSource.COURSE,
         ref_id: 0, // Will be updated
         order_index: orderIndex,
       });
@@ -129,9 +109,7 @@ export class LessonsService {
     });
   }
 
-  /**
-   * Find all lessons for a chapter
-   */
+  // Get all lessons for a chapter
   async findByChapter(chapterId: number): Promise<LessonResponseDto[]> {
     const lessons = await this.lessonRepository.find({
       where: { chapter_id: chapterId },
@@ -141,9 +119,7 @@ export class LessonsService {
     return lessons.map((l) => this.toResponseDto(l));
   }
 
-  /**
-   * Find a single lesson by ID
-   */
+  // Find a lesson by ID
   async findOne(id: number): Promise<LessonResponseDto> {
     const lesson = await this.lessonRepository.findOne({ where: { lesson_id: id } });
 
@@ -154,9 +130,7 @@ export class LessonsService {
     return this.toResponseDto(lesson);
   }
 
-  /**
-   * Update a lesson
-   */
+  // Update a lesson
   async update(id: number, updateLessonDto: UpdateLessonDto): Promise<LessonResponseDto> {
     const lesson = await this.lessonRepository.findOne({ where: { lesson_id: id } });
 
@@ -176,10 +150,6 @@ export class LessonsService {
       lesson.type = updateLessonDto.type;
     }
 
-    if (updateLessonDto.refSource !== undefined) {
-      lesson.ref_source = updateLessonDto.refSource;
-    }
-
     if (updateLessonDto.refId !== undefined) {
       lesson.ref_id = updateLessonDto.refId;
     }
@@ -192,9 +162,7 @@ export class LessonsService {
     return this.toResponseDto(saved);
   }
 
-  /**
-   * Delete a lesson (cascades to article if exists)
-   */
+  // Delete a lesson
   async remove(id: number): Promise<void> {
     const lesson = await this.lessonRepository.findOne({ where: { lesson_id: id } });
 
@@ -205,9 +173,7 @@ export class LessonsService {
     await this.lessonRepository.remove(lesson);
   }
 
-  /**
-   * Reorder lessons within a chapter
-   */
+  // Reorder lessons within a chapter
   async reorder(chapterId: number, lessonIds: number[]): Promise<LessonResponseDto[]> {
     const lessons = await this.lessonRepository.find({
       where: { chapter_id: chapterId },
@@ -226,19 +192,16 @@ export class LessonsService {
     return this.findByChapter(chapterId);
   }
 
-  /**
-   * Map entity to response DTO
-   */
+  // Convert Lesson entity to LessonResponseDto
   private toResponseDto(lesson: Lesson): LessonResponseDto {
     return {
       id: lesson.lesson_id,
       title: lesson.lesson_title,
       description: lesson.lesson_description,
       type: lesson.type,
-      refSource: lesson.ref_source,
       refId: lesson.ref_id,
       orderIndex: lesson.order_index,
-      chapterId: lesson.chapter_id,
+      chapter_id: lesson.chapter_id,
       createdAt: lesson.createdAt,
     };
   }

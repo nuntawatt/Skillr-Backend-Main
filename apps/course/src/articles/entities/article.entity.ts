@@ -13,8 +13,12 @@ export class Article {
     @Column({ name: 'lesson_id', type: 'int', unique: true })
     lessonId: number;
 
+
     @Column({ name: 'pdf_article', type: 'bytea', nullable: true })
     pdfArticle?: Buffer;
+
+    @Column({ name: 'article_image_id', type: 'int', nullable: true })
+    article_imageId?: number | null;
 
     // rich content: JSONB for editor content (blocks) or markdown HTML
     @Column({ type: 'jsonb', nullable: false })

@@ -10,8 +10,8 @@ export class LessonStructureDto {
     @ApiProperty({ description: 'Lesson type', example: 'article', enum: ['article', 'video', 'quiz', 'assignment'] })
     type: string;
 
-    @ApiProperty({ description: 'Reference source', example: 'course', enum: ['course', 'media', 'quiz'] })
-    refSource: string;
+    // @ApiProperty({ description: 'Reference source', example: 'course', enum: ['course', 'media', 'quiz'] })
+    // refSource: string;
 
     @ApiProperty({ description: 'Reference ID', example: 1 })
     refId: number;

@@ -117,7 +117,7 @@ export class CoursesService {
           id: lesson.lesson_id,
           title: lesson.lesson_title,
           type: lesson.type,
-          refSource: lesson.ref_source,
+          // refSource: lesson.ref_source,
           refId: lesson.ref_id,
           orderIndex: lesson.order_index,
         }));
@@ -217,7 +217,7 @@ export class CoursesService {
             const lesson = this.lessonRepository.create({
               lesson_title: les.title,
               type: les.type as any,
-              ref_source: (les.refSource as any) ?? 'course',
+              // ref_source: (les.refSource as any) ?? 'course',
               ref_id: les.refId ?? 0,
               order_index: les.orderIndex,
               chapter_id: savedChapter.chapter_id,

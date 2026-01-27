@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsOptional, IsNumber, IsEnum, MaxLength, Min } from 'class-validator';
-import { LessonType, LessonRefSource } from '../entities/lesson.entity';
+import { LessonType } from '../entities/lesson.entity';
 
 export class UpdateLessonDto {
   @ApiPropertyOptional({ description: 'Lesson title', example: 'Introduction to Variables' })
@@ -22,15 +22,6 @@ export class UpdateLessonDto {
   @IsOptional()
   @IsEnum(LessonType)
   type?: LessonType;
-
-  @ApiPropertyOptional({
-    description: 'Reference source where content is stored',
-    enum: LessonRefSource,
-    example: LessonRefSource.COURSE,
-  })
-  @IsOptional()
-  @IsEnum(LessonRefSource)
-  refSource?: LessonRefSource;
 
   @ApiPropertyOptional({ description: 'Reference ID pointing to the content', example: 1 })
   @IsOptional()

@@ -13,8 +13,8 @@ export class LessonResponseDto {
   @ApiProperty({ description: 'Lesson type', example: 'article' })
   type: string;
 
-  @ApiProperty({ description: 'Reference source', example: 'course' })
-  refSource: string;
+  // @ApiProperty({ description: 'Reference source', example: 'course' })
+  // refSource: string;
 
   @ApiProperty({ description: 'Reference ID', example: 1 })
   refId: number;
@@ -23,8 +23,9 @@ export class LessonResponseDto {
   orderIndex: number;
 
   @ApiProperty({ description: 'Chapter ID this lesson belongs to', example: 1 })
-  chapterId: number;
+  chapter_id: number;
 
   @ApiProperty({ description: 'Creation timestamp' })
   createdAt: Date;
+  
 }

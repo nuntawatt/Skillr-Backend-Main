@@ -24,8 +24,6 @@ export class Course {
   @Column({ name: 'course_tags', type: 'text', array: true, nullable: true })
   course_tags?: string[] | null;
 
-  // @Column({ name: 'intro_media_asset_id', type: 'int', nullable: true })
-  // introMediaAssetId?: number | null;
 
   @Column({ name: 'is_published', default: false })
   isPublished: boolean;
