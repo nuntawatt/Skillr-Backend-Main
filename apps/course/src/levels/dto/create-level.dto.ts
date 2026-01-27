@@ -5,16 +5,16 @@ export class CreateLevelDto {
   @ApiProperty({ description: 'Level title', example: 'Beginner Level' })
   @IsString()
   @MaxLength(255)
-  title: string;
+  level_title: string;
 
   @ApiProperty({ description: 'Course ID this level belongs to', example: 1 })
   @IsNumber()
   @Min(1)
-  courseId: number;
+  course_id: number;
 
   @ApiPropertyOptional({ description: 'Order index within the course', example: 0, default: 0 })
   @IsOptional()
   @IsNumber()
   @Min(0)
-  orderIndex?: number;
+  level_orderIndex?: number;
 }

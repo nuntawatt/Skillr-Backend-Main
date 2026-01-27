@@ -6,11 +6,11 @@ export class UpdateLevelDto {
   @IsOptional()
   @IsString()
   @MaxLength(255)
-  title?: string;
+  level_title?: string;
 
   @ApiPropertyOptional({ description: 'Order index within the course', example: 0 })
   @IsOptional()
   @IsNumber()
   @Min(0)
-  orderIndex?: number;
+  level_orderIndex?: number;
 }

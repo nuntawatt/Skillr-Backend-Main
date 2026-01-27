@@ -1,7 +1,10 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as argon2 from 'argon2';
+import * as Minio from 'minio';
+import { randomUUID } from 'crypto';
 import { User } from './entities/user.entity';
 import { AuthAccount } from './entities/auth-account.entity';
 import { CreateUserDto, UpdateUserDto, UpdateRoleDto } from './dto';
@@ -9,11 +12,13 @@ import { AuthProvider } from '@common/enums';
 
 @Injectable()
 export class UsersService {
+  private minioClient?: Minio.Client;
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     @InjectRepository(AuthAccount)
     private readonly authAccountRepository: Repository<AuthAccount>,
+    private readonly config: ConfigService,
   ) { }
 
   // Create a new user
@@ -30,10 +35,63 @@ export class UsersService {
       firstName: createUserDto.firstName,
       lastName: createUserDto.lastName,
       avatar: createUserDto.avatar,
+      avatar_media_id: (createUserDto as any).avatar_media_id ?? null,
       role: createUserDto.role,
     });
 
     return this.userRepository.save(user);
+  }
+
+  // Get a fresh presigned avatar URL for a given media id
+  async getAvatarPresignedUrlByMediaId(mediaId: string): Promise<string> {
+    if (!mediaId) throw new NotFoundException('mediaId is required');
+
+    const endpointRaw = this.config.get<string>('S3_ENDPOINT') ?? this.config.get<string>('MINIO_ENDPOINT') ?? '';
+    if (!endpointRaw) throw new BadRequestException('S3_ENDPOINT not configured');
+
+    const bucket = this.config.get<string>('S3_BUCKET') ?? 'auth-profile';
+    const prefix = this.config.get<string>('S3_AVATAR_PREFIX') ?? 'avatar';
+
+    const client = this.getMinioClient(endpointRaw);
+
+    // Find the object key under the avatar prefix that starts with the mediaId
+    const searchPrefix = `${prefix}/${mediaId}`;
+    const foundKey: string | null = await new Promise((resolve, reject) => {
+      const stream = client.listObjectsV2(bucket, searchPrefix, true);
+      let resolved = false;
+      stream.on('data', (obj: any) => {
+        if (!resolved && obj && obj.name) {
+          resolved = true;
+          resolve(obj.name);
+          stream.destroy();
+        }
+      });
+      stream.on('error', (err: Error) => {
+        if (!resolved) {
+          resolved = true;
+          reject(err);
+        }
+      });
+      stream.on('end', () => {
+        if (!resolved) {
+          resolved = true;
+          resolve(null);
+        }
+      });
+    });
+
+    if (!foundKey) throw new NotFoundException('Avatar object not found in bucket');
+
+    const expires = Number(this.config.get<number>('S3_SIGNED_URL_EXPIRES_SECONDS')) || 900;
+    const presignedUrl: string = await new Promise((resolve, reject) => {
+      // @ts-ignore
+      client.presignedGetObject(bucket, foundKey, expires, (err: Error | null, url?: string) => {
+        if (err) return reject(err);
+        resolve(url!);
+      });
+    });
+
+    return presignedUrl;
   }
 
   // Find user by ID
@@ -144,6 +202,70 @@ export class UsersService {
     return this.userRepository.save(user);
   }
 
+  // Upload avatar image to media MinIO and update user.avatar with public URL
+  async uploadAvatar(id: number | string, file: Express.Multer.File): Promise<User> {
+    const user = await this.findById(id);
+    if (!user) throw new NotFoundException('User not found');
+
+    if (!file || !file.buffer) throw new BadRequestException('File is required');
+    if (!file.mimetype || (file.mimetype !== 'image/jpeg' && file.mimetype !== 'image/png')) throw new BadRequestException('Only JPG and PNG are allowed');
+
+    // read config values instead of hardcoding
+    const endpointRaw = this.config.get<string>('S3_ENDPOINT') ?? this.config.get<string>('MINIO_ENDPOINT') ?? '';
+    if (!endpointRaw) throw new BadRequestException('S3_ENDPOINT not configured');
+
+    const bucket = this.config.get<string>('S3_BUCKET') ?? 'auth-profile';
+    const prefix = this.config.get<string>('S3_AVATAR_PREFIX') ?? 'avatar';
+
+    // create or reuse MinIO client
+    const client = this.getMinioClient(endpointRaw);
+
+    const ext = (() => {
+      const m = file.originalname?.match(/\.([a-z0-9]+)$/i);
+      if (m) return `.${m[1]}`;
+      return file.mimetype === 'image/png' ? '.png' : '.jpg';
+    })();
+    // generate media id and use it as the object key under the avatar prefix
+    const mediaId = randomUUID();
+    const key = `${prefix}/${mediaId}${ext}`;
+
+    await client.putObject(bucket, key, file.buffer, file.size ?? file.buffer.length, { 'Content-Type': file.mimetype });
+
+    // generate a presigned GET URL so the client can view immediately
+    const expires = Number(this.config.get<number>('S3_SIGNED_URL_EXPIRES_SECONDS')) || 900;
+    const presignedUrl: string = await new Promise((resolve, reject) => {
+      // Minio client uses a callback-style presignedGetObject
+      // @ts-ignore
+      client.presignedGetObject(bucket, key, expires, (err: Error | null, url?: string) => {
+        if (err) return reject(err);
+        resolve(url!);
+      });
+    });
+
+    // save media id and presigned URL
+    user.avatar_media_id = mediaId;
+    user.avatar = presignedUrl;
+    return this.userRepository.save(user);
+  }
+
+  private getMinioClient(endpointRaw: string): Minio.Client {
+    if (this.minioClient) return this.minioClient;
+
+    const url = new URL(endpointRaw);
+    const accessKey = this.config.get<string>('S3_ACCESS_KEY_ID') ?? this.config.get<string>('MINIO_ROOT_USER') ?? '';
+    const secretKey = this.config.get<string>('S3_SECRET_ACCESS_KEY') ?? this.config.get<string>('MINIO_ROOT_PASSWORD') ?? '';
+
+    this.minioClient = new Minio.Client({
+      endPoint: url.hostname,
+      port: Number(url.port || 9000),
+      useSSL: url.protocol === 'http:',
+      accessKey,
+      secretKey,
+    });
+
+    return this.minioClient;
+  }
+
   // Update user role
   async updateRole(
     id: number | string,
@@ -196,6 +318,7 @@ export class UsersService {
         'firstName',
         'lastName',
         'avatar',
+        'avatar_media_id',
         'role',
         'isVerified',
         'createdAt',

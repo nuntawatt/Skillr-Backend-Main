@@ -20,23 +20,21 @@ export class CoursesController {
   @ApiOperation({ summary: 'List courses with optional filters' })
   @ApiOkResponse({ type: CourseResponseDto, isArray: true })
   @ApiQuery({ name: 'isPublished', required: false, type: Boolean })
-  @ApiQuery({ name: 'ownerUserId', required: false, type: Number })
+  @ApiQuery({ name: 'course_ownerId', required: false, type: Number })
   @ApiQuery({ name: 'categoryId', required: false, type: Number })
   @ApiQuery({ name: 'search', required: false, type: String })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'offset', required: false, type: Number })
   findAll(
     @Query('isPublished') isPublished?: string,
-    @Query('ownerUserId') ownerUserId?: string,
-    @Query('categoryId') categoryId?: string,
+    @Query('course_ownerId') course_ownerId?: string,
     @Query('search') search?: string,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ): Promise<CourseResponseDto[]> {
     return this.coursesService.findAll({
       isPublished: isPublished === 'true' ? true : isPublished === 'false' ? false : undefined,
-      ownerUserId: ownerUserId ? parseInt(ownerUserId, 10) : undefined,
-      categoryId: categoryId ? parseInt(categoryId, 10) : undefined,
+      course_ownerId: course_ownerId ? parseInt(course_ownerId, 10) : undefined,
       search,
       limit: limit ? parseInt(limit, 10) : undefined,
       offset: offset ? parseInt(offset, 10) : undefined,
@@ -62,7 +60,10 @@ export class CoursesController {
   @Put(':id/structure')
   @ApiOperation({ summary: 'Save full course structure (transactional)' })
   @ApiParam({ name: 'id', type: Number })
-  async saveStructure(@Param('id', ParseIntPipe) id: number, @Body() dto: CourseStructureSaveDto): Promise<CourseStructureResponseDto> {
+  async saveStructure(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CourseStructureSaveDto,
+  ): Promise<CourseStructureResponseDto> {
     return this.coursesService.saveStructure(id, dto);
   }
 
@@ -70,7 +71,10 @@ export class CoursesController {
   @ApiOperation({ summary: 'Update a course by ID' })
   @ApiParam({ name: 'id', type: Number })
   @ApiOkResponse({ type: CourseResponseDto })
-  update(@Param('id', ParseIntPipe) id: number, @Body() updateCourseDto: UpdateCourseDto): Promise<CourseResponseDto> {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateCourseDto: UpdateCourseDto,
+  ): Promise<CourseResponseDto> {
     return this.coursesService.update(id, updateCourseDto);
   }
 

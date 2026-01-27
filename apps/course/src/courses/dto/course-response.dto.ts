@@ -2,31 +2,28 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CourseResponseDto {
   @ApiProperty({ description: 'Course ID', example: 1 })
-  id: number;
+  course_id: number;
 
   @ApiProperty({ description: 'Owner user ID', example: 1 })
-  ownerUserId: number;
+  course_ownerId: number;
 
   @ApiProperty({ description: 'Course title', example: 'Introduction to TypeScript' })
-  title: string;
+  course_title: string;
 
   @ApiPropertyOptional({ description: 'Course description' })
-  description?: string;
+  course_description?: string;
 
   @ApiPropertyOptional({ description: 'Cover image media asset ID' })
-  coverMediaAssetId?: number;
+  course_imageId?: number;
 
-  @ApiPropertyOptional({ description: 'Intro video media asset ID' })
-  introMediaAssetId?: number;
+  @ApiPropertyOptional({ description: 'Course tags', type: [String] })
+  course_tags?: string[];
 
-  @ApiProperty({ description: 'Estimated time in seconds', example: 3600 })
-  estimateTimeSeconds: number;
+  // @ApiPropertyOptional({ description: 'Intro video media asset ID' })
+  // introMediaAssetId?: number;
 
   @ApiProperty({ description: 'Is the course published', example: false })
   isPublished: boolean;
-
-  @ApiPropertyOptional({ description: 'Category ID' })
-  categoryId?: number;
 
   @ApiProperty({ description: 'Creation timestamp' })
   createdAt: Date;

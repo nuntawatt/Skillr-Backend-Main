@@ -7,7 +7,6 @@ export class UpdateArticleDto {
         example: { blocks: [{ type: 'paragraph', data: { text: 'Updated content' } }] },
     })
     @IsOptional()
-    content?: any;
-
+    article_content?: any;
 }
 

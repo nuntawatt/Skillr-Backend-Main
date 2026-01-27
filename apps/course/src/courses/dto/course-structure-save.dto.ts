@@ -71,12 +71,18 @@ export class LevelSaveDto {
 export class CourseStructureSaveDto {
     @ApiProperty({ description: 'Course title' })
     @IsString()
-    title: string;
+    course_title: string;
 
     @ApiPropertyOptional({ description: 'Course description' })
     @IsOptional()
     @IsString()
-    description?: string;
+    course_description?: string;
+
+    @ApiPropertyOptional({ description: 'Course tags', type: [String] })
+    @IsOptional()
+    @IsArray()
+    @IsString({ each: true })
+    course_tags?: string[];
 
     @ApiProperty({ description: 'Levels in the course', type: [LevelSaveDto] })
     @IsArray()

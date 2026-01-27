@@ -4,9 +4,9 @@ import { Lesson } from '../../lessons/entities/lesson.entity';
 @Entity('articles')
 export class Article {
     @PrimaryGeneratedColumn()
-    id: number;
+    article_id: number;
 
-    @OneToOne(() => Lesson, (lesson) => lesson.article, { onDelete: 'CASCADE' })
+    @OneToOne(() => Lesson, (lesson) => lesson.lesson_article, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'lesson_id' })
     lesson: Lesson;
 
@@ -18,7 +18,7 @@ export class Article {
 
     // rich content: JSONB for editor content (blocks) or markdown HTML
     @Column({ type: 'jsonb', nullable: false })
-    content: any;
+    article_content: any;
 
     @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
     updatedAt: Date;

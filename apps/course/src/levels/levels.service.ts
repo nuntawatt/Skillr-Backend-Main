@@ -18,28 +18,28 @@ export class LevelsService {
   async create(createLevelDto: CreateLevelDto): Promise<LevelResponseDto> {
     // Verify course exists
     const course = await this.courseRepository.findOne({
-      where: { id: createLevelDto.courseId },
+      where: { course_id: createLevelDto.course_id },
     });
 
     if (!course) {
-      throw new NotFoundException(`Course with ID ${createLevelDto.courseId} not found`);
+      throw new NotFoundException(`Course with ID ${createLevelDto.course_id} not found`);
     }
 
     // Auto-generate orderIndex if not provided
-    let orderIndex = createLevelDto.orderIndex;
+    let orderIndex = createLevelDto.level_orderIndex;
     if (orderIndex === undefined) {
       const maxOrderResult = await this.levelRepository
         .createQueryBuilder('level')
-        .where('level.courseId = :courseId', { courseId: createLevelDto.courseId })
-        .select('MAX(level.orderIndex)', 'maxOrder')
+        .where('level.course_id = :course_id', { course_id: createLevelDto.course_id })
+        .select('MAX(level.level_orderIndex)', 'maxOrder')
         .getRawOne();
       orderIndex = (maxOrderResult?.maxOrder ?? -1) + 1;
     }
 
     const level = this.levelRepository.create({
-      title: createLevelDto.title,
-      courseId: createLevelDto.courseId,
-      orderIndex,
+      level_title: createLevelDto.level_title,
+      course_id: createLevelDto.course_id,
+      level_orderIndex: orderIndex,
     });
 
     const saved = await this.levelRepository.save(level);
@@ -49,8 +49,8 @@ export class LevelsService {
   // Find all levels for a course
   async findByCourse(courseId: number): Promise<LevelResponseDto[]> {
     const levels = await this.levelRepository.find({
-      where: { courseId },
-      order: { orderIndex: 'ASC' },
+      where: { course_id: courseId },
+      order: { level_orderIndex: 'ASC' },
     });
 
     return levels.map((l) => this.toResponseDto(l));
@@ -58,7 +58,7 @@ export class LevelsService {
 
   // Find a level by ID
   async findOne(id: number): Promise<LevelResponseDto> {
-    const level = await this.levelRepository.findOne({ where: { id } });
+    const level = await this.levelRepository.findOne({ where: { level_id: id } });
 
     if (!level) {
       throw new NotFoundException(`Level with ID ${id} not found`);
@@ -69,18 +69,18 @@ export class LevelsService {
 
   // Update a level
   async update(id: number, updateLevelDto: UpdateLevelDto): Promise<LevelResponseDto> {
-    const level = await this.levelRepository.findOne({ where: { id } });
+    const level = await this.levelRepository.findOne({ where: { level_id: id } });
 
     if (!level) {
       throw new NotFoundException(`Level with ID ${id} not found`);
     }
 
-    if (updateLevelDto.title !== undefined) {
-      level.title = updateLevelDto.title;
+    if (updateLevelDto.level_title !== undefined) {
+      level.level_title = updateLevelDto.level_title;
     }
 
-    if (updateLevelDto.orderIndex !== undefined) {
-      level.orderIndex = updateLevelDto.orderIndex;
+    if (updateLevelDto.level_orderIndex !== undefined) {
+      level.level_orderIndex = updateLevelDto.level_orderIndex;
     }
 
     const saved = await this.levelRepository.save(level);
@@ -89,7 +89,7 @@ export class LevelsService {
 
   // Delete a level
   async remove(id: number): Promise<void> {
-    const level = await this.levelRepository.findOne({ where: { id } });
+    const level = await this.levelRepository.findOne({ where: { level_id: id } });
 
     if (!level) {
       throw new NotFoundException(`Level with ID ${id} not found`);
@@ -101,15 +101,15 @@ export class LevelsService {
   // Reorder levels within a course
   async reorder(courseId: number, levelIds: number[]): Promise<LevelResponseDto[]> {
     const levels = await this.levelRepository.find({
-      where: { courseId },
+      where: { course_id: courseId },
     });
 
-    const levelMap = new Map(levels.map((l) => [l.id, l]));
+    const levelMap = new Map(levels.map((l) => [l.level_id, l]));
 
     for (let i = 0; i < levelIds.length; i++) {
       const level = levelMap.get(levelIds[i]);
       if (level) {
-        level.orderIndex = i;
+        level.level_orderIndex = i;
         await this.levelRepository.save(level);
       }
     }
@@ -120,10 +120,10 @@ export class LevelsService {
   // Convert Level entity to LevelResponseDto
   private toResponseDto(level: Level): LevelResponseDto {
     return {
-      id: level.id,
-      title: level.title,
-      orderIndex: level.orderIndex,
-      courseId: level.courseId,
+      level_id: level.level_id,
+      level_title: level.level_title,
+      level_orderIndex: level.level_orderIndex,
+      course_id: level.course_id,
     };
   }
 }

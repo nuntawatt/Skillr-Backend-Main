@@ -15,7 +15,7 @@ import { firstValueFrom } from 'rxjs';
 @Injectable()
 export class QuizService {
   private readonly maxQuestionsPerLesson = 3;
-  private readonly learningServiceUrl = process.env.LEARNING_SERVICE_URL ?? 'http://localhost:3003';
+  private readonly learningServiceUrl = process.env.LEARNING_SERVICE_URL;
 
   constructor(
     @InjectRepository(Quiz)

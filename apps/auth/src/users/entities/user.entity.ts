@@ -22,6 +22,9 @@ export class User {
   @Column({ nullable: true })
   avatar: string;
 
+  @Column({ name: 'avatar_media_id', type: 'varchar', length: 255, nullable: true })
+  avatar_media_id?: string | null;
+
   @Column({ name: 'first_name', nullable: true })
   firstName: string;
 

@@ -11,7 +11,7 @@ export class ArticleResponseDto {
     description: 'Article content as JSONB',
     example: { blocks: [{ type: 'paragraph', data: { text: 'Hello world' } }] },
   })
-  content: any;
+  article_content: any;
 
   @ApiPropertyOptional({ description: 'Has PDF article attached' })
   hasPdfArticle?: boolean;

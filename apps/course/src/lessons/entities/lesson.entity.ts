@@ -16,17 +16,17 @@ export enum LessonRefSource {
 }
 
 @Entity('lessons')
-@Index('idx_lessons_chapter_id', ['chapterId'])
+@Index('idx_lessons_chapter_id', ['chapter_id'])
 export class Lesson {
   @PrimaryGeneratedColumn()
-  id: number;
+  lesson_id: number;
 
   @Column()
-  title: string;
+  lesson_title: string;
 
   // short description (optional)
-  @Column({ name: 'description', type: 'text', nullable: true })
-  description?: string;
+  @Column({ name: 'lesson_description', type: 'text', nullable: true })
+  lesson_description?: string;
 
   @Column({
     type: 'enum',
@@ -36,7 +36,7 @@ export class Lesson {
   type: LessonType;
 
   @Column({ name: 'order_index', type: 'int', default: 0 })
-  orderIndex: number;
+  order_index: number;
 
   // where actual content lives and id of that resource
   @Column({
@@ -45,20 +45,20 @@ export class Lesson {
     enum: LessonRefSource,
     default: LessonRefSource.COURSE,
   })
-  refSource: LessonRefSource;
+  ref_source: LessonRefSource;
 
   @Column({ name: 'ref_id', type: 'int' })
-  refId: number;
+  ref_id: number;
 
   @ManyToOne(() => Chapter, (chapter) => chapter.lessons, { onDelete: 'CASCADE' })
   chapter: Chapter;
 
   @Column({ name: 'chapter_id', type: 'int' })
-  chapterId: number;
+  chapter_id: number;
 
   // ONE-TO-ONE optional link to Article only when type === 'article'
   @OneToOne(() => Article, (article) => article.lesson, { cascade: true })
-  article?: Article;
+  lesson_article?: Article;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

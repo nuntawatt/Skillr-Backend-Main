@@ -67,10 +67,7 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
   @ApiOperation({ summary: 'Google OAuth2 callback' })
-  @ApiResponse({ status: 200, description: 'User logged in successfully via Google OAuth2.' })
-  @ApiResponse({ status: 302, description: 'Redirect after successful Google OAuth2 authentication.' })
-  @ApiResponse({ status: 400, description: 'Bad Request. Invalid Google OAuth2 response.' })
-  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
+  @ApiResponse({ status: 302, description: 'Redirect to frontend after login' })
   async googleAuthCallback(@Req() req: Request, @Res() res: Response) {
     const user = req.user as {
       googleId: string;
@@ -80,8 +77,16 @@ export class AuthController {
       avatar?: string;
     };
 
-    const result = await this.authService.googleLogin(user);
-    return res.json(result);
+    const { tokens } = await this.authService.googleLogin(user);
+
+    res.cookie('refreshToken', tokens.refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      path: '/'
+    });
+
+    return res.redirect(`${this.configService.get('FRONTEND_URL')}/login`);
   }
 
   // Google OAuth - Token Exchange
@@ -205,7 +210,8 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Logout from current session' })
-  @ApiBody({ schema: {
+  @ApiBody({
+    schema: {
       type: 'object',
       properties: { refreshToken: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' } },
       required: [],

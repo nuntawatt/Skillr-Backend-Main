@@ -1,17 +1,21 @@
-import { Controller, Get, Patch, Param, Body, UseGuards, Request, Delete, HttpCode, HttpStatus } from '@nestjs/common';
-import type { Request as ExpressRequest } from 'express';
+import { Controller, Get, Patch, Param, Body, UseGuards, Request, Delete, HttpCode, HttpStatus, UseInterceptors, UploadedFile, BadRequestException, Post, Res } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import * as multer from 'multer';
+
+import type { Response, Request as ExpressRequest } from 'express';
 import { UsersService } from './users.service';
 import { UpdateUserDto, UpdateRoleDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '@common/enums';
-import { ApiTags, ApiOperation, ApiBody, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBody, ApiResponse, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
 
 type AuthedRequest = ExpressRequest & { user: { id: string } };
 
 @ApiTags('Users')
 @Controller('users')
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) { }
@@ -44,6 +48,42 @@ export class UsersController {
   ) {
     const user = await this.usersService.update(req.user.id, updateUserDto);
     return user;
+  }
+
+  @Patch('profile/avatar')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: multer.memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+      fileFilter: (req, file, cb) => {
+        const ok = file.mimetype === 'image/jpeg' || file.mimetype === 'image/png';
+        if (!ok) return cb(new BadRequestException('Only JPG and PNG are allowed'), false);
+        cb(null, true);
+      },
+    }),
+  )
+  async uploadAvatar(@Request() req: AuthedRequest, @UploadedFile() file: Express.Multer.File) {
+    if (!file) throw new BadRequestException('File is required');
+    const updated = await this.usersService.uploadAvatar(req.user.id, file);
+    return updated;
+  }
+
+  @Get('profile/:key')
+    @ApiOperation({ summary: 'Public: presign avatar by key and redirect' })
+    @ApiResponse({ status: 302, description: 'Redirects to presigned avatar URL.' })
+    @ApiResponse({ status: 404, description: 'Not found.' })
+    async getProfileAvatarByKey(@Param('key') key: string, @Res() res: Response) {
+      const url = await this.usersService.getAvatarPresignedUrlByMediaId(key);
+      return res.redirect(url);
   }
 
   // Get all users (Admin only)

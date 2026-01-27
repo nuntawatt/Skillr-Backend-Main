@@ -21,7 +21,7 @@ export class ArticlesService {
   async create(createArticleDto: CreateArticleDto): Promise<ArticleResponseDto> {
     // Verify lesson exists and is of type article
     const lesson = await this.lessonRepository.findOne({
-      where: { id: createArticleDto.lessonId },
+      where: { lesson_id: createArticleDto.lessonId },
     });
 
     if (!lesson) {
@@ -43,13 +43,13 @@ export class ArticlesService {
 
     const article = this.articleRepository.create({
       lessonId: createArticleDto.lessonId,
-      content: createArticleDto.content,
+      article_content: createArticleDto.article_content,
     });
 
     const saved = await this.articleRepository.save(article);
 
-    // Update lesson's refId to point to the article
-    lesson.refId = saved.id;
+    // Update lesson's ref_id to point to the article
+    lesson.ref_id = saved.article_id;
     await this.lessonRepository.save(lesson);
 
     return this.toResponseDto(saved);
@@ -57,7 +57,7 @@ export class ArticlesService {
 
   // Create article with uploaded PDF
   async createWithPdf(body: { lessonId: number; content?: any }, fileBuffer: Buffer): Promise<ArticleResponseDto> {
-    const lesson = await this.lessonRepository.findOne({ where: { id: body.lessonId } });
+    const lesson = await this.lessonRepository.findOne({ where: { lesson_id: body.lessonId } });
 
     if (!lesson) {
       throw new NotFoundException(`Lesson with ID ${body.lessonId} not found`);
@@ -73,10 +73,10 @@ export class ArticlesService {
     const pdfKey = `articles/pdf/${randomUUID()}.pdf`;
     await this.storageService.putObject(this.storageService.bucket, pdfKey, fileBuffer, fileBuffer.length, { 'Content-Type': 'application/pdf' });
 
-    const article = this.articleRepository.create({ lessonId: body.lessonId, content: body.content ?? null, pdfArticle: Buffer.from(pdfKey, 'utf8') });
+    const article = this.articleRepository.create({ lessonId: body.lessonId, article_content: body.content ?? null, pdfArticle: Buffer.from(pdfKey, 'utf8') });
     const saved = await this.articleRepository.save(article);
 
-    lesson.refId = saved.id;
+    lesson.ref_id = saved.article_id;
     await this.lessonRepository.save(lesson);
 
     return this.toResponseDto(saved);
@@ -84,7 +84,7 @@ export class ArticlesService {
 
   // Upload or replace PDF for an existing article
   async uploadPdfToArticle(articleId: number, fileBuffer: Buffer): Promise<ArticleResponseDto> {
-    const article = await this.articleRepository.findOne({ where: { id: articleId } });
+    const article = await this.articleRepository.findOne({ where: { article_id: articleId } });
     if (!article) throw new NotFoundException(`Article with ID ${articleId} not found`);
 
     // remove previous object if stored as key
@@ -105,7 +105,7 @@ export class ArticlesService {
 
   // Get presigned URL for article PDF
   async getPdfUrl(articleId: number): Promise<string> {
-    const article = await this.articleRepository.findOne({ where: { id: articleId } });
+    const article = await this.articleRepository.findOne({ where: { article_id: articleId } });
     if (!article) throw new NotFoundException(`Article with ID ${articleId} not found`);
 
     const key = article.pdfArticle ? article.pdfArticle.toString('utf8') : undefined;
@@ -132,7 +132,7 @@ export class ArticlesService {
 
   // Find an article by ID
   async findOne(id: number): Promise<ArticleResponseDto> {
-    const article = await this.articleRepository.findOne({ where: { id } });
+    const article = await this.articleRepository.findOne({ where: { article_id: id } });
 
     if (!article) {
       throw new NotFoundException(`Article with ID ${id} not found`);
@@ -154,14 +154,14 @@ export class ArticlesService {
 
   // Update an article by ID
   async update(id: number, updateArticleDto: UpdateArticleDto): Promise<ArticleResponseDto> {
-    const article = await this.articleRepository.findOne({ where: { id } });
+    const article = await this.articleRepository.findOne({ where: { article_id: id } });
 
     if (!article) {
       throw new NotFoundException(`Article with ID ${id} not found`);
     }
 
-    if (updateArticleDto.content !== undefined) {
-      article.content = updateArticleDto.content;
+    if ((updateArticleDto as any).article_content !== undefined) {
+      article.article_content = (updateArticleDto as any).article_content;
     }
 
     // PDF binary updates are handled via the dedicated upload or base64 endpoints.
@@ -172,7 +172,7 @@ export class ArticlesService {
 
   // Delete an article by ID
   async remove(id: number): Promise<void> {
-    const article = await this.articleRepository.findOne({ where: { id } });
+    const article = await this.articleRepository.findOne({ where: { article_id: id } });
 
     if (!article) {
       throw new NotFoundException(`Article with ID ${id} not found`);
@@ -184,9 +184,9 @@ export class ArticlesService {
   // Convert Article entity to ArticleResponseDto
   private toResponseDto(article: Article): ArticleResponseDto {
     return {
-      id: article.id,
+      id: article.article_id,
       lessonId: article.lessonId,
-      content: article.content,
+      article_content: article.article_content,
       hasPdfArticle: !!article.pdfArticle,
       updatedAt: article.updatedAt,
     };

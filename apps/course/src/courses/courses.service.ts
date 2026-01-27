@@ -25,14 +25,12 @@ export class CoursesService {
   // Create a new course
   async create(createCourseDto: CreateCourseDto): Promise<CourseResponseDto> {
     const course = this.courseRepository.create({
-      ownerUserId: createCourseDto.ownerUserId ?? 0,
-      title: createCourseDto.title,
-      description: createCourseDto.description,
-      coverMediaAssetId: createCourseDto.coverMediaAssetId,
-      introMediaAssetId: createCourseDto.introMediaAssetId,
-      estimateTimeSeconds: createCourseDto.estimateTimeSeconds ?? 0,
+      course_ownerId: createCourseDto.course_ownerId ?? 0,
+      course_title: createCourseDto.course_title,
+      course_description: createCourseDto.course_description,
+      course_imageId: createCourseDto.course_imageId,
+      course_tags: createCourseDto.course_tags ?? null,
       isPublished: createCourseDto.isPublished ?? false,
-      categoryId: createCourseDto.categoryId,
     });
 
     const saved = await this.courseRepository.save(course);
@@ -42,8 +40,7 @@ export class CoursesService {
   // Find all courses with optional filters
   async findAll(params?: {
     isPublished?: boolean;
-    ownerUserId?: number;
-    categoryId?: number;
+    course_ownerId?: number;
     search?: string;
     limit?: number;
     offset?: number;
@@ -56,23 +53,16 @@ export class CoursesService {
       });
     }
 
-    if (params?.ownerUserId !== undefined) {
-      query.andWhere('course.ownerUserId = :ownerUserId', {
-        ownerUserId: params.ownerUserId,
-      });
-    }
-
-    if (params?.categoryId !== undefined) {
-      query.andWhere('course.categoryId = :categoryId', {
-        categoryId: params.categoryId,
+    if (params?.course_ownerId !== undefined) {
+      query.andWhere('course.course_ownerId = :course_ownerId', {
+        course_ownerId: params.course_ownerId,
       });
     }
 
     if (params?.search) {
       const keyword = params.search.toLowerCase();
       query.andWhere(
-        '(LOWER(course.title) LIKE :kw OR LOWER(course.description) LIKE :kw)',
-        { kw: `%${keyword}%` },
+        '(LOWER(course.course_title) LIKE :kw OR LOWER(course.course_description) LIKE :kw)',{ kw: `%${keyword}%` }
       );
     }
 
@@ -82,12 +72,12 @@ export class CoursesService {
     query.orderBy('course.createdAt', 'DESC').take(limit).skip(offset);
 
     const courses = await query.getMany();
-    return courses.map((c) => this.toResponseDto(c));
+    return courses.map((course) => this.toResponseDto(course));
   }
 
   // Find a single course by ID
   async findOne(id: number): Promise<CourseResponseDto> {
-    const course = await this.courseRepository.findOne({ where: { id } });
+    const course = await this.courseRepository.findOne({ where: { course_id: id } });
 
     if (!course) {
       throw new NotFoundException(`Course with ID ${id} not found`);
@@ -98,12 +88,11 @@ export class CoursesService {
 
   // Get the full nested structure of a course
   async getStructure(id: number): Promise<CourseStructureResponseDto> {
-    const course = await this.courseRepository.findOne({
-      where: { id },
+    const course = await this.courseRepository.findOne({where: { course_id: id },
       relations: [
-        'levels',
-        'levels.chapters',
-        'levels.chapters.lessons',
+        'course_levels',
+        'course_levels.level_chapters',
+        'course_levels.level_chapters.lessons',
       ],
     });
 
@@ -111,91 +100,74 @@ export class CoursesService {
       throw new NotFoundException(`Course with ID ${id} not found`);
     }
 
-    // Sort levels by orderIndex
-    const sortedLevels = (course.levels || []).sort(
-      (a, b) => a.orderIndex - b.orderIndex,
-    );
+    // Sort levels by orderIndex (entity uses snake_case fields)
+    const sortedLevels = (course.course_levels || []).sort((a, b) => a.level_orderIndex - b.level_orderIndex);
 
     const levels: LevelStructureDto[] = sortedLevels.map((level) => {
       // Sort chapters by orderIndex
-      const sortedChapters = (level.chapters || []).sort(
-        (a, b) => a.orderIndex - b.orderIndex,
-      );
+      const sortedChapters = (level.level_chapters || []).sort((a, b) => a.chapter_orderIndex - b.chapter_orderIndex);
 
       const chapters: ChapterStructureDto[] = sortedChapters.map((chapter) => {
         // Sort lessons by orderIndex
         const sortedLessons = (chapter.lessons || []).sort(
-          (a, b) => a.orderIndex - b.orderIndex,
+          (a, b) => a.order_index - b.order_index,
         );
 
         const lessons: LessonStructureDto[] = sortedLessons.map((lesson) => ({
-          id: lesson.id,
-          title: lesson.title,
+          id: lesson.lesson_id,
+          title: lesson.lesson_title,
           type: lesson.type,
-          refSource: lesson.refSource,
-          refId: lesson.refId,
-          orderIndex: lesson.orderIndex,
+          refSource: lesson.ref_source,
+          refId: lesson.ref_id,
+          orderIndex: lesson.order_index,
         }));
 
         return {
-          id: chapter.id,
-          title: chapter.title,
-          orderIndex: chapter.orderIndex,
+          id: chapter.chapter_id,
+          title: chapter.chapter_title,
+          orderIndex: chapter.chapter_orderIndex,
           lessons,
         };
       });
 
       return {
-        id: level.id,
-        title: level.title,
-        orderIndex: level.orderIndex,
+        id: level.level_id,
+        title: level.level_title,
+        orderIndex: level.level_orderIndex,
         chapters,
       };
     });
 
     return {
-      id: course.id,
-      title: course.title,
-      description: course.description,
+      course_id: course.course_id,
+      course_title: course.course_title,
+      course_description: course.course_description,
       isPublished: course.isPublished,
-      levels,
+      course_tags: course.course_tags ?? undefined,
+      course_levels: levels,
     };
   }
 
   // Update a course
   async update(id: number, updateCourseDto: UpdateCourseDto): Promise<CourseResponseDto> {
-    const course = await this.courseRepository.findOne({ where: { id } });
+    const course = await this.courseRepository.findOne({ where: { course_id: id } });
 
     if (!course) {
       throw new NotFoundException(`Course with ID ${id} not found`);
     }
 
-    if (updateCourseDto.title !== undefined) {
-      course.title = updateCourseDto.title;
-    }
+    if (updateCourseDto.course_title !== undefined) course.course_title = updateCourseDto.course_title;
+    if (updateCourseDto.course_description !== undefined) course.course_description = updateCourseDto.course_description;
+    if (updateCourseDto.course_imageId !== undefined) course.course_imageId = updateCourseDto.course_imageId;
+    if (updateCourseDto.course_tags !== undefined) course.course_tags = updateCourseDto.course_tags ?? null;
 
-    if (updateCourseDto.description !== undefined) {
-      course.description = updateCourseDto.description;
-    }
+    // if (updateCourseDto.introMediaAssetId !== undefined) {
+    //   course.introMediaAssetId = updateCourseDto.introMediaAssetId;
+    // }
 
-    if (updateCourseDto.coverMediaAssetId !== undefined) {
-      course.coverMediaAssetId = updateCourseDto.coverMediaAssetId;
-    }
-
-    if (updateCourseDto.introMediaAssetId !== undefined) {
-      course.introMediaAssetId = updateCourseDto.introMediaAssetId;
-    }
-
-    if (updateCourseDto.estimateTimeSeconds !== undefined) {
-      course.estimateTimeSeconds = updateCourseDto.estimateTimeSeconds;
-    }
 
     if (updateCourseDto.isPublished !== undefined) {
       course.isPublished = updateCourseDto.isPublished;
-    }
-
-    if (updateCourseDto.categoryId !== undefined) {
-      course.categoryId = updateCourseDto.categoryId;
     }
 
     const saved = await this.courseRepository.save(course);
@@ -204,7 +176,7 @@ export class CoursesService {
 
   // Delete a course and all nested entities (cascades)
   async remove(id: number): Promise<void> {
-    const course = await this.courseRepository.findOne({ where: { id } });
+    const course = await this.courseRepository.findOne({ where: { course_id: id } });
 
     if (!course) {
       throw new NotFoundException(`Course with ID ${id} not found`);
@@ -215,40 +187,40 @@ export class CoursesService {
 
   // Save full course structure (transactional)
   async saveStructure(courseId: number, dto: CourseStructureSaveDto): Promise<CourseStructureResponseDto> {
-    const course = await this.courseRepository.findOne({ where: { id: courseId } });
+    const course = await this.courseRepository.findOne({ where: { course_id: courseId } });
     if (!course) throw new NotFoundException(`Course with ID ${courseId} not found`);
 
     await this.dataSource.transaction(async (manager) => {
       // delete existing levels (cascades to chapters and lessons)
-      await manager.delete(Level, { courseId });
+      await manager.delete(Level, { course_id: courseId });
 
       // create new levels/chapters/lessons
       for (const lv of dto.levels || []) {
         const level = this.levelRepository.create({
-          title: lv.title,
-          orderIndex: lv.orderIndex,
-          courseId,
+          level_title: lv.title,
+          level_orderIndex: lv.orderIndex,
+          course_id: courseId,
         });
 
         const savedLevel = await manager.save(Level, level);
 
         for (const ch of lv.chapters || []) {
           const chapter = this.chapterRepository.create({
-            title: ch.title,
-            orderIndex: ch.orderIndex,
-            levelId: savedLevel.id,
+            chapter_title: ch.title,
+            chapter_orderIndex: ch.orderIndex,
+            levelId: savedLevel.level_id,
           });
 
           const savedChapter = await manager.save(Chapter, chapter);
 
           for (const les of ch.lessons || []) {
             const lesson = this.lessonRepository.create({
-              title: les.title,
+              lesson_title: les.title,
               type: les.type as any,
-              refSource: (les.refSource as any) ?? 'course',
-              refId: les.refId ?? 0,
-              orderIndex: les.orderIndex,
-              chapterId: savedChapter.id,
+              ref_source: (les.refSource as any) ?? 'course',
+              ref_id: les.refId ?? 0,
+              order_index: les.orderIndex,
+              chapter_id: savedChapter.chapter_id,
             });
 
             await manager.save(Lesson, lesson);
@@ -258,8 +230,9 @@ export class CoursesService {
     });
 
     // update course basic fields if provided
-    if (dto.title !== undefined) course.title = dto.title;
-    if (dto.description !== undefined) course.description = dto.description;
+    if (dto.course_title !== undefined) course.course_title = dto.course_title;
+    if (dto.course_description !== undefined) course.course_description = dto.course_description;
+    if ((dto as any).course_tags !== undefined) course.course_tags = (dto as any).course_tags ?? null;
     await this.courseRepository.save(course);
 
     return this.getStructure(courseId);
@@ -268,15 +241,13 @@ export class CoursesService {
   // Convert Course entity to CourseResponseDto
   private toResponseDto(course: Course): CourseResponseDto {
     return {
-      id: course.id,
-      ownerUserId: course.ownerUserId,
-      title: course.title,
-      description: course.description,
-      coverMediaAssetId: course.coverMediaAssetId ?? undefined,
-      introMediaAssetId: course.introMediaAssetId ?? undefined,
-      estimateTimeSeconds: course.estimateTimeSeconds,
+      course_id: course.course_id,
+      course_ownerId: course.course_ownerId,
+      course_title: course.course_title,
+      course_description: course.course_description,
+      course_tags: course.course_tags ?? undefined,
+      course_imageId: course.course_imageId ?? undefined,
       isPublished: course.isPublished,
-      categoryId: course.categoryId ?? undefined,
       createdAt: course.createdAt,
       updatedAt: course.updatedAt,
     };

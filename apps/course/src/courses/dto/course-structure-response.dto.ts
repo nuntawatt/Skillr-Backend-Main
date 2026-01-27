@@ -50,17 +50,20 @@ export class LevelStructureDto {
 
 export class CourseStructureResponseDto {
     @ApiProperty({ description: 'Course ID', example: 1 })
-    id: number;
+    course_id: number;
 
     @ApiProperty({ description: 'Course title', example: 'Introduction to TypeScript' })
-    title: string;
+    course_title: string;
 
     @ApiPropertyOptional({ description: 'Course description' })
-    description?: string;
+    course_description?: string;
+
+    @ApiPropertyOptional({ description: 'Course tags', type: [String] })
+    course_tags?: string[];
 
     @ApiProperty({ description: 'Is the course published', example: false })
     isPublished: boolean;
 
     @ApiProperty({ description: 'Levels in this course', type: [LevelStructureDto] })
-    levels: LevelStructureDto[];
+    course_levels: LevelStructureDto[];
 }
