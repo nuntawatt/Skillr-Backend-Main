@@ -9,6 +9,13 @@ async function bootstrap() {
     logger: ['log', 'error', 'warn'],
   });
   
+  // app.enableCors({ origin: true, credentials: true });
+  app.enableCors({
+    // origin: [process.env.FRONTEND_URL, 'http://localhost:3000', 'https://skllracademy.com'],
+    // credentials: true,
+    origin: '*',
+  });
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -29,17 +36,7 @@ async function bootstrap() {
   SwaggerModule.setup('docs/media', app, document);
 
   // app.enableCors({ origin: true, credentials: true });
-  const allowedOrigins = ['https://skllracademy.com', 'http://157.85.98.100:3004','http://localhost:3000'].filter(Boolean);
-
-  app.enableCors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // allow non-browser tools like Postman
-      return allowedOrigins.includes(origin)
-        ? callback(null, true)
-        : callback(new Error('Not allowed by CORS'), false);
-    },
-    credentials: true,
-  });
+  // const allowedOrigins = ['https://skllracademy.com', 'http://157.85.98.100:3004','http://localhost:3000'].filter(Boolean);
 
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   

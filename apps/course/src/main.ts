@@ -11,13 +11,11 @@ async function bootstrap() {
     logger: ['log', 'error', 'warn'],
   });
 
-  // Enable CORS for all origins (adjust as needed for production)
   // app.enableCors({ origin: true, credentials: true });
   app.enableCors({
-    origin: '*', // Allows all origins
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS', // Allows all common methods
-    allowedHeaders: '*', // Allows all headers
-    credentials: true, // If you need to support credentials
+    // origin: [process.env.FRONTEND_URL, 'http://localhost:3000', 'https://skllracademy.com'],
+    // credentials: true,
+    origin: '*',
   });
 
   app.useGlobalPipes(
@@ -40,18 +38,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs/course', app, document);
 
-  // app.enableCors({ origin: true, credentials: true });
-  const allowedOrigins = ['https://skllracademy.com', 'http://157.85.98.100:3001', 'http://localhost:3000'].filter(Boolean);
 
-  app.enableCors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // allow non-browser tools like Postman
-      return allowedOrigins.includes(origin)
-        ? callback(null, true)
-        : callback(new Error('Not allowed by CORS'), false);
-    },
-    credentials: true,
-  });
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.use(cookieParser());
 

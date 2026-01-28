@@ -169,23 +169,8 @@ export class AuthController {
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async refreshTokens(@Body() refreshTokenDto: RefreshTokenDto, @Req() req: Request) {
     // อ่านคุกกี้จากคำขอ
-    const cookiesUnknown: unknown = (req as unknown as { cookies?: unknown }).cookies;
-
-    const cookies = typeof cookiesUnknown === 'object' && cookiesUnknown !== null
-      ? (cookiesUnknown as { refreshToken?: unknown })
-      : undefined;
-
-    const refreshTokenRaw = refreshTokenDto.refreshToken ?? cookies?.refreshToken;
-    const refreshToken = typeof refreshTokenRaw === 'string' ? refreshTokenRaw : undefined;
-
-    // log presence (do not log token values)
-    this.logger.debug(`refresh cookie present=${!!cookies?.refreshToken}, body present=${typeof (refreshTokenDto as any)?.refreshToken === 'string'}`);
-
-    if (!refreshToken) {
-      throw new BadRequestException('Refresh token is required');
-    }
-
-    return this.authService.refreshTokens(refreshToken);
+  
+    return this.authService.refreshTokens(refreshTokenDto.refreshToken);
   }
 
   // Forgot password - send OTP
