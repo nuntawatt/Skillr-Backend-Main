@@ -3,13 +3,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { getDatabaseConfig } from '@config/database.config';
 import { AuthLibModule } from '@auth/auth-lib.module';
-<<<<<<< HEAD
 import { QuizModule } from './quizzes/quiz.module';
 
-=======
-
-import { QuizModule } from './quizzes/quiz.module';
->>>>>>> origin/backup
 @Module({
   imports: [
     ConfigModule.forRoot({
