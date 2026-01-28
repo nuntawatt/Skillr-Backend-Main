@@ -10,7 +10,7 @@ export const getDatabaseConfig = (
     type: 'postgres',
     url: databaseUrl,
     autoLoadEntities: true, // true or false
-    synchronize: true, // Disabling synchronize since we are using migrations
+    synchronize: false, // Disabling synchronize since we are using migrations
     logging: false, // Set to true if you need SQL query log
   };
 };
