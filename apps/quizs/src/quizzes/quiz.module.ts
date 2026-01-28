@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { HttpModule } from '@nestjs/axios';
-import { QuizController, QuestionController, InternalController } from './quiz.controller';
+import { QuizController, QuizAdminController, QuestionAdminController, InternalController } from './quiz.controller';
 import { QuizService } from './quiz.service';
 import { Quiz } from './entities/quiz.entity';
 import { Question } from './entities/question.entity';
@@ -13,7 +13,7 @@ import { QuizAttempt } from './entities/quiz-attempt.entity';
     TypeOrmModule.forFeature([Quiz, Question, QuizOption, QuizAttempt]),
     HttpModule,
   ],
-  controllers: [QuizController, QuestionController, InternalController],
+  controllers: [QuizController, QuizAdminController, QuestionAdminController, InternalController],
   providers: [
     QuizService,
   ],
