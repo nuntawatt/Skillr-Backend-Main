@@ -69,12 +69,22 @@ export class ChaptersService {
 
   // Find a chapter by ID
   async findOne(id: number): Promise<ChapterResponseDto> {
+<<<<<<< HEAD
     const chapter = await this.chapterRepository.findOne({
       where: { chapter_id: id },
+=======
+    const chapter = await this.chapterRepository.findOne({ 
+      where: { chapter_id: id },
+      relations: ['lessons']
+>>>>>>> wave-service-quizs-learning
     });
 
     if (!chapter) {
       throw new NotFoundException(`Chapter with ID ${id} not found`);
+    }
+
+    if (chapter.lessons) {
+      chapter.lessons.sort((a, b) => a.order_index - b.order_index);
     }
 
     return this.toResponseDto(chapter);
@@ -160,6 +170,17 @@ export class ChaptersService {
       chapter_description: chapter.chapter_description,
       chapter_orderIndex: chapter.chapter_orderIndex,
       level_id: chapter.levelId,
+      lessons: chapter.lessons?.map(lesson => ({
+        id: lesson.lesson_id,
+        title: lesson.lesson_title,
+        description: lesson.lesson_description,
+        type: lesson.type,
+        refSource: lesson.ref_source,
+        refId: lesson.ref_id,
+        orderIndex: lesson.order_index,
+        chapterId: lesson.chapter_id,
+        createdAt: lesson.createdAt,
+      })),
     };
   }
 }

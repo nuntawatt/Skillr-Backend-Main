@@ -6,6 +6,17 @@ export enum LessonType {
   ARTICLE = 'article',
   VIDEO = 'video',
   QUIZ = 'quiz',
+<<<<<<< HEAD
+=======
+  ASSIGNMENT = 'assignment',
+  CHECKPOINT = 'checkpoint',
+}
+
+export enum LessonRefSource {
+  COURSE = 'course', // article content stored in course service
+  MEDIA = 'media',   // media service id
+  QUIZ = 'quiz',     // quiz service id
+>>>>>>> wave-service-quizs-learning
 }
 
 @Entity('lessons')

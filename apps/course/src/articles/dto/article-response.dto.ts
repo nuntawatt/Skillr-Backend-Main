@@ -1,6 +1,20 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ArticleContentItem } from './create-article.dto';
 
+export class ArticleCardResponseDto {
+  @ApiProperty({ example: 1 })
+  id: number;
+
+  @ApiProperty({ example: 'Card content here' })
+  content: string;
+
+  @ApiPropertyOptional({ example: 'https://example.com/icon.png' })
+  mediaUrl?: string;
+
+  @ApiProperty({ example: 1 })
+  sequenceOrder: number;
+}
+
 export class ArticleResponseDto {
   @ApiProperty({ description: 'Article ID', example: 1 })
   article_id: number;
@@ -9,8 +23,25 @@ export class ArticleResponseDto {
   lesson_id: number;
 
   @ApiProperty({
+<<<<<<< HEAD
     description: 'Article content as array of { url, article } items',
     example: [{ url: 'https://cdn.example.com/image.png', article: 'Hello world' }],
   })
   article_content: ArticleContentItem[] | any;
+=======
+    description: 'Article content as JSONB (deprecated for card-based)',
+    example: { blocks: [{ type: 'paragraph', data: { text: 'Hello world' } }] },
+    required: false,
+  })
+  article_content: any;
+
+  @ApiPropertyOptional({ type: [ArticleCardResponseDto] })
+  cards?: ArticleCardResponseDto[];
+
+  @ApiPropertyOptional({ description: 'Has PDF article attached' })
+  hasPdfArticle?: boolean;
+
+  @ApiProperty({ description: 'Last update timestamp' })
+  updatedAt: Date;
+>>>>>>> wave-service-quizs-learning
 }
