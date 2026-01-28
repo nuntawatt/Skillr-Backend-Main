@@ -1,0 +1,34 @@
+# Builder stage
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# build deps
+RUN apk add --no-cache python3 make g++ libc6-compat
+RUN corepack enable
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml nest-cli.json tsconfig.json tsconfig.build.json ./
+
+COPY apps ./apps
+COPY libs ./libs
+
+# install deps
+RUN pnpm install --frozen-lockfile
+
+# ensure clean dist inside the build context to avoid stale artifacts
+RUN rm -rf dist
+RUN pnpm exec nest build learning
+
+# Runtime stage
+FROM node:20-alpine
+
+WORKDIR /app
+ENV NODE_ENV=production
+
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+
+EXPOSE 3005
+
+CMD ["node", "dist/apps/learning/src/main.js"]

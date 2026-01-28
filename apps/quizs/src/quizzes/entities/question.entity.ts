@@ -1,22 +1,52 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Quiz } from './quiz.entity';
-import { QuizOption } from './quiz-option.entity';
 
 export enum QuestionType {
   MULTIPLE_CHOICE = 'multiple_choice',
   TRUE_FALSE = 'true_false',
+  MATCH_PAIRS = 'match_pairs',
+  CORRECT_ORDER = 'correct_order',
   SHORT_ANSWER = 'short_answer',
 }
 
-// ... (MatchPairOption and other types remain same if needed) ...
+export interface MatchPairOption {
+  left: string;
+  right: string;
+}
+
+export interface CorrectOrderOption {
+  text: string;
+}
+
+export type QuestionOptions =
+  | string[]
+  | MatchPairOption[]
+  | CorrectOrderOption[];
+
+export type QuestionAnswer =
+  | string
+  | number
+  | boolean
+  | string[]
+  | number[]
+  | MatchPairOption[]
+  | CorrectOrderOption[];
 
 @Entity('questions')
 export class Question {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'question_text', type: 'text' })
-  questionText: string;
+  @Column({ type: 'text' })
+  question: string;
 
   @Column({
     type: 'enum',
@@ -25,23 +55,17 @@ export class Question {
   })
   type: QuestionType;
 
-  @Column({ name: 'media_url', type: 'text', nullable: true })
-  mediaUrl: string;
+  @Column({ type: 'jsonb', nullable: true })
+  options: QuestionOptions; // Stores options per question type
 
-  @Column({ name: 'correct_explanation', type: 'text', nullable: true })
-  correctExplanation: string;
-
-  @Column({ name: 'order_index', default: 0 })
-  orderIndex: number;
-
-  @OneToMany(() => QuizOption, (option) => option.question, { cascade: true })
-  options: QuizOption[];
-
-  @Column({ name: 'correct_answer', type: 'jsonb', nullable: true })
-  correctAnswer: any; // Keep for non-MC/TF types if they persist
+  @Column({ name: 'correct_answer', type: 'jsonb' })
+  correctAnswer: QuestionAnswer;
 
   @Column({ default: 1 })
   points: number;
+
+  @Column({ default: 0 })
+  order: number;
 
   @Column({ name: 'quiz_id' })
   quizId: number;

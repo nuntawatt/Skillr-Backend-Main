@@ -1,8 +1,8 @@
-import { Controller, Get, Post, Body, Param, Request, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { Controller, Get, Post, Param, Request, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { LearningProgressService } from './learning-progress.service';
 import { LearningDashboardService } from './learning-dashboard.service';
-import { LearningDashboardDto, LessonProgressResponseDto, ProgressSummaryDto, UpdateLessonProgressDto, ChapterRoadmapDto } from './dto/learning-progress.dto';
+import { LearningDashboardDto, LessonProgressResponseDto, ProgressSummaryDto } from './dto/learning-progress.dto';
 import { JwtAuthGuard } from '@auth';
 import type { AuthUser } from '@auth';
 
@@ -68,36 +68,6 @@ export class LearningProgressController {
         );
     }
 
-    @Post('lessons/:id/progress')
-    @ApiOperation({ summary: 'Save progress for a lesson (e.g. card index for articles)' })
-    @ApiParam({ name: 'id', example: 1 })
-    @ApiBody({ type: UpdateLessonProgressDto })
-    @ApiResponse({
-        status: 200,
-        description: 'Progress saved successfully.',
-        type: LessonProgressResponseDto,
-    })
-    @ApiResponse({
-        status: 400,
-        description: 'Invalid input data.',
-    })
-    @ApiResponse({
-        status: 500,
-        description: 'Internal Server Error.',
-    })
-    saveLessonProgress(
-        @Param('id') id: string,
-        @Body() dto: UpdateLessonProgressDto,
-        @Request() req: any,
-    ) {
-        return this.learningProgressService.saveLessonProgress(
-            getUserIdOrThrow(req.user, req),
-            id,
-            dto.lastReadCardIndex,
-            dto.isCompleted,
-        );
-    }
-
     @Get('progress')
     @ApiOperation({ summary: 'Get progress summary' })
     @ApiResponse({
@@ -137,25 +107,6 @@ export class LearningProgressController {
         return this.learningProgressService.getLessonProgress(
             getUserIdOrThrow(req.user, req),
             id,
-        );
-    }
-
-    @Get('chapters/:chapterId/roadmap')
-    @ApiOperation({ summary: 'Get chapter roadmap (timeline) for a user' })
-    @ApiParam({ name: 'chapterId', example: 1 })
-    @ApiResponse({
-        status: 200,
-        description: 'Chapter Roadmap พร้อมสถานะ Completed/Current/Locked',
-        type: ChapterRoadmapDto,
-    })
-    @ApiResponse({
-        status: 404,
-        description: 'Chapter not found.',
-    })
-    getChapterRoadmap(@Param('chapterId') chapterId: string, @Request() req: any) {
-        return this.learningProgressService.getChapterRoadmap(
-            getUserIdOrThrow(req.user, req),
-            chapterId,
         );
     }
 }
