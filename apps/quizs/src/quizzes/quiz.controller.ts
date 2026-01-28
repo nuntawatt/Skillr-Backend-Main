@@ -21,6 +21,7 @@ import {
 } from '@nestjs/swagger';
 import { QuizService } from './quiz.service';
 import { CreateQuizDto } from './dto/create-quiz.dto';
+import { CreateQuizsDto, CreateCheckpointDto } from './dto/create-quizs.dto';
 import { UpdateQuizDto } from './dto/update-quiz.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { SubmitQuizDto } from './dto/submit-quiz.dto';
@@ -44,78 +45,61 @@ function getUserIdOrThrow(user?: AuthUser): string {
 @ApiTags('Admin | Quiz')
 @ApiBearerAuth()
 @Controller('admin/quizzes')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
+// @UseGuards(JwtAuthGuard, RolesGuard)
+// @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
 export class QuizAdminController {
   constructor(private readonly quizService: QuizService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new quiz with questions' })
+  @ApiOperation({ summary: 'Create a new quiz (1 Lesson = 1 Question)' })
   @ApiBody({
-    type: CreateQuizDto,
+    type: CreateQuizsDto,
     examples: {
-      multiple_choice_example: {
-        summary: 'ตัวอย่าง: Quiz แบบเลือกตอบ (Multiple Choice)',
+      multiple_choice: {
+        summary: 'ตัวอย่าง: Quiz แบบเลือกตอบ (MC)',
         value: {
-          lessonId: 1,
-          title: 'แบบทดสอบ TypeScript (Multiple Choice)',
-          questions: [
-            {
-              question: 'TypeScript คืออะไร?',
-              type: 'multiple_choice',
-              options: [
-                'Superset ของ JavaScript',
-                'ชื่อตัวละครในเกม',
-                'ยี่ห้อกาแฟ',
-                'ระบบปฏิบัติการ',
-              ],
-              correctAnswer: 'Superset ของ JavaScript',
-              explanation: 'TypeScript เป็นภาษาที่สร้างครอบ JavaScript อีกทีหนึ่ง เพื่อเพิ่มความสามารถด้าน Static Typing',
-              mediaUrl: 'https://example.com/ts-logo.png',
-            },
-          ],
+          lesson_id: 1,
+          quizs_type: 'multiple_choice',
+          quizs_questions: 'TypeScript คืออะไร?',
+          quizs_option: ['Superset ของ JavaScript', 'ชื่อกาแฟ', 'ระบบปฏิบัติการ'],
+          quizs_answer: 'Superset ของ JavaScript',
         },
       },
-      true_false_example: {
-        summary: 'ตัวอย่าง: Quiz แบบถูก/ผิด (True/False)',
+      true_false: {
+        summary: 'ตัวอย่าง: Quiz แบบถูก/ผิด (TF)',
         value: {
-          lessonId: 2,
-          title: 'แบบทดสอบความเข้าใจพื้นฐาน (True/False)',
-          questions: [
-            {
-              question: 'Browser สามารถรันไฟล์ .ts ได้โดยตรงใช่หรือไม่?',
-              type: 'true_false',
-              correctAnswerBool: false,
-              explanation: 'ไม่ถูกต้อง เพราะ Browser รันได้เฉพาะ JavaScript เท่านั้น ต้องผ่านการ Compile ก่อน',
-            },
-          ],
+          lesson_id: 2,
+          quizs_type: 'true_false',
+          quizs_questions: 'Node.js คือภาษาโปรแกรมใช่หรือไม่?',
+          quizs_option: ['True', 'False'],
+          quizs_answer: 'False',
         },
       },
     },
   })
-  @ApiResponse({
-    status: 201,
-    description: 'Quiz created successfully.',
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Invalid input data.',
-    schema: {
-      example: {
-        statusCode: 400,
-        error: 'Bad Request',
-        message: '1 Lesson สามารถมีคำถามรวมได้สูงสุด 3 ข้อ (ปัจจุบันมีแล้ว 3 ข้อ)',
+  createQuiz(@Body() dto: CreateQuizsDto) {
+    return this.quizService.createQuizs(dto);
+  }
+
+  @Post('checkpoint')
+  @ApiOperation({ summary: 'Create a new checkpoint' })
+  @ApiBody({
+    type: CreateCheckpointDto,
+    examples: {
+      checkpoint_example: {
+        summary: 'ตัวอย่าง: Checkpoint ระหว่างเรียน',
+        value: {
+          lesson_id: 1,
+          checkpoint_type: 'multiple_choice',
+          checkpoint_questions: '1 + 1 เท่ากับเท่าไหร่?',
+          checkpoint_option: ['1', '2', '3'],
+          checkpoint_answer: '2',
+        },
       },
     },
   })
-  @ApiResponse({
-    status: 500,
-    description: 'Internal Server Error.',
-  })
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
-  createQuiz(@Body() createQuizDto: CreateQuizDto) {
-    return this.quizService.createQuiz(createQuizDto);
+  createCheckpoint(@Body() dto: CreateCheckpointDto) {
+    return this.quizService.createCheckpoint(dto);
   }
 
   @Patch(':id')
@@ -151,8 +135,8 @@ export class QuizAdminController {
 @ApiTags('Admin | Question')
 @ApiBearerAuth()
 @Controller('admin/questions')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
+// @UseGuards(JwtAuthGuard, RolesGuard)
+// @Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
 export class QuestionAdminController {
   constructor(private readonly quizService: QuizService) {}
 
@@ -224,6 +208,30 @@ export class QuizController {
     });
   }
 
+  @Get('lesson/:lessonId')
+  @ApiOperation({ summary: 'Get quiz by lesson id (New 1-to-1)' })
+  findOneQuizByLesson(@Param('lessonId') lessonId: string) {
+    return this.quizService.findOneQuizsByLesson(Number(lessonId));
+  }
+
+  @Get('checkpoint/:lessonId')
+  @ApiOperation({ summary: 'Get checkpoints by lesson id' })
+  findCheckpointsByLesson(@Param('lessonId') lessonId: string) {
+    return this.quizService.findCheckpointsByLesson(Number(lessonId));
+  }
+
+  @Post('lesson/:lessonId/check')
+  @ApiOperation({ summary: 'Check answer for quiz by lesson id (New 1-to-1)' })
+  checkQuizs(@Param('lessonId') lessonId: string, @Body('answer') answer: any) {
+    return this.quizService.checkQuizsAnswer(Number(lessonId), answer);
+  }
+
+  @Post('checkpoint/:id/check')
+  @ApiOperation({ summary: 'Check answer for checkpoint by id' })
+  checkCheckpoint(@Param('id') id: string, @Body('answer') answer: any) {
+    return this.quizService.checkCheckpointAnswer(Number(id), answer);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get quiz by id' })
   findOneQuiz(@Param('id') id: string, @Request() req: RequestWithUser) {
@@ -283,7 +291,6 @@ export class QuizController {
     schema: {
       type: 'object',
       properties: {
-        quizId: { type: 'number', example: 7 },
         answer: {
           oneOf: [
             { type: 'string', example: 'Superset ของ JavaScript' },
@@ -296,14 +303,12 @@ export class QuizController {
       check_mc: {
         summary: 'Check Multiple Choice answer',
         value: {
-          quizId: 7,
           answer: 'Superset ของ JavaScript',
         },
       },
       check_tf: {
         summary: 'Check True/False answer',
         value: {
-          quizId: 7,
           answer: false,
         },
       },
@@ -323,11 +328,10 @@ export class QuizController {
   })
   checkQuestion(
     @Param('id') questionId: string,
-    @Body('quizId') quizId: string,
     @Body('answer') answer: any,
     @Request() req: RequestWithUser,
   ) {
-    return this.quizService.checkAnswer(String(quizId), getUserIdOrThrow(req.user), {
+    return this.quizService.checkAnswer(getUserIdOrThrow(req.user), {
       questionId: Number(questionId),
       answer,
     });

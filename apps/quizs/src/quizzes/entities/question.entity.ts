@@ -64,6 +64,9 @@ export class Question {
   @Column({ type: 'text', nullable: true })
   explanation: string;
 
+  @Column({ name: 'media_url', type: 'text', nullable: true })
+  mediaUrl: string;
+
   @Column({ default: 1 })
   points: number;
 

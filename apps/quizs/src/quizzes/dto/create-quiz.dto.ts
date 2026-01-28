@@ -100,6 +100,11 @@ export class CreateQuestionDto {
   @IsOptional()
   @IsString()
   explanation?: string;
+
+  @ApiPropertyOptional({ example: 'https://example.com/image.png' })
+  @IsOptional()
+  @IsString()
+  mediaUrl?: string;
 }
 
 export class CreateQuizDto {

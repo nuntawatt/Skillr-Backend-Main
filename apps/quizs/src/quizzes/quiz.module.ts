@@ -6,10 +6,12 @@ import { QuizService } from './quiz.service';
 import { Quiz } from './entities/quiz.entity';
 import { Question } from './entities/question.entity';
 import { QuizAttempt } from './entities/quiz-attempt.entity';
+import { Quizs } from './entities/quizs.entity';
+import { QuizsCheckpoint } from './entities/checkpoint.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Quiz, Question, QuizAttempt]),
+    TypeOrmModule.forFeature([Quiz, Question, QuizAttempt, Quizs, QuizsCheckpoint]),
     HttpModule,
   ],
   controllers: [QuizController, QuizAdminController, QuestionAdminController, InternalController],

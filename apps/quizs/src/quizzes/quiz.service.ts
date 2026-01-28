@@ -12,9 +12,13 @@ import { SubmitQuizDto } from './dto/submit-quiz.dto';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 
+import { Quizs } from './entities/quizs.entity';
+import { QuizsCheckpoint } from './entities/checkpoint.entity';
+import { CreateQuizsDto, CreateCheckpointDto } from './dto/create-quizs.dto';
+
 @Injectable()
 export class QuizService {
-  private readonly maxQuestionsPerLesson = 3;
+  private readonly maxQuestionsPerLesson = 1; // Updated to 1 as per user request
   private readonly learningServiceUrl = process.env.LEARNING_SERVICE_URL;
 
   constructor(
@@ -24,8 +28,76 @@ export class QuizService {
     private readonly questionRepository: Repository<Question>,
     @InjectRepository(QuizAttempt)
     private readonly attemptRepository: Repository<QuizAttempt>,
+    @InjectRepository(Quizs)
+    private readonly quizsRepository: Repository<Quizs>,
+    @InjectRepository(QuizsCheckpoint)
+    private readonly checkpointRepository: Repository<QuizsCheckpoint>,
     private readonly httpService: HttpService,
   ) { }
+
+  // --- New Flattened Methods ---
+
+  async createQuizs(dto: CreateQuizsDto): Promise<Quizs> {
+    const existing = await this.quizsRepository.findOne({
+      where: { lessonId: dto.lesson_id },
+    });
+    if (existing) {
+      throw new BadRequestException(`Lesson ${dto.lesson_id} มี Quiz อยู่แล้ว`);
+    }
+
+    const quiz = this.quizsRepository.create({
+      lessonId: dto.lesson_id,
+      quizsType: dto.quizs_type,
+      quizsQuestions: dto.quizs_questions,
+      quizsOption: dto.quizs_option,
+      quizsAnswer: dto.quizs_answer,
+    });
+    return this.quizsRepository.save(quiz);
+  }
+
+  async findOneQuizsByLesson(lessonId: number): Promise<Quizs> {
+    const quiz = await this.quizsRepository.findOne({ where: { lessonId } });
+    if (!quiz) {
+      throw new NotFoundException(`Quiz for lesson ${lessonId} not found`);
+    }
+    return quiz;
+  }
+
+  async createCheckpoint(dto: CreateCheckpointDto): Promise<QuizsCheckpoint> {
+    const checkpoint = this.checkpointRepository.create({
+      lessonId: dto.lesson_id,
+      checkpointType: dto.checkpoint_type,
+      checkpointQuestions: dto.checkpoint_questions,
+      checkpointOption: dto.checkpoint_option,
+      checkpointAnswer: dto.checkpoint_answer,
+    });
+    return this.checkpointRepository.save(checkpoint);
+  }
+
+  async findCheckpointsByLesson(lessonId: number): Promise<QuizsCheckpoint[]> {
+    return this.checkpointRepository.find({ where: { lessonId } });
+  }
+
+  async checkQuizsAnswer(lessonId: number, answer: any) {
+    const quiz = await this.findOneQuizsByLesson(lessonId);
+    const isCorrect = JSON.stringify(quiz.quizsAnswer) === JSON.stringify(answer);
+    return {
+      isCorrect,
+      correctAnswer: quiz.quizsAnswer,
+    };
+  }
+
+  async checkCheckpointAnswer(checkpointId: number, answer: any) {
+    const checkpoint = await this.checkpointRepository.findOne({ where: { checkpointId } });
+    if (!checkpoint) throw new NotFoundException('Checkpoint not found');
+    const isCorrect = JSON.stringify(checkpoint.checkpointAnswer) === JSON.stringify(answer);
+    return {
+      isCorrect,
+      correctAnswer: checkpoint.checkpointAnswer,
+    };
+  }
+
+  // --- End of New Flattened Methods ---
 
   async createQuiz(createQuizDto: CreateQuizDto): Promise<Quiz> {
     const questions: CreateQuestionDto[] = createQuizDto.questions ?? [];
@@ -73,6 +145,7 @@ export class QuizService {
           options: this.mapOptionsByType(q),
           correctAnswer: this.mapCorrectAnswerByType(q),
           explanation: q.explanation,
+          mediaUrl: q.mediaUrl,
           points: 1, // backend-managed points
           order: index + 1, // บังคับเรียงลำดับบนลงล่าง
           quizId: savedQuiz.id,
@@ -310,6 +383,7 @@ export class QuizService {
       options: mappedOptions,
       correctAnswer: mappedAnswer,
       explanation: updateDto.explanation ?? question.explanation,
+      mediaUrl: updateDto.mediaUrl ?? question.mediaUrl,
     });
 
     return await this.questionRepository.save(question);
@@ -910,65 +984,23 @@ export class QuizService {
   }
 
   async checkAnswer(
-    quizId: string,
     userId: string,
-    data: { questionId: number; selectedOptionId?: any; answer?: any },
+    data: { questionId: number; answer: any },
   ) {
-    const quiz = await this.findOneQuiz(quizId);
-    const question = quiz.questions.find((q) => q.id === data.questionId);
+    const question = await this.questionRepository.findOne({
+      where: { id: data.questionId },
+    });
     if (!question) {
       throw new NotFoundException('Question not found');
     }
 
-    // User Story: รองรับเฉพาะ Multiple Choice และ True/False
-    if (
-      question.type !== QuestionType.MULTIPLE_CHOICE &&
-      question.type !== QuestionType.TRUE_FALSE
-    ) {
-      throw new BadRequestException('Question type is not supported');
-    }
-
-    const submittedAnswer =
-      data.selectedOptionId !== undefined ? data.selectedOptionId : data.answer;
-    const isCorrect = this.isAnswerCorrect(question, submittedAnswer);
-
-    // AC Requirement: ระบบต้องแสดงผลลัพธ์ของแต่ละข้อว่า ถูก / ผิด และแสดงคำตอบที่ผู้เรียนเลือกไว้ก่อนหน้า
-    // บันทึกคำตอบลงใน Attempt อัตโนมัติ (Save Progress)
-    let attempt = await this.getActiveAttempt(quizId, userId);
-    if (!attempt) {
-      // ถ้ายังไม่มี attempt ค้างอยู่ ให้สร้างขึ้นมาเพื่อรองรับการทำข้อแรกทันที
-      attempt = await this.startQuiz(String(quizId), String(userId));
-    }
-
-    if (!attempt.answers) attempt.answers = [];
-    const existingAnswerIndex = attempt.answers.findIndex(
-      (a) => a.questionId === question.id,
-    );
-
-    if (existingAnswerIndex > -1) {
-      attempt.answers[existingAnswerIndex].answer = submittedAnswer;
-    } else {
-      attempt.answers.push({ questionId: question.id, answer: submittedAnswer });
-    }
-
-    // บันทึกผลลัพธ์ด้วย
-    if (!attempt.results) attempt.results = [];
-    const existingResultIndex = attempt.results.findIndex(
-      (r) => r.questionId === question.id,
-    );
-    if (existingResultIndex > -1) {
-      attempt.results[existingResultIndex].isCorrect = isCorrect;
-    } else {
-      attempt.results.push({ questionId: question.id, isCorrect });
-    }
-
-    await this.attemptRepository.save(attempt);
+    const isCorrect = this.isAnswerCorrect(question, data.answer);
 
     return {
       isCorrect,
       correctAnswer: question.correctAnswer,
       explanation: question.explanation || '',
-      isCompleted: await this.hasCompletedQuiz(quizId, userId),
+      isCompleted: await this.hasCompletedQuiz(question.quizId, userId),
     };
   }
 }
