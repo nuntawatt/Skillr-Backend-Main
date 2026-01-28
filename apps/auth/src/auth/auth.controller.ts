@@ -1,6 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
-import { Controller, Post, Get, Body, UseGuards, Req, Res, HttpCode, HttpStatus, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards, Req, Res, HttpCode, HttpStatus, BadRequestException, Logger } from '@nestjs/common';
 import { RegisterDto, LoginDto, RefreshTokenDto, ForgotPasswordDto, VerifyOtpDto, ResetPasswordDto } from './dto';
 import { AuthService } from './auth.service';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
@@ -19,9 +19,24 @@ type GoogleTokenInfo = {
   picture?: string;
 };
 
+/**
+- Cookie options central:
+- DEV: no domain, secure=false, sameSite=lax
+- PROD: domain from env, secure=true, sameSite=none (for cross-site cookies)
+ */
+const isProd = process.env.NODE_ENV === 'production';
+const cookieOptions = {
+  httpOnly: true,
+  secure: isProd,
+  sameSite: isProd ? 'none' : 'lax',
+  ...(isProd && { domain: process.env.COOKIE_DOMAIN }),
+  path: '/',
+};
+
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ConfigService,
@@ -61,7 +76,9 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Bad Request. Invalid Google OAuth2 request.' })
   @ApiResponse({ status: 302, description: 'Redirect to Google OAuth2 consent screen.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
-  async googleAuth() { }
+  async googleAuth() {
+    // Guard handles redirection to Google
+  }
 
   // Google OAuth - Callback
   @Get('google/callback')
@@ -79,14 +96,16 @@ export class AuthController {
 
     const { tokens } = await this.authService.googleLogin(user);
 
-    res.cookie('refreshToken', tokens.refreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      path: '/'
-    });
+    this.logger.debug(`Setting refresh cookie: httpOnly=true, secure=${cookieOptions.secure}, sameSite='${cookieOptions.sameSite}', path='/'`);
 
-    return res.redirect(`${this.configService.get('FRONTEND_URL')}/instructor`);
+    // SET cookie (dev: no domain, prod: domain from env)
+    // res.cookie('refreshToken', tokens.refreshToken, cookieOptions);
+
+    const frontendUrl = isProd
+      ? this.configService.get<string>('FRONTEND_URL')
+      : 'http://localhost:3000';
+
+    return res.redirect(`${frontendUrl}/instructor`);
   }
 
   // Google OAuth - Token Exchange
@@ -135,6 +154,7 @@ export class AuthController {
       avatar: info.picture,
     };
 
+    // // For token-exchange flow we return tokens directly
     return this.authService.googleLogin(profile);
   }
 
@@ -148,6 +168,7 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Unauthorized. Invalid or expired refresh token.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async refreshTokens(@Body() refreshTokenDto: RefreshTokenDto, @Req() req: Request) {
+    // อ่านคุกกี้จากคำขอ
     const cookiesUnknown: unknown = (req as unknown as { cookies?: unknown }).cookies;
 
     const cookies = typeof cookiesUnknown === 'object' && cookiesUnknown !== null
@@ -156,6 +177,9 @@ export class AuthController {
 
     const refreshTokenRaw = refreshTokenDto.refreshToken ?? cookies?.refreshToken;
     const refreshToken = typeof refreshTokenRaw === 'string' ? refreshTokenRaw : undefined;
+
+    // log presence (do not log token values)
+    this.logger.debug(`refresh cookie present=${!!cookies?.refreshToken}, body present=${typeof (refreshTokenDto as any)?.refreshToken === 'string'}`);
 
     if (!refreshToken) {
       throw new BadRequestException('Refresh token is required');
@@ -233,7 +257,8 @@ export class AuthController {
     if (refreshToken) {
       await this.authService.logout(refreshToken);
     }
-    res.clearCookie('refreshToken', { httpOnly: true, secure: true, sameSite: 'strict' });
+    
+    // res.clearCookie('refreshToken', cookieOptions);
 
     return { message: 'Logged out successfully', };
   }
@@ -250,7 +275,11 @@ export class AuthController {
   async logoutAll(@CurrentUser('id') userId: string, @Res({ passthrough: true }) res: Response) {
     await this.authService.logoutAll(userId);
 
-    res.clearCookie('refreshToken', { httpOnly: true, secure: true, sameSite: 'strict' });
+    // res.clearCookie('refreshToken', { httpOnly: true, secure: true, sameSite: 'none', path: '/' }); // อันนนี้มีปัญหา
+
+    // Clear cookie by setting it to empty with past expiry
+    res.cookie('refreshToken', cookieOptions);
+
     return { message: 'Logged out from all devices successfully' };
   }
 }
