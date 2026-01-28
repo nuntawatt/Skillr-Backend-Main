@@ -23,6 +23,7 @@ import { QuizService } from './quiz.service';
 import { CreateQuizDto } from './dto/create-quiz.dto';
 import { UpdateQuizDto } from './dto/update-quiz.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
+import { SubmitQuizDto } from './dto/submit-quiz.dto';
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import type { AuthUser } from '@auth';
 import { UserRole } from '@common/enums';
@@ -69,7 +70,7 @@ export class QuizAdminController {
                 'ระบบปฏิบัติการ',
               ],
               correctAnswer: 'Superset ของ JavaScript',
-              correctExplanation: 'TypeScript เป็นภาษาที่สร้างครอบ JavaScript อีกทีหนึ่ง เพื่อเพิ่มความสามารถด้าน Static Typing',
+              explanation: 'TypeScript เป็นภาษาที่สร้างครอบ JavaScript อีกทีหนึ่ง เพื่อเพิ่มความสามารถด้าน Static Typing',
               mediaUrl: 'https://example.com/ts-logo.png',
             },
           ],
@@ -85,7 +86,7 @@ export class QuizAdminController {
               question: 'Browser สามารถรันไฟล์ .ts ได้โดยตรงใช่หรือไม่?',
               type: 'true_false',
               correctAnswerBool: false,
-              correctExplanation: 'ไม่ถูกต้อง เพราะ Browser รันได้เฉพาะ JavaScript เท่านั้น ต้องผ่านการ Compile ก่อน',
+              explanation: 'ไม่ถูกต้อง เพราะ Browser รันได้เฉพาะ JavaScript เท่านั้น ต้องผ่านการ Compile ก่อน',
             },
           ],
         },
@@ -167,7 +168,7 @@ export class QuestionAdminController {
           type: 'multiple_choice',
           options: ['RAM', 'CPU', 'GPU', 'SSD'],
           correctAnswer: 'CPU',
-          correctExplanation: 'CPU ย่อมาจาก Central Processing Unit',
+          explanation: 'CPU ย่อมาจาก Central Processing Unit',
         },
       },
       update_tf: {
@@ -269,6 +270,16 @@ export class QuizController {
     @Request() req: RequestWithUser,
   ) {
     return this.quizService.completeQuiz(id, getUserIdOrThrow(req.user), status);
+  }
+
+  @Post(':id/submit')
+  @ApiOperation({ summary: 'Submit quiz answers and get final result' })
+  submitQuiz(
+    @Param('id') id: string,
+    @Body() submitDto: SubmitQuizDto,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.quizService.submitQuiz(id, getUserIdOrThrow(req.user), submitDto);
   }
 
   @Post('questions/:id/check')

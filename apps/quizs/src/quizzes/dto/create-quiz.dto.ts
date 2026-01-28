@@ -95,6 +95,11 @@ export class CreateQuestionDto {
   @ValidateIf((q) => q.type === QuestionType.TRUE_FALSE)
   @IsBoolean()
   correctAnswerBool?: boolean;
+
+  @ApiPropertyOptional({ example: 'คำอธิบายเฉลยที่ถูกต้อง' })
+  @IsOptional()
+  @IsString()
+  explanation?: string;
 }
 
 export class CreateQuizDto {

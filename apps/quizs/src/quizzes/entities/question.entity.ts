@@ -61,6 +61,9 @@ export class Question {
   @Column({ name: 'correct_answer', type: 'jsonb' })
   correctAnswer: QuestionAnswer;
 
+  @Column({ type: 'text', nullable: true })
+  explanation: string;
+
   @Column({ default: 1 })
   points: number;
 

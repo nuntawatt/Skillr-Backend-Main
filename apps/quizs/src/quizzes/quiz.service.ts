@@ -62,6 +62,7 @@ export class QuizService {
           type: q.type ?? QuestionType.MULTIPLE_CHOICE,
           options: this.mapOptionsByType(q),
           correctAnswer: this.mapCorrectAnswerByType(q),
+          explanation: q.explanation,
           points: 1, // backend-managed points
           order: index + 1, // บังคับเรียงลำดับบนลงล่าง
           quizId: savedQuiz.id,
@@ -282,6 +283,7 @@ export class QuizService {
       ...updateDto,
       options: mappedOptions,
       correctAnswer: mappedAnswer,
+      explanation: updateDto.explanation ?? question.explanation,
     });
 
     return await this.questionRepository.save(question);
@@ -889,10 +891,39 @@ export class QuizService {
       data.selectedOptionId !== undefined ? data.selectedOptionId : data.answer;
     const isCorrect = this.isAnswerCorrect(question, submittedAnswer);
 
+    // AC Requirement: ระบบต้องแสดงผลลัพธ์ของแต่ละข้อว่า ถูก / ผิด และแสดงคำตอบที่ผู้เรียนเลือกไว้ก่อนหน้า
+    // บันทึกคำตอบลงใน Attempt อัตโนมัติ (Save Progress)
+    const attempt = await this.getActiveAttempt(quizId, userId);
+    if (attempt) {
+      if (!attempt.answers) attempt.answers = [];
+      const existingAnswerIndex = attempt.answers.findIndex(
+        (a) => a.questionId === question.id,
+      );
+
+      if (existingAnswerIndex > -1) {
+        attempt.answers[existingAnswerIndex].answer = submittedAnswer;
+      } else {
+        attempt.answers.push({ questionId: question.id, answer: submittedAnswer });
+      }
+
+      // บันทึกผลลัพธ์ด้วย
+      if (!attempt.results) attempt.results = [];
+      const existingResultIndex = attempt.results.findIndex(
+        (r) => r.questionId === question.id,
+      );
+      if (existingResultIndex > -1) {
+        attempt.results[existingResultIndex].isCorrect = isCorrect;
+      } else {
+        attempt.results.push({ questionId: question.id, isCorrect });
+      }
+
+      await this.attemptRepository.save(attempt);
+    }
+
     return {
       isCorrect,
       correctAnswer: question.correctAnswer,
-      explanation: '', // Not in entity yet
+      explanation: question.explanation || '',
       isCompleted: await this.hasCompletedQuiz(quizId, userId),
     };
   }
