@@ -1,13 +1,7 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-<<<<<<< HEAD
 import { Lesson, LessonType } from './entities/lesson.entity';
-=======
-import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
-import { Lesson, LessonType, LessonRefSource } from './entities/lesson.entity';
->>>>>>> wave-service-quizs-learning
 import { Chapter } from '../chapters/entities/chapter.entity';
 import { Article } from '../articles/entities/article.entity';
 import { CreateLessonDto, UpdateLessonDto, LessonResponseDto } from './dto/lesson';
@@ -22,7 +16,6 @@ export class LessonsService {
     @InjectRepository(Article)
     private readonly articleRepository: Repository<Article>,
     private readonly dataSource: DataSource,
-    private readonly httpService: HttpService,
   ) {}
 
   // Create a new lesson
@@ -137,109 +130,7 @@ export class LessonsService {
     return this.toResponseDto(lesson);
   }
 
-<<<<<<< HEAD
   // Update a lesson
-=======
-  // Check if student can access this lesson by checking completion of the previous lesson
-  async validateLessonAccess(lessonId: number, userId: string): Promise<void> {
-    const currentLesson = await this.lessonRepository.findOne({ 
-      where: { lesson_id: lessonId },
-      relations: ['chapter']
-    });
-
-    if (!currentLesson) {
-      throw new NotFoundException(`Lesson with ID ${lessonId} not found`);
-    }
-
-    const previousLesson = await this.getPreviousLesson(currentLesson);
-    if (!previousLesson) {
-      // First lesson of the course, allowed
-      return;
-    }
-
-    // Check if previous lesson is completed in learning service
-    const learningServiceUrl = process.env.LEARNING_SERVICE_URL || 'http://localhost:3005';
-    
-    try {
-      const response = await firstValueFrom(
-        this.httpService.get(`${learningServiceUrl}/learning/lessons/${previousLesson.lesson_id}/progress`, {
-          headers: { 'x-user-id': userId }
-        })
-      );
-      
-      const progress = response.data;
-      if (!progress || !progress.completedAt) {
-        throw new ForbiddenException({
-          message: 'Please complete the previous lesson first.',
-          previousLessonId: previousLesson.lesson_id,
-          previousLessonTitle: previousLesson.lesson_title
-        });
-      }
-    } catch (error) {
-      if (error instanceof ForbiddenException) throw error;
-      
-      // If progress record doesn't exist at all, it's definitely not completed
-      throw new ForbiddenException({
-        message: 'Please complete the previous lesson first.',
-        previousLessonId: previousLesson.lesson_id,
-        previousLessonTitle: previousLesson.lesson_title
-      });
-    }
-  }
-
-  // Helper to find the previous lesson
-  private async getPreviousLesson(lesson: Lesson): Promise<Lesson | null> {
-    // 1. Check if there's a lesson with a smaller orderIndex in the same chapter
-    const prevInChapter = await this.lessonRepository.findOne({
-      where: {
-        chapter_id: lesson.chapter_id,
-        order_index: lesson.order_index - 1 // Simplified assuming consecutive indexes, but let's be safer
-      },
-      order: { order_index: 'DESC' }
-    });
-
-    if (prevInChapter) return prevInChapter;
-
-    // Alternative safer way if orderIndex is not exactly -1
-    const prevInChapterSafer = await this.lessonRepository.findOne({
-      where: {
-        chapter_id: lesson.chapter_id,
-        order_index: this.dataSource.getRepository(Lesson).createQueryBuilder().select('MAX(order_index)').where('chapter_id = :chapterId AND order_index < :orderIndex', { chapterId: lesson.chapter_id, orderIndex: lesson.order_index }).getQuery() as any
-      }
-    });
-    // Let's use a simpler query builder approach
-    const prevInChapterFinal = await this.lessonRepository
-      .createQueryBuilder('lesson')
-      .where('lesson.chapter_id = :chapterId', { chapterId: lesson.chapter_id })
-      .andWhere('lesson.order_index < :orderIndex', { orderIndex: lesson.order_index })
-      .orderBy('lesson.order_index', 'DESC')
-      .getOne();
-
-    if (prevInChapterFinal) return prevInChapterFinal;
-
-    // 2. If it's the first lesson in the chapter, check the previous chapter
-    const currentChapter = lesson.chapter;
-    const prevChapter = await this.chapterRepository
-      .createQueryBuilder('chapter')
-      .where('chapter.levelId = :levelId', { levelId: currentChapter.levelId })
-      .andWhere('chapter.chapter_orderIndex < :orderIndex', { orderIndex: currentChapter.chapter_orderIndex })
-      .orderBy('chapter.chapter_orderIndex', 'DESC')
-      .getOne();
-
-    if (!prevChapter) return null;
-
-    // Get the last lesson of the previous chapter
-    return await this.lessonRepository
-      .createQueryBuilder('lesson')
-      .where('lesson.chapter_id = :chapterId', { chapterId: prevChapter.chapter_id })
-      .orderBy('lesson.order_index', 'DESC')
-      .getOne();
-  }
-
-  /**
-   * Update a lesson
-   */
->>>>>>> wave-service-quizs-learning
   async update(id: number, updateLessonDto: UpdateLessonDto): Promise<LessonResponseDto> {
     const lesson = await this.lessonRepository.findOne({ where: { lesson_id: id } });
 

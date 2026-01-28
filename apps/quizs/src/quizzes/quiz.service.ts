@@ -9,13 +9,12 @@ import { UpdateQuizDto } from './dto/update-quiz.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { QuizSolutionResponseDto } from './dto/quiz-solution.dto';
 import { SubmitQuizDto } from './dto/submit-quiz.dto';
-import { CheckAnswerDto } from './dto/check-answer.dto';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class QuizService {
-  private readonly maxQuestionsPerLesson = 1;
+  private readonly maxQuestionsPerLesson = 3;
   private readonly learningServiceUrl = process.env.LEARNING_SERVICE_URL;
 
   constructor(
@@ -59,29 +58,14 @@ export class QuizService {
     if (questions.length > 0) {
       for (const [index, q] of questions.entries()) {
         const question = this.questionRepository.create({
-          questionText: q.question,
+          question: q.question,
           type: q.type ?? QuestionType.MULTIPLE_CHOICE,
-          mediaUrl: q.mediaUrl,
-          correctExplanation: q.correctExplanation,
-          orderIndex: index + 1,
+          options: this.mapOptionsByType(q),
+          correctAnswer: this.mapCorrectAnswerByType(q),
+          points: 1, // backend-managed points
+          order: index + 1, // บังคับเรียงลำดับบนลงล่าง
           quizId: savedQuiz.id,
-          points: 1,
         });
-
-        if (q.type === QuestionType.MULTIPLE_CHOICE) {
-          question.options = (q.options || []).map((optText) => ({
-            optionText: optText,
-            isCorrect: optText === q.correctAnswer,
-          })) as any;
-        } else if (q.type === QuestionType.TRUE_FALSE) {
-          question.options = [
-            { optionText: 'True', isCorrect: q.correctAnswerBool === true },
-            { optionText: 'False', isCorrect: q.correctAnswerBool === false },
-          ] as any;
-        } else {
-          question.correctAnswer = this.mapCorrectAnswerByType(q);
-        }
-
         await this.questionRepository.save(question);
       }
     }
@@ -93,6 +77,10 @@ export class QuizService {
     switch (question.type) {
       case QuestionType.TRUE_FALSE:
         return ['True', 'False'];
+      case QuestionType.MATCH_PAIRS:
+        return question.optionsPairs;
+      case QuestionType.CORRECT_ORDER:
+        return question.optionsOrder;
       default:
         return question.options;
     }
@@ -102,6 +90,11 @@ export class QuizService {
     switch (question.type) {
       case QuestionType.TRUE_FALSE:
         return question.correctAnswerBool;
+      case QuestionType.MATCH_PAIRS:
+        return question.optionsPairs;
+      case QuestionType.CORRECT_ORDER:
+        // ใช้ลำดับของ optionsOrder ที่ส่งมาเป็นเฉลยโดยตรง (เก็บเป็น Array ของ Text)
+        return question.optionsOrder?.map((o) => o.text);
       default:
         return question.correctAnswer;
     }
@@ -111,9 +104,7 @@ export class QuizService {
     const query = this.quizRepository
       .createQueryBuilder('quiz')
       .leftJoinAndSelect('quiz.questions', 'questions')
-      .leftJoinAndSelect('questions.options', 'options')
-      .addOrderBy('questions.orderIndex', 'ASC')
-      .addOrderBy('options.id', 'ASC');
+      .addOrderBy('questions.order', 'ASC');
 
     if (lessonId) {
       query.where('quiz.lessonId = :lessonId', { lessonId: Number(lessonId) });
@@ -127,10 +118,8 @@ export class QuizService {
     const quiz = await this.quizRepository
       .createQueryBuilder('quiz')
       .leftJoinAndSelect('quiz.questions', 'questions')
-      .leftJoinAndSelect('questions.options', 'options')
       .where('quiz.id = :id', { id: quizId })
-      .orderBy('questions.orderIndex', 'ASC')
-      .addOrderBy('options.id', 'ASC')
+      .orderBy('questions.order', 'ASC')
       .getOne();
 
     if (!quiz) {
@@ -160,12 +149,9 @@ export class QuizService {
         const { correctAnswer, ...rest } = q;
         const stripped = { ...rest } as Question;
 
-        // Strip isCorrect from options
-        if (stripped.options) {
-          stripped.options = stripped.options.map((opt) => {
-            const { isCorrect, ...optRest } = opt;
-            return optRest as any;
-          });
+        // Ensure TRUE_FALSE always has options ['True', 'False'] (Derived for students)
+        if (q.type === QuestionType.TRUE_FALSE) {
+          stripped.options = ['True', 'False'];
         }
 
         // --- Persist Presentation Order Logic ---
@@ -179,11 +165,24 @@ export class QuizService {
           stripped.options = savedOrder;
         } else if (stripped.options && Array.isArray(stripped.options)) {
           // ถ้ายังไม่ตอบ หรือยังไม่เคยเซฟลำดับ -> สุ่มใหม่
-          if (q.type === QuestionType.MULTIPLE_CHOICE || q.type === QuestionType.TRUE_FALSE) {
-            // สลับตัวเลือก
+          if (q.type === QuestionType.MULTIPLE_CHOICE) {
+            // สลับตัวเลือก ก ข ค ง
             stripped.options = this.shuffleArray([
-              ...(stripped.options as any[]),
+              ...(stripped.options as string[]),
             ]);
+          } else if (q.type === QuestionType.CORRECT_ORDER) {
+            // สลับขั้นตอนการเรียงลำดับให้มั่ว
+            stripped.options = this.shuffleArray([...(stripped.options as any[])]);
+          } else if (q.type === QuestionType.MATCH_PAIRS) {
+            // ตามโจทย์: ฝั่งขวาอยู่ที่เดิม แต่ฝั่งซ้ายสุ่มลำดับใหม่
+            const pairs = stripped.options as { left: string; right: string }[];
+            const shuffledLefts = this.shuffleArray(pairs.map((p) => p.left));
+            const originalRights = pairs.map((p) => p.right);
+
+            stripped.options = originalRights.map((right, i) => ({
+              left: shuffledLefts[i],
+              right: right,
+            }));
           }
 
           // อัปเดตลำดับที่สุ่มได้กลับเข้าไปใน Attempt (Draft) เพื่อให้ครั้งหน้าเรียกแล้วได้ลำดับเดิมถ้ามีการเซฟ
@@ -264,14 +263,18 @@ export class QuizService {
 
     // Handle options and correct answer mapping if they are being updated
     const mappedOptions =
-      updateDto.type || updateDto.options
+      updateDto.type ||
+        updateDto.options ||
+        updateDto.optionsPairs ||
+        updateDto.optionsOrder
         ? this.mapOptionsByType(updateDto as any)
         : question.options;
 
     const mappedAnswer =
       updateDto.type ||
         updateDto.correctAnswer ||
-        updateDto.correctAnswerBool
+        updateDto.correctAnswerBool ||
+        updateDto.optionsPairs
         ? this.mapCorrectAnswerByType(updateDto as any)
         : question.correctAnswer;
 
@@ -303,14 +306,14 @@ export class QuizService {
     // Re-index remaining questions in order
     const remaining = await this.questionRepository.find({
       where: { quizId },
-      order: { orderIndex: 'ASC' },
+      order: { order: 'ASC' },
     });
 
     for (let i = 0; i < remaining.length; i++) {
       const q = remaining[i];
       const newOrder = i + 1;
-      if (q.orderIndex !== newOrder) {
-        q.orderIndex = newOrder;
+      if (q.order !== newOrder) {
+        q.order = newOrder;
         await this.questionRepository.save(q);
       }
     }
@@ -488,8 +491,8 @@ export class QuizService {
           );
         }
 
-        const submitted = String(answer.answer).trim();
-        const options = question.options || [];
+        const submitted = answer.answer.trim();
+        const options = (question.options as string[]) || [];
 
         if (options.length === 0) {
           throw new BadRequestException(
@@ -497,9 +500,9 @@ export class QuizService {
           );
         }
 
-        // Validate if submitted answer matches any option ID or text
+        // ใช้การเทียบแบบ trim เพื่อความแม่นยำ (กันช่องว่างส่วนเกิน)
         const isValidOption = options.some(
-          (opt) => String(opt.id) === submitted || String(opt.optionText).trim() === submitted,
+          (opt) => String(opt).trim() === submitted,
         );
 
         if (!isValidOption) {
@@ -517,6 +520,95 @@ export class QuizService {
           );
         }
       }
+
+      if (question.type === QuestionType.MATCH_PAIRS) {
+        const submittedPairs = answer.answer;
+        if (!Array.isArray(submittedPairs)) {
+          throw new BadRequestException(
+            `คำตอบของข้อที่ ${question.id} (Match Pairs) ต้องเป็นรายการคู่จับคู่ (Array)`,
+          );
+        }
+
+        const options = (question.options as any[]) || [];
+        // AC Requirement: ต้องจับคู่ให้ครบทุกคู่
+        if (submittedPairs.length !== options.length) {
+          throw new BadRequestException(
+            `กรุณาจับคู่คำตอบให้ครบทุกข้อ (ข้อที่ ${question.id} ยังจับคู่ไม่ครบ)`,
+          );
+        }
+
+        const lefts = new Set();
+        const rights = new Set();
+
+        for (const p of submittedPairs) {
+          if (!p || p.left === undefined || p.right === undefined) {
+            throw new BadRequestException(
+              `รูปแบบการจับคู่ในข้อที่ ${question.id} ไม่ถูกต้อง (ต้องมีทั้ง left และ right)`,
+            );
+          }
+
+          const left = String(p.left).trim();
+          const right = String(p.right).trim();
+
+          // Red Case: ป้องกันการเลือกคำตอบซ้ำ
+          if (lefts.has(left)) {
+            throw new BadRequestException(
+              `คำถามฝั่งซ้าย "${left}" ในข้อที่ ${question.id} ถูกใช้ซ้ำ`,
+            );
+          }
+          if (rights.has(right)) {
+            throw new BadRequestException(
+              `คำตอบฝั่งขวา "${right}" ในข้อที่ ${question.id} ถูกใช้ซ้ำ (คำตอบนี้ถูกใช้แล้ว)`,
+            );
+          }
+
+          lefts.add(left);
+          rights.add(right);
+
+          // ตรวจสอบว่าค่าที่ส่งมามีอยู่ใน Options จริงหรือไม่
+          const isValidPair = options.some(
+            (opt) =>
+              String(opt.left).trim() === left ||
+              String(opt.right).trim() === right,
+          );
+
+          if (!isValidPair) {
+            throw new BadRequestException(
+              `การจับคู่ "${left}" - "${right}" ในข้อที่ ${question.id} ไม่มีอยู่ในตัวเลือกที่มีให้`,
+            );
+          }
+        }
+      }
+
+      if (question.type === QuestionType.CORRECT_ORDER) {
+        const submittedOrder = answer.answer;
+        if (!Array.isArray(submittedOrder)) {
+          throw new BadRequestException(
+            `คำตอบของข้อที่ ${question.id} (Correct Order) ต้องเป็นรายการเรียงลำดับ (Array)`,
+          );
+        }
+
+        const options = (question.options as any[]) || [];
+        // AC Requirement: ต้องเรียงลำดับให้ครบทุกรายการ
+        if (submittedOrder.length !== options.length) {
+          throw new BadRequestException(
+            `กรุณาเรียงลำดับรายการให้ครบทุกข้อ (ข้อที่ ${question.id} ยังเรียงไม่ครบ)`,
+          );
+        }
+
+        // ตรวจสอบว่ารายการที่ส่งมา ตรงกับที่มีในโจทย์จริงๆ หรือไม่
+        const optionTexts = options.map((o) => String(o.text).trim());
+        const isValid = submittedOrder.every((item) =>
+          optionTexts.includes(String(item).trim()),
+        );
+
+        if (!isValid) {
+          throw new BadRequestException(
+            `รายการที่ส่งมาในข้อที่ ${question.id} ไม่ถูกต้อง (ไม่ตรงกับตัวเลือกที่มี)`,
+          );
+        }
+      }
+      // ----------------------------------------
 
       const isCorrect = this.isAnswerCorrect(question, answer.answer);
       results.push({ questionId: answer.questionId, isCorrect });
@@ -540,147 +632,27 @@ export class QuizService {
 
     // 5. Auto-update Lesson Progress if passed
     if (passed) {
-      await this.completeLessonProgress(quiz.lessonId, userId);
+      try {
+        await firstValueFrom(
+          this.httpService.post(
+            `${this.learningServiceUrl}/api/learning/lessons/${quiz.lessonId}/complete`,
+            {},
+            {
+              headers: {
+                // Pass user context if needed, here we assume internal call or handled by userId in body if API allowed
+                'x-user-id': userId,
+              },
+            },
+          ),
+        );
+      } catch (error) {
+        console.error('Failed to update lesson progress via HTTP:', error.message);
+        // We don't throw here to not break quiz submission if progress service is down
+      }
     }
 
     // Return structured solution response for Scenario 2 & 3
     return this.getQuizSolution(String(quiz.id), userId);
-  }
-
-  async checkAnswer(
-    quizId: string,
-    userId: string,
-    checkDto: CheckAnswerDto,
-  ): Promise<{
-    isCorrect: boolean;
-    correctAnswer: any;
-    explanation: string;
-    isCompleted: boolean;
-  }> {
-    const quiz = await this.findOneQuiz(quizId);
-    const numericQuizId = Number(quizId);
-    const numericUserId = Number(userId);
-
-    // 1. Find or create active attempt
-    let attempt = await this.getActiveAttempt(numericQuizId, numericUserId);
-    if (!attempt) {
-      // Check if already completed
-      const hasCompleted = await this.hasCompletedQuiz(numericQuizId, numericUserId);
-      if (hasCompleted) {
-        throw new BadRequestException('คุณได้ทำ Quiz นี้เสร็จสิ้นแล้ว');
-      }
-      // Auto-start if not started
-      attempt = await this.startQuiz(quizId, userId);
-    }
-
-    // 2. Find question
-    const question = quiz.questions.find((q) => q.id === checkDto.questionId);
-    if (!question) {
-      throw new NotFoundException(`ไม่พบคำถาม ID ${checkDto.questionId}`);
-    }
-
-    // 3. Check answer
-    const submitted = checkDto.selectedOptionId ?? checkDto.answer;
-    const isCorrect = this.isAnswerCorrect(question, submitted);
-
-    // 4. Update attempt progress
-    if (!attempt.answers) attempt.answers = [];
-    if (!attempt.results) attempt.results = [];
-
-    // Remove existing answer for this question if any
-    attempt.answers = attempt.answers.filter((a) => a.questionId !== question.id);
-    attempt.results = attempt.results.filter((r) => r.questionId !== question.id);
-
-    attempt.answers.push({ questionId: question.id, answer: submitted });
-    attempt.results.push({ questionId: question.id, isCorrect });
-
-    // 5. Check completion
-    const totalQuestions = quiz.questions.length;
-    const answeredCount = attempt.answers.length;
-    const isCompleted = answeredCount >= totalQuestions;
-
-    if (isCompleted) {
-      attempt.completedAt = new Date();
-      attempt.isCompleted = true;
-      const correctCount = attempt.results.filter((r) => r.isCorrect).length;
-      attempt.score = (correctCount / totalQuestions) * 100;
-      attempt.passed = attempt.score >= 60;
-
-      if (attempt.passed) {
-        await this.completeLessonProgress(quiz.lessonId, userId);
-      }
-    }
-
-    await this.attemptRepository.save(attempt);
-
-    // Find correct answer text for feedback
-    let correctAnswerText = question.correctAnswer;
-    if (question.type === QuestionType.MULTIPLE_CHOICE || question.type === QuestionType.TRUE_FALSE) {
-      correctAnswerText = question.options?.find(o => o.isCorrect)?.optionText;
-    }
-
-    return {
-      isCorrect,
-      correctAnswer: correctAnswerText,
-      explanation: question.correctExplanation,
-      isCompleted,
-    };
-  }
-
-  async completeQuiz(
-    quizId: string,
-    userId: string,
-    status: 'COMPLETED' | 'SKIPPED',
-  ): Promise<{ success: boolean; score?: number }> {
-    const quiz = await this.findOneQuiz(quizId);
-    const numericQuizId = Number(quizId);
-    const numericUserId = Number(userId);
-
-    let attempt = await this.getActiveAttempt(numericQuizId, numericUserId);
-    if (!attempt) {
-      const hasCompleted = await this.hasCompletedQuiz(numericQuizId, numericUserId);
-      if (hasCompleted) return { success: true };
-      attempt = await this.startQuiz(quizId, userId);
-    }
-
-    attempt.completedAt = new Date();
-    attempt.isCompleted = true;
-
-    if (status === 'SKIPPED') {
-      attempt.passed = true;
-      if (attempt.score === null || attempt.score === undefined) {
-        attempt.score = 0;
-      }
-    } else {
-      // For COMPLETED status via this endpoint, we calculate final score
-      const totalQuestions = quiz.questions.length;
-      const correctCount = attempt.results?.filter((r) => r.isCorrect).length || 0;
-      attempt.score = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
-      attempt.passed = attempt.score >= 60;
-    }
-
-    await this.attemptRepository.save(attempt);
-    await this.completeLessonProgress(quiz.lessonId, userId);
-
-    return { success: true, score: attempt.score };
-  }
-
-  private async completeLessonProgress(lessonId: number, userId: string) {
-    try {
-      await firstValueFrom(
-        this.httpService.post(
-          `${this.learningServiceUrl}/api/learning/lessons/${lessonId}/complete`,
-          {},
-          {
-            headers: {
-              'x-user-id': userId,
-            },
-          },
-        ),
-      );
-    } catch (error) {
-      console.error('Failed to update lesson progress via HTTP:', error.message);
-    }
   }
 
   async getQuizSolution(
@@ -727,19 +699,14 @@ export class QuizService {
             : this.isAnswerCorrect(question, userAnswer);
       }
 
-      let correctAnswer = question.correctAnswer;
-      if (question.type === QuestionType.MULTIPLE_CHOICE || question.type === QuestionType.TRUE_FALSE) {
-        correctAnswer = question.options?.find(o => o.isCorrect)?.optionText;
-      }
-
       return {
         questionId: question.id,
-        question: question.questionText,
+        question: question.question,
         type: question.type,
         options: question.options,
         userAnswer: userAnswer ?? null,
         isCorrect,
-        correctAnswer,
+        correctAnswer: question.correctAnswer,
       };
     });
 
@@ -759,20 +726,79 @@ export class QuizService {
   }
 
   private isAnswerCorrect(question: Question, submittedAnswer: any): boolean {
+    const correct = question.correctAnswer;
+
     switch (question.type) {
       case QuestionType.MULTIPLE_CHOICE:
-      case QuestionType.TRUE_FALSE: {
-        // In the new system, submittedAnswer is the optionId (number or string)
-        const selectedOption = question.options?.find(
-          (opt) => String(opt.id) === String(submittedAnswer),
+        return String(correct) === String(submittedAnswer);
+
+      case QuestionType.TRUE_FALSE:
+        return (
+          String(correct).toLowerCase() ===
+          String(submittedAnswer).toLowerCase()
         );
-        return selectedOption?.isCorrect ?? false;
+
+      case QuestionType.MATCH_PAIRS: {
+        if (!Array.isArray(correct) || !Array.isArray(submittedAnswer)) {
+          return false;
+        }
+
+        const normalizedCorrect = this.normalizePairs(correct);
+        const normalizedSubmitted = this.normalizePairs(submittedAnswer);
+
+        if (
+          !normalizedCorrect ||
+          !normalizedSubmitted ||
+          normalizedCorrect.length !== normalizedSubmitted.length
+        ) {
+          return false;
+        }
+
+        const sortFn = (a: any, b: any) =>
+          String(a.left).localeCompare(String(b.left));
+        normalizedCorrect.sort(sortFn);
+        normalizedSubmitted.sort(sortFn);
+
+        return (
+          JSON.stringify(normalizedCorrect) ===
+          JSON.stringify(normalizedSubmitted)
+        );
       }
 
-      default: {
-        const correct = question.correctAnswer;
+      case QuestionType.CORRECT_ORDER:
+        // For complex types, we compare as JSON strings (order-sensitive for Correct Order)
+        return JSON.stringify(correct) === JSON.stringify(submittedAnswer);
+
+      default:
         return correct === submittedAnswer;
-      }
+    }
+  }
+
+  /**
+   * Normalize matching pairs for comparison:
+   * - require left/right keys
+   * - trim + lowercase to avoid casing/spacing issues
+   */
+  private normalizePairs(
+    pairs: any[],
+  ): { left: string; right: string }[] | null {
+    try {
+      return pairs.map((p) => {
+        if (p === null || p === undefined) {
+          throw new Error('Invalid pair');
+        }
+        if (p.left === undefined || p.right === undefined) {
+          throw new Error('Pair must include left and right');
+        }
+        const left = String(p.left).trim().toLowerCase();
+        const right = String(p.right).trim().toLowerCase();
+        if (left === '' || right === '') {
+          throw new Error('Pair values cannot be empty');
+        }
+        return { left, right };
+      });
+    } catch {
+      return null;
     }
   }
 

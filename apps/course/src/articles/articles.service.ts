@@ -2,11 +2,9 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
-import { HttpService } from '@nestjs/axios';
-import { firstValueFrom } from 'rxjs';
 import { Article } from './entities/article.entity';
 import { Lesson, LessonType } from '../lessons/entities/lesson.entity';
-import { CreateArticleDto, UpdateArticleDto, ArticleResponseDto, ArticleCardResponseDto, ArticleProgressUpdateDto } from './dto';
+import { CreateArticleDto, UpdateArticleDto, ArticleResponseDto } from './dto';
 import { StorageService } from '../storage/storage.service';
 
 @Injectable()
@@ -17,12 +15,7 @@ export class ArticlesService {
     @InjectRepository(Lesson)
     private readonly lessonRepository: Repository<Lesson>,
     private readonly storageService: StorageService,
-<<<<<<< HEAD
   ) { }
-=======
-    private readonly httpService: HttpService,
-  ) {}
->>>>>>> wave-service-quizs-learning
 
   // Create a new article
   async create(createArticleDto: CreateArticleDto): Promise<ArticleResponseDto> {
@@ -42,12 +35,7 @@ export class ArticlesService {
     // Allow multiple articles per lesson. Do not block creation if others exist.
 
     const article = this.articleRepository.create({
-<<<<<<< HEAD
       lesson_id: createArticleDto.lesson_id,
-=======
-      lessonId: createArticleDto.lessonId,
-      cards: createArticleDto.cards,
->>>>>>> wave-service-quizs-learning
       article_content: createArticleDto.article_content,
     });
 
@@ -131,20 +119,12 @@ export class ArticlesService {
       order: { updatedAt: 'DESC' },
     });
 
-    return Promise.all(articles.map((a) => this.toResponseDto(a)));
+    return articles.map((a) => this.toResponseDto(a));
   }
 
   // Find an article by ID
   async findOne(id: number): Promise<ArticleResponseDto> {
-    const article = await this.articleRepository.findOne({ 
-      where: { article_id: id },
-      relations: ['cards'],
-      order: {
-        cards: {
-          sequenceOrder: 'ASC'
-        }
-      }
-    });
+    const article = await this.articleRepository.findOne({ where: { article_id: id } });
 
     if (!article) {
       throw new NotFoundException(`Article with ID ${id} not found`);
@@ -155,115 +135,13 @@ export class ArticlesService {
 
   // Find an article by lesson ID
   async findByLessonId(lessonId: number): Promise<ArticleResponseDto> {
-<<<<<<< HEAD
     const article = await this.articleRepository.findOne({ where: { lesson_id: lessonId } });
-=======
-    const article = await this.articleRepository.findOne({ 
-      where: { lessonId },
-      relations: ['cards'],
-      order: {
-        cards: {
-          sequenceOrder: 'ASC'
-        }
-      }
-    });
->>>>>>> wave-service-quizs-learning
 
     if (!article) {
       throw new NotFoundException(`Article for lesson with ID ${lessonId} not found`);
     }
 
     return this.toResponseDto(article);
-  }
-
-  // Get only cards for an article
-  async getCards(articleId: number): Promise<ArticleCardResponseDto[]> {
-    const article = await this.articleRepository.findOne({
-      where: { article_id: articleId },
-      relations: ['cards'],
-      order: {
-        cards: {
-          sequenceOrder: 'ASC'
-        }
-      }
-    });
-
-    if (!article) {
-      throw new NotFoundException(`Article with ID ${articleId} not found`);
-    }
-
-    return (article.cards || []).map(card => ({
-      id: card.id,
-      content: card.content,
-      mediaUrl: card.mediaUrl,
-      sequenceOrder: card.sequenceOrder,
-    }));
-  }
-
-  // Get user state for an article from learning service
-  async getUserState(articleId: number, userId: string): Promise<any> {
-    const article = await this.articleRepository.findOne({ where: { article_id: articleId } });
-    if (!article) {
-      throw new NotFoundException(`Article with ID ${articleId} not found`);
-    }
-
-    const learningServiceUrl = process.env.LEARNING_SERVICE_URL || 'http://localhost:3005';
-    
-    try {
-      const response = await firstValueFrom(
-        this.httpService.get(`${learningServiceUrl}/learning/lessons/${article.lessonId}/progress`, {
-          headers: { 'x-user-id': userId }
-        })
-      );
-      
-      const progress = response.data;
-      return {
-        currentCardIndex: progress?.lastReadCardIndex ?? 0,
-        isCompleted: !!progress?.completedAt
-      };
-    } catch (error) {
-      // Return default state if progress not found
-      return {
-        currentCardIndex: 0,
-        isCompleted: false
-      };
-    }
-  }
-
-  // Save progress for an article
-  async saveProgress(articleId: number, userId: string, currentCardIndex: number): Promise<any> {
-    const article = await this.articleRepository.findOne({ 
-      where: { article_id: articleId },
-      relations: ['cards']
-    });
-
-    if (!article) {
-      throw new NotFoundException(`Article with ID ${articleId} not found`);
-    }
-
-    const totalCards = article.cards?.length || 0;
-    const isCompleted = currentCardIndex + 1 >= totalCards;
-
-    const learningServiceUrl = process.env.LEARNING_SERVICE_URL || 'http://localhost:3005';
-    
-    try {
-      const response = await firstValueFrom(
-        this.httpService.post(`${learningServiceUrl}/learning/lessons/${article.lessonId}/progress`, {
-          lastReadCardIndex: currentCardIndex,
-          isCompleted: isCompleted
-        }, {
-          headers: { 'x-user-id': userId }
-        })
-      );
-      
-      return {
-        ...response.data,
-        isCompleted // explicitly return calculated status
-      };
-    } catch (error) {
-      console.error('Error saving progress to learning service:', error.response?.data || error.message);
-      throw new BadRequestException('Failed to update progress in learning service');
-    }
   }
 
   // Update an article by ID
@@ -296,8 +174,21 @@ export class ArticlesService {
   }
 
   // Convert Article entity to ArticleResponseDto
-<<<<<<< HEAD
   private toResponseDto(article: Article): ArticleResponseDto {
+    const images: { url: string; article_id: number; index: number }[] = [];
+    try {
+      const content = article.article_content;
+      if (Array.isArray(content)) {
+        content.forEach((item: any, idx: number) => {
+          if (item && item.url) {
+            images.push({ url: item.url, article_id: article.article_id, index: idx });
+          }
+        });
+      }
+    } catch {
+      // ignore
+    }
+
     const lessonIdValue = typeof (article as any).lesson_id === 'number'
       ? (article as any).lesson_id
       : (article as any).lesson?.lesson_id ?? null;
@@ -305,19 +196,10 @@ export class ArticlesService {
     return {
       article_id: article.article_id,
       lesson_id: lessonIdValue,
-=======
-  async toResponseDto(article: Article): Promise<ArticleResponseDto> {
-    return {
-      id: article.article_id,
-      lessonId: article.lessonId,
-      cards: article.cards?.map(card => ({
-        id: card.id,
-        content: card.content,
-        mediaUrl: card.mediaUrl,
-        sequenceOrder: card.sequenceOrder,
-      })),
->>>>>>> wave-service-quizs-learning
       article_content: article.article_content,
-    } as ArticleResponseDto;
+      images: images.length ? images : undefined,
+      hasPdfArticle: !!article.pdfArticle,
+      updatedAt: article.updatedAt,
+    };
   }
 }
