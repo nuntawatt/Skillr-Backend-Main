@@ -16,6 +16,9 @@ async function bootstrap() {
     // origin: [process.env.FRONTEND_URL, 'http://localhost:3000', 'https://skllracademy.com'],
     // credentials: true,
     origin: '*',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: '*',
+    credentials: false,
   });
   app.useGlobalPipes(
     new ValidationPipe({
