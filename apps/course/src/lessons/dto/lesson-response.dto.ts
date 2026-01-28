@@ -22,6 +22,12 @@ export class LessonResponseDto {
   @ApiProperty({ description: 'Chapter ID this lesson belongs to', example: 1 })
   chapter_id: number;
 
+  @ApiPropertyOptional({ description: 'Cover image ID from media service', example: 123 })
+  lesson_coverImage_id?: number | null;
+
+  @ApiPropertyOptional({ description: 'Main video ID from media service', example: 456 })
+  lesson_video_id?: number | null;
+
   @ApiProperty({ description: 'Creation timestamp' })
   createdAt: Date;
   

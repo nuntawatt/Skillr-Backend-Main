@@ -36,5 +36,15 @@ export class CreateLessonDto {
   @IsNumber()
   @Min(0)
   orderIndex?: number;
+
+  @ApiPropertyOptional({ description: 'Cover image ID from media service', example: 123 })
+  @IsOptional()
+  @IsNumber()
+  lesson_coverImage_id?: number | null;
+
+  @ApiPropertyOptional({ description: 'Main video ID from media service', example: 456 })
+  @IsOptional()
+  @IsNumber()
+  lesson_video_id?: number | null;
 }
 

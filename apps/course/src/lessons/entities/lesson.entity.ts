@@ -33,6 +33,14 @@ export class Lesson {
   @Column({ name: 'order_index', type: 'int', default: 0 })
   orderIndex: number;
 
+  // cover image (media-service image id)
+  @Column({ name: 'lesson_cover_image_id', type: 'int', nullable: true })
+  lesson_coverImage_id?: number | null;
+
+  // main video (media-service video id)
+  @Column({ name: 'lesson_video_id', type: 'int', nullable: true })
+  lesson_video_id?: number | null;
+
   @ManyToOne(() => Chapter, (chapter) => chapter.lessons, { onDelete: 'CASCADE' })
   chapter: Chapter;
   @Column({ name: 'chapter_id', type: 'int' })

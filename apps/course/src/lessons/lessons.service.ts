@@ -47,6 +47,8 @@ export class LessonsService {
       lesson_type: createLessonDto.lesson_type,
       ref_id: createLessonDto.ref_id,
       orderIndex: orderIndex,
+      lesson_coverImage_id: createLessonDto.lesson_coverImage_id,
+      lesson_video_id: createLessonDto.lesson_video_id,
     });
 
     const saved = await this.lessonRepository.save(lesson);
@@ -158,6 +160,14 @@ export class LessonsService {
       lesson.orderIndex = updateLessonDto.orderIndex;
     }
 
+    if (updateLessonDto.lesson_coverImage_id !== undefined) {
+      lesson.lesson_coverImage_id = updateLessonDto.lesson_coverImage_id;
+    }
+
+    if (updateLessonDto.lesson_video_id !== undefined) {
+      lesson.lesson_video_id = updateLessonDto.lesson_video_id;
+    }
+
     const saved = await this.lessonRepository.save(lesson);
     return this.toResponseDto(saved);
   }
@@ -202,6 +212,10 @@ export class LessonsService {
       ref_id: lesson.ref_id,
       orderIndex: lesson.orderIndex,
       chapter_id: lesson.chapter_id,
+      
+      lesson_coverImage_id: lesson.lesson_coverImage_id,
+      lesson_video_id: lesson.lesson_video_id,
+
       createdAt: lesson.createdAt,
     };
   }
