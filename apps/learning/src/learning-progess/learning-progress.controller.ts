@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Param, Request, UseGuards } from '@nestjs/
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { LearningProgressService } from './learning-progress.service';
 import { LearningDashboardService } from './learning-dashboard.service';
-import { LearningDashboardDto, LessonProgressResponseDto, ProgressSummaryDto, UpdateLessonProgressDto } from './dto/learning-progress.dto';
+import { LearningDashboardDto, LessonProgressResponseDto, ProgressSummaryDto, UpdateLessonProgressDto, ChapterRoadmapDto } from './dto/learning-progress.dto';
 import { JwtAuthGuard } from '@auth';
 import type { AuthUser } from '@auth';
 
@@ -137,6 +137,25 @@ export class LearningProgressController {
         return this.learningProgressService.getLessonProgress(
             getUserIdOrThrow(req.user, req),
             id,
+        );
+    }
+
+    @Get('chapters/:chapterId/roadmap')
+    @ApiOperation({ summary: 'Get chapter roadmap (timeline) for a user' })
+    @ApiParam({ name: 'chapterId', example: 1 })
+    @ApiResponse({
+        status: 200,
+        description: 'Chapter Roadmap พร้อมสถานะ Completed/Current/Locked',
+        type: ChapterRoadmapDto,
+    })
+    @ApiResponse({
+        status: 404,
+        description: 'Chapter not found.',
+    })
+    getChapterRoadmap(@Param('chapterId') chapterId: string, @Request() req: any) {
+        return this.learningProgressService.getChapterRoadmap(
+            getUserIdOrThrow(req.user, req),
+            chapterId,
         );
     }
 }

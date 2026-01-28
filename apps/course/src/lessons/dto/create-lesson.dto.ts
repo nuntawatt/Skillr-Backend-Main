@@ -22,6 +22,7 @@ export class CreateLessonDto {
     description: 'Lesson type',
     enum: LessonType,
     example: LessonType.ARTICLE,
+    enumName: 'LessonType',
   })
   @IsEnum(LessonType)
   type: LessonType;

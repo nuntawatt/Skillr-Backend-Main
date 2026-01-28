@@ -18,6 +18,7 @@ export class UpdateLessonDto {
     description: 'Lesson type',
     enum: LessonType,
     example: LessonType.ARTICLE,
+    enumName: 'LessonType',
   })
   @IsOptional()
   @IsEnum(LessonType)

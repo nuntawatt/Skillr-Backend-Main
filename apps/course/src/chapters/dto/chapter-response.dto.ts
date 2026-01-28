@@ -1,4 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { LessonResponseDto } from '../../lessons/dto/lesson-response.dto';
 
 export class ChapterResponseDto {
     @ApiProperty({ description: 'Chapter ID', example: 1 })
@@ -12,4 +13,7 @@ export class ChapterResponseDto {
 
     @ApiProperty({ description: 'Level ID this chapter belongs to', example: 1 })
     level_id: number;
+
+    @ApiPropertyOptional({ type: [LessonResponseDto], description: 'List of lessons in this chapter' })
+    lessons?: LessonResponseDto[];
 }

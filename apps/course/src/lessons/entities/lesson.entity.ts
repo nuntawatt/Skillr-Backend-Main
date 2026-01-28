@@ -7,6 +7,7 @@ export enum LessonType {
   VIDEO = 'video',
   QUIZ = 'quiz',
   ASSIGNMENT = 'assignment',
+  CHECKPOINT = 'checkpoint',
 }
 
 export enum LessonRefSource {

@@ -68,3 +68,34 @@ export class UpdateLessonProgressDto {
   @ApiProperty({ example: false })
   isCompleted?: boolean;
 }
+
+export class RoadmapItemDto {
+  @ApiProperty({ example: 1 })
+  id: number;
+
+  @ApiProperty({ example: 'Introduction to Stocks' })
+  title: string;
+
+  @ApiProperty({ example: 'article' })
+  type: string;
+
+  @ApiProperty({ example: 'completed', enum: ['completed', 'current', 'locked'] })
+  status: 'completed' | 'current' | 'locked';
+
+  @ApiProperty({ example: 0 })
+  orderIndex: number;
+
+  @ApiProperty({ example: 'document', description: 'Icon type based on lesson type' })
+  icon: string;
+}
+
+export class ChapterRoadmapDto {
+  @ApiProperty({ example: 1 })
+  chapterId: number;
+
+  @ApiProperty({ example: 'Basics of Trading' })
+  chapterTitle: string;
+
+  @ApiProperty({ type: [RoadmapItemDto] })
+  items: RoadmapItemDto[];
+}
