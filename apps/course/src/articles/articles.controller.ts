@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Get, Param, Query, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Post, Get, Param, Query, BadRequestException, ParseIntPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiCreatedResponse, ApiOkResponse, ApiBody, ApiParam, ApiResponse } from '@nestjs/swagger';
 import { ArticlesService } from './articles.service';
 import { CreateArticleDto } from './dto/create-article.dto';
@@ -49,8 +49,7 @@ export class ArticlesController {
     @ApiResponse({ status: 404, description: 'Article not found' })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     @ApiOkResponse({ type: ArticleResponseDto })
-    async findOne(@Param('id') id: string) {
-        return this.svc.findOne(Number(id));
+    async findOne(@Param('id', ParseIntPipe) id: number) {
+        return this.svc.findOne(id);
     }
-
 }
