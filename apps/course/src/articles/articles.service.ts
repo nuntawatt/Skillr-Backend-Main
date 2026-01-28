@@ -44,10 +44,6 @@ export class ArticlesService {
   }
 
   async findOne(id: number): Promise<ArticleResponseDto> {
-    if (typeof id !== 'number' || Number.isNaN(id) || !Number.isFinite(id)) {
-      throw new BadRequestException('invalid article id');
-    }
-
     const article = await this.articleRepo.findOne({ where: { article_id: id } });
     if (!article) throw new NotFoundException('article not found');
     return this.toResponseDto(article);
