@@ -175,20 +175,6 @@ export class ArticlesService {
 
   // Convert Article entity to ArticleResponseDto
   private toResponseDto(article: Article): ArticleResponseDto {
-    const images: { url: string; article_id: number; index: number }[] = [];
-    try {
-      const content = article.article_content;
-      if (Array.isArray(content)) {
-        content.forEach((item: any, idx: number) => {
-          if (item && item.url) {
-            images.push({ url: item.url, article_id: article.article_id, index: idx });
-          }
-        });
-      }
-    } catch {
-      // ignore
-    }
-
     const lessonIdValue = typeof (article as any).lesson_id === 'number'
       ? (article as any).lesson_id
       : (article as any).lesson?.lesson_id ?? null;
@@ -197,9 +183,6 @@ export class ArticlesService {
       article_id: article.article_id,
       lesson_id: lessonIdValue,
       article_content: article.article_content,
-      images: images.length ? images : undefined,
-      hasPdfArticle: !!article.pdfArticle,
-      updatedAt: article.updatedAt,
-    };
+    } as ArticleResponseDto;
   }
 }
