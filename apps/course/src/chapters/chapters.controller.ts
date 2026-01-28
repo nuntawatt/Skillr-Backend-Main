@@ -17,10 +17,10 @@ export class ChaptersController {
 
     @Get()
     @ApiOperation({ summary: 'Get all chapters for a level' })
-    @ApiQuery({ name: 'level_id', required: true, type: Number })
+    @ApiQuery({ name: 'level_id', type: Number, required: true, description: 'ID of the level to fetch chapters for' })
     @ApiOkResponse({ type: ChapterResponseDto, isArray: true })
-    findByLevel(@Query('level_id', ParseIntPipe) level_id: number): Promise<ChapterResponseDto[]> {
-        return this.chaptersService.findByLevel(level_id);
+    findByLevel(@Query('level_id', ParseIntPipe) levelId: number): Promise<ChapterResponseDto[]> {
+        return this.chaptersService.findByLevel(levelId);
     }
 
     @Get(':id')
