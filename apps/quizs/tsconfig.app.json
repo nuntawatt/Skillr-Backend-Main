@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig.build.json",
   "compilerOptions": {
-    "outDir": "../../dist/apps/quizs"
+    "outDir": "../../dist"
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts", "../../libs/**/*.ts"],
   "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
