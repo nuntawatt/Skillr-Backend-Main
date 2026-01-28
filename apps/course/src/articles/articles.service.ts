@@ -32,14 +32,7 @@ export class ArticlesService {
       throw new BadRequestException(`Lesson with ID ${createArticleDto.lesson_id} is not of type 'article'`);
     }
 
-    // Check if article already exists for this lesson
-    const existingArticle = await this.articleRepository.findOne({
-      where: { lesson_id: createArticleDto.lesson_id },
-    });
-
-    if (existingArticle) {
-      throw new BadRequestException(`Article already exists for lesson with ID ${createArticleDto.lesson_id}`);
-    }
+    // Allow multiple articles per lesson. Do not block creation if others exist.
 
     const article = this.articleRepository.create({
       lesson_id: createArticleDto.lesson_id,
@@ -67,8 +60,7 @@ export class ArticlesService {
       throw new BadRequestException(`Lesson with ID ${body.lessonId} is not of type 'article'`);
     }
 
-    const existing = await this.articleRepository.findOne({ where: { lesson_id: body.lessonId } });
-    if (existing) throw new BadRequestException(`Article already exists for lesson ${body.lessonId}`);
+    // Allow multiple articles per lesson when creating with PDF; do not block creation.
 
     const pdfKey = `articles/pdf/${randomUUID()}.pdf`;
     await this.storageService.putObject(this.storageService.bucket, pdfKey, fileBuffer, fileBuffer.length, { 'Content-Type': 'application/pdf' });
@@ -183,10 +175,29 @@ export class ArticlesService {
 
   // Convert Article entity to ArticleResponseDto
   private toResponseDto(article: Article): ArticleResponseDto {
+    const images: { url: string; article_id: number; index: number }[] = [];
+    try {
+      const content = article.article_content;
+      if (Array.isArray(content)) {
+        content.forEach((item: any, idx: number) => {
+          if (item && item.url) {
+            images.push({ url: item.url, article_id: article.article_id, index: idx });
+          }
+        });
+      }
+    } catch {
+      // ignore
+    }
+
+    const lessonIdValue = typeof (article as any).lesson_id === 'number'
+      ? (article as any).lesson_id
+      : (article as any).lesson?.lesson_id ?? null;
+
     return {
       article_id: article.article_id,
-      lesson_id: article.lesson_id,
+      lesson_id: lessonIdValue,
       article_content: article.article_content,
+      images: images.length ? images : undefined,
       hasPdfArticle: !!article.pdfArticle,
       updatedAt: article.updatedAt,
     };

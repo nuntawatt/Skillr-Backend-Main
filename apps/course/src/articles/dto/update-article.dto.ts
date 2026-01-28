@@ -1,12 +1,17 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsArray, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+import { ArticleContentItem } from './create-article.dto';
 
 export class UpdateArticleDto {
     @ApiPropertyOptional({
-        description: 'Article content as JSONB (editor blocks or structured content)',
-        example: { blocks: [{ type: 'paragraph', data: { text: 'Updated content' } }] },
+        description: 'Article content as array of { url, article } items',
+        example: [{ url: 'https://cdn.example.com/image.png', article: 'Updated caption' }],
     })
     @IsOptional()
-    article_content?: any;
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => ArticleContentItem)
+    article_content?: ArticleContentItem[];
 }
 
