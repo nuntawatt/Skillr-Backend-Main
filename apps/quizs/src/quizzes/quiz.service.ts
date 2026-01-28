@@ -881,12 +881,14 @@ export class QuizService {
   ) {
     const quiz = await this.findOneQuiz(quizId);
     const question = quiz.questions.find((q) => q.id === data.questionId);
+    
+    console.log('Checking answer for question:', data.questionId, 'in quiz:', quizId);
+    
     if (!question) {
       throw new NotFoundException('Question not found');
     }
 
-    const submittedAnswer =
-      data.selectedOptionId !== undefined ? data.selectedOptionId : data.answer;
+    const submittedAnswer = data.selectedOptionId !== undefined ? data.selectedOptionId : data.answer;
     const isCorrect = this.isAnswerCorrect(question, submittedAnswer);
 
     return {

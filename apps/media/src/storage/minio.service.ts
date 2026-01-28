@@ -8,8 +8,8 @@ export class MinioStorageService implements StorageProvider {
   private readonly client: Minio.Client;
 
   constructor() {
-    const endpoint = process.env.S3_ENDPOINT ?? '';
-    const url = new URL(endpoint);
+    const endpointRaw = process.env.S3_ENDPOINT ?? 'http://localhost:9000';
+    const url = new URL(endpointRaw);
 
     this.client = new Minio.Client({
       endPoint: url.hostname,
@@ -24,41 +24,60 @@ export class MinioStorageService implements StorageProvider {
     return process.env.S3_BUCKET ?? 'media';
   }
 
-  // ===== Presign PUT =====
-  async presignPut(bucket: string, key: string, _contentType: string, expiresIn: number) {
+  // ================= Presign PUT =================
+  async presignPut(
+    bucket: string,
+    key: string,
+    _contentType: string,
+    expiresIn: number,
+  ): Promise<string> {
+    // ✅ MinIO รองรับ Promise อยู่แล้ว
     return this.client.presignedPutObject(bucket, key, expiresIn);
   }
 
-  async presignedPutObject(bucket: string, key: string, expiresIn: number) {
+  async presignedPutObject(
+    bucket: string,
+    key: string,
+    expiresIn: number,
+  ): Promise<string> {
     return this.client.presignedPutObject(bucket, key, expiresIn);
   }
 
-  // ===== Presign GET =====
-  async presignGet(bucket: string, key: string, expiresIn: number) {
+  // ================= Presign GET =================
+  async presignGet(
+    bucket: string,
+    key: string,
+    expiresIn: number,
+  ): Promise<string> {
     return this.client.presignedGetObject(bucket, key, expiresIn);
   }
 
-  async presignedGetObject(bucket: string, key: string, expiresIn: number) {
+  async presignedGetObject(
+    bucket: string,
+    key: string,
+    expiresIn: number,
+  ): Promise<string> {
     return this.client.presignedGetObject(bucket, key, expiresIn);
   }
 
-  // ===== Upload =====
+  // ================= Upload =================
   async putObject(
     bucket: string,
     key: string,
     body: Buffer,
     size?: number,
     meta?: Record<string, string>,
-  ) {
+  ): Promise<void> {
     await this.client.putObject(bucket, key, body, size, meta);
   }
 
-  // ===== Delete =====
-  async deleteObject(bucket: string, key: string) {
+  // ================= Delete =================
+  async deleteObject(bucket: string, key: string): Promise<void> {
     await this.client.removeObject(bucket, key);
   }
 
-  buildPublicUrl(bucket: string, key: string) {
+  // ================= Public URL =================
+  buildPublicUrl(bucket: string, key: string): string {
     return `${process.env.S3_ENDPOINT}/${bucket}/${key}`;
   }
 }

@@ -1,17 +1,17 @@
-import { Body, Controller, Get, Param, Post, UploadedFile, UseInterceptors, Delete } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UploadedFile, UseInterceptors, Delete, BadRequestException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
+import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiParam, ApiResponse } from '@nestjs/swagger';
 
 import { MediaImagesService } from './media-images.service';
 import { CreateImageUploadDto } from './dto/create-image-upload.dto';
-import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiExtraModels, ApiParam, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags('Media Images')
-@ApiExtraModels(CreateImageUploadDto)
 @Controller('media/images')
 export class MediaImagesController {
   constructor(private readonly svc: MediaImagesService) { }
 
+  // ===== Upload image =====
   @Post('upload')
   @ApiOperation({ summary: 'Upload image' })
   @ApiConsumes('multipart/form-data')
@@ -31,27 +31,29 @@ export class MediaImagesController {
   @UseInterceptors(FileInterceptor('file', {
     storage: multer.memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
-  }),
-  )
+  }))
   async upload(@UploadedFile() file: Express.Multer.File, @Body() dto: CreateImageUploadDto) {
-    return this.svc.uploadImageFileAndPersist(file, dto.owner_user_id);
+    if (!file) throw new BadRequestException('file missing');
+    // คืนค่าเป็น image_id ให้ frontend เอาไปใส่ใน article_content
+    return this.svc.uploadImageFileAndPersist(file, dto?.owner_user_id);
   }
 
-  // get presigned GET url for viewing
-  @Get('presign/:key')
-  @ApiOperation({ summary: '[CLIENT] Get presigned URL for image viewing by storage key' })
-  @ApiParam({ name: 'key', description: 'Storage key of the image', type: 'string' })
+  // ===== Presign by image id =====
+  @Get('presign/:id')
+  @ApiOperation({ summary: 'Get presigned URL by image id' })
+  @ApiParam({ name: 'id', description: 'Image asset id', type: 'number' })
   @ApiResponse({ status: 200, description: 'Presigned URL retrieved' })
-  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 404, description: 'Image not found' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
-  async getPresign(@Param('key') key: string) {
-    return this.svc.getPresignedImageByKey(key);
+  async getPresign(@Param('id') id: string) {
+    return this.svc.getPresignedImageById(Number(id));
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete image by ID' })
-  @ApiResponse({ status: 200, description: 'Image deleted' })
-  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiParam({ name: 'id', description: 'Image asset id', type: 'number' })
+  @ApiResponse({ status: 200, description: 'Image deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Image not found' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
   async delete(@Param('id') id: string) {
     return this.svc.deleteImageById(Number(id));

@@ -38,9 +38,9 @@ export class Lesson {
   @Column({ name: 'chapter_id', type: 'int' })
   chapter_id: number;
 
-  // One-to-many relation with Article (multiple articles can belong to a lesson)
-  @OneToMany(() => Article, (article) => article.lesson, { cascade: true })
-  lesson_articles?: Article[];
+  // ความสัมพันธ์กับบทความ (ถ้า lesson_type เป็น ARTICLE)
+  @OneToMany(() => Article, (a) => a.lesson)
+  lesson_articles: Article[];
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

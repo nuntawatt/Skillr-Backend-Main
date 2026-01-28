@@ -2,6 +2,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
+
 import { StorageFactory } from '../storage/storage.factory';
 import { ImageAsset, ImageAssetStatus } from './entities/image-asset.entity';
 
@@ -15,8 +16,8 @@ export class MediaImagesService {
 
   private validateImageMime(mime: string, originalName?: string) {
     const ext = (originalName ?? '').split('.').pop()?.toLowerCase();
-    const allowMime = ['image/jpeg', 'image/png', 'image/jpg', 'image/pjpeg'];
-    const allowExt = ['jpg', 'jpeg', 'png'];
+    const allowMime = ['image/jpeg', 'image/png', 'image/jpg', 'image/pjpeg', 'image/webp'];
+    const allowExt = ['jpg', 'jpeg', 'png', 'webp'];
 
     if (allowMime.includes((mime ?? '').toLowerCase())) return;
     if ((mime === 'application/octet-stream' || !mime) && ext && allowExt.includes(ext)) return;
@@ -24,7 +25,7 @@ export class MediaImagesService {
     throw new BadRequestException('invalid image mime type');
   }
 
-  // ========== Upload image ==========
+  // ===== Upload image =====
   async uploadImageFileAndPersist(file: Express.Multer.File, ownerUserId?: number) {
     if (!file) throw new BadRequestException('file missing');
 
@@ -38,9 +39,11 @@ export class MediaImagesService {
     const storage = this.storageFactory.image();
     const bucket = storage.bucket;
 
+    // สร้าง storage key แบบ unique (คุณสามารถเปลี่ยน structure ได้)
     const uuid = randomUUID();
-    const storageKey = `images/${uuid}`;
+    const storageKey = `images/${uuid}${(file.originalname?.match(/\.[^.]+$/) ?? [''])[0]}`;
 
+    // upload ผ่าน storage abstraction
     await storage.putObject(
       bucket,
       storageKey,
@@ -49,6 +52,7 @@ export class MediaImagesService {
       { 'Content-Type': file.mimetype },
     );
 
+    // บันทึก metadata ลง DB
     const saved = await this.repo.save(
       this.repo.create({
         ownerUserId: Number(ownerUserId ?? 0),
@@ -56,7 +60,7 @@ export class MediaImagesService {
         mimeType: file.mimetype,
         sizeBytes: String(file.size),
 
-        storageProvider: process.env.STORAGE_PROVIDER ?? 'minio',
+        storageProvider: process.env.STORAGE_PROVIDER ?? 'local',
         storageBucket: bucket,
         storageKey,
         status: ImageAssetStatus.READY,
@@ -64,41 +68,30 @@ export class MediaImagesService {
     );
 
     return {
-      media_asset_id: saved.id,
+      image_id: saved.id,
       storage_key: storageKey,
       status: saved.status,
     };
   }
 
-  // ========== Get presigned GET URL ==========
-  async getPresignedImageByKey(id: string) {
+  // ===== Get presigned by id =====
+  async getPresignedImageById(id: number) {
+    const asset = await this.repo.findOne({ where: { id } });
+    if (!asset) throw new NotFoundException('image asset not found');
+
     const storage = this.storageFactory.image();
     const bucket = storage.bucket;
 
-    const storageKey = `images/${id}`;
-
-    const asset = await this.repo.findOne({
-      where: {
-        storageBucket: bucket,
-        storageKey,
-      },
-    });
-
-    if (!asset) {
-      throw new NotFoundException('image file not found');
-    }
-
     const expires = Number(process.env.PRESIGN_EXPIRES_SECONDS ?? 3600);
 
+    // call storage presign method (storage implementation must provide)
     let url: string;
-
-    // instance of checks 
     if (typeof (storage as any).presignGet === 'function') {
       url = await (storage as any).presignGet(bucket, asset.storageKey, expires);
     } else if (typeof (storage as any).presignedGetObject === 'function') {
       url = await (storage as any).presignedGetObject(bucket, asset.storageKey, expires);
     } else {
-      throw new Error('presign GET not supported');
+      throw new Error('presign GET not supported by storage implementation');
     }
 
     return {
@@ -107,7 +100,7 @@ export class MediaImagesService {
     };
   }
 
-  // ========== Delete ==========
+  // ===== Delete =====
   async deleteImageById(id: number) {
     const asset = await this.repo.findOne({ where: { id } });
     if (!asset) throw new NotFoundException('media asset not found');

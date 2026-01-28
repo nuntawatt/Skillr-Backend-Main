@@ -3,13 +3,17 @@ import { IsNumber, IsOptional, Min, IsString, IsArray, ValidateNested } from 'cl
 import { Type } from 'class-transformer';
 
 export class ArticleContentItem {
-  @ApiProperty({ description: 'Image or resource URL', example: 'https://cdn.example.com/image.png' })
-  @IsString()
-  url: string;
+  @ApiPropertyOptional({ description: 'ID of the image from media-service', example: 123 })
+  @IsNumber()
+  id: number | null;
 
-  @ApiProperty({ description: 'Article text associated with the URL', example: 'Image caption or paragraph text' })
+  @ApiPropertyOptional({ description: 'Article text associated with the URL', example: 'Image caption or paragraph text' })
   @IsString()
   article: string;
+
+  @ApiPropertyOptional({ description: 'Order index of this content item', example: 1 })
+  @IsNumber()
+  order: number;
 }
 
 export class CreateArticleDto {

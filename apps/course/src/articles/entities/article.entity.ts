@@ -3,26 +3,20 @@ import { Lesson } from '../../lessons/entities/lesson.entity';
 
 @Entity('articles')
 export class Article {
-    @PrimaryGeneratedColumn()
-    article_id: number;
+  @PrimaryGeneratedColumn()
+  article_id: number;
 
-    @ManyToOne(() => Lesson, (lesson) => lesson.lesson_articles, { onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'lesson_id' })
-    lesson: Lesson;
+  @ManyToOne(() => Lesson, (lesson) => lesson.lesson_articles, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'lesson_id' })
+  lesson: Lesson;
 
-    @RelationId((article: Article) => article.lesson)
-    lesson_id: number;
+  @RelationId((article: Article) => article.lesson)
+  lesson_id: number;
 
-    @Column({ name: 'pdf_article', type: 'bytea', nullable: true })
-    pdfArticle?: Buffer;
+  // เก็บ article content เป็น jsonb โดยมีค่าเป็น array ของ blocks
+  @Column({ type: 'jsonb', default: () => "'[]'" })
+  article_content: any[];
 
-    @Column({ name: 'article_image_id', type: 'int', nullable: true })
-    article_imageId?: number | null;
-
-    // rich content: JSONB for editor content (blocks) or markdown HTML
-    @Column({ type: 'jsonb', nullable: false })
-    article_content: any;
-
-    @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
-    updatedAt: Date;
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
+  updatedAt: Date;
 }
