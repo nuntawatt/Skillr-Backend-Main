@@ -331,20 +331,9 @@ export class QuizService {
     const numericUserId = Number(userId);
     const isRetry = Boolean(options?.retry);
 
-    // 1. เช็คว่าเคยทำเสร็จไปแล้วหรือยัง
-    const completedAttempt = await this.attemptRepository.findOne({
-      where: {
-        quizId: numericQuizId,
-        userId: numericUserId,
-        completedAt: Not(IsNull()),
-      },
-    });
-
-    if (completedAttempt && !isRetry) {
-      throw new BadRequestException(
-        'คุณได้ทำ Quiz นี้เสร็จสิ้นแล้ว ไม่สามารถทำซ้ำได้',
-      );
-    }
+    // User Story: ผู้เรียนสามารถกลับมาทำ Quiz ซ้ำได้
+    // - หากไม่ได้ส่ง retry: ให้ทำได้ในโหมด review ผ่าน /solution (ไม่ต้อง start ใหม่)
+    // - หากส่ง retry: ให้เปิด attempt ใหม่
 
     // 2. เช็คว่ามี Attempt ที่ทำค้างอยู่ไหม
     const activeAttempt = await this.attemptRepository.findOne({
@@ -709,6 +698,7 @@ export class QuizService {
         userAnswer: userAnswer ?? null,
         isCorrect,
         correctAnswer: question.correctAnswer,
+        explanation: question.explanation ?? null,
       };
     });
 
@@ -859,20 +849,37 @@ export class QuizService {
         userId: Number(userId),
         startedAt: new Date(),
         completedAt: new Date(),
-        score: status === 'COMPLETED' ? 100 : 0,
-        passed: status === 'COMPLETED',
+        completionStatus: status,
+        // User Story: Skip ถือว่า Completed แต่ไม่ใช่คะแนน 100
+        score: null as any,
+        passed: false,
       });
       return this.attemptRepository.save(newAttempt);
     }
 
     attempt.completedAt = new Date();
+    attempt.completionStatus = status;
+
     if (status === 'SKIPPED') {
-      attempt.score = 0;
+      attempt.score = null as any;
       attempt.passed = false;
-    } else {
-      attempt.score = 100;
-      attempt.passed = true;
+      return this.attemptRepository.save(attempt);
     }
+
+    // COMPLETED: คำนวณคะแนนจากผลที่สะสมไว้ (จากการ check รายข้อ)
+    const quiz = await this.findOneQuiz(String(quizId));
+    const answers = attempt.answers || [];
+    const correctCount = quiz.questions.filter((q) => {
+      const a = answers.find((x) => x.questionId === q.id);
+      if (!a) return false;
+      return this.isAnswerCorrect(q, a.answer);
+    }).length;
+
+    const totalQuestions = quiz.questions.length;
+    const score = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
+    attempt.score = score as any;
+    attempt.passed = score >= 60;
+
     return this.attemptRepository.save(attempt);
   }
 
@@ -887,38 +894,49 @@ export class QuizService {
       throw new NotFoundException('Question not found');
     }
 
+    // User Story: รองรับเฉพาะ Multiple Choice และ True/False
+    if (
+      question.type !== QuestionType.MULTIPLE_CHOICE &&
+      question.type !== QuestionType.TRUE_FALSE
+    ) {
+      throw new BadRequestException('Question type is not supported');
+    }
+
     const submittedAnswer =
       data.selectedOptionId !== undefined ? data.selectedOptionId : data.answer;
     const isCorrect = this.isAnswerCorrect(question, submittedAnswer);
 
     // AC Requirement: ระบบต้องแสดงผลลัพธ์ของแต่ละข้อว่า ถูก / ผิด และแสดงคำตอบที่ผู้เรียนเลือกไว้ก่อนหน้า
     // บันทึกคำตอบลงใน Attempt อัตโนมัติ (Save Progress)
-    const attempt = await this.getActiveAttempt(quizId, userId);
-    if (attempt) {
-      if (!attempt.answers) attempt.answers = [];
-      const existingAnswerIndex = attempt.answers.findIndex(
-        (a) => a.questionId === question.id,
-      );
-
-      if (existingAnswerIndex > -1) {
-        attempt.answers[existingAnswerIndex].answer = submittedAnswer;
-      } else {
-        attempt.answers.push({ questionId: question.id, answer: submittedAnswer });
-      }
-
-      // บันทึกผลลัพธ์ด้วย
-      if (!attempt.results) attempt.results = [];
-      const existingResultIndex = attempt.results.findIndex(
-        (r) => r.questionId === question.id,
-      );
-      if (existingResultIndex > -1) {
-        attempt.results[existingResultIndex].isCorrect = isCorrect;
-      } else {
-        attempt.results.push({ questionId: question.id, isCorrect });
-      }
-
-      await this.attemptRepository.save(attempt);
+    let attempt = await this.getActiveAttempt(quizId, userId);
+    if (!attempt) {
+      // ถ้ายังไม่มี attempt ค้างอยู่ ให้สร้างขึ้นมาเพื่อรองรับการทำข้อแรกทันที
+      attempt = await this.startQuiz(String(quizId), String(userId));
     }
+
+    if (!attempt.answers) attempt.answers = [];
+    const existingAnswerIndex = attempt.answers.findIndex(
+      (a) => a.questionId === question.id,
+    );
+
+    if (existingAnswerIndex > -1) {
+      attempt.answers[existingAnswerIndex].answer = submittedAnswer;
+    } else {
+      attempt.answers.push({ questionId: question.id, answer: submittedAnswer });
+    }
+
+    // บันทึกผลลัพธ์ด้วย
+    if (!attempt.results) attempt.results = [];
+    const existingResultIndex = attempt.results.findIndex(
+      (r) => r.questionId === question.id,
+    );
+    if (existingResultIndex > -1) {
+      attempt.results[existingResultIndex].isCorrect = isCorrect;
+    } else {
+      attempt.results.push({ questionId: question.id, isCorrect });
+    }
+
+    await this.attemptRepository.save(attempt);
 
     return {
       isCorrect,

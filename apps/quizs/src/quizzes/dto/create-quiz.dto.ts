@@ -3,7 +3,7 @@ import {
   ArrayMinSize,
   IsArray,
   IsBoolean,
-  IsEnum,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
@@ -48,7 +48,7 @@ export class CreateQuestionDto {
   question: string;
 
   @ApiProperty({ enum: QuestionType, example: QuestionType.MULTIPLE_CHOICE })
-  @IsEnum(QuestionType)
+  @IsIn([QuestionType.MULTIPLE_CHOICE, QuestionType.TRUE_FALSE])
   type: QuestionType;
 
   // Multiple Choice options: 3-4 choices, each <= 150 chars
@@ -125,21 +125,10 @@ export class CreateQuizDto {
         correctAnswer: 'แอปเปิ้ล',
       },
       {
-        question: 'จงจับคู่แม่สีให้ถูกต้อง',
-        type: 'match_pairs',
-        optionsPairs: [
-          { left: 'ท้องฟ้า', right: 'สีน้ำเงิน' },
-          { left: 'กล้วยหอม', right: 'สีเหลือง' },
-        ],
-      },
-      {
-        question: 'จงเรียงลำดับการล้างมือ',
-        type: 'correct_order',
-        optionsOrder: [
-          { text: 'ชโลมสบู่' },
-          { text: 'ถูมือให้สะอาด' },
-          { text: 'ล้างด้วยน้ำเปล่า' },
-        ],
+        question: 'Browser สามารถรันไฟล์ .ts ได้โดยตรงใช่หรือไม่?',
+        type: 'true_false',
+        correctAnswerBool: false,
+        explanation: 'ไม่ถูกต้อง เพราะ Browser รันได้เฉพาะ JavaScript เท่านั้น ต้องผ่านการ Compile ก่อน',
       },
     ],
   })

@@ -237,14 +237,8 @@ export class QuizController {
 
       if (isAdminOrInstructor) return quiz;
 
-      if (userId) {
-        const activeAttempt = await this.quizService.getActiveAttempt(quiz.id, userId);
-        if (activeAttempt) return this.quizService.stripAnswers(quiz, userId);
-
-        const hasCompleted = await this.quizService.hasCompletedQuiz(quiz.id, userId);
-        if (hasCompleted) return quiz;
-      }
-
+      // Student: never expose correct answers via this endpoint.
+      // Review results should be fetched via /quizzes/:id/solution.
       return this.quizService.stripAnswers(quiz, userId);
     });
   }
@@ -290,7 +284,12 @@ export class QuizController {
       type: 'object',
       properties: {
         quizId: { type: 'number', example: 7 },
-        selectedOptionId: { type: 'number', example: 101 },
+        answer: {
+          oneOf: [
+            { type: 'string', example: 'Superset ของ JavaScript' },
+            { type: 'boolean', example: true },
+          ],
+        },
       },
     },
     examples: {
@@ -298,7 +297,14 @@ export class QuizController {
         summary: 'Check Multiple Choice answer',
         value: {
           quizId: 7,
-          selectedOptionId: 101,
+          answer: 'Superset ของ JavaScript',
+        },
+      },
+      check_tf: {
+        summary: 'Check True/False answer',
+        value: {
+          quizId: 7,
+          answer: false,
         },
       },
     },
@@ -318,13 +324,19 @@ export class QuizController {
   checkQuestion(
     @Param('id') questionId: string,
     @Body('quizId') quizId: string,
-    @Body('selectedOptionId') selectedOptionId: number,
+    @Body('answer') answer: any,
     @Request() req: RequestWithUser,
   ) {
     return this.quizService.checkAnswer(String(quizId), getUserIdOrThrow(req.user), {
       questionId: Number(questionId),
-      selectedOptionId,
+      answer,
     });
+  }
+
+  @Get(':id/solution')
+  @ApiOperation({ summary: 'Get my quiz solution (answers + correct/incorrect) for a completed quiz' })
+  getMyQuizSolution(@Param('id') id: string, @Request() req: RequestWithUser) {
+    return this.quizService.getQuizSolution(id, getUserIdOrThrow(req.user));
   }
 
   @Get(':id/attempts')

@@ -31,6 +31,13 @@ export class QuizSolutionItemDto {
   correctAnswer: any;
 
   @ApiProperty({
+    example: 'CPU ย่อมาจาก Central Processing Unit',
+    description: 'คำอธิบายเฉลย (แสดงเมื่อผู้เรียนตอบผิด)',
+    nullable: true,
+  })
+  explanation?: string;
+
+  @ApiProperty({
     example: ['CPU', 'GPU', 'RAM'],
     description: 'รายการตัวเลือกทั้งหมดของข้อนี้',
     nullable: true,

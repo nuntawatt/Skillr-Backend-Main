@@ -38,6 +38,9 @@ export class QuizAttempt {
   @Column({ default: false })
   passed: boolean;
 
+  @Column({ name: 'completion_status', type: 'varchar', length: 20, nullable: true })
+  completionStatus: 'COMPLETED' | 'SKIPPED' | null;
+
   @Column({ name: 'started_at', type: 'timestamptz' })
   startedAt: Date;
 
