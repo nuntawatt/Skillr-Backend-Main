@@ -13,13 +13,4 @@ export class ArticleResponseDto {
     example: [{ url: 'https://cdn.example.com/image.png', article: 'Hello world' }],
   })
   article_content: ArticleContentItem[] | any;
-
-  @ApiPropertyOptional({ description: 'Images extracted from article_content with their article id mapping' })
-  images?: { url: string; article_id: number; index: number }[];
-
-  @ApiPropertyOptional({ description: 'Has PDF article attached' })
-  hasPdfArticle?: boolean;
-
-  @ApiProperty({ description: 'Last update timestamp' })
-  updatedAt: Date;
 }
