@@ -28,6 +28,9 @@ export class Quizs {
   @Column({ name: 'quizs_answer', type: 'jsonb' })
   quizsAnswer: any;
 
+  @Column({ name: 'quizs_explanation', type: 'text', nullable: true })
+  quizsExplanation: string;
+
   @Column({ name: 'lesson_id', unique: true })
   lessonId: number;
 

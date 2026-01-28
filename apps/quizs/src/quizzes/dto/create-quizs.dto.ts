@@ -25,6 +25,11 @@ export class CreateQuizsDto {
   @ApiProperty({ example: 'Superset ของ JavaScript' })
   @IsNotEmpty()
   quizs_answer: any;
+
+  @ApiPropertyOptional({ example: 'TypeScript เป็นภาษาที่สร้างครอบ JS เพื่อเพิ่มระบบ Type' })
+  @IsOptional()
+  @IsString()
+  quizs_explanation?: string;
 }
 
 export class CreateCheckpointDto {
