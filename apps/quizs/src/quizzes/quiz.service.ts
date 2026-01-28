@@ -840,6 +840,62 @@ export class QuizService {
         : undefined,
     };
   }
+
+  async completeQuiz(
+    quizId: string | number,
+    userId: string | number,
+    status: 'COMPLETED' | 'SKIPPED',
+  ): Promise<QuizAttempt> {
+    const attempt = await this.getActiveAttempt(quizId, userId);
+    if (!attempt) {
+      const hasCompleted = await this.hasCompletedQuiz(quizId, userId);
+      if (hasCompleted) {
+        throw new BadRequestException('Quiz already completed');
+      }
+      const newAttempt = this.attemptRepository.create({
+        quizId: Number(quizId),
+        userId: Number(userId),
+        startedAt: new Date(),
+        completedAt: new Date(),
+        score: status === 'COMPLETED' ? 100 : 0,
+        passed: status === 'COMPLETED',
+      });
+      return this.attemptRepository.save(newAttempt);
+    }
+
+    attempt.completedAt = new Date();
+    if (status === 'SKIPPED') {
+      attempt.score = 0;
+      attempt.passed = false;
+    } else {
+      attempt.score = 100;
+      attempt.passed = true;
+    }
+    return this.attemptRepository.save(attempt);
+  }
+
+  async checkAnswer(
+    quizId: string,
+    userId: string,
+    data: { questionId: number; selectedOptionId?: any; answer?: any },
+  ) {
+    const quiz = await this.findOneQuiz(quizId);
+    const question = quiz.questions.find((q) => q.id === data.questionId);
+    if (!question) {
+      throw new NotFoundException('Question not found');
+    }
+
+    const submittedAnswer =
+      data.selectedOptionId !== undefined ? data.selectedOptionId : data.answer;
+    const isCorrect = this.isAnswerCorrect(question, submittedAnswer);
+
+    return {
+      isCorrect,
+      correctAnswer: question.correctAnswer,
+      explanation: '', // Not in entity yet
+      isCompleted: await this.hasCompletedQuiz(quizId, userId),
+    };
+  }
 }
 
 export type QuizAttemptInsight = {
