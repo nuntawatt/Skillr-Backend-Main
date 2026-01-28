@@ -13,7 +13,7 @@ export class Quiz {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'lesson_id' })
+  @Column({ name: 'lesson_id', unique: true })
   lessonId: number;
 
   @Column({ nullable: true })

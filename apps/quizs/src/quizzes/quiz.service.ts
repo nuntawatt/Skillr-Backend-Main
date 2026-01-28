@@ -30,6 +30,16 @@ export class QuizService {
   async createQuiz(createQuizDto: CreateQuizDto): Promise<Quiz> {
     const questions: CreateQuestionDto[] = createQuizDto.questions ?? [];
 
+    // Business Rule: 1 Lesson มีได้แค่ 1 Quiz
+    const existingQuizForLesson = await this.quizRepository.findOne({
+      where: { lessonId: Number(createQuizDto.lessonId) },
+    });
+    if (existingQuizForLesson) {
+      throw new BadRequestException(
+        `Lesson ${createQuizDto.lessonId} มี Quiz อยู่แล้ว (Quiz ID: ${existingQuizForLesson.id})`,
+      );
+    }
+
     // Check total questions for this lesson in DB
     const existingQuizzes = await this.quizRepository.find({
       where: { lessonId: Number(createQuizDto.lessonId) },
@@ -220,6 +230,22 @@ export class QuizService {
 
   async updateQuiz(id: string, updateQuizDto: UpdateQuizDto): Promise<Quiz> {
     const quiz = await this.findOneQuiz(id);
+
+    // Business Rule: 1 Lesson มีได้แค่ 1 Quiz
+    // - ถ้ามีการเปลี่ยน lessonId ต้องตรวจว่ามี quiz ของ lesson นั้นอยู่แล้วหรือไม่
+    if (
+      updateQuizDto.lessonId !== undefined &&
+      Number(updateQuizDto.lessonId) !== Number(quiz.lessonId)
+    ) {
+      const exists = await this.quizRepository.findOne({
+        where: { lessonId: Number(updateQuizDto.lessonId) },
+      });
+      if (exists && exists.id !== quiz.id) {
+        throw new BadRequestException(
+          `Lesson ${updateQuizDto.lessonId} มี Quiz อยู่แล้ว (Quiz ID: ${exists.id})`,
+        );
+      }
+    }
 
     // Enforce total questions per lesson (across quizzes) when questions are being replaced/updated
     if (updateQuizDto.questions) {
