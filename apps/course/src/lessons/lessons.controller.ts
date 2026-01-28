@@ -1,12 +1,13 @@
-import {Controller,Get,Post,Body,Patch,Param,Delete,Query,ParseIntPipe,HttpCode,HttpStatus} from '@nestjs/common';
-import {ApiTags,ApiOperation,ApiOkResponse,ApiCreatedResponse,ApiParam,ApiQuery, ApiResponse,ApiNoContentResponse} from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiQuery, ApiResponse, ApiNoContentResponse } from '@nestjs/swagger';
 import { LessonsService } from './lessons.service';
 import { CreateLessonDto, UpdateLessonDto, LessonResponseDto } from './dto/lesson';
+import { ChapterResponseDto } from '../chapters/dto';
 
 @ApiTags('Lessons')
 @Controller('lessons')
 export class LessonsController {
-  constructor(private readonly lessonsService: LessonsService) {}
+  constructor(private readonly lessonsService: LessonsService) { }
 
   @Post()
   @ApiOperation({ summary: 'Create a new lesson' })
@@ -23,19 +24,17 @@ export class LessonsController {
   @ApiResponse({ status: 400, description: 'Bad Request' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
   createArticleLesson(
-    @Body() body: { lesson_title: string; lesson_description?: string; chapter_id: number; orderIndex?: number; content: any  }): Promise<LessonResponseDto> {
+    @Body() body: { lesson_title: string; lesson_description?: string; chapter_id: number; orderIndex?: number; content: any }): Promise<LessonResponseDto> {
     const { content, ...lessonData } = body;
     return this.lessonsService.createArticleLesson(lessonData, content);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all lessons for a chapter' })
-  @ApiQuery({ name: 'chapterId', required: true, type: Number })
+  @ApiOperation({ summary: 'Get all lessons with optional filters' })
   @ApiOkResponse({ type: LessonResponseDto, isArray: true })
-  @ApiResponse({ status: 400, description: 'Bad Request' })
-  @ApiResponse({ status: 500, description: 'Internal Server Error' })
-  findByChapter(@Query('chapterId', ParseIntPipe) chapterId: number): Promise<LessonResponseDto[]> {
-    return this.lessonsService.findByChapter(chapterId);
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  findAll(): Promise<LessonResponseDto[]> {
+    return this.lessonsService.findAll();
   }
 
   @Get(':id')
@@ -54,7 +53,7 @@ export class LessonsController {
   @ApiOkResponse({ type: LessonResponseDto })
   @ApiResponse({ status: 404, description: 'Lesson not found' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
-  update(@Param('id', ParseIntPipe) id: number,@Body() updateLessonDto: UpdateLessonDto): Promise<LessonResponseDto> {
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateLessonDto: UpdateLessonDto): Promise<LessonResponseDto> {
     return this.lessonsService.update(id, updateLessonDto);
   }
 

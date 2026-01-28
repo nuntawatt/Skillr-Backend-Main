@@ -111,6 +111,14 @@ export class LessonsService {
     });
   }
 
+  // Get all lessons
+  async findAll(): Promise<LessonResponseDto[]> {
+    const lessons = await this.lessonRepository.find({
+      order: { orderIndex: 'ASC' },
+    });
+    return lessons.map((l) => this.toResponseDto(l));
+  }
+
   // Get all lessons for a chapter
   async findByChapter(chapterId: number): Promise<LessonResponseDto[]> {
     const lessons = await this.lessonRepository.find({

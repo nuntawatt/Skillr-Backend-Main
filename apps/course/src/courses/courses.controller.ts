@@ -1,8 +1,9 @@
 import { CoursesService } from './courses.service';
-import { Controller, Get, Post, Put, Body, Patch, Param, Delete, Query, ParseIntPipe, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Patch, Param, Delete, ParseIntPipe, HttpCode, HttpStatus, Req } from '@nestjs/common';
 import { CreateCourseDto, UpdateCourseDto, CourseResponseDto, CourseStructureResponseDto } from './dto';
 import { CourseStructureSaveDto } from './dto/course-structure-save.dto';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiQuery, ApiNoContentResponse } from '@nestjs/swagger';
+
+import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiResponse, ApiNoContentResponse } from '@nestjs/swagger';
 
 @ApiTags('Courses')
 @Controller('courses')
@@ -12,39 +13,27 @@ export class CoursesController {
   @Post()
   @ApiOperation({ summary: 'Create a new course' })
   @ApiCreatedResponse({ type: CourseResponseDto, description: 'Course created successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   create(@Body() dto: CreateCourseDto): Promise<CourseResponseDto> {
     return this.coursesService.create(dto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'List courses with optional filters' })
+  @ApiOperation({ summary: 'Get all courses with optional filters' })
   @ApiOkResponse({ type: CourseResponseDto, isArray: true })
-  @ApiQuery({ name: 'isPublished', required: false, type: Boolean })
-  @ApiQuery({ name: 'course_ownerId', required: false, type: Number })
-  @ApiQuery({ name: 'categoryId', required: false, type: Number })
-  @ApiQuery({ name: 'search', required: false, type: String })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'offset', required: false, type: Number })
-  findAll(
-    @Query('isPublished') isPublished?: string,
-    @Query('course_ownerId') course_ownerId?: string,
-    @Query('search') search?: string,
-    @Query('limit') limit?: string,
-    @Query('offset') offset?: string,
-  ): Promise<CourseResponseDto[]> {
-    return this.coursesService.findAll({
-      isPublished: isPublished === 'true' ? true : isPublished === 'false' ? false : undefined,
-      course_ownerId: course_ownerId ? parseInt(course_ownerId, 10) : undefined,
-      search,
-      limit: limit ? parseInt(limit, 10) : undefined,
-      offset: offset ? parseInt(offset, 10) : undefined,
-    });
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  findAll(): Promise<CourseResponseDto[]> {
+    return this.coursesService.findAll();
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a course by ID' })
   @ApiParam({ name: 'id', type: Number })
   @ApiOkResponse({ type: CourseResponseDto })
+  @ApiResponse({ status: 200, description: 'Course retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Course not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   findOne(@Param('id', ParseIntPipe) id: number): Promise<CourseResponseDto> {
     return this.coursesService.findOne(id);
   }
@@ -53,6 +42,9 @@ export class CoursesController {
   @ApiOperation({ summary: 'Get the full nested structure of a course' })
   @ApiParam({ name: 'id', type: Number })
   @ApiOkResponse({ type: CourseStructureResponseDto })
+  @ApiResponse({ status: 200, description: 'Course structure retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Course not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   getStructure(@Param('id', ParseIntPipe) id: number): Promise<CourseStructureResponseDto> {
     return this.coursesService.getStructure(id);
   }
@@ -60,10 +52,11 @@ export class CoursesController {
   @Put(':id/structure')
   @ApiOperation({ summary: 'Save full course structure (transactional)' })
   @ApiParam({ name: 'id', type: Number })
-  async saveStructure(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: CourseStructureSaveDto,
-  ): Promise<CourseStructureResponseDto> {
+  @ApiOkResponse({ type: CourseStructureResponseDto })
+  @ApiResponse({ status: 200, description: 'Course structure saved successfully' })
+  @ApiResponse({ status: 404, description: 'Course not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  async saveStructure(@Param('id', ParseIntPipe) id: number, @Body() dto: CourseStructureSaveDto): Promise<CourseStructureResponseDto> {
     return this.coursesService.saveStructure(id, dto);
   }
 
@@ -71,10 +64,11 @@ export class CoursesController {
   @ApiOperation({ summary: 'Update a course by ID' })
   @ApiParam({ name: 'id', type: Number })
   @ApiOkResponse({ type: CourseResponseDto })
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() updateCourseDto: UpdateCourseDto,
-  ): Promise<CourseResponseDto> {
+  @ApiResponse({ status: 200, description: 'Course updated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @ApiResponse({ status: 404, description: 'Course not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateCourseDto: UpdateCourseDto): Promise<CourseResponseDto> {
     return this.coursesService.update(id, updateCourseDto);
   }
 
@@ -83,6 +77,8 @@ export class CoursesController {
   @ApiOperation({ summary: 'Delete a course by ID' })
   @ApiParam({ name: 'id', type: Number })
   @ApiNoContentResponse({ description: 'Course deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Course not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
     return this.coursesService.remove(id);
   }

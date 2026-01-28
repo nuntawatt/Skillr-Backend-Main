@@ -10,7 +10,7 @@ export class ArticlesController {
     constructor(private readonly svc: ArticlesService) { }
 
     @Post()
-    @ApiOperation({ summary: 'Create an article (JSON body) — image_id should come from media-service' })
+    @ApiOperation({ summary: 'Create an article (JSON body) - image_id should come from media-service' })
     @ApiBody({
         type: CreateArticleDto,
         examples: {
@@ -34,6 +34,14 @@ export class ArticlesController {
         return this.svc.create(body);
     }
 
+    @Get()
+    @ApiOperation({ summary: 'Get all articles with optional filters' })
+      @ApiOkResponse({ type: ArticleResponseDto, isArray: true })
+      @ApiResponse({ status: 500, description: 'Internal server error' })
+      findAll(): Promise<ArticleResponseDto[]> {
+        return this.svc.findAll();
+      }
+
     @Get(':id')
     @ApiOperation({ summary: 'Get article by id' })
     @ApiParam({ name: 'id', description: 'Article id', type: 'number' })
@@ -45,15 +53,4 @@ export class ArticlesController {
         return this.svc.findOne(Number(id));
     }
 
-    @Get()
-    @ApiOperation({ summary: 'Get all articles with pagination' })
-    @ApiOkResponse({ type: [ArticleResponseDto] })
-    @ApiResponse({ status: 200, description: 'Articles retrieved successfully' })
-    @ApiResponse({ status: 500, description: 'Internal Server Error' })
-    async findAll(@Query('limit') limit?: string, @Query('offset') offset?: string) {
-        return this.svc.findAll({
-            limit: limit ? parseInt(limit, 10) : undefined,
-            offset: offset ? parseInt(offset, 10) : undefined,
-        });
-    }
 }

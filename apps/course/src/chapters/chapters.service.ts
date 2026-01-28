@@ -67,6 +67,14 @@ export class ChaptersService {
     return chapters.map((c) => this.toResponseDto(c));
   }
 
+  // Find all chapters
+  async findAll(): Promise<ChapterResponseDto[]> {
+    const chapters = await this.chapterRepository.find({
+      order: { chapter_orderIndex: 'ASC' },
+    });
+    return chapters.map((c) => this.toResponseDto(c));
+  }
+
   // Find a chapter by ID
   async findOne(id: number): Promise<ChapterResponseDto> {
     const chapter = await this.chapterRepository.findOne({

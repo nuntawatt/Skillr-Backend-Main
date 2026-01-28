@@ -19,9 +19,6 @@ export class CourseResponseDto {
   @ApiPropertyOptional({ description: 'Course tags', type: [String] })
   course_tags?: string[];
 
-  // @ApiPropertyOptional({ description: 'Intro video media asset ID' })
-  // introMediaAssetId?: number;
-
   @ApiProperty({ description: 'Is the course published', example: false })
   isPublished: boolean;
 
