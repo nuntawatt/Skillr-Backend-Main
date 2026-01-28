@@ -35,7 +35,7 @@ export class ArticlesService {
     // Allow multiple articles per lesson. Do not block creation if others exist.
 
     const article = this.articleRepository.create({
-      lesson_id: createArticleDto.lesson_id,
+      lesson: { lesson_id: createArticleDto.lesson_id } as any,
       article_content: createArticleDto.article_content,
     });
 
@@ -65,7 +65,7 @@ export class ArticlesService {
     const pdfKey = `articles/pdf/${randomUUID()}.pdf`;
     await this.storageService.putObject(this.storageService.bucket, pdfKey, fileBuffer, fileBuffer.length, { 'Content-Type': 'application/pdf' });
 
-    const article = this.articleRepository.create({ lesson_id: body.lessonId, article_content: body.content, pdfArticle: Buffer.from(pdfKey, 'utf8') });
+    const article = this.articleRepository.create({ lesson: { lesson_id: body.lessonId } as any, article_content: body.content, pdfArticle: Buffer.from(pdfKey, 'utf8') });
     const saved = await this.articleRepository.save(article);
 
     lesson.ref_id = saved.article_id;

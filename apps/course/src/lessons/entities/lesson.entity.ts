@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToOne, CreateDateColumn, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, Index } from 'typeorm';
 import { Chapter } from '../../chapters/entities/chapter.entity';
 import { Article } from '../../articles/entities/article.entity';
 
@@ -38,9 +38,9 @@ export class Lesson {
   @Column({ name: 'chapter_id', type: 'int' })
   chapter_id: number;
 
-  // One-to-one relation with Article (if type is ARTICLE)
-  @OneToOne(() => Article, (article) => article.lesson_id, { cascade: true })
-  lesson_article?: Article;
+  // One-to-many relation with Article (multiple articles can belong to a lesson)
+  @OneToMany(() => Article, (article) => article.lesson, { cascade: true })
+  lesson_articles?: Article[];
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

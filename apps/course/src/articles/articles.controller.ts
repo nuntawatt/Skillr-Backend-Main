@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, HttpCode, HttpStatus, UseInterceptors, UploadedFile, UploadedFiles, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, HttpCode, HttpStatus, UseInterceptors, UploadedFile, UploadedFiles, BadRequestException, HttpException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiQuery, ApiNoContentResponse, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { ArticlesService } from './articles.service';
 import { CreateArticleDto, UpdateArticleDto, ArticleResponseDto } from './dto';
@@ -39,67 +39,75 @@ export class ArticlesController {
         }),
     )
     async create(@Body() body: any, @UploadedFiles() files: Express.Multer.File[]): Promise<ArticleResponseDto> {
-        // Expect either: multipart form with fields `lesson_id` and optional `article` JSON string, plus `images` files
-        const lessonIdRaw = body?.lesson_id ?? (body?.lesson ? (typeof body.article === 'string' ? (() => { try { return JSON.parse(body.article).lesson_id } catch { return undefined } })() : body.article?.lesson_id) : undefined);
+        try {
+            // Expect either: multipart form with fields `lesson_id` and optional `article` JSON string, plus `images` files
+            const lessonIdRaw = body?.lesson_id ?? (body?.lesson ? (typeof body.article === 'string' ? (() => { try { return JSON.parse(body.article).lesson_id } catch { return undefined } })() : body.article?.lesson_id) : undefined);
 
-        const lesson_id = Number(lessonIdRaw);
-        if (!Number.isFinite(lesson_id) || lesson_id <= 0) {
-            throw new BadRequestException('lesson_id is required and must be a positive number');
-        }
-
-        // Parse article JSON if provided. If not valid JSON, treat it as plain text description.
-        let parsedArticle: any = {};
-        if (body?.article) {
-            if (typeof body.article === 'string') {
-                try {
-                    parsedArticle = JSON.parse(body.article);
-                } catch {
-                    // treat as plain text -> create a single content item with the text
-                    parsedArticle = { article_content: [{ url: '', article: body.article }] };
-                }
-            } else {
-                parsedArticle = body.article;
+            const lesson_id = Number(lessonIdRaw);
+            if (!Number.isFinite(lesson_id) || lesson_id <= 0) {
+                throw new BadRequestException('lesson_id is required and must be a positive number');
             }
-        }
 
-        // Ensure article_content is an array if present
-        let article_content = Array.isArray(parsedArticle.article_content) ? parsedArticle.article_content : undefined;
-
-        // Upload files and generate presigned URLs
-        const uploadedFiles = files || [];
-        let fileIdx = 0;
-
-        if (article_content && article_content.length > 0) {
-            for (let i = 0; i < article_content.length; i++) {
-                const item = article_content[i];
-                if (!item || !item.url) {
-                    const f = uploadedFiles[fileIdx++];
-                    if (!f) throw new BadRequestException('Not enough uploaded files for article_content placeholders');
-
-                    const extMatch = (f.originalname || '').match(/\.[^.]+$/);
-                    const ext = extMatch ? extMatch[0] : '';
-                    const key = `articles/images/${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
-                    await this.articlesService['storageService'].putObject(this.articlesService['storageService'].bucket, key, f.buffer, f.size, { 'Content-Type': f.mimetype });
-                    const url = await this.articlesService['storageService'].buildPublicUrl(this.articlesService['storageService'].bucket, key);
-                    article_content[i] = { ...(item || {}), url };
+            // Parse article JSON if provided. If not valid JSON, treat it as plain text description.
+            let parsedArticle: any = {};
+            if (body?.article) {
+                if (typeof body.article === 'string') {
+                    try {
+                        parsedArticle = JSON.parse(body.article);
+                    } catch {
+                        // treat as plain text -> create a single content item with the text
+                        parsedArticle = { article_content: [{ url: '', article: body.article }] };
+                    }
+                } else {
+                    parsedArticle = body.article;
                 }
             }
-        }
 
-        // Append any remaining uploaded files
-        while (fileIdx < uploadedFiles.length) {
-            const f = uploadedFiles[fileIdx++];
-            const extMatch = (f.originalname || '').match(/\.[^.]+$/);
-            const ext = extMatch ? extMatch[0] : '';
-            const key = `articles/images/${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
-            await this.articlesService['storageService'].putObject(this.articlesService['storageService'].bucket, key, f.buffer, f.size, { 'Content-Type': f.mimetype });
-            const url = await this.articlesService['storageService'].buildPublicUrl(this.articlesService['storageService'].bucket, key);
-            article_content = article_content || [];
-            article_content.push({ url, article: '' });
-        }
+            // Ensure article_content is an array if present
+            let article_content = Array.isArray(parsedArticle.article_content) ? parsedArticle.article_content : undefined;
 
-        const dto: CreateArticleDto = { lesson_id, article_content } as any;
-        return this.articlesService.create(dto);
+            // Upload files and generate presigned URLs
+            const uploadedFiles = files || [];
+            let fileIdx = 0;
+
+            if (article_content && article_content.length > 0) {
+                for (let i = 0; i < article_content.length; i++) {
+                    const item = article_content[i];
+                    if (!item || !item.url) {
+                        const f = uploadedFiles[fileIdx++];
+                        if (!f) throw new BadRequestException('Not enough uploaded files for article_content placeholders');
+
+                        const extMatch = (f.originalname || '').match(/\.[^.]+$/);
+                        const ext = extMatch ? extMatch[0] : '';
+                        const key = `articles/images/${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
+                        await this.articlesService['storageService'].putObject(this.articlesService['storageService'].bucket, key, f.buffer, f.size, { 'Content-Type': f.mimetype });
+                        const url = await this.articlesService['storageService'].buildPublicUrl(this.articlesService['storageService'].bucket, key);
+                        article_content[i] = { ...(item || {}), url };
+                    }
+                }
+            }
+
+            // Append any remaining uploaded files
+            while (fileIdx < uploadedFiles.length) {
+                const f = uploadedFiles[fileIdx++];
+                const extMatch = (f.originalname || '').match(/\.[^.]+$/);
+                const ext = extMatch ? extMatch[0] : '';
+                const key = `articles/images/${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
+                await this.articlesService['storageService'].putObject(this.articlesService['storageService'].bucket, key, f.buffer, f.size, { 'Content-Type': f.mimetype });
+                const url = await this.articlesService['storageService'].buildPublicUrl(this.articlesService['storageService'].bucket, key);
+                article_content = article_content || [];
+                article_content.push({ url, article: '' });
+            }
+
+            const dto: CreateArticleDto = { lesson_id, article_content } as any;
+            return this.articlesService.create(dto);
+        } catch (err: any) {
+            // rethrow http exceptions unchanged
+            if (err instanceof HttpException) throw err;
+            // log full error for debugging
+            console.error('POST /articles error:', err?.stack || err?.message || err);
+            throw new HttpException(err?.message || 'Internal server error', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @Post('upload')

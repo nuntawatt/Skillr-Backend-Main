@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, UpdateDateColumn, RelationId } from 'typeorm';
 import { Lesson } from '../../lessons/entities/lesson.entity';
 
 @Entity('articles')
@@ -6,8 +6,11 @@ export class Article {
     @PrimaryGeneratedColumn()
     article_id: number;
 
-    @OneToOne(() => Lesson, (lesson) => lesson.lesson_article, { onDelete: 'CASCADE' })
+    @ManyToOne(() => Lesson, (lesson) => lesson.lesson_articles, { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'lesson_id' })
+    lesson: Lesson;
+
+    @RelationId((article: Article) => article.lesson)
     lesson_id: number;
 
     @Column({ name: 'pdf_article', type: 'bytea', nullable: true })
