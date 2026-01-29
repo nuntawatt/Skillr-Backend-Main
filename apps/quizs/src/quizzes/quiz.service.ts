@@ -56,7 +56,7 @@ export class QuizService {
       where: { lessonId, userId },
     });
 
-    const showAnswer = result?.status === QuizsStatus.COMPLETED;
+    const showAnswer = result?.status === QuizsStatus.COMPLETED || result?.status === QuizsStatus.SKIPPED;
     
     return {
       quizs_id: quiz.quizsId,
@@ -102,7 +102,9 @@ export class QuizService {
     if (!result) {
       result = this.resultRepository.create({ lessonId, userId });
     }
-    result.status = QuizsStatus.SKIPPED;
+    // AC Requirement: ระบบต้องตั้งสถานะ Quiz เป็น “Completed” แม้ผู้เรียนไม่ได้ทำ Quiz
+    result.status = QuizsStatus.COMPLETED;
+    result.isCorrect = false; // Mark as incorrect since it was skipped
     return this.resultRepository.save(result);
   }
 
