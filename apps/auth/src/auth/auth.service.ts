@@ -14,20 +14,22 @@ import { LoginAttemptsService } from './login-attempts.service';
 import { EmailService } from './email.service';
 import { AuthProvider } from '@common/enums';
 
-// Constants
+// เวลาเป็นนาทีสำหรับ OTP และ Reset Token
 const OTP_EXPIRY_MINUTES = 10;
 const RESET_TOKEN_EXPIRY_MINUTES = 15;
+
+// จำนวนรอบของ bcrypt สำหรับ hashing
 const BCRYPT_SALT_ROUNDS = 10;
 
 export interface TokenResponse {
-  accessToken: string;
+  accessToken: string; 
   refreshToken: string;
-  expiresIn: number;
+  expiresIn: number; // in seconds
 }
 
 export interface AuthResponse {
   user: Partial<User>;
-  tokens: TokenResponse;
+  tokens: TokenResponse; 
 }
 
 @Injectable()
@@ -47,14 +49,16 @@ export class AuthService {
 
   // Register a new user
   async register(registerDto: RegisterDto): Promise<AuthResponse> {
-    const existingAccount = await this.usersService.findAuthAccountByProviderAndEmail(
+    // ตรวจสอบว่ามี email ถูกใช้จาก provider ยัง
+    const existingAccount = await this.usersService.findAuthAccountByProviderAndEmail( 
       AuthProvider.LOCAL,
       registerDto.email,
-    );
+    );  
     if (existingAccount) {
-      throw new ConflictException('Email already exists');
+      throw new ConflictException('Email already exists'); // email ถูกใช้แล้ว
     }
 
+    // สร้าง user ใหม่ (ถ้ายังไม่มี) และสร้าง local auth account
     let user = await this.usersService.findByEmail(registerDto.email);
     if (!user) {
       user = await this.usersService.create({
@@ -64,6 +68,7 @@ export class AuthService {
       });
     }
 
+    // สร้าง local auth account
     await this.usersService.createEmailAuthAccount(
       user,
       registerDto.email,
@@ -80,9 +85,9 @@ export class AuthService {
 
   // Login with email and password
   async login(loginDto: LoginDto, userAgent?: string, ipAddress?: string): Promise<AuthResponse> {
-    const invalidMessage = 'Invalid email or password';
+    const invalidMessage = 'Invalid email or password'; 
 
-    const lockStatus = await this.loginAttemptsService.getLockStatus(loginDto.email);
+    const lockStatus = await this.loginAttemptsService.getLockStatus(loginDto.email); // ตรวจสอบว่าบัญชีถูกล็อกหรือไม่
     if (lockStatus.isLocked) {
       throw new UnauthorizedException(
         this.formatLockMessage(lockStatus.remainingMs),
@@ -94,7 +99,7 @@ export class AuthService {
       loginDto.email,
     );
     if (!authAccount?.user) {
-      const nextStatus = await this.loginAttemptsService.recordFailure(loginDto.email);
+      const nextStatus = await this.loginAttemptsService.recordFailure(loginDto.email); // บันทึกความพยายามล้มเหลว
       throw new UnauthorizedException(nextStatus.isLocked
         ? this.formatLockMessage(nextStatus.remainingMs)
         : invalidMessage,
@@ -113,6 +118,7 @@ export class AuthService {
       );
     }
 
+    // check user status
     if ((authAccount.user.status ?? '').toLowerCase() !== 'active') {
       throw new UnauthorizedException('Account is inactive or suspended');
     }
@@ -143,7 +149,7 @@ export class AuthService {
       where: {
         refreshTokenHash,
         revokedAt: IsNull(),
-        expiresAt: MoreThan(new Date()),
+        expiresAt: MoreThan(new Date()), // ตรวจสอบว่า token ยังไม่หมดอายุ
       },
       relations: ['user']
     });
@@ -156,7 +162,7 @@ export class AuthService {
     session.revokedAt = new Date();
     await this.sessionRepository.save(session);
 
-    return this.generateTokens(session.user);
+    return this.generateTokens(session.user); // สร้าง token ใหม่
   }
 
   // Logout from all devices
@@ -324,10 +330,8 @@ export class AuthService {
     const role = String(user.role);
     const normalizedRole = role === 'INSTRUCTOR' ? 'ADMIN' : role;
 
-    const payload = { sub: user.id, email: user.email, role: normalizedRole };
-
-    const accessToken = this.jwtService.sign(payload);
-
+    // Create refresh session first so we can include the session id in the
+    // access token (allows revoking access tokens by checking session state).
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days refresh token expiry
 
@@ -342,6 +346,10 @@ export class AuthService {
     });
 
     await this.sessionRepository.save(session);
+
+    const payload = { sub: user.id, email: user.email, role: normalizedRole, sid: session.id };
+    const accessToken = this.jwtService.sign(payload);
+
     return { accessToken, refreshToken: refreshTokenValue, expiresIn: 15 * 60 };
   }
 

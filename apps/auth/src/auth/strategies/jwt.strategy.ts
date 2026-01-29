@@ -3,6 +3,9 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../../users/users.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, MoreThan, IsNull } from 'typeorm';
+import { Session } from '../../users/entities/session.entity';
 
 export interface JwtPayload {
   sub: string;
@@ -15,6 +18,8 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(
     private readonly configService: ConfigService,
     private readonly usersService: UsersService,
+    @InjectRepository(Session)
+    private readonly sessionRepository: Repository<Session>,
   ) {
     const secret = configService.get<string>('JWT_ACCESS_SECRET');
     if (!secret) {
@@ -32,6 +37,17 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     const user = await this.usersService.findById(payload.sub);
     if (!user) {
       throw new UnauthorizedException('User not found');
+    }
+
+    // If the token includes a session id (sid), ensure the session is active.
+    if ((payload as any).sid) {
+      const sid = (payload as any).sid as string;
+      const session = await this.sessionRepository.findOne({
+        where: { id: sid, revokedAt: IsNull(), expiresAt: MoreThan(new Date()) },
+      });
+      if (!session) {
+        throw new UnauthorizedException('Session is not active');
+      }
     }
 
     const role = String(user.role);
