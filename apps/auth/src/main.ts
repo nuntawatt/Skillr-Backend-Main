@@ -11,7 +11,7 @@ async function bootstrap() {
     logger: ['log', 'error', 'warn'],
   });
 
-  // app.use(cookieParser());
+  app.use(cookieParser());
 
   app.enableCors({
     allowedHeaders: ['http://localhost:3000', 'https://skllracademy.com'],

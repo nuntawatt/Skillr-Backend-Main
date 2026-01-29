@@ -1,6 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
-import { Controller, Post, Get, Body, UseGuards, Req, Res, HttpCode, HttpStatus, BadRequestException, Logger } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards, Req, Res, HttpCode, HttpStatus, BadRequestException, Logger, UnauthorizedException } from '@nestjs/common';
 import { RegisterDto, LoginDto, RefreshTokenDto, ForgotPasswordDto, VerifyOtpDto, ResetPasswordDto } from './dto';
 import { AuthService } from './auth.service';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
@@ -78,7 +78,7 @@ export class AuthController {
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async googleAuth() {
     // Guard handles redirection to Google
-    
+
   }
 
   // Google OAuth - Callback
@@ -160,18 +160,31 @@ export class AuthController {
   }
 
   // Refresh token
+  // @Post('refresh')
+  // @HttpCode(HttpStatus.OK)
+  // @ApiOperation({ summary: 'Refresh access and refresh tokens' })
+  // @ApiBody({ type: RefreshTokenDto })
+  // @ApiResponse({ status: 200, description: 'Tokens refreshed successfully.' })
+  // @ApiResponse({ status: 400, description: 'Bad Request. Refresh token is required.' })
+  // @ApiResponse({ status: 401, description: 'Unauthorized. Invalid or expired refresh token.' })
+  // @ApiResponse({ status: 500, description: 'Internal Server Error.' })
+  // async refreshTokens(@Body() refreshTokenDto: RefreshTokenDto, @Req() req: Request) {
+
+  //   return this.authService.refreshTokens(refreshTokenDto.refreshToken);
+  // }
+
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Refresh access and refresh tokens' })
-  @ApiBody({ type: RefreshTokenDto })
-  @ApiResponse({ status: 200, description: 'Tokens refreshed successfully.' })
-  @ApiResponse({ status: 400, description: 'Bad Request. Refresh token is required.' })
-  @ApiResponse({ status: 401, description: 'Unauthorized. Invalid or expired refresh token.' })
-  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
-  async refreshTokens(@Body() refreshTokenDto: RefreshTokenDto, @Req() req: Request) {
-    
-    return this.authService.refreshTokens(refreshTokenDto.refreshToken);
+  async refreshTokens(@Req() req: Request) {
+    const refreshToken = req.cookies?.refreshToken;
+
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token not found');
+    }
+
+    return this.authService.refreshTokens(refreshToken);
   }
+  
 
   // Forgot password - send OTP
   @Post('forgot-password')
@@ -242,7 +255,7 @@ export class AuthController {
     if (refreshToken) {
       await this.authService.logout(refreshToken);
     }
-    
+
     // res.clearCookie('refreshToken', cookieOptions);
 
     return { message: 'Logged out successfully', };
