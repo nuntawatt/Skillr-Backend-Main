@@ -18,8 +18,8 @@ async function bootstrap() {
     // credentials: true,
     // origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    // allowedHeaders: '*',
-    allowedHeaders: ['http://localhost:3000', 'https://skllracademy.com'],
+    allowedHeaders: '*',
+    // allowedHeaders: ['http://localhost:3000', 'https://skllracademy.com'],
     credentials: true,
   });
 
