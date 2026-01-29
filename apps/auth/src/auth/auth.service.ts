@@ -171,9 +171,9 @@ export class AuthService {
       { userId, revokedAt: IsNull() },
       { revokedAt: new Date() },
     );
-    if (result.affected === 0) {
-      throw new BadRequestException('No active sessions');
-    }
+    // if (result.affected === 0) {
+    //   throw new BadRequestException('No active sessions');
+    // }
   }
 
   // Logout (revoke one refresh token)
@@ -280,6 +280,7 @@ export class AuthService {
   // Reset password with verified token
   async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
     const invalidMessage = 'Invalid or expired reset token';
+
 
     // Find all non-expired, unused tokens
     const tokens = await this.passwordResetTokenRepository.find({

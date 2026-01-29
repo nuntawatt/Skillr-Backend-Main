@@ -28,7 +28,7 @@ export class EmailService {
       ? nodemailer.createTransport({
           host: smtpHost as string,
           port: smtpPort,
-          secure: smtpPort === 465, // true for 465, false for other ports
+          secure: smtpPort === 465,
           auth: {
             user: smtpUser as string,
             pass: smtpPass as string,
@@ -40,7 +40,7 @@ export class EmailService {
   }
 
   async sendOtpEmail(to: string, otp: string): Promise<boolean> {
-    const subject = 'รหัส OTP สำหรับรีเซ็ตรหัสผ่าน - Skillr Academy';
+    const subject = 'รหัส OTP สำหรับรีเซ็ตรหัสผ่าน';
     const html = `
       <!DOCTYPE html>
       <html lang="th">
@@ -48,80 +48,62 @@ export class EmailService {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
-      <body style="margin: 0; padding: 0; background-color: #f5f7fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f5f7fa; padding: 40px 0;">
+      <body style="margin: 0; padding: 0; background-color: #f8f9fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f8f9fa; padding: 40px 20px;">
           <tr>
             <td align="center">
-              <!-- Container -->
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07); overflow: hidden;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
                 
                 <!-- Header -->
                 <tr>
-                  <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
-                    <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
-                      🎓 Skillr Academy
+                  <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 32px; text-align: center;">
+                    <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">
+                      Skillr Academy
                     </h1>
-                    <p style="margin: 8px 0 0 0; color: #e6e9ff; font-size: 14px; font-weight: 500;">
-                      แพลตฟอร์มเรียนรู้ออนไลน์
-                    </p>
                   </td>
                 </tr>
 
                 <!-- Content -->
                 <tr>
-                  <td style="padding: 50px 40px;">
-                    <h2 style="margin: 0 0 16px 0; color: #1a202c; font-size: 24px; font-weight: 700;">
-                      🔐 รีเซ็ตรหัสผ่าน
+                  <td style="padding: 40px 32px;">
+                    <h2 style="margin: 0 0 16px 0; color: #1a1a1a; font-size: 20px; font-weight: 600;">
+                      รีเซ็ตรหัสผ่าน
                     </h2>
-                    <p style="margin: 0 0 30px 0; color: #4a5568; font-size: 16px; line-height: 1.6;">
-                      คุณได้ขอรีเซ็ตรหัสผ่านของบัญชี Skillr Academy กรุณาใช้รหัส OTP ด้านล่างเพื่อดำเนินการต่อ
+                    <p style="margin: 0 0 32px 0; color: #666; font-size: 15px; line-height: 1.5;">
+                      ใช้รหัส OTP ด้านล่างเพื่อรีเซ็ตรหัสผ่าน
                     </p>
 
                     <!-- OTP Box -->
                     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                       <tr>
-                        <td align="center" style="padding: 30px 0;">
-                          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 3px; display: inline-block;">
-                            <div style="background-color: #ffffff; border-radius: 10px; padding: 24px 48px;">
-                              <div style="color: #667eea; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">
-                                รหัส OTP ของคุณ
-                              </div>
-                              <div style="font-size: 42px; font-weight: 800; color: #1a202c; letter-spacing: 8px; font-family: 'Courier New', monospace;">
-                                ${otp}
-                              </div>
+                        <td align="center" style="padding: 0 0 32px 0;">
+                          <div style="background: #f8f9fa; border: 2px dashed #667eea; border-radius: 8px; padding: 24px; display: inline-block;">
+                            <div style="font-size: 36px; font-weight: 700; color: #667eea; letter-spacing: 8px; font-family: 'Courier New', monospace;">
+                              ${otp}
                             </div>
                           </div>
                         </td>
                       </tr>
                     </table>
 
-                    <!-- Warning Box -->
-                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-top: 30px;">
-                      <tr>
-                        <td style="background-color: #fff5f5; border-left: 4px solid #fc8181; padding: 16px 20px; border-radius: 8px;">
-                          <p style="margin: 0; color: #742a2a; font-size: 14px; line-height: 1.6;">
-                            ⏱️ <strong>รหัสนี้จะหมดอายุภายใน 10 นาที</strong><br>
-                            <span style="color: #c53030;">กรุณาอย่าแชร์รหัสนี้กับผู้อื่น</span>
-                          </p>
-                        </td>
-                      </tr>
-                    </table>
+                    <!-- Warning -->
+                    <div style="background-color: #fff3cd; border-left: 3px solid #ffc107; padding: 12px 16px; border-radius: 4px; margin-bottom: 24px;">
+                      <p style="margin: 0; color: #856404; font-size: 14px;">
+                        รหัสนี้จะหมดอายุใน <strong>10 นาที</strong>
+                      </p>
+                    </div>
 
-                    <!-- Info Text -->
-                    <p style="margin: 30px 0 0 0; color: #718096; font-size: 14px; line-height: 1.6;">
-                      หากคุณไม่ได้ขอรีเซ็ตรหัสผ่าน กรุณาเพิกเฉยต่ออีเมลนี้ หรือติดต่อทีมสนับสนุนของเราทันที
+                    <p style="margin: 0; color: #999; font-size: 13px; line-height: 1.5;">
+                      หากคุณไม่ได้ขอรีเซ็ตรหัสผ่าน กรุณาเพิกเฉยอีเมลนี้
                     </p>
                   </td>
                 </tr>
 
                 <!-- Footer -->
                 <tr>
-                  <td style="background-color: #f7fafc; padding: 30px 40px; border-top: 1px solid #e2e8f0;">
-                    <p style="margin: 0 0 12px 0; color: #718096; font-size: 13px; line-height: 1.6; text-align: center;">
-                      ขอบคุณที่ใช้บริการ <strong style="color: #667eea;">Skillr Academy</strong>
-                    </p>
-                    <p style="margin: 0; color: #a0aec0; font-size: 12px; text-align: center;">
-                      © ${new Date().getFullYear()} Skillr Academy. All rights reserved.
+                  <td style="background-color: #f8f9fa; padding: 24px; text-align: center; border-top: 1px solid #e9ecef;">
+                    <p style="margin: 0; color: #999; font-size: 12px;">
+                      © ${new Date().getFullYear()} Skillr Academy
                     </p>
                   </td>
                 </tr>
@@ -138,7 +120,7 @@ export class EmailService {
   }
 
   async sendPasswordChangedEmail(to: string): Promise<boolean> {
-    const subject = 'รหัสผ่านของคุณถูกเปลี่ยนแล้ว - Skillr Academy';
+    const subject = 'รหัสผ่านถูกเปลี่ยนเรียบร้อย';
     const html = `
       <!DOCTYPE html>
       <html lang="th">
@@ -146,97 +128,50 @@ export class EmailService {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
-      <body style="margin: 0; padding: 0; background-color: #f5f7fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f5f7fa; padding: 40px 0;">
+      <body style="margin: 0; padding: 0; background-color: #f8f9fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f8f9fa; padding: 40px 20px;">
           <tr>
             <td align="center">
-              <!-- Container -->
-              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07); overflow: hidden;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
                 
                 <!-- Header -->
                 <tr>
-                  <td style="background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); padding: 40px 30px; text-align: center;">
-                    <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
-                      🎓 Skillr Academy
+                  <td style="background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); padding: 32px; text-align: center;">
+                    <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">
+                      Skillr Academy
                     </h1>
-                    <p style="margin: 8px 0 0 0; color: #e6ffed; font-size: 14px; font-weight: 500;">
-                      แพลตฟอร์มเรียนรู้ออนไลน์
-                    </p>
                   </td>
                 </tr>
 
                 <!-- Content -->
                 <tr>
-                  <td style="padding: 50px 40px;">
+                  <td style="padding: 48px 32px; text-align: center;">
+                    
                     <!-- Success Icon -->
-                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                      <tr>
-                        <td align="center" style="padding-bottom: 30px;">
-                          <div style="background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); width: 80px; height: 80px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 8px 16px rgba(72, 187, 120, 0.3);">
-                            <span style="font-size: 48px; line-height: 1;">✓</span>
-                          </div>
-                        </td>
-                      </tr>
-                    </table>
+                    <div style="width: 64px; height: 64px; background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); border-radius: 50%; margin: 0 auto 24px auto; display: flex; align-items: center; justify-content: center;">
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                        <tr>
+                          <td style="font-size: 36px; line-height: 64px; color: #ffffff;">✓</td>
+                        </tr>
+                      </table>
+                    </div>
 
-                    <h2 style="margin: 0 0 16px 0; color: #1a202c; font-size: 24px; font-weight: 700; text-align: center;">
-                      รหัสผ่านถูกเปลี่ยนสำเร็จ
+                    <h2 style="margin: 0 0 12px 0; color: #1a1a1a; font-size: 22px; font-weight: 600;">
+                      เปลี่ยนรหัสผ่านสำเร็จ
                     </h2>
                     
-                    <p style="margin: 0 0 30px 0; color: #4a5568; font-size: 16px; line-height: 1.6; text-align: center;">
-                      รหัสผ่านของคุณถูกเปลี่ยนเรียบร้อยแล้ว คุณสามารถเข้าสู่ระบบด้วยรหัสผ่านใหม่ได้ทันที
+                    <p style="margin: 0; color: #666; font-size: 15px; line-height: 1.5;">
+                      คุณสามารถเข้าสู่ระบบด้วยรหัสผ่านใหม่ได้แล้ว
                     </p>
 
-                    <!-- Info Box -->
-                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-top: 30px;">
-                      <tr>
-                        <td style="background-color: #f0fff4; border-left: 4px solid #48bb78; padding: 20px; border-radius: 8px;">
-                          <p style="margin: 0 0 12px 0; color: #22543d; font-size: 15px; font-weight: 600;">
-                            🛡️ ความปลอดภัยของบัญชี
-                          </p>
-                          <p style="margin: 0; color: #276749; font-size: 14px; line-height: 1.6;">
-                            เราแนะนำให้คุณ:<br>
-                            • ใช้รหัสผ่านที่แข็งแกร่งและไม่ซ้ำกับเว็บไซต์อื่น<br>
-                            • เปิดใช้งานการยืนยันตัวตนสองขั้นตอน (2FA) หากมี<br>
-                            • ตรวจสอบกิจกรรมบัญชีของคุณเป็นประจำ
-                          </p>
-                        </td>
-                      </tr>
-                    </table>
-
-                    <!-- Warning Box -->
-                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-top: 24px;">
-                      <tr>
-                        <td style="background-color: #fffaf0; border-left: 4px solid #ed8936; padding: 16px 20px; border-radius: 8px;">
-                          <p style="margin: 0; color: #7c2d12; font-size: 14px; line-height: 1.6;">
-                            ⚠️ <strong>ไม่ได้เป็นคุณที่ทำการเปลี่ยน?</strong><br>
-                            <span style="color: #c05621;">หากคุณไม่ได้ทำการเปลี่ยนรหัสผ่าน กรุณาติดต่อทีมสนับสนุนของเราทันที เพื่อรักษาความปลอดภัยของบัญชี</span>
-                          </p>
-                        </td>
-                      </tr>
-                    </table>
-
-                    <!-- CTA Button -->
-                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-top: 40px;">
-                      <tr>
-                        <td align="center">
-                          <a href="#" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);">
-                            เข้าสู่ระบบ Skillr Academy
-                          </a>
-                        </td>
-                      </tr>
-                    </table>
                   </td>
                 </tr>
 
                 <!-- Footer -->
                 <tr>
-                  <td style="background-color: #f7fafc; padding: 30px 40px; border-top: 1px solid #e2e8f0;">
-                    <p style="margin: 0 0 12px 0; color: #718096; font-size: 13px; line-height: 1.6; text-align: center;">
-                      ต้องการความช่วยเหลือ? ติดต่อเราได้ที่ <a href="mailto:support@skillracademy.com" style="color: #667eea; text-decoration: none;">support@skillracademy.com</a>
-                    </p>
-                    <p style="margin: 0; color: #a0aec0; font-size: 12px; text-align: center;">
-                      © ${new Date().getFullYear()} Skillr Academy. All rights reserved.
+                  <td style="background-color: #f8f9fa; padding: 24px; text-align: center; border-top: 1px solid #e9ecef;">
+                    <p style="margin: 0; color: #999; font-size: 12px;">
+                      © ${new Date().getFullYear()} Skillr Academy
                     </p>
                   </td>
                 </tr>
@@ -253,7 +188,6 @@ export class EmailService {
   }
 
   private async sendEmail(to: string, subject: string, html: string, text: string): Promise<boolean> {
-    // Priority: SMTP if configured -> Resend -> Preview
     if (this.smtpConfigured && this.transporter) {
       try {
         const info = await this.transporter.sendMail({
@@ -267,7 +201,6 @@ export class EmailService {
         return true;
       } catch (err) {
         this.logger.error(`SMTP send failed to ${to}: ${(err as Error).message}`);
-        // fallthrough to try Resend if available
       }
     }
 
@@ -291,7 +224,6 @@ export class EmailService {
       }
     }
 
-    // Preview mode
     this.logger.log(`[Preview Mode] Email to: ${to}`);
     this.logger.log(`[Preview Mode] Subject: ${subject}`);
     this.logger.log(`[Preview Mode] Text: ${text}`);

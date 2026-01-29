@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, UseGuards, HttpCode, HttpStatus, BadRequestException, Logger } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards, HttpCode, HttpStatus, BadRequestException, Logger, Res } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBody, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 
@@ -13,7 +13,7 @@ import { CurrentUser } from './decorators/current-user.decorator';
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly authService: AuthService) { }
 
   // ===================== Register =====================
   @Post('register')
@@ -51,9 +51,15 @@ export class AuthController {
   // ===================== Google OAuth Callback =====================
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
-  async googleCallback(@CurrentUser() user: any) {
-    // login ด้วย Google แล้วคืน JWT ตามปกติ
-    return this.authService.googleLogin(user);
+  async googleCallback(@CurrentUser() user: any, @Res() res: any) {
+    const result = await this.authService.googleLogin(user);
+
+    const redirectUrl =
+      `${process.env.FRONTEND_URL}/student/course` +
+      `?accessToken=${result.tokens.accessToken}` +
+      `&refreshToken=${result.tokens.refreshToken}`;
+
+    return res.redirect(redirectUrl);
   }
 
   // ===================== Refresh Token =====================
@@ -113,7 +119,7 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Bad Request.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
 
-  @Throttle({ short: { ttl: 60, limit: 2 } }) 
+  @Throttle({ short: { ttl: 60, limit: 2 } })
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto.email);
   }
