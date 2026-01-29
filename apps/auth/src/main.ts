@@ -14,13 +14,13 @@ async function bootstrap() {
   // app.use(cookieParser());
 
   app.enableCors({
-    origin: [process.env.FRONTEND_URL, 'http://localhost:3000', 'https://skllracademy.com'],
+    // origin: [process.env.FRONTEND_URL, 'http://localhost:3000', 'https://skllracademy.com'],
     // credentials: true,
-    // origin: '*',
+    origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: '*',
     // allowedHeaders: ['http://localhost:3000', 'https://skllracademy.com'],
-    credentials: true,
+    credentials: false,
   });
 
   app.useGlobalPipes(
