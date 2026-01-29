@@ -169,8 +169,7 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Unauthorized. Invalid or expired refresh token.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async refreshTokens(@Body() refreshTokenDto: RefreshTokenDto, @Req() req: Request) {
-    // อ่านคุกกี้จากคำขอ
-  
+    
     return this.authService.refreshTokens(refreshTokenDto.refreshToken);
   }
 
