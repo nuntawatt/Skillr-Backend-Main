@@ -1,4 +1,3 @@
-export * from './quiz.entity';
-export * from './question.entity';
-export * from './quiz-attempt.entity';
-export * from '../../../../learning/src/learning-progess/entities/lesson-progress.entity';
+export * from './quizs.entity';
+export * from './checkpoint.entity';
+export * from './quizs-result.entity';
