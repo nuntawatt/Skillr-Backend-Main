@@ -78,6 +78,7 @@ export class AuthController {
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async googleAuth() {
     // Guard handles redirection to Google
+    
   }
 
   // Google OAuth - Callback
