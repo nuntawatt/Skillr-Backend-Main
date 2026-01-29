@@ -15,7 +15,7 @@ async function bootstrap() {
 
   app.enableCors({
     allowedHeaders: ['http://localhost:3000', 'https://skllracademy.com'],
-    
+
     origin: [process.env.FRONTEND_URL, 'http://localhost:3000', 'https://skllracademy.com'],
     credentials: true,
     // origin: '*',
@@ -35,8 +35,15 @@ async function bootstrap() {
     .setTitle('Skillr Auth Service API')
     .setDescription('API documentation for the Auth Service')
     .setVersion('1.0.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+      },
+      'access-token',
+    )
     .addServer('/api')
-    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

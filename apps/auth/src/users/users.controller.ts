@@ -15,7 +15,7 @@ type AuthedRequest = ExpressRequest & { user: { id: string } };
 
 @ApiTags('Users')
 @Controller('users')
-@ApiBearerAuth()
+@ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) { }

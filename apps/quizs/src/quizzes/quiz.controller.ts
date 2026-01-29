@@ -1,19 +1,5 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  UseGuards,
-} from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiBearerAuth,
-  ApiBody,
-} from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { QuizService } from './quiz.service';
 import { CreateQuizsDto, CreateCheckpointDto } from './dto/create-quizs.dto';
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
@@ -23,7 +9,7 @@ import { UserRole } from '@common/enums';
 @ApiBearerAuth()
 @Controller('admin/quizzes')
 export class QuizAdminController {
-  constructor(private readonly quizService: QuizService) {}
+  constructor(private readonly quizService: QuizService) { }
 
   @Post()
   @ApiOperation({ summary: 'Create a new quiz (1 Lesson = 1 Question)' })
@@ -96,7 +82,7 @@ export class QuizAdminController {
 @ApiBearerAuth()
 @Controller('quizzes')
 export class QuizController {
-  constructor(private readonly quizService: QuizService) {}
+  constructor(private readonly quizService: QuizService) { }
 
   @Get()
   @ApiOperation({ summary: 'Get all quizzes' })

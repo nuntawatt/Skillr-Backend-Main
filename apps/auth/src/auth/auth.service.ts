@@ -14,7 +14,7 @@ import { LoginAttemptsService } from './login-attempts.service';
 import { EmailService } from './email.service';
 import { AuthProvider } from '@common/enums';
 
-// Constants for OTP/Token configuration
+// Constants
 const OTP_EXPIRY_MINUTES = 10;
 const RESET_TOKEN_EXPIRY_MINUTES = 15;
 const BCRYPT_SALT_ROUNDS = 10;
@@ -123,7 +123,7 @@ export class AuthService {
     return { user: this.sanitizeUser(authAccount.user), tokens };
   }
 
-  // Login - Register with Google OAuth
+  // Google OAuth login
   async googleLogin(profile: { googleId: string; email: string; firstName?: string; lastName?: string; avatar?: string; }): Promise<AuthResponse> {
     const user = await this.usersService.findOrCreateFromGoogle(profile);
 
@@ -152,20 +152,25 @@ export class AuthService {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
+    // revoke the old session (rotate)
     session.revokedAt = new Date();
     await this.sessionRepository.save(session);
+
     return this.generateTokens(session.user);
   }
 
   // Logout from all devices
   async logoutAll(userId: string): Promise<void> {
-    await this.sessionRepository.update(
+    const result = await this.sessionRepository.update(
       { userId, revokedAt: IsNull() },
       { revokedAt: new Date() },
     );
+    if (result.affected === 0) {
+      throw new BadRequestException('No active sessions');
+    }
   }
 
-  // Logout
+  // Logout (revoke one refresh token)
   async logout(refreshTokenValue: string): Promise<void> {
     const refreshTokenHash = this.hashRefreshToken(refreshTokenValue);
     await this.sessionRepository.update(
@@ -173,7 +178,6 @@ export class AuthService {
       { revokedAt: new Date() },
     );
   }
-
 
   // Forgot password - send OTP (hashed before storage)
   async forgotPassword(email: string): Promise<{ message: string }> {
@@ -343,7 +347,17 @@ export class AuthService {
 
   // Remove sensitive fields user object
   private sanitizeUser(user: User): Partial<User> {
-    return { ...user };
+    // แก้ให้ส่งเฉพาะ field ที่ปลอดภัย (ไม่ส่ง password, tokens, internal flags)
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      status: user.status,
+      avatar: user.avatar,
+      createdAt: user.createdAt,
+    };
   }
 
   private hashRefreshToken(token: string): string {
