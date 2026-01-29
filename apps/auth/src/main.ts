@@ -10,16 +10,17 @@ async function bootstrap() {
     logger: ['log', 'error', 'warn'],
   });
 
-  app.use(cookieParser());
+  // app.use(cookieParser());
 
   app.enableCors({
     // origin: [process.env.FRONTEND_URL, 'http://localhost:3000', 'https://skllracademy.com'],
     // credentials: true,
-    origin: '*',
+    origin: [process.env.FRONTEND_URL, 'http://localhost:3000', 'https://skllracademy.com'],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: '*',
-    credentials: false,
+    credentials: true,
   });
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
