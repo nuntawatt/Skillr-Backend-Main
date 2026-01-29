@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { AuthAppModule } from './auth-app.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { all } from 'axios';
 
 async function bootstrap() {
   const logger = new Logger('AuthBootstrap');
@@ -13,12 +14,13 @@ async function bootstrap() {
   // app.use(cookieParser());
 
   app.enableCors({
-    // origin: [process.env.FRONTEND_URL, 'http://localhost:3000', 'https://skllracademy.com'],
+    origin: [process.env.FRONTEND_URL, 'http://localhost:3000', 'https://skllracademy.com'],
     // credentials: true,
-    origin: '*',
+    // origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    allowedHeaders: '*',
-    credentials: false,
+    // allowedHeaders: '*',
+    allowedHeaders: ['http://localhost:3000', 'https://skllracademy.com'],
+    credentials: true,
   });
 
   app.useGlobalPipes(
