@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, HttpCode, HttpStatus, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiQuery, ApiNoContentResponse, ApiResponse } from '@nestjs/swagger';
 import { LevelsService } from './levels.service';
 import { CreateLevelDto, UpdateLevelDto, LevelResponseDto } from './dto';
@@ -17,14 +17,22 @@ export class LevelsController {
         return this.levelsService.create(dto);
     }
 
-    @Get()
-    @ApiOperation({ summary: 'Get all levels' })
-    @ApiOkResponse({ type: LevelResponseDto, isArray: true })
-    @ApiResponse({ status: 500, description: 'Internal server error' })
-    findAll(): Promise<LevelResponseDto[]> {
-        return this.levelsService.findAll();
-    }
+    // @Get()
+    // @ApiOperation({ summary: 'Get all levels' })
+    // @ApiOkResponse({ type: LevelResponseDto, isArray: true })
+    // @ApiResponse({ status: 500, description: 'Internal server error' })
+    // findAll(): Promise<LevelResponseDto[]> {
+    //     return this.levelsService.findAll();
+    // }
 
+    @Get()
+@ApiOperation({ summary: 'Get all levels for a course' })
+@ApiQuery({ name: 'course_id', required: true, type: Number })
+findByCourse(
+  @Query('course_id', ParseIntPipe) course_id: number,
+): Promise<LevelResponseDto[]> {
+  return this.levelsService.findByCourse(course_id);
+}
 
     @Get(':id')
     @ApiOperation({ summary: 'Get a level by ID' })

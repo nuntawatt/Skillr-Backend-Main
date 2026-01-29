@@ -81,18 +81,21 @@ export class MediaImagesService {
 
     const storage = this.storageFactory.image();
     const bucket = storage.bucket;
-
     const expires = Number(process.env.PRESIGN_EXPIRES_SECONDS ?? 3600);
 
-    // call storage presign method (storage implementation must provide)
-    let url: string;
-    if (typeof (storage as any).presignGet === 'function') {
-      url = await (storage as any).presignGet(bucket, asset.storageKey, expires);
-    } else if (typeof (storage as any).presignedGetObject === 'function') {
-      url = await (storage as any).presignedGetObject(bucket, asset.storageKey, expires);
-    } else {
-      throw new Error('presign GET not supported by storage implementation');
-    }
+    // สร้าง response headers เพื่อให้ browser แสดง inline แทนดาวน์โหลด
+    const responseHeaders = {
+      // S3/MinIO รับ parameter ชื่อแบบนี้ (จะถูก encode เป็น query params)
+      'response-content-type': asset.mimeType,
+      'response-content-disposition': 'inline',
+    };
+
+    const url = await storage.presignedGetObject(
+      bucket,
+      asset.storageKey,
+      expires,
+      responseHeaders
+    );
 
     return {
       presignedUrl: url,

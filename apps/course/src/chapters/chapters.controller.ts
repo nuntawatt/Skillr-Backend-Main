@@ -16,11 +16,11 @@ export class ChaptersController {
     }
 
     @Get()
-    @ApiOperation({ summary: 'Get all chapters with optional filters' })
+    @ApiOperation({ summary: 'Get all chapters for a level' })
+    @ApiQuery({ name: 'level_id', type: Number, required: true, description: 'ID of the level to fetch chapters for' })
     @ApiOkResponse({ type: ChapterResponseDto, isArray: true })
-    @ApiResponse({ status: 500, description: 'Internal server error' })
-    findAll(): Promise<ChapterResponseDto[]> {
-        return this.chaptersService.findAll();
+    findByLevel(@Query('level_id', ParseIntPipe) levelId: number): Promise<ChapterResponseDto[]> {
+        return this.chaptersService.findByLevel(levelId);
     }
 
     @Get(':id')

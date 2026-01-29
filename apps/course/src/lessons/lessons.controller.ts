@@ -29,12 +29,22 @@ export class LessonsController {
     return this.lessonsService.createArticleLesson(lessonData, content);
   }
 
+  // @Get()
+  // @ApiOperation({ summary: 'Get all lessons with optional filters' })
+  // @ApiOkResponse({ type: LessonResponseDto, isArray: true })
+  // @ApiResponse({ status: 500, description: 'Internal server error' })
+  // findAll(): Promise<LessonResponseDto[]> {
+  //   return this.lessonsService.findAll();
+  // }
+
   @Get()
-  @ApiOperation({ summary: 'Get all lessons with optional filters' })
+  @ApiOperation({ summary: 'Get all lessons for a chapter' })
+  @ApiQuery({ name: 'chapterId', required: true, type: Number })
   @ApiOkResponse({ type: LessonResponseDto, isArray: true })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  findAll(): Promise<LessonResponseDto[]> {
-    return this.lessonsService.findAll();
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
+  findByChapter(@Query('chapterId', ParseIntPipe) chapterId: number): Promise<LessonResponseDto[]> {
+    return this.lessonsService.findByChapter(chapterId);
   }
 
   @Get(':id')
