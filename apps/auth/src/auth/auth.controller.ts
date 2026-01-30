@@ -52,14 +52,14 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
   async googleCallback(@CurrentUser() user: any, @Res() res: any) {
-    const result = await this.authService.googleLogin(user);
+    // const result = await this.authService.googleLogin(user);
 
-    const redirectUrl =
-      `${process.env.FRONTEND_URL}/student/course` +
-      `?accessToken=${result.tokens.accessToken}` +
-      `&refreshToken=${result.tokens.refreshToken}`;
+    // const redirectUrl =
+    //   `${process.env.FRONTEND_URL}/student/course` +
+    //   `?accessToken=${result.tokens.accessToken}` +
+    //   `&refreshToken=${result.tokens.refreshToken}`;
 
-    return res.redirect(redirectUrl);
+    // return res.redirect(redirectUrl);
   }
 
   // ===================== Refresh Token =====================
