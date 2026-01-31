@@ -22,14 +22,14 @@ const RESET_TOKEN_EXPIRY_MINUTES = 15;
 const BCRYPT_SALT_ROUNDS = 10;
 
 export interface TokenResponse {
-  accessToken: string; 
+  accessToken: string;
   refreshToken: string;
   expiresIn: number; // in seconds
 }
 
 export interface AuthResponse {
   user: Partial<User>;
-  tokens: TokenResponse; 
+  tokens: TokenResponse;
 }
 
 @Injectable()
@@ -50,10 +50,10 @@ export class AuthService {
   // Register a new user
   async register(registerDto: RegisterDto): Promise<AuthResponse> {
     // ตรวจสอบว่ามี email ถูกใช้จาก provider ยัง
-    const existingAccount = await this.usersService.findAuthAccountByProviderAndEmail( 
+    const existingAccount = await this.usersService.findAuthAccountByProviderAndEmail(
       AuthProvider.LOCAL,
       registerDto.email,
-    );  
+    );
     if (existingAccount) {
       throw new ConflictException('Email already exists'); // email ถูกใช้แล้ว
     }
@@ -85,7 +85,7 @@ export class AuthService {
 
   // Login with email and password
   async login(loginDto: LoginDto, userAgent?: string, ipAddress?: string): Promise<AuthResponse> {
-    const invalidMessage = 'Invalid email or password'; 
+    const invalidMessage = 'Invalid email or password';
 
     const lockStatus = await this.loginAttemptsService.getLockStatus(loginDto.email); // ตรวจสอบว่าบัญชีถูกล็อกหรือไม่
     if (lockStatus.isLocked) {
@@ -130,16 +130,23 @@ export class AuthService {
   }
 
   // Google OAuth login
-  async googleLogin(profile: { googleId: string; email: string; firstName?: string; lastName?: string; avatar?: string; }): Promise<AuthResponse> {
+  async googleLogin(profile: {
+    googleId: string;
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    avatar?: string;
+  }) {
     const user = await this.usersService.findOrCreateFromGoogle(profile);
 
-    if ((user.status ?? '').toLowerCase() !== 'active') {
-      throw new UnauthorizedException('Account is inactive or suspended');
+    if (user.status !== 'active') {
+      throw new UnauthorizedException();
     }
 
-    const tokens = await this.generateTokens(user);
+    // token สร้าง แต่ไม่ส่งออก
+    await this.generateTokens(user);
 
-    return { user: this.sanitizeUser(user), tokens };
+    return;
   }
 
   // Refresh access token using refresh token

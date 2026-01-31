@@ -44,6 +44,11 @@ export class AuthController {
   // ===================== Google OAuth Redirect =====================
   @Get('google')
   @UseGuards(GoogleAuthGuard)
+  @ApiOperation({
+    summary: 'Login with Google (OAuth 2.0)',
+    description: `เปลี่ยนเส้นทางผู้ใช้ไปที่ Google เพื่อทำการยืนยันตัวตน จุดเชื่อมต่อนี้จะไม่ส่งคืน Token ใด ๆ โดยตรง แต่จะเปลี่ยนเส้นทางผู้ใช้ไปที่หน้าการยืนยันตัวตนของ Google`
+  })
+  @ApiResponse({ status: 302, description: 'Redirect to Google OAuth consent screen' })
   async googleAuth() {
     // Guard จะจัดการ redirect ไป Google
   }
@@ -51,15 +56,14 @@ export class AuthController {
   // ===================== Google OAuth Callback =====================
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
-  async googleCallback(@CurrentUser() user: any, @Res() res: any) {
-    // const result = await this.authService.googleLogin(user);
+  @ApiOperation({ summary: 'Google OAuth callback' })
+  @ApiResponse({ status: 302, description: 'Redirect to frontend after successful authentication' })
+  @ApiResponse({ status: 400, description: 'Bad Request.' })
+  async googleCallback(@CurrentUser() googleProfile: any, @Res() res: any,) {
+    await this.authService.googleLogin(googleProfile);
 
-    // const redirectUrl =
-    //   `${process.env.FRONTEND_URL}/student/course` +
-    //   `?accessToken=${result.tokens.accessToken}` +
-    //   `&refreshToken=${result.tokens.refreshToken}`;
-
-    // return res.redirect(redirectUrl);
+    // redirect เฉย ๆ ไม่มี token
+    return res.redirect(process.env.FRONTEND_URL);
   }
 
   // ===================== Refresh Token =====================
