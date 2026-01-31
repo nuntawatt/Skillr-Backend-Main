@@ -43,7 +43,8 @@ async function bootstrap() {
       },
       'access-token',
     )
-    .addServer('/api')
+    .addServer('https://skllracademy.com/api')
+    .addServer('157.85.98.100:3001/api')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

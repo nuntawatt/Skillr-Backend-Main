@@ -29,15 +29,13 @@ async function bootstrap() {
     .setTitle('Skllr Media Service API')
     .setDescription('API documentation for the Media Service')
     .setVersion('1.0.0')
-    .addServer('/api')
+    .addServer('https://skllracademy.com/api')
+    .addServer('157.85.98.100:3004/api')
     .addBearerAuth() 
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs/media', app, document);
-
-  // app.enableCors({ origin: true, credentials: true });
-  // const allowedOrigins = ['https://skllracademy.com', 'http://157.85.98.100:3004','http://localhost:3000'].filter(Boolean);
 
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   

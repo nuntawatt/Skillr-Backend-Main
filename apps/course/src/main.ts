@@ -33,7 +33,8 @@ async function bootstrap() {
     .setTitle('Skillr Course Service API')
     .setDescription('API documentation for the Course Service')
     .setVersion('1.0.0')
-    .addServer('/api')
+    .addServer('https://skllracademy.com/api')
+    .addServer('157.85.98.100:3002/api')
     .addBearerAuth()
     .build();
 

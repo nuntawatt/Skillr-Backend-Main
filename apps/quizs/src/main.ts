@@ -9,11 +9,19 @@ async function bootstrap() {
     logger: ['log', 'error', 'warn'],
   });
 
+  app.enableCors({
+    origin: '*', // Allows all origins
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS', // Allows all common methods
+    allowedHeaders: '*', // Allows all headers
+    credentials: false, // If you need to support credentials
+  });
+
   const config = new DocumentBuilder()
     .setTitle('Skillr Quiz Service API')
     .setDescription('API documentation for Quiz Service')
     .setVersion('1.0.0')
-    .addServer('/api')
+    .addServer('https://skllracademy.com/api')
+    .addServer('157.85.98.100:3003/api')
     .addBearerAuth()
     .build();
 
@@ -27,22 +35,15 @@ async function bootstrap() {
       transform: true,
     }),
   );
-  
-  app.enableCors({
-    origin: '*', // Allows all origins
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS', // Allows all common methods
-    allowedHeaders: '*', // Allows all headers
-    credentials: false, // If you need to support credentials
-  });
-  
+
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
   app.setGlobalPrefix('api');
 
   const port = Number(process.env.PORT ?? 3003);
   await app.listen(port);
-  
-  
+
+
   logger.log(`quizs service listening on http://localhost:${port}/api`);
   logger.log(`Swagger docs available at http://localhost:${port}/docs/quizs`);
 }
