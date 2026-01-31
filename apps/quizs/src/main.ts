@@ -21,7 +21,7 @@ async function bootstrap() {
     .setDescription('API documentation for Quiz Service')
     .setVersion('1.0.0')
     .addServer('https://skllracademy.com/api')
-    .addServer('157.85.98.100:3003/api')
+    .addServer('/api')
     .addBearerAuth()
     .build();
 
