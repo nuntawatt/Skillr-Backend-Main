@@ -36,7 +36,7 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs/auth', app, document);
+  SwaggerModule.setup('docs', app, document);
 
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
   app.setGlobalPrefix('api');
@@ -45,7 +45,7 @@ async function bootstrap() {
   await app.listen(port);
 
   logger.log(`Auth service listening on http://localhost:${port}/api`);
-  logger.log(`Swagger docs available at http://localhost:${port}/docs/auth`);
+  logger.log(`Swagger docs available at http://localhost:${port}/docs`);
 }
 
 void bootstrap();

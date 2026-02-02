@@ -26,7 +26,7 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs/quizs', app, document);
+  SwaggerModule.setup('docs', app, document);
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -43,9 +43,8 @@ async function bootstrap() {
   const port = Number(process.env.PORT ?? 3003);
   await app.listen(port);
 
-
   logger.log(`quizs service listening on http://localhost:${port}/api`);
-  logger.log(`Swagger docs available at http://localhost:${port}/docs/quizs`);
+  logger.log(`Swagger docs available at http://localhost:${port}/docs`);
 }
 
 void bootstrap();

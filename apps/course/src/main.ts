@@ -40,7 +40,7 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs/course', app, document);
+  SwaggerModule.setup('docs', app, document);
 
 
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
@@ -54,6 +54,6 @@ async function bootstrap() {
 
 
   logger.log(`Course service listening on http://localhost:${port}/api`);
-  logger.log(`Swagger docs available at http://localhost:${port}/docs/course`);
+  logger.log(`Swagger docs available at http://localhost:${port}/docs`);
 }
 void bootstrap();
