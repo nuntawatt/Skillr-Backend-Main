@@ -27,8 +27,7 @@ import { Chapter } from './chapters/entities/chapter.entity';
 import { Lesson } from './lessons/entities/lesson.entity';
 import { Article } from './articles/entities/article.entity';
 
-const isTest =
-  process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
+const isTest = process.env.NODE_ENV;
 
 @Module({
   imports: [
@@ -51,10 +50,10 @@ const isTest =
           Level,
           Chapter,
           Lesson,
-          Article,
+          Article
         ]),
 
-        AuthLibModule,
+        AuthLibModule
       ]),
   ],
 
@@ -63,7 +62,7 @@ const isTest =
     LevelsController,
     ChaptersController,
     LessonsController,
-    ArticlesController,
+    ArticlesController
   ],
 
   providers: [
@@ -72,7 +71,7 @@ const isTest =
     ChaptersService,
     LessonsService,
     ArticlesService,
-    StorageService,
+    StorageService
   ],
 })
 export class AppModule { }

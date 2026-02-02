@@ -26,13 +26,11 @@ export class LevelsController {
     // }
 
     @Get()
-@ApiOperation({ summary: 'Get all levels for a course' })
-@ApiQuery({ name: 'course_id', required: true, type: Number })
-findByCourse(
-  @Query('course_id', ParseIntPipe) course_id: number,
-): Promise<LevelResponseDto[]> {
-  return this.levelsService.findByCourse(course_id);
-}
+    @ApiOperation({ summary: 'Get all levels for a course' })
+    @ApiQuery({ name: 'course_id', required: true, type: Number })
+    findByCourse(@Query('course_id', ParseIntPipe) course_id: number,): Promise<LevelResponseDto[]> {
+        return this.levelsService.findByCourse(course_id);
+    }
 
     @Get(':id')
     @ApiOperation({ summary: 'Get a level by ID' })

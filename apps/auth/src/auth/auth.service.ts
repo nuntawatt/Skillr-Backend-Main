@@ -87,7 +87,7 @@ export class AuthService {
   async login(loginDto: LoginDto, userAgent?: string, ipAddress?: string): Promise<AuthResponse> {
     const invalidMessage = 'Invalid email or password';
 
-    const lockStatus = await this.loginAttemptsService.getLockStatus(loginDto.email); // ตรวจสอบว่าบัญชีถูกล็อกหรือไม่
+    const lockStatus = await this.loginAttemptsService.getLockStatus(loginDto.email); // check if account is locked
     if (lockStatus.isLocked) {
       throw new UnauthorizedException(
         this.formatLockMessage(lockStatus.remainingMs),
@@ -99,7 +99,7 @@ export class AuthService {
       loginDto.email,
     );
     if (!authAccount?.user) {
-      const nextStatus = await this.loginAttemptsService.recordFailure(loginDto.email); // บันทึกความพยายามล้มเหลว
+      const nextStatus = await this.loginAttemptsService.recordFailure(loginDto.email); // login failed
       throw new UnauthorizedException(nextStatus.isLocked
         ? this.formatLockMessage(nextStatus.remainingMs)
         : invalidMessage,
@@ -136,17 +136,24 @@ export class AuthService {
     firstName?: string;
     lastName?: string;
     avatar?: string;
-  }) {
+  }) : Promise<AuthResponse> {
+    // ค้นหาหรือสร้าง user จากข้อมูล profile ที่ได้จาก Google
     const user = await this.usersService.findOrCreateFromGoogle(profile);
 
-    if (user.status !== 'active') {
-      throw new UnauthorizedException();
+    // ตรวจสอบสถานะ user
+    if ((user.status ?? '').toLowerCase() !== 'active') {
+      throw new UnauthorizedException('Account is inactive or suspended');
     }
 
-    // token สร้าง แต่ไม่ส่งออก
-    await this.generateTokens(user);
+    const tokens = await this.generateTokens(user);
 
-    return;
+    this.logger.log(`Google login successful for user: ${user.email}`);
+
+    // คืนค่าในรูปแบบเดียวกับ login ปกติ
+    return {
+      user: this.sanitizeUser(user),
+      tokens
+    };
   }
 
   // Refresh access token using refresh token
@@ -178,12 +185,9 @@ export class AuthService {
       { userId, revokedAt: IsNull() },
       { revokedAt: new Date() },
     );
-    // if (result.affected === 0) {
-    //   throw new BadRequestException('No active sessions');
-    // }
   }
 
-  // Logout (revoke one refresh token)
+  // Logout from current device
   async logout(refreshTokenValue: string): Promise<void> {
     const refreshTokenHash = this.hashRefreshToken(refreshTokenValue);
     await this.sessionRepository.update(
@@ -192,7 +196,7 @@ export class AuthService {
     );
   }
 
-  // Forgot password - send OTP (hashed before storage)
+  // Forgot password - generate OTP and send email
   async forgotPassword(email: string): Promise<{ message: string }> {
     const genericMessage = 'If the email exists, an OTP will be sent.';
 
@@ -204,13 +208,13 @@ export class AuthService {
       return { message: genericMessage };
     }
 
-    // Invalidate any existing OTPs for this user
+    // Invalidate previous tokens
     await this.passwordResetTokenRepository.update(
       { userId: authAccount.user.id, isUsed: false },
       { isUsed: true },
     );
 
-    // Generate 6-digit OTP and hash it before storage
+    // Generate OTP and hash it
     const otp = this.generateOtp();
     const otpHash = await bcrypt.hash(otp, BCRYPT_SALT_ROUNDS);
 
@@ -218,7 +222,7 @@ export class AuthService {
     expiresAt.setMinutes(expiresAt.getMinutes() + OTP_EXPIRY_MINUTES);
 
     const resetToken = this.passwordResetTokenRepository.create({
-      token: otpHash, // Store hashed OTP, never plain text
+      token: otpHash, // store hashed OTP
       userId: authAccount.user.id,
       expiresAt,
     });
@@ -267,7 +271,7 @@ export class AuthService {
       throw new BadRequestException(invalidMessage);
     }
 
-    // Generate reset token and hash before storage
+    // generate a new reset token for password reset phase
     const resetTokenPlain = crypto.randomBytes(32).toString('hex');
     const resetTokenHash = await bcrypt.hash(resetTokenPlain, BCRYPT_SALT_ROUNDS);
 
@@ -315,7 +319,7 @@ export class AuthService {
     // Update user password
     await this.usersService.updatePassword(matchedToken.userId, newPassword);
 
-    // Mark token as used (clear sensitive fields)
+    // Mark the token as used
     matchedToken.isUsed = true;
     await this.passwordResetTokenRepository.save(matchedToken);
 
@@ -338,8 +342,7 @@ export class AuthService {
     const role = String(user.role);
     const normalizedRole = role === 'INSTRUCTOR' ? 'ADMIN' : role;
 
-    // Create refresh session first so we can include the session id in the
-    // access token (allows revoking access tokens by checking session state).
+    // สร้าง session สำหรับ refresh token
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7 days refresh token expiry
 
@@ -361,7 +364,7 @@ export class AuthService {
     return { accessToken, refreshToken: refreshTokenValue, expiresIn: 15 * 60 };
   }
 
-  // Remove sensitive fields user object
+  // ลบข้อมูลผู้ใช้ที่ไม่ควรเปิดเผย
   private sanitizeUser(user: User): Partial<User> {
     // แก้ให้ส่งเฉพาะ field ที่ปลอดภัย (ไม่ส่ง password, tokens, internal flags)
     return {

@@ -1,6 +1,7 @@
 import { Controller, Post, Get, Body, UseGuards, HttpCode, HttpStatus, BadRequestException, Logger, Res } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBody, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { Response } from 'express';
 
 import { AuthService } from './auth.service';
 import { RegisterDto, LoginDto, RefreshTokenDto, ForgotPasswordDto, VerifyOtpDto, ResetPasswordDto } from './dto';
@@ -50,7 +51,7 @@ export class AuthController {
   })
   @ApiResponse({ status: 302, description: 'Redirect to Google OAuth consent screen' })
   async googleAuth() {
-    // Guard จะจัดการ redirect ไป Google
+    // redirect ไปที่ Google
   }
 
   // ===================== Google OAuth Callback =====================
@@ -59,11 +60,15 @@ export class AuthController {
   @ApiOperation({ summary: 'Google OAuth callback' })
   @ApiResponse({ status: 302, description: 'Redirect to frontend after successful authentication' })
   @ApiResponse({ status: 400, description: 'Bad Request.' })
-  async googleCallback(@CurrentUser() googleProfile: any, @Res() res: any,) {
-    await this.authService.googleLogin(googleProfile);
+  async googleCallback(@CurrentUser() googleProfile: any, @Res() res: Response) {
 
-    // redirect เฉย ๆ ไม่มี token
-    return res.redirect(process.env.FRONTEND_URL);
+    const result = await this.authService.googleLogin(googleProfile);
+
+    const frontend = process.env.FRONTEND_URL;
+    const accessToken = encodeURIComponent(result.tokens.accessToken);
+    
+    // redirect กลับไปที่ frontend พร้อมกับ accessToken ใน query string
+    return res.redirect(`${frontend}/google-callback?accessToken=${accessToken}`);
   }
 
   // ===================== Refresh Token =====================

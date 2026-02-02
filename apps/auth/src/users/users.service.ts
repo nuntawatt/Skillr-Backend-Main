@@ -141,7 +141,7 @@ export class UsersService {
       providerUserId: null,
       email,
       passwordHash,
-      
+
     });
     return this.authAccountRepository.save(account);
   }
@@ -154,15 +154,43 @@ export class UsersService {
     lastName?: string;
     avatar?: string;
   }): Promise<User> {
-    const existingAccount = await this.findAuthAccountByProviderUserId(
-      AuthProvider.GOOGLE,
-      profile.googleId,
-    );
-    if (existingAccount?.user) {
-      return existingAccount.user;
+
+    // 1. หา Google auth account ก่อน (primary key)
+    const existingGoogleAccount =
+      await this.findAuthAccountByProviderUserId(
+        AuthProvider.GOOGLE,
+        profile.googleId,
+      );
+
+    if (existingGoogleAccount?.user) {
+      return existingGoogleAccount.user;
     }
 
-    let user = profile.email ? await this.findByEmail(profile.email) : null;
+    // 2. หา user ด้วย email (secondary)
+    let user: User | null = null;
+
+    if (profile.email) {
+      user = await this.findByEmail(profile.email);
+
+      // ถ้าเจอ user แต่เป็น LOCAL-only account
+      if (user) {
+        const existingLocalAccount =
+          await this.findAuthAccountByProviderAndEmail(
+            AuthProvider.LOCAL,
+            profile.email,
+          );
+
+        if (existingLocalAccount) {
+          // policy: ไม่ auto-merge
+          // ป้องกัน account takeover
+          throw new ConflictException(
+            'Email already registered with password login',
+          );
+        }
+      }
+    }
+
+    // 3. ถ้าไม่มี user → สร้างใหม่
     if (!user) {
       user = this.userRepository.create({
         email: profile.email || null,
@@ -171,12 +199,38 @@ export class UsersService {
         avatar: profile.avatar,
         isVerified: true,
       });
+
       user = await this.userRepository.save(user);
-    } else if (!user.avatar && profile.avatar) {
-      user.avatar = profile.avatar;
-      user = await this.userRepository.save(user);
+    } else {
+      // 4. ถ้ามี user อยู่แล้ว → update profile แบบ safe
+      let shouldUpdate = false;
+
+      if (!user.firstName && profile.firstName) {
+        user.firstName = profile.firstName;
+        shouldUpdate = true;
+      }
+
+      if (!user.lastName && profile.lastName) {
+        user.lastName = profile.lastName;
+        shouldUpdate = true;
+      }
+
+      if (!user.avatar && profile.avatar) {
+        user.avatar = profile.avatar;
+        shouldUpdate = true;
+      }
+
+      if (!user.isVerified) {
+        user.isVerified = true;
+        shouldUpdate = true;
+      }
+
+      if (shouldUpdate) {
+        user = await this.userRepository.save(user);
+      }
     }
 
+    // 5. สร้าง Google auth account
     const account = this.authAccountRepository.create({
       userId: user.id,
       user,
@@ -185,6 +239,7 @@ export class UsersService {
       email: profile.email || null,
       passwordHash: null,
     });
+
     await this.authAccountRepository.save(account);
 
     return user;
@@ -193,7 +248,7 @@ export class UsersService {
   // Update user details
   async update(id: number | string, updateUserDto: UpdateUserDto,): Promise<User> {
     const user = await this.findById(id);
-    
+
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -258,7 +313,8 @@ export class UsersService {
     this.minioClient = new Minio.Client({
       endPoint: url.hostname,
       port: Number(url.port || 9000),
-      useSSL: url.protocol === 'http:',
+      // useSSL should be true for https
+      useSSL: url.protocol === 'https:',
       accessKey,
       secretKey,
     });

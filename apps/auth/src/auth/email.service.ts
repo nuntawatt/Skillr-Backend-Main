@@ -26,14 +26,14 @@ export class EmailService {
     this.smtpConfigured = !!(smtpHost && smtpUser && smtpPass);
     this.transporter = this.smtpConfigured
       ? nodemailer.createTransport({
-          host: smtpHost as string,
-          port: smtpPort,
-          secure: smtpPort === 465,
-          auth: {
-            user: smtpUser as string,
-            pass: smtpPass as string,
-          },
-        })
+        host: smtpHost as string,
+        port: smtpPort,
+        secure: smtpPort === 465,
+        auth: {
+          user: smtpUser as string,
+          pass: smtpPass as string,
+        },
+      })
       : null;
 
     this.logger.log(`EmailService initialized - Resend: ${this.isResendConfigured}, SMTP: ${this.smtpConfigured}, From: ${this.fromEmail}`);

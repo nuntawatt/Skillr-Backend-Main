@@ -51,7 +51,9 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     }
 
     const role = String(user.role);
-    const normalizedRole = role === 'INSTRUCTOR' ? 'ADMIN' : role;
+
+    const normalizedRole = role === 'ADMIN';
+    
     return {
       id: user.id,
       email: user.email,

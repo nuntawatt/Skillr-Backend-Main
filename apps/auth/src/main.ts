@@ -1,9 +1,7 @@
-import cookieParser from 'cookie-parser';
 import { NestFactory } from '@nestjs/core';
 import { AuthAppModule } from './auth-app.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { all } from 'axios';
 
 async function bootstrap() {
   const logger = new Logger('AuthBootstrap');
@@ -11,17 +9,13 @@ async function bootstrap() {
     logger: ['log', 'error', 'warn'],
   });
 
-  app.use(cookieParser());
-
+  // allowedHeaders: ['http://localhost:3000', 'https://skllracademy.com'],
+  // origin: [process.env.FRONTEND_URL, 'http://localhost:3000', 'https://skllracademy.com'],
   app.enableCors({
-    allowedHeaders: ['http://localhost:3000', 'https://skllracademy.com'],
-
-    origin: [process.env.FRONTEND_URL, 'http://localhost:3000', 'https://skllracademy.com'],
-    credentials: true,
-    // origin: '*',
-    // methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    // allowedHeaders: '*',
-    // credentials: false,
+    origin: '*',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: '*',
+    credentials: false,
   });
 
   app.useGlobalPipes(
@@ -31,18 +25,12 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
   const config = new DocumentBuilder()
     .setTitle('Skillr Auth Service API')
     .setDescription('API documentation for the Auth Service')
     .setVersion('1.0.0')
-    .addBearerAuth(
-      {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-      },
-      'access-token',
-    )
+    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'access-token')
     .addServer('https://skllracademy.com/api')
     .addServer('/api')
     .build();

@@ -1,6 +1,7 @@
 import { NestFactory, Reflector } from '@nestjs/core';
 import { ValidationPipe, Logger, ClassSerializerInterceptor } from '@nestjs/common';
-import * as express from 'express';
+
+// import * as express from 'express';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './course.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -11,9 +12,9 @@ async function bootstrap() {
     logger: ['log', 'error', 'warn'],
   });
 
+  // origin: [process.env.FRONTEND_URL, 'http://localhost:3000', 'https://skllracademy.com'],
+  // credentials: true,
   app.enableCors({
-    // origin: [process.env.FRONTEND_URL, 'http://localhost:3000', 'https://skllracademy.com'],
-    // credentials: true,
     origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: '*',
