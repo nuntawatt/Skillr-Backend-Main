@@ -27,7 +27,7 @@ import { Chapter } from './chapters/entities/chapter.entity';
 import { Lesson } from './lessons/entities/lesson.entity';
 import { Article } from './articles/entities/article.entity';
 
-const isTest = process.env.NODE_ENV;
+const isTest = process.env.NODE_ENV === 'test';
 
 @Module({
   imports: [
