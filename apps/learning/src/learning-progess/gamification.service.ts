@@ -29,10 +29,10 @@ export interface ItemStatus {
 @Injectable()
 export class GamificationService {
   constructor(
-    private readonly chapterProgressService: ChapterProgressService,
-    private readonly lessonProgressService: LessonProgressService,
-    private readonly checkpointService: CheckpointService,
-    private readonly validationService: ProgressValidationService,
+    public readonly chapterProgressService: ChapterProgressService,
+    public readonly lessonProgressService: LessonProgressService,
+    public readonly checkpointService: CheckpointService,
+    public readonly validationService: ProgressValidationService,
   ) {}
 
   async getChapterGamificationProgress(userId: number, chapterId: number): Promise<GamificationProgress> {

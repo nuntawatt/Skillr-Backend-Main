@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query, Request, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { QuizService } from './quiz.service';
 import { CreateQuizsDto, CreateCheckpointDto } from './dto/create-quizs.dto';
@@ -138,7 +138,25 @@ export class QuizController {
   @Get('checkpoint/batch')
   @ApiOperation({ summary: 'Get checkpoints by multiple lesson ids' })
   getCheckpointsByLessonIds(@Query('lessonIds') lessonIds: string) {
-    const ids = lessonIds.split(',').map(id => Number(id));
-    return this.quizService.getCheckpointsByLessonIds(ids);
+    try {
+      if (!lessonIds) {
+        throw new BadRequestException('lessonIds parameter is required');
+      }
+      
+      const ids = lessonIds.split(',').map(id => {
+        const num = Number(id.trim());
+        if (isNaN(num)) {
+          throw new BadRequestException(`Invalid lesson ID: ${id}`);
+        }
+        return num;
+      });
+      
+      return this.quizService.getCheckpointsByLessonIds(ids);
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new Error(`Failed to get checkpoints: ${error.message}`);
+    }
   }
 }
