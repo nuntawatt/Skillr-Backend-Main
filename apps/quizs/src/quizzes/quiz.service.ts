@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { HttpService } from '@nestjs/axios';
@@ -19,7 +23,7 @@ export class QuizService {
     @InjectRepository(QuizsResult)
     private readonly resultRepository: Repository<QuizsResult>,
     private readonly httpService: HttpService,
-  ) { }
+  ) {}
 
   // --- Quizs (1 Lesson = 1 Question) ---
 
@@ -27,14 +31,14 @@ export class QuizService {
     const existing = await this.quizsRepository.findOne({
       where: { lessonId: dto.lesson_id },
     });
-    
+
     const data = {
       lessonId: dto.lesson_id,
       quizsType: dto.quizs_type,
       quizsQuestions: dto.quizs_questions,
       quizsOption: dto.quizs_option,
       quizsAnswer: dto.quizs_answer,
-      quizsExplanation: dto.quizs_explanation, 
+      quizsExplanation: dto.quizs_explanation,
     };
 
     if (existing) {
@@ -56,19 +60,23 @@ export class QuizService {
       where: { lessonId, userId },
     });
 
-    const showAnswer = result?.status === QuizsStatus.COMPLETED || result?.status === QuizsStatus.SKIPPED;
-    
+    const showAnswer =
+      result?.status === QuizsStatus.COMPLETED ||
+      result?.status === QuizsStatus.SKIPPED;
+
     return {
       quizs_id: quiz.quizsId,
       quizs_type: quiz.quizsType,
       quizs_questions: quiz.quizsQuestions,
       quizs_option: quiz.quizsOption,
       lesson_id: quiz.lessonId,
-      user_result: result ? {
-        user_answer: result.userAnswer,
-        is_correct: result.isCorrect,
-        status: result.status,
-      } : { status: QuizsStatus.NOT_STARTED },
+      user_result: result
+        ? {
+            user_answer: result.userAnswer,
+            is_correct: result.isCorrect,
+            status: result.status,
+          }
+        : { status: QuizsStatus.NOT_STARTED },
       quizs_answer: showAnswer ? quiz.quizsAnswer : undefined,
       quizs_explanation: showAnswer ? quiz.quizsExplanation : undefined,
     };
@@ -78,9 +86,12 @@ export class QuizService {
     const quiz = await this.quizsRepository.findOne({ where: { lessonId } });
     if (!quiz) throw new NotFoundException('Quiz not found');
 
-    const isCorrect = JSON.stringify(quiz.quizsAnswer) === JSON.stringify(answer);
+    const isCorrect =
+      JSON.stringify(quiz.quizsAnswer) === JSON.stringify(answer);
 
-    let result = await this.resultRepository.findOne({ where: { lessonId, userId } });
+    let result = await this.resultRepository.findOne({
+      where: { lessonId, userId },
+    });
     if (!result) {
       result = this.resultRepository.create({ lessonId, userId });
     }
@@ -98,7 +109,9 @@ export class QuizService {
   }
 
   async skipQuiz(lessonId: number, userId: number) {
-    let result = await this.resultRepository.findOne({ where: { lessonId, userId } });
+    let result = await this.resultRepository.findOne({
+      where: { lessonId, userId },
+    });
     if (!result) {
       result = this.resultRepository.create({ lessonId, userId });
     }
@@ -118,7 +131,10 @@ export class QuizService {
     return quiz;
   }
 
-  async updateQuizs(lessonId: number, dto: Partial<CreateQuizsDto>): Promise<Quizs> {
+  async updateQuizs(
+    lessonId: number,
+    dto: Partial<CreateQuizsDto>,
+  ): Promise<Quizs> {
     const quiz = await this.findOneQuizsByLesson(lessonId);
     Object.assign(quiz, {
       quizsType: dto.quizs_type ?? quiz.quizsType,
@@ -153,18 +169,23 @@ export class QuizService {
   }
 
   async checkCheckpointAnswer(checkpointId: number, answer: any) {
-    const checkpoint = await this.checkpointRepository.findOne({ where: { checkpointId } });
+    const checkpoint = await this.checkpointRepository.findOne({
+      where: { checkpointId },
+    });
     if (!checkpoint) throw new NotFoundException('Checkpoint not found');
-    const isCorrect = JSON.stringify(checkpoint.checkpointAnswer) === JSON.stringify(answer);
+    const isCorrect =
+      JSON.stringify(checkpoint.checkpointAnswer) === JSON.stringify(answer);
     return {
       isCorrect,
       correctAnswer: checkpoint.checkpointAnswer,
     };
   }
 
-  async getCheckpointsByLessonIds(lessonIds: number[]): Promise<QuizsCheckpoint[]> {
+  async getCheckpointsByLessonIds(
+    lessonIds: number[],
+  ): Promise<QuizsCheckpoint[]> {
     return this.checkpointRepository.find({
-      where: { lessonId: In(lessonIds) }
+      where: { lessonId: In(lessonIds) },
     });
   }
 }

@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import { LessonProgress, LessonProgressStatus } from './entities/lesson-progress.entity';
+import {
+  LessonProgress,
+  LessonProgressStatus,
+} from './entities/lesson-progress.entity';
 
 export interface LessonProgressUpdate {
   status?: LessonProgressStatus;
@@ -17,11 +20,14 @@ export class LessonProgressService {
     private readonly progressRepository: Repository<LessonProgress>,
   ) {}
 
-  async completeLesson(userId: number, lessonId: number): Promise<LessonProgress> {
+  async completeLesson(
+    userId: number,
+    lessonId: number,
+  ): Promise<LessonProgress> {
     return this.updateLessonProgress(userId, lessonId, {
       status: LessonProgressStatus.COMPLETED,
       progressPercentage: 100,
-      completedAt: new Date()
+      completedAt: new Date(),
     });
   }
 
@@ -30,17 +36,17 @@ export class LessonProgressService {
       status: LessonProgressStatus.COMPLETED,
       isSkipped: true,
       progressPercentage: 100,
-      completedAt: new Date()
+      completedAt: new Date(),
     });
   }
 
   async updateLessonProgress(
-    userId: number, 
-    lessonId: number, 
-    updates: Partial<LessonProgressUpdate & { completedAt?: Date }>
+    userId: number,
+    lessonId: number,
+    updates: Partial<LessonProgressUpdate & { completedAt?: Date }>,
   ): Promise<LessonProgress> {
     let progress = await this.progressRepository.findOne({
-      where: { userId, lessonId }
+      where: { userId, lessonId },
     });
 
     if (!progress) {
@@ -51,7 +57,7 @@ export class LessonProgressService {
         progressPercentage: 0,
         timeSpent: 0,
         isSkipped: false,
-        lastUpdated: new Date()
+        lastUpdated: new Date(),
       });
     }
 
@@ -61,26 +67,32 @@ export class LessonProgressService {
     return this.progressRepository.save(progress);
   }
 
-  async getLessonProgress(userId: number, lessonId: number): Promise<LessonProgress | null> {
+  async getLessonProgress(
+    userId: number,
+    lessonId: number,
+  ): Promise<LessonProgress | null> {
     return this.progressRepository.findOne({
-      where: { userId, lessonId }
+      where: { userId, lessonId },
     });
   }
 
-  async getLessonsProgress(userId: number, lessonIds: number[]): Promise<LessonProgress[]> {
+  async getLessonsProgress(
+    userId: number,
+    lessonIds: number[],
+  ): Promise<LessonProgress[]> {
     return this.progressRepository.find({
       where: {
         userId,
-        lessonId: In(lessonIds)
-      }
+        lessonId: In(lessonIds),
+      },
     });
   }
 
   async updateVideoProgress(
-    userId: number, 
-    lessonId: number, 
-    currentTime: number, 
-    duration: number
+    userId: number,
+    lessonId: number,
+    currentTime: number,
+    duration: number,
   ): Promise<LessonProgress> {
     const progressPercentage = Math.round((currentTime / duration) * 100);
     const timeSpent = Math.round(currentTime);
@@ -88,7 +100,10 @@ export class LessonProgressService {
     return this.updateLessonProgress(userId, lessonId, {
       progressPercentage: Math.min(progressPercentage, 99), // ไม่ให้เกิน 99% จนกว่าจะจบจริง
       timeSpent,
-      status: progressPercentage > 0 ? LessonProgressStatus.CURRENT : LessonProgressStatus.LOCKED
+      status:
+        progressPercentage > 0
+          ? LessonProgressStatus.CURRENT
+          : LessonProgressStatus.LOCKED,
     });
   }
 
@@ -97,13 +112,16 @@ export class LessonProgressService {
     return progress?.status === LessonProgressStatus.COMPLETED;
   }
 
-  async getCompletedLessonsCount(userId: number, lessonIds: number[]): Promise<number> {
+  async getCompletedLessonsCount(
+    userId: number,
+    lessonIds: number[],
+  ): Promise<number> {
     return this.progressRepository.count({
       where: {
         userId,
         lessonId: In(lessonIds),
-        status: LessonProgressStatus.COMPLETED
-      }
+        status: LessonProgressStatus.COMPLETED,
+      },
     });
   }
 

@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, Index } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+  Index,
+} from 'typeorm';
 import { Level } from '../../levels/entities/level.entity';
 
 @Entity('courses')

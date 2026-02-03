@@ -8,8 +8,12 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env'), override: false });
 export const CourseDataSource = new DataSource({
   type: 'postgres',
   url: process.env.DATABASE_URL,
-  entities: [path.resolve(process.cwd(), 'apps/course/src/**/*.entity{.ts,.js}')],
-  migrations: [path.resolve(process.cwd(), 'apps/course/migrations/*{.ts,.js}')],
+  entities: [
+    path.resolve(process.cwd(), 'apps/course/src/**/*.entity{.ts,.js}'),
+  ],
+  migrations: [
+    path.resolve(process.cwd(), 'apps/course/migrations/*{.ts,.js}'),
+  ],
   synchronize: false,
   logging: false,
 });

@@ -2,8 +2,21 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Course } from './entities/course.entity';
-import { CreateCourseDto, UpdateCourseDto, CourseResponseDto, CourseStructureResponseDto, LevelStructureDto, ChapterStructureDto, LessonStructureDto } from './dto';
-import { CourseStructureSaveDto, LevelSaveDto, ChapterSaveDto, LessonSaveDto } from './dto/course-structure-save.dto';
+import {
+  CreateCourseDto,
+  UpdateCourseDto,
+  CourseResponseDto,
+  CourseStructureResponseDto,
+  LevelStructureDto,
+  ChapterStructureDto,
+  LessonStructureDto,
+} from './dto';
+import {
+  CourseStructureSaveDto,
+  LevelSaveDto,
+  ChapterSaveDto,
+  LessonSaveDto,
+} from './dto/course-structure-save.dto';
 import { Level } from '../levels/entities/level.entity';
 import { Chapter } from '../chapters/entities/chapter.entity';
 import { Lesson } from '../lessons/entities/lesson.entity';
@@ -20,7 +33,7 @@ export class CoursesService {
     private readonly chapterRepository: Repository<Chapter>,
     @InjectRepository(Lesson)
     private readonly lessonRepository: Repository<Lesson>,
-  ) { }
+  ) {}
 
   // Create a new course
   async create(createCourseDto: CreateCourseDto): Promise<CourseResponseDto> {
@@ -62,11 +75,13 @@ export class CoursesService {
     if (params?.search) {
       const keyword = params.search.toLowerCase();
       query.andWhere(
-        '(LOWER(course.course_title) LIKE :kw OR LOWER(course.course_description) LIKE :kw)',{ kw: `%${keyword}%` }
+        '(LOWER(course.course_title) LIKE :kw OR LOWER(course.course_description) LIKE :kw)',
+        { kw: `%${keyword}%` },
       );
     }
 
-    const limit = params?.limit && params.limit > 0 ? Math.min(params.limit, 100) : 50;
+    const limit =
+      params?.limit && params.limit > 0 ? Math.min(params.limit, 100) : 50;
     const offset = params?.offset && params.offset >= 0 ? params.offset : 0;
 
     query.orderBy('course.createdAt', 'DESC').take(limit).skip(offset);
@@ -77,7 +92,9 @@ export class CoursesService {
 
   // Find a single course by ID
   async findOne(id: number): Promise<CourseResponseDto> {
-    const course = await this.courseRepository.findOne({ where: { course_id: id } });
+    const course = await this.courseRepository.findOne({
+      where: { course_id: id },
+    });
 
     if (!course) {
       throw new NotFoundException(`Course with ID ${id} not found`);
@@ -88,7 +105,8 @@ export class CoursesService {
 
   // Get the full nested structure of a course
   async getStructure(id: number): Promise<CourseStructureResponseDto> {
-    const course = await this.courseRepository.findOne({where: { course_id: id },
+    const course = await this.courseRepository.findOne({
+      where: { course_id: id },
       relations: [
         'course_levels',
         'course_levels.level_chapters',
@@ -101,11 +119,15 @@ export class CoursesService {
     }
 
     // Sort levels by orderIndex (entity uses snake_case fields)
-    const sortedLevels = (course.course_levels || []).sort((a, b) => a.level_orderIndex - b.level_orderIndex);
+    const sortedLevels = (course.course_levels || []).sort(
+      (a, b) => a.level_orderIndex - b.level_orderIndex,
+    );
 
     const levels: LevelStructureDto[] = sortedLevels.map((level) => {
       // Sort chapters by orderIndex
-      const sortedChapters = (level.level_chapters || []).sort((a, b) => a.chapter_orderIndex - b.chapter_orderIndex);
+      const sortedChapters = (level.level_chapters || []).sort(
+        (a, b) => a.chapter_orderIndex - b.chapter_orderIndex,
+      );
 
       const chapters: ChapterStructureDto[] = sortedChapters.map((chapter) => {
         // Sort lessons by orderIndex
@@ -148,17 +170,26 @@ export class CoursesService {
   }
 
   // Update a course
-  async update(id: number, updateCourseDto: UpdateCourseDto): Promise<CourseResponseDto> {
-    const course = await this.courseRepository.findOne({ where: { course_id: id } });
+  async update(
+    id: number,
+    updateCourseDto: UpdateCourseDto,
+  ): Promise<CourseResponseDto> {
+    const course = await this.courseRepository.findOne({
+      where: { course_id: id },
+    });
 
     if (!course) {
       throw new NotFoundException(`Course with ID ${id} not found`);
     }
 
-    if (updateCourseDto.course_title !== undefined) course.course_title = updateCourseDto.course_title;
-    if (updateCourseDto.course_description !== undefined) course.course_description = updateCourseDto.course_description;
-    if (updateCourseDto.course_imageId !== undefined) course.course_imageId = updateCourseDto.course_imageId;
-    if (updateCourseDto.course_tags !== undefined) course.course_tags = updateCourseDto.course_tags ?? null;
+    if (updateCourseDto.course_title !== undefined)
+      course.course_title = updateCourseDto.course_title;
+    if (updateCourseDto.course_description !== undefined)
+      course.course_description = updateCourseDto.course_description;
+    if (updateCourseDto.course_imageId !== undefined)
+      course.course_imageId = updateCourseDto.course_imageId;
+    if (updateCourseDto.course_tags !== undefined)
+      course.course_tags = updateCourseDto.course_tags ?? null;
 
     if (updateCourseDto.isPublished !== undefined) {
       course.isPublished = updateCourseDto.isPublished;
@@ -170,7 +201,9 @@ export class CoursesService {
 
   // Delete a course and all nested entities (cascades)
   async remove(id: number): Promise<void> {
-    const course = await this.courseRepository.findOne({ where: { course_id: id } });
+    const course = await this.courseRepository.findOne({
+      where: { course_id: id },
+    });
 
     if (!course) {
       throw new NotFoundException(`Course with ID ${id} not found`);
@@ -180,9 +213,15 @@ export class CoursesService {
   }
 
   // Save full course structure (transactional)
-  async saveStructure(courseId: number, dto: CourseStructureSaveDto): Promise<CourseStructureResponseDto> {
-    const course = await this.courseRepository.findOne({ where: { course_id: courseId } });
-    if (!course) throw new NotFoundException(`Course with ID ${courseId} not found`);
+  async saveStructure(
+    courseId: number,
+    dto: CourseStructureSaveDto,
+  ): Promise<CourseStructureResponseDto> {
+    const course = await this.courseRepository.findOne({
+      where: { course_id: courseId },
+    });
+    if (!course)
+      throw new NotFoundException(`Course with ID ${courseId} not found`);
 
     await this.dataSource.transaction(async (manager) => {
       // delete existing levels (cascades to chapters and lessons)
@@ -224,8 +263,10 @@ export class CoursesService {
 
     // update course basic fields if provided
     if (dto.course_title !== undefined) course.course_title = dto.course_title;
-    if (dto.course_description !== undefined) course.course_description = dto.course_description;
-    if ((dto as any).course_tags !== undefined) course.course_tags = (dto as any).course_tags ?? null;
+    if (dto.course_description !== undefined)
+      course.course_description = dto.course_description;
+    if ((dto as any).course_tags !== undefined)
+      course.course_tags = (dto as any).course_tags ?? null;
     await this.courseRepository.save(course);
 
     return this.getStructure(courseId);

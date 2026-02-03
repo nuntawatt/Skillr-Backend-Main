@@ -43,7 +43,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     if ((payload as any).sid) {
       const sid = (payload as any).sid as string;
       const session = await this.sessionRepository.findOne({
-        where: { id: sid, revokedAt: IsNull(), expiresAt: MoreThan(new Date()) },
+        where: {
+          id: sid,
+          revokedAt: IsNull(),
+          expiresAt: MoreThan(new Date()),
+        },
       });
       if (!session) {
         throw new UnauthorizedException('Session is not active');
@@ -53,7 +57,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     const role = String(user.role);
 
     const normalizedRole = role === 'ADMIN';
-    
+
     return {
       id: user.id,
       email: user.email,

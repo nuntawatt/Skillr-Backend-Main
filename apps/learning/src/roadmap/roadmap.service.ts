@@ -7,8 +7,10 @@ import { LessonProgress } from '../learning-progess/entities/lesson-progress.ent
 
 @Injectable()
 export class RoadmapService {
-  private readonly courseServiceUrl = process.env.COURSE_SERVICE_URL ?? 'http://localhost:3001';
-  private readonly quizServiceUrl = process.env.QUIZ_SERVICE_URL ?? 'http://localhost:3002';
+  private readonly courseServiceUrl =
+    process.env.COURSE_SERVICE_URL ?? 'http://localhost:3001';
+  private readonly quizServiceUrl =
+    process.env.QUIZ_SERVICE_URL ?? 'http://localhost:3002';
 
   constructor(
     @InjectRepository(LessonProgress)
@@ -19,17 +21,27 @@ export class RoadmapService {
   async getChapterRoadmap(userId: string, chapterId: number) {
     // 1) ดึง lessons จาก course service
     const lessons = await firstValueFrom(
-      this.httpService.get(`${this.courseServiceUrl}/lessons?chapterId=${chapterId}`)
-    ).then(res => res.data);
+      this.httpService.get(
+        `${this.courseServiceUrl}/lessons?chapterId=${chapterId}`,
+      ),
+    ).then((res) => res.data);
 
     // 2) ดึง progress ของ user สำหรับ lessons เหล่านี้
-    const lessonIds = lessons.map(l => l.lesson_id);
+    const lessonIds = lessons.map((l) => l.lesson_id);
     const progressMap = await this.getProgressMap(userId, lessonIds);
 
     // 3) ดึง checkpoints จาก quiz service
-    const checkpoints = lessonIds.length > 0 ? await firstValueFrom(
-      this.httpService.get(`${this.quizServiceUrl}/quizzes/checkpoint/batch`, { params: { lessonIds: lessonIds.join(',') } })
-    ).then(res => res.data).catch(() => []) : [];
+    const checkpoints =
+      lessonIds.length > 0
+        ? await firstValueFrom(
+            this.httpService.get(
+              `${this.quizServiceUrl}/quizzes/checkpoint/batch`,
+              { params: { lessonIds: lessonIds.join(',') } },
+            ),
+          )
+            .then((res) => res.data)
+            .catch(() => [])
+        : [];
 
     // 4) สร้าง roadmap items (lessons + checkpoints ท้ายสุด)
     const items: any[] = [];
@@ -42,7 +54,7 @@ export class RoadmapService {
         type: lesson.lesson_type,
         order: lesson.orderIndex,
         status: this.getStatus(progressMap[lesson.lesson_id]),
-        ref_id: lesson.ref_id
+        ref_id: lesson.ref_id,
       });
     }
 
@@ -54,13 +66,13 @@ export class RoadmapService {
         type: 'checkpoint',
         order: 999,
         status: this.getStatus(progressMap[checkpoint.lessonId]),
-        ref_id: checkpoint.lessonId
+        ref_id: checkpoint.lessonId,
       });
     }
 
     return {
       chapterId,
-      items: items.sort((a, b) => a.order - b.order)
+      items: items.sort((a, b) => a.order - b.order),
     };
   }
 
@@ -69,18 +81,20 @@ export class RoadmapService {
     const progresses = await this.progressRepository.find({
       where: {
         userId: Number(userId),
-        lessonId: In(lessonIds)
-      }
+        lessonId: In(lessonIds),
+      },
     });
 
     const map = {};
-    progresses.forEach(p => {
+    progresses.forEach((p) => {
       map[p.lessonId] = p;
     });
     return map;
   }
 
-  private getStatus(progress: LessonProgress | undefined): 'completed' | 'current' | 'locked' {
+  private getStatus(
+    progress: LessonProgress | undefined,
+  ): 'completed' | 'current' | 'locked' {
     if (progress) return 'completed';
     return 'current';
   }

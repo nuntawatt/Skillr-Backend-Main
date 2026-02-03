@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Article } from './entities/article.entity';
@@ -16,13 +20,17 @@ export class ArticlesService {
   ) {}
 
   async create(dto: CreateArticleDto): Promise<ArticleResponseDto> {
-    const lesson = await this.lessonRepo.findOne({ where: { lesson_id: dto.lesson_id } });
+    const lesson = await this.lessonRepo.findOne({
+      where: { lesson_id: dto.lesson_id },
+    });
     if (!lesson) throw new NotFoundException('lesson not found');
     if (lesson.lesson_type !== LessonType.ARTICLE) {
       throw new BadRequestException('lesson is not type ARTICLE');
     }
 
-    const content = Array.isArray(dto.article_content) ? dto.article_content : [];
+    const content = Array.isArray(dto.article_content)
+      ? dto.article_content
+      : [];
 
     // เติม order ถ้าไม่มี
     content.forEach((c, i) => {
@@ -44,20 +52,33 @@ export class ArticlesService {
   }
 
   async findOne(id: number): Promise<ArticleResponseDto> {
-    const article = await this.articleRepo.findOne({ where: { article_id: id } });
+    const article = await this.articleRepo.findOne({
+      where: { article_id: id },
+    });
     if (!article) throw new NotFoundException('article not found');
     return this.toResponseDto(article);
   }
 
-  async findAll(params?: { limit?: number; offset?: number }): Promise<ArticleResponseDto[]> {
-    const limit = params?.limit && params.limit > 0 ? Math.min(params.limit, 100) : 50;
+  async findAll(params?: {
+    limit?: number;
+    offset?: number;
+  }): Promise<ArticleResponseDto[]> {
+    const limit =
+      params?.limit && params.limit > 0 ? Math.min(params.limit, 100) : 50;
     const offset = params?.offset && params.offset >= 0 ? params.offset : 0;
-    const rows = await this.articleRepo.find({ take: limit, skip: offset, order: { updatedAt: 'DESC' } });
+    const rows = await this.articleRepo.find({
+      take: limit,
+      skip: offset,
+      order: { updatedAt: 'DESC' },
+    });
     return rows.map((r) => this.toResponseDto(r));
   }
 
   private toResponseDto(article: Article): ArticleResponseDto {
-    const lessonIdValue = typeof (article as any).lesson_id === 'number' ? (article as any).lesson_id : (article as any).lesson?.lesson_id ?? null;
+    const lessonIdValue =
+      typeof (article as any).lesson_id === 'number'
+        ? (article as any).lesson_id
+        : ((article as any).lesson?.lesson_id ?? null);
     return {
       article_id: article.article_id,
       lesson_id: lessonIdValue,

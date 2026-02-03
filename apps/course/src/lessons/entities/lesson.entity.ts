@@ -1,6 +1,15 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, Index } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+  CreateDateColumn,
+  Index,
+} from 'typeorm';
 import { Chapter } from '../../chapters/entities/chapter.entity';
 import { Article } from '../../articles/entities/article.entity';
+import { Quiz } from '../../quizzes/entities/quiz.entity';
 
 export enum LessonType {
   ARTICLE = 'article',
@@ -42,7 +51,9 @@ export class Lesson {
   @Column({ name: 'lesson_video_id', type: 'int', nullable: true })
   lesson_video_id?: number | null;
 
-  @ManyToOne(() => Chapter, (chapter) => chapter.lessons, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Chapter, (chapter) => chapter.lessons, {
+    onDelete: 'CASCADE',
+  })
   chapter: Chapter;
   @Column({ name: 'chapter_id', type: 'int' })
   chapter_id: number;
@@ -50,6 +61,10 @@ export class Lesson {
   // ความสัมพันธ์กับบทความ (ถ้า lesson_type เป็น ARTICLE)
   @OneToMany(() => Article, (a) => a.lesson)
   lesson_articles: Article[];
+
+  // ความสัมพันธ์กับ Quiz (ถ้า lesson_type เป็น QUIZ)
+  @OneToMany(() => Quiz, (quiz) => quiz.lesson)
+  lesson_quizzes: Quiz[];
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

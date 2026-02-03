@@ -1,5 +1,9 @@
 import { NestFactory, Reflector } from '@nestjs/core';
-import { ClassSerializerInterceptor, Logger, ValidationPipe } from '@nestjs/common';
+import {
+  ClassSerializerInterceptor,
+  Logger,
+  ValidationPipe,
+} from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './quiz.module';
 

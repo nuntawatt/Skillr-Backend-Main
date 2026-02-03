@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { ChapterProgress } from './entities/chapter-progress.entity';
-import { LessonProgress, LessonProgressStatus } from './entities/lesson-progress.entity';
+import {
+  LessonProgress,
+  LessonProgressStatus,
+} from './entities/lesson-progress.entity';
 
 export interface ChapterProgressSummary {
   chapterId: number;
@@ -27,10 +30,13 @@ export class ChapterProgressService {
     private readonly lessonRepository: Repository<Lesson>,
   ) {}
 
-  async calculateChapterProgress(userId: number, chapterId: number): Promise<number> {
+  async calculateChapterProgress(
+    userId: number,
+    chapterId: number,
+  ): Promise<number> {
     const lessons = await this.lessonRepository.find({
       where: { chapter_id: chapterId },
-      order: { orderIndex: 'ASC' }
+      order: { orderIndex: 'ASC' },
     });
 
     if (lessons.length === 0) return 0;
@@ -39,30 +45,36 @@ export class ChapterProgressService {
       where: {
         userId,
         status: LessonProgressStatus.COMPLETED,
-        lessonId: lessons.map(l => l.lesson_id)
-      }
+        lessonId: lessons.map((l) => l.lesson_id),
+      },
     });
 
     return Math.round((completedLessons / lessons.length) * 100);
   }
 
-  async updateChapterProgress(userId: number, chapterId: number): Promise<ChapterProgress> {
+  async updateChapterProgress(
+    userId: number,
+    chapterId: number,
+  ): Promise<ChapterProgress> {
     const lessons = await this.lessonRepository.find({
-      where: { chapter_id: chapterId }
+      where: { chapter_id: chapterId },
     });
 
     const completedItems = await this.lessonProgressRepository.count({
       where: {
         userId,
         status: LessonProgressStatus.COMPLETED,
-        lessonId: lessons.map(l => l.lesson_id)
-      }
+        lessonId: lessons.map((l) => l.lesson_id),
+      },
     });
 
-    const progressPercentage = lessons.length > 0 ? Math.round((completedItems / lessons.length) * 100) : 0;
+    const progressPercentage =
+      lessons.length > 0
+        ? Math.round((completedItems / lessons.length) * 100)
+        : 0;
 
     let chapterProgress = await this.chapterProgressRepository.findOne({
-      where: { userId, chapterId }
+      where: { userId, chapterId },
     });
 
     if (!chapterProgress) {
@@ -72,7 +84,7 @@ export class ChapterProgressService {
         progressPercentage,
         totalItems: lessons.length,
         completedItems,
-        lastUpdated: new Date()
+        lastUpdated: new Date(),
       });
     } else {
       chapterProgress.progressPercentage = progressPercentage;
@@ -84,25 +96,30 @@ export class ChapterProgressService {
     return this.chapterProgressRepository.save(chapterProgress);
   }
 
-  async getChapterProgressSummary(userId: number, chapterId: number): Promise<ChapterProgressSummary> {
+  async getChapterProgressSummary(
+    userId: number,
+    chapterId: number,
+  ): Promise<ChapterProgressSummary> {
     const lessons = await this.lessonRepository.find({
       where: { chapter_id: chapterId },
-      order: { orderIndex: 'ASC' }
+      order: { orderIndex: 'ASC' },
     });
 
     const lessonProgresses = await this.lessonProgressRepository.find({
       where: {
         userId,
-        lessonId: lessons.map(l => l.lesson_id)
-      }
+        lessonId: lessons.map((l) => l.lesson_id),
+      },
     });
 
-    const items = lessons.map(lesson => {
-      const progress = lessonProgresses.find(p => p.lessonId === lesson.lesson_id);
+    const items = lessons.map((lesson) => {
+      const progress = lessonProgresses.find(
+        (p) => p.lessonId === lesson.lesson_id,
+      );
       return {
         lessonId: lesson.lesson_id,
         status: progress?.status || LessonProgressStatus.LOCKED,
-        progressPercentage: progress?.progressPercentage || 0
+        progressPercentage: progress?.progressPercentage || 0,
       };
     });
 
@@ -120,27 +137,40 @@ export class ChapterProgressService {
       }
     }
 
-    const completedItems = items.filter(item => item.status === LessonProgressStatus.COMPLETED).length;
-    const progressPercentage = lessons.length > 0 ? Math.round((completedItems / lessons.length) * 100) : 0;
+    const completedItems = items.filter(
+      (item) => item.status === LessonProgressStatus.COMPLETED,
+    ).length;
+    const progressPercentage =
+      lessons.length > 0
+        ? Math.round((completedItems / lessons.length) * 100)
+        : 0;
 
     return {
       chapterId,
       progressPercentage,
       totalItems: lessons.length,
       completedItems,
-      items
+      items,
     };
   }
 
-  async getNextAvailableItem(userId: number, chapterId: number): Promise<number | null> {
+  async getNextAvailableItem(
+    userId: number,
+    chapterId: number,
+  ): Promise<number | null> {
     const summary = await this.getChapterProgressSummary(userId, chapterId);
-    const currentItem = summary.items.find(item => item.status === LessonProgressStatus.CURRENT);
+    const currentItem = summary.items.find(
+      (item) => item.status === LessonProgressStatus.CURRENT,
+    );
     return currentItem?.lessonId || null;
   }
 
-  async validateProgressConstraints(userId: number, chapterId: number): Promise<boolean> {
+  async validateProgressConstraints(
+    userId: number,
+    chapterId: number,
+  ): Promise<boolean> {
     const progress = await this.chapterProgressRepository.findOne({
-      where: { userId, chapterId }
+      where: { userId, chapterId },
     });
 
     if (!progress) return true;
@@ -155,12 +185,15 @@ export class ChapterProgressService {
     return true;
   }
 
-  async isCheckpointUnlocked(userId: number, chapterId: number): Promise<boolean> {
+  async isCheckpointUnlocked(
+    userId: number,
+    chapterId: number,
+  ): Promise<boolean> {
     const lessons = await this.lessonRepository.find({
-      where: { 
+      where: {
         chapter_id: chapterId,
-        lesson_type: 'checkpoint'
-      }
+        lesson_type: 'checkpoint',
+      },
     });
 
     if (lessons.length === 0) return true;
@@ -169,16 +202,16 @@ export class ChapterProgressService {
     const precedingLessons = await this.lessonRepository.find({
       where: {
         chapter_id: chapterId,
-        orderIndex: { $lt: checkpoint.orderIndex }
-      }
+        orderIndex: { $lt: checkpoint.orderIndex },
+      },
     });
 
     const completedPreceding = await this.lessonProgressRepository.count({
       where: {
         userId,
         status: LessonProgressStatus.COMPLETED,
-        lessonId: precedingLessons.map(l => l.lesson_id)
-      }
+        lessonId: precedingLessons.map((l) => l.lesson_id),
+      },
     });
 
     return completedPreceding === precedingLessons.length;

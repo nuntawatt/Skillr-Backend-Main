@@ -1,10 +1,20 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Lesson, LessonType } from './entities/lesson.entity';
 import { Chapter } from '../chapters/entities/chapter.entity';
 import { Article } from '../articles/entities/article.entity';
-import { CreateLessonDto, UpdateLessonDto, LessonResponseDto } from './dto/lesson';
+import { Quiz } from '../quizzes/entities/quiz.entity';
+import {
+  CreateLessonDto,
+  UpdateLessonDto,
+  LessonResponseDto,
+} from './dto/lesson';
+import { CreateQuizDto } from '../quizzes/dto/quiz.dto';
 
 @Injectable()
 export class LessonsService {
@@ -15,6 +25,8 @@ export class LessonsService {
     private readonly chapterRepository: Repository<Chapter>,
     @InjectRepository(Article)
     private readonly articleRepository: Repository<Article>,
+    @InjectRepository(Quiz)
+    private readonly quizRepository: Repository<Quiz>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -26,7 +38,9 @@ export class LessonsService {
     });
 
     if (!chapter) {
-      throw new NotFoundException(`Chapter with ID ${createLessonDto.chapter_id} not found`);
+      throw new NotFoundException(
+        `Chapter with ID ${createLessonDto.chapter_id} not found`,
+      );
     }
 
     // Auto-generate orderIndex if not provided
@@ -34,7 +48,9 @@ export class LessonsService {
     if (orderIndex === undefined) {
       const maxOrderResult = await this.lessonRepository
         .createQueryBuilder('lesson')
-        .where('lesson.chapter_id = :chapterId', { chapterId: createLessonDto.chapter_id })
+        .where('lesson.chapter_id = :chapterId', {
+          chapterId: createLessonDto.chapter_id,
+        })
         .select('MAX(lesson.order_index)', 'maxOrder')
         .getRawOne();
       orderIndex = (maxOrderResult?.maxOrder ?? -1) + 1;
@@ -67,7 +83,9 @@ export class LessonsService {
       });
 
       if (!chapter) {
-        throw new NotFoundException(`Chapter with ID ${createLessonDto.chapter_id} not found`);
+        throw new NotFoundException(
+          `Chapter with ID ${createLessonDto.chapter_id} not found`,
+        );
       }
 
       // Auto-generate orderIndex if not provided
@@ -75,7 +93,9 @@ export class LessonsService {
       if (orderIndex === undefined) {
         const maxOrderResult = await manager
           .createQueryBuilder(Lesson, 'lesson')
-          .where('lesson.chapter_id = :chapterId', { chapterId: createLessonDto.chapter_id })
+          .where('lesson.chapter_id = :chapterId', {
+            chapterId: createLessonDto.chapter_id,
+          })
           .select('MAX(lesson.order_index)', 'maxOrder')
           .getRawOne();
         orderIndex = (maxOrderResult?.maxOrder ?? -1) + 1;
@@ -111,6 +131,82 @@ export class LessonsService {
     });
   }
 
+  // Create a new quiz lesson with quiz content
+  async createQuizLesson(
+    lessonData: {
+      lesson_title: string;
+      lesson_description?: string;
+      chapter_id: number;
+      orderIndex?: number;
+    },
+    quizData: CreateQuizDto,
+  ): Promise<LessonResponseDto> {
+    return this.dataSource.transaction(async (manager) => {
+      // Verify chapter exists
+      const chapter = await manager.findOne(Chapter, {
+        where: { chapter_id: lessonData.chapter_id },
+      });
+
+      if (!chapter) {
+        throw new NotFoundException(
+          `Chapter with ID ${lessonData.chapter_id} not found`,
+        );
+      }
+
+      // Auto-generate orderIndex if not provided
+      let orderIndex = lessonData.orderIndex;
+      if (orderIndex === undefined) {
+        const maxOrderResult = await manager
+          .createQueryBuilder(Lesson, 'lesson')
+          .where('lesson.chapter_id = :chapterId', {
+            chapterId: lessonData.chapter_id,
+          })
+          .select('MAX(lesson.order_index)', 'maxOrder')
+          .getRawOne();
+        orderIndex = (maxOrderResult?.maxOrder ?? -1) + 1;
+      }
+
+      // Create quiz first to get its ID
+      const quizQuestions = quizData.quiz_questions.map((q, index) => ({
+        id: `q_${Date.now()}_${index}`,
+        question: q.question,
+        type: q.type,
+        options: q.options,
+        correct_answer: q.correct_answer,
+        explanation: q.explanation,
+        order_index: q.order_index,
+      }));
+
+      const quiz = manager.create(Quiz, {
+        ...quizData,
+        quiz_questions: quizQuestions,
+        lesson_id: 0, // Will be updated after lesson creation
+      });
+
+      // We need to save the lesson first to get its ID
+      const lesson = manager.create(Lesson, {
+        lesson_title: lessonData.lesson_title,
+        lesson_description: lessonData.lesson_description,
+        chapter_id: lessonData.chapter_id,
+        lesson_type: LessonType.QUIZ,
+        ref_id: 0, // Will be updated
+        orderIndex: orderIndex,
+      });
+
+      const savedLesson = await manager.save(lesson);
+
+      // Now create the quiz with the lesson ID
+      quiz.lesson_id = savedLesson.lesson_id;
+      const savedQuiz = await manager.save(quiz);
+
+      // Update the lesson with the quiz's ID
+      savedLesson.ref_id = savedQuiz.quiz_id;
+      await manager.save(savedLesson);
+
+      return this.toResponseDto(savedLesson);
+    });
+  }
+
   // Get all lessons
   async findAll(): Promise<LessonResponseDto[]> {
     const lessons = await this.lessonRepository.find({
@@ -131,7 +227,9 @@ export class LessonsService {
 
   // Find a lesson by ID
   async findOne(id: number): Promise<LessonResponseDto> {
-    const lesson = await this.lessonRepository.findOne({ where: { lesson_id: id } });
+    const lesson = await this.lessonRepository.findOne({
+      where: { lesson_id: id },
+    });
 
     if (!lesson) {
       throw new NotFoundException(`Lesson with ID ${id} not found`);
@@ -141,8 +239,13 @@ export class LessonsService {
   }
 
   // Update a lesson
-  async update(id: number, updateLessonDto: UpdateLessonDto): Promise<LessonResponseDto> {
-    const lesson = await this.lessonRepository.findOne({ where: { lesson_id: id } });
+  async update(
+    id: number,
+    updateLessonDto: UpdateLessonDto,
+  ): Promise<LessonResponseDto> {
+    const lesson = await this.lessonRepository.findOne({
+      where: { lesson_id: id },
+    });
 
     if (!lesson) {
       throw new NotFoundException(`Lesson with ID ${id} not found`);
@@ -182,7 +285,9 @@ export class LessonsService {
 
   // Delete a lesson
   async remove(id: number): Promise<void> {
-    const lesson = await this.lessonRepository.findOne({ where: { lesson_id: id } });
+    const lesson = await this.lessonRepository.findOne({
+      where: { lesson_id: id },
+    });
 
     if (!lesson) {
       throw new NotFoundException(`Lesson with ID ${id} not found`);
@@ -192,7 +297,10 @@ export class LessonsService {
   }
 
   // Reorder lessons within a chapter
-  async reorder(chapterId: number, lessonIds: number[]): Promise<LessonResponseDto[]> {
+  async reorder(
+    chapterId: number,
+    lessonIds: number[],
+  ): Promise<LessonResponseDto[]> {
     const lessons = await this.lessonRepository.find({
       where: { chapter_id: chapterId },
     });
@@ -220,7 +328,7 @@ export class LessonsService {
       ref_id: lesson.ref_id,
       orderIndex: lesson.orderIndex,
       chapter_id: lesson.chapter_id,
-      
+
       lesson_coverImage_id: lesson.lesson_coverImage_id,
       lesson_video_id: lesson.lesson_video_id,
 

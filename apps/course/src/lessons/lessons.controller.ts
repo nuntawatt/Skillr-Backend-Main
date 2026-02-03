@@ -1,17 +1,46 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiQuery, ApiResponse, ApiNoContentResponse } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  ParseIntPipe,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiOkResponse,
+  ApiCreatedResponse,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+  ApiNoContentResponse,
+} from '@nestjs/swagger';
 import { LessonsService } from './lessons.service';
-import { CreateLessonDto, UpdateLessonDto, LessonResponseDto } from './dto/lesson';
+import {
+  CreateLessonDto,
+  UpdateLessonDto,
+  LessonResponseDto,
+} from './dto/lesson';
 import { ChapterResponseDto } from '../chapters/dto';
+import { CreateQuizDto } from '../quizzes/dto/quiz.dto';
 
 @ApiTags('Lessons')
 @Controller('lessons')
 export class LessonsController {
-  constructor(private readonly lessonsService: LessonsService) { }
+  constructor(private readonly lessonsService: LessonsService) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new lesson' })
-  @ApiCreatedResponse({ type: LessonResponseDto, description: 'Lesson created successfully' })
+  @ApiCreatedResponse({
+    type: LessonResponseDto,
+    description: 'Lesson created successfully',
+  })
   @ApiResponse({ status: 400, description: 'Bad Request' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
   create(@Body() dto: CreateLessonDto): Promise<LessonResponseDto> {
@@ -20,13 +49,46 @@ export class LessonsController {
 
   @Post('article')
   @ApiOperation({ summary: 'Create a new article lesson with content' })
-  @ApiCreatedResponse({ type: LessonResponseDto, description: 'Article lesson created successfully' })
+  @ApiCreatedResponse({
+    type: LessonResponseDto,
+    description: 'Article lesson created successfully',
+  })
   @ApiResponse({ status: 400, description: 'Bad Request' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
   createArticleLesson(
-    @Body() body: { lesson_title: string; lesson_description?: string; chapter_id: number; orderIndex?: number; content: any }): Promise<LessonResponseDto> {
+    @Body()
+    body: {
+      lesson_title: string;
+      lesson_description?: string;
+      chapter_id: number;
+      orderIndex?: number;
+      content: any;
+    },
+  ): Promise<LessonResponseDto> {
     const { content, ...lessonData } = body;
     return this.lessonsService.createArticleLesson(lessonData, content);
+  }
+
+  @Post('quiz')
+  @ApiOperation({ summary: 'Create a new quiz lesson with content' })
+  @ApiCreatedResponse({
+    type: LessonResponseDto,
+    description: 'Quiz lesson created successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
+  createQuizLesson(
+    @Body()
+    body: {
+      lesson_title: string;
+      lesson_description?: string;
+      chapter_id: number;
+      orderIndex?: number;
+      quiz: CreateQuizDto;
+    },
+  ): Promise<LessonResponseDto> {
+    const { quiz, ...lessonData } = body;
+    return this.lessonsService.createQuizLesson(lessonData, quiz);
   }
 
   // @Get()
@@ -43,7 +105,9 @@ export class LessonsController {
   @ApiOkResponse({ type: LessonResponseDto, isArray: true })
   @ApiResponse({ status: 400, description: 'Bad Request' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
-  findByChapter(@Query('chapterId', ParseIntPipe) chapterId: number): Promise<LessonResponseDto[]> {
+  findByChapter(
+    @Query('chapterId', ParseIntPipe) chapterId: number,
+  ): Promise<LessonResponseDto[]> {
     return this.lessonsService.findByChapter(chapterId);
   }
 
@@ -63,7 +127,10 @@ export class LessonsController {
   @ApiOkResponse({ type: LessonResponseDto })
   @ApiResponse({ status: 404, description: 'Lesson not found' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() updateLessonDto: UpdateLessonDto): Promise<LessonResponseDto> {
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateLessonDto: UpdateLessonDto,
+  ): Promise<LessonResponseDto> {
     return this.lessonsService.update(id, updateLessonDto);
   }
 
@@ -79,11 +146,16 @@ export class LessonsController {
   }
 
   @Post('reorder')
-  @ApiOperation({ summary: 'Reorder lessons within a chapter : ยังไม่ได้หมายเหตุเผื่อได้ใช้ รีบทเรียน ' })
+  @ApiOperation({
+    summary:
+      'Reorder lessons within a chapter : ยังไม่ได้หมายเหตุเผื่อได้ใช้ รีบทเรียน ',
+  })
   @ApiOkResponse({ type: LessonResponseDto, isArray: true })
   @ApiResponse({ status: 400, description: 'Bad Request' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
-  reorder(@Body() body: { chapterId: number; lessonIds: number[] }): Promise<LessonResponseDto[]> {
+  reorder(
+    @Body() body: { chapterId: number; lessonIds: number[] },
+  ): Promise<LessonResponseDto[]> {
     return this.lessonsService.reorder(body.chapterId, body.lessonIds);
   }
 }

@@ -22,7 +22,9 @@ export class LevelsService {
     });
 
     if (!course) {
-      throw new NotFoundException(`Course with ID ${createLevelDto.course_id} not found`);
+      throw new NotFoundException(
+        `Course with ID ${createLevelDto.course_id} not found`,
+      );
     }
 
     // Auto-generate orderIndex if not provided
@@ -30,7 +32,9 @@ export class LevelsService {
     if (orderIndex === undefined) {
       const maxOrderResult = await this.levelRepository
         .createQueryBuilder('level')
-        .where('level.course_id = :course_id', { course_id: createLevelDto.course_id })
+        .where('level.course_id = :course_id', {
+          course_id: createLevelDto.course_id,
+        })
         .select('MAX(level.level_orderIndex)', 'maxOrder')
         .getRawOne();
       orderIndex = (maxOrderResult?.maxOrder ?? -1) + 1;
@@ -61,13 +65,15 @@ export class LevelsService {
     const levels = await this.levelRepository.find({
       order: { level_orderIndex: 'ASC' },
     });
-    
+
     return levels.map((l) => this.toResponseDto(l));
   }
 
   // Find a level by ID
   async findOne(id: number): Promise<LevelResponseDto> {
-    const level = await this.levelRepository.findOne({ where: { level_id: id } });
+    const level = await this.levelRepository.findOne({
+      where: { level_id: id },
+    });
 
     if (!level) {
       throw new NotFoundException(`Level with ID ${id} not found`);
@@ -77,8 +83,13 @@ export class LevelsService {
   }
 
   // Update a level
-  async update(id: number, updateLevelDto: UpdateLevelDto): Promise<LevelResponseDto> {
-    const level = await this.levelRepository.findOne({ where: { level_id: id } });
+  async update(
+    id: number,
+    updateLevelDto: UpdateLevelDto,
+  ): Promise<LevelResponseDto> {
+    const level = await this.levelRepository.findOne({
+      where: { level_id: id },
+    });
 
     if (!level) {
       throw new NotFoundException(`Level with ID ${id} not found`);
@@ -98,7 +109,9 @@ export class LevelsService {
 
   // Delete a level
   async remove(id: number): Promise<void> {
-    const level = await this.levelRepository.findOne({ where: { level_id: id } });
+    const level = await this.levelRepository.findOne({
+      where: { level_id: id },
+    });
 
     if (!level) {
       throw new NotFoundException(`Level with ID ${id} not found`);
@@ -108,7 +121,10 @@ export class LevelsService {
   }
 
   // Reorder levels within a course
-  async reorder(courseId: number, levelIds: number[]): Promise<LevelResponseDto[]> {
+  async reorder(
+    courseId: number,
+    levelIds: number[],
+  ): Promise<LevelResponseDto[]> {
     const levels = await this.levelRepository.find({
       where: { course_id: courseId },
     });

@@ -4,7 +4,10 @@ export class LessonResponseDto {
   @ApiProperty({ description: 'Lesson ID', example: 1 })
   lesson_id: number;
 
-  @ApiProperty({ description: 'Lesson title', example: 'Introduction to Variables' })
+  @ApiProperty({
+    description: 'Lesson title',
+    example: 'Introduction to Variables',
+  })
   lesson_title: string;
 
   @ApiPropertyOptional({ description: 'Lesson description' })
@@ -22,13 +25,18 @@ export class LessonResponseDto {
   @ApiProperty({ description: 'Chapter ID this lesson belongs to', example: 1 })
   chapter_id: number;
 
-  @ApiPropertyOptional({ description: 'Cover image ID from media service', example: 123 })
+  @ApiPropertyOptional({
+    description: 'Cover image ID from media service',
+    example: 123,
+  })
   lesson_coverImage_id?: number | null;
 
-  @ApiPropertyOptional({ description: 'Main video ID from media service', example: 456 })
+  @ApiPropertyOptional({
+    description: 'Main video ID from media service',
+    example: 456,
+  })
   lesson_video_id?: number | null;
 
   @ApiProperty({ description: 'Creation timestamp' })
   createdAt: Date;
-  
 }

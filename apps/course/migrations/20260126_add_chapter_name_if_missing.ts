@@ -5,7 +5,9 @@ export class AddChapterNameIfMissing1769370000002 implements MigrationInterface 
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Add column if missing
-    await queryRunner.query(`ALTER TABLE chapters ADD COLUMN IF NOT EXISTS chapter_name varchar(100)`);
+    await queryRunner.query(
+      `ALTER TABLE chapters ADD COLUMN IF NOT EXISTS chapter_name varchar(100)`,
+    );
 
     // Populate chapter_name from chapter_title for NULL/empty values
     await queryRunner.query(`
@@ -15,11 +17,15 @@ export class AddChapterNameIfMissing1769370000002 implements MigrationInterface 
     `);
 
     // Set NOT NULL constraint after data correction
-    await queryRunner.query(`ALTER TABLE chapters ALTER COLUMN chapter_name SET NOT NULL`);
+    await queryRunner.query(
+      `ALTER TABLE chapters ALTER COLUMN chapter_name SET NOT NULL`,
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Remove column if we want to revert
-    await queryRunner.query(`ALTER TABLE chapters DROP COLUMN IF EXISTS chapter_name`);
+    await queryRunner.query(
+      `ALTER TABLE chapters DROP COLUMN IF EXISTS chapter_name`,
+    );
   }
 }

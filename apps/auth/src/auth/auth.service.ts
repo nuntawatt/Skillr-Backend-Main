@@ -1,4 +1,10 @@
-import { Injectable, UnauthorizedException, BadRequestException, ConflictException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+  ConflictException,
+  Logger,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan, IsNull } from 'typeorm';
@@ -45,15 +51,16 @@ export class AuthService {
     private readonly passwordResetTokenRepository: Repository<PasswordResetToken>,
     private readonly loginAttemptsService: LoginAttemptsService,
     private readonly emailService: EmailService,
-  ) { }
+  ) {}
 
   // Register a new user
   async register(registerDto: RegisterDto): Promise<AuthResponse> {
     // ตรวจสอบว่ามี email ถูกใช้จาก provider ยัง
-    const existingAccount = await this.usersService.findAuthAccountByProviderAndEmail(
-      AuthProvider.LOCAL,
-      registerDto.email,
-    );
+    const existingAccount =
+      await this.usersService.findAuthAccountByProviderAndEmail(
+        AuthProvider.LOCAL,
+        registerDto.email,
+      );
     if (existingAccount) {
       throw new ConflictException('Email already exists'); // email ถูกใช้แล้ว
     }
@@ -84,25 +91,35 @@ export class AuthService {
   }
 
   // Login with email and password
-  async login(loginDto: LoginDto, userAgent?: string, ipAddress?: string): Promise<AuthResponse> {
+  async login(
+    loginDto: LoginDto,
+    userAgent?: string,
+    ipAddress?: string,
+  ): Promise<AuthResponse> {
     const invalidMessage = 'Invalid email or password';
 
-    const lockStatus = await this.loginAttemptsService.getLockStatus(loginDto.email); // check if account is locked
+    const lockStatus = await this.loginAttemptsService.getLockStatus(
+      loginDto.email,
+    ); // check if account is locked
     if (lockStatus.isLocked) {
       throw new UnauthorizedException(
         this.formatLockMessage(lockStatus.remainingMs),
       );
     }
 
-    const authAccount = await this.usersService.findAuthAccountByProviderAndEmail(
-      AuthProvider.LOCAL,
-      loginDto.email,
-    );
+    const authAccount =
+      await this.usersService.findAuthAccountByProviderAndEmail(
+        AuthProvider.LOCAL,
+        loginDto.email,
+      );
     if (!authAccount?.user) {
-      const nextStatus = await this.loginAttemptsService.recordFailure(loginDto.email); // login failed
-      throw new UnauthorizedException(nextStatus.isLocked
-        ? this.formatLockMessage(nextStatus.remainingMs)
-        : invalidMessage,
+      const nextStatus = await this.loginAttemptsService.recordFailure(
+        loginDto.email,
+      ); // login failed
+      throw new UnauthorizedException(
+        nextStatus.isLocked
+          ? this.formatLockMessage(nextStatus.remainingMs)
+          : invalidMessage,
       );
     }
 
@@ -111,10 +128,13 @@ export class AuthService {
       loginDto.password,
     );
     if (!isPasswordValid) {
-      const nextStatus = await this.loginAttemptsService.recordFailure(loginDto.email);
-      throw new UnauthorizedException(nextStatus.isLocked
-        ? this.formatLockMessage(nextStatus.remainingMs)
-        : invalidMessage,
+      const nextStatus = await this.loginAttemptsService.recordFailure(
+        loginDto.email,
+      );
+      throw new UnauthorizedException(
+        nextStatus.isLocked
+          ? this.formatLockMessage(nextStatus.remainingMs)
+          : invalidMessage,
       );
     }
 
@@ -123,7 +143,11 @@ export class AuthService {
       throw new UnauthorizedException('Account is inactive or suspended');
     }
 
-    const tokens = await this.generateTokens(authAccount.user, userAgent, ipAddress);
+    const tokens = await this.generateTokens(
+      authAccount.user,
+      userAgent,
+      ipAddress,
+    );
     await this.loginAttemptsService.resetAttempts(loginDto.email);
 
     return { user: this.sanitizeUser(authAccount.user), tokens };
@@ -136,7 +160,7 @@ export class AuthService {
     firstName?: string;
     lastName?: string;
     avatar?: string;
-  }) : Promise<AuthResponse> {
+  }): Promise<AuthResponse> {
     // ค้นหาหรือสร้าง user จากข้อมูล profile ที่ได้จาก Google
     const user = await this.usersService.findOrCreateFromGoogle(profile);
 
@@ -152,7 +176,7 @@ export class AuthService {
     // คืนค่าในรูปแบบเดียวกับ login ปกติ
     return {
       user: this.sanitizeUser(user),
-      tokens
+      tokens,
     };
   }
 
@@ -165,7 +189,7 @@ export class AuthService {
         revokedAt: IsNull(),
         expiresAt: MoreThan(new Date()), // ตรวจสอบว่า token ยังไม่หมดอายุ
       },
-      relations: ['user']
+      relations: ['user'],
     });
 
     if (!session) {
@@ -200,10 +224,11 @@ export class AuthService {
   async forgotPassword(email: string): Promise<{ message: string }> {
     const genericMessage = 'If the email exists, an OTP will be sent.';
 
-    const authAccount = await this.usersService.findAuthAccountByProviderAndEmail(
-      AuthProvider.LOCAL,
-      email,
-    );
+    const authAccount =
+      await this.usersService.findAuthAccountByProviderAndEmail(
+        AuthProvider.LOCAL,
+        email,
+      );
     if (!authAccount?.user) {
       return { message: genericMessage };
     }
@@ -239,10 +264,11 @@ export class AuthService {
   async verifyOtp(email: string, otp: string): Promise<{ resetToken: string }> {
     const invalidMessage = 'Invalid or expired OTP';
 
-    const authAccount = await this.usersService.findAuthAccountByProviderAndEmail(
-      AuthProvider.LOCAL,
-      email,
-    );
+    const authAccount =
+      await this.usersService.findAuthAccountByProviderAndEmail(
+        AuthProvider.LOCAL,
+        email,
+      );
     if (!authAccount?.user) {
       throw new BadRequestException(invalidMessage);
     }
@@ -273,11 +299,16 @@ export class AuthService {
 
     // generate a new reset token for password reset phase
     const resetTokenPlain = crypto.randomBytes(32).toString('hex');
-    const resetTokenHash = await bcrypt.hash(resetTokenPlain, BCRYPT_SALT_ROUNDS);
+    const resetTokenHash = await bcrypt.hash(
+      resetTokenPlain,
+      BCRYPT_SALT_ROUNDS,
+    );
 
     // Update expiry for reset token phase
     const resetTokenExpiresAt = new Date();
-    resetTokenExpiresAt.setMinutes(resetTokenExpiresAt.getMinutes() + RESET_TOKEN_EXPIRY_MINUTES);
+    resetTokenExpiresAt.setMinutes(
+      resetTokenExpiresAt.getMinutes() + RESET_TOKEN_EXPIRY_MINUTES,
+    );
 
     // Replace OTP hash with reset token hash
     matchedToken.token = resetTokenHash;
@@ -289,9 +320,11 @@ export class AuthService {
   }
 
   // Reset password with verified token
-  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+  async resetPassword(
+    token: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
     const invalidMessage = 'Invalid or expired reset token';
-
 
     // Find all non-expired, unused tokens
     const tokens = await this.passwordResetTokenRepository.find({
@@ -299,7 +332,7 @@ export class AuthService {
         isUsed: false,
         expiresAt: MoreThan(new Date()),
       },
-      relations: ['user']
+      relations: ['user'],
     });
 
     // Compare reset token with stored hashes using bcrypt
@@ -326,7 +359,9 @@ export class AuthService {
     // Logout from all sessions for security
     await this.logoutAll(matchedToken.userId);
 
-    await this.emailService.sendPasswordChangedEmail(matchedToken.user.email || '');
+    await this.emailService.sendPasswordChangedEmail(
+      matchedToken.user.email || '',
+    );
     this.logger.log(`Password reset for userId=${matchedToken.userId}`);
 
     return { message: 'Password has been reset successfully' };
@@ -338,7 +373,11 @@ export class AuthService {
   }
 
   // Generate access and refresh tokens
-  private async generateTokens(user: User, userAgent?: string, ipAddress?: string): Promise<TokenResponse> {
+  private async generateTokens(
+    user: User,
+    userAgent?: string,
+    ipAddress?: string,
+  ): Promise<TokenResponse> {
     const role = String(user.role);
     const normalizedRole = role === 'INSTRUCTOR' ? 'ADMIN' : role;
 
@@ -358,7 +397,12 @@ export class AuthService {
 
     await this.sessionRepository.save(session);
 
-    const payload = { sub: user.id, email: user.email, role: normalizedRole, sid: session.id };
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: normalizedRole,
+      sid: session.id,
+    };
     const accessToken = this.jwtService.sign(payload);
 
     return { accessToken, refreshToken: refreshTokenValue, expiresIn: 15 * 60 };

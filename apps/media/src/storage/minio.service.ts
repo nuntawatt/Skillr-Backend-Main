@@ -44,14 +44,27 @@ export class MinioStorageService implements StorageProvider {
   }
 
   // ================= Presign GET =================
-  async presignGet(bucket: string, key: string, expiresIn: number): Promise<string> {
+  async presignGet(
+    bucket: string,
+    key: string,
+    expiresIn: number,
+  ): Promise<string> {
     return this.client.presignedGetObject(bucket, key, expiresIn);
   }
 
-  async presignedGetObject(bucket: string,key: string,expiresIn: number,responseHeaders?: Record<string, string>): Promise<string> {
-    
+  async presignedGetObject(
+    bucket: string,
+    key: string,
+    expiresIn: number,
+    responseHeaders?: Record<string, string>,
+  ): Promise<string> {
     if (responseHeaders) {
-      return this.client.presignedGetObject(bucket, key, expiresIn, responseHeaders);
+      return this.client.presignedGetObject(
+        bucket,
+        key,
+        expiresIn,
+        responseHeaders,
+      );
     }
     return this.client.presignedGetObject(bucket, key, expiresIn);
   }

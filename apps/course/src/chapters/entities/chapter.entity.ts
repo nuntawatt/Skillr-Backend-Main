@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, Index } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  OneToMany,
+  Index,
+} from 'typeorm';
 import { Level } from '../../levels/entities/level.entity';
 import { Lesson } from '../../lessons/entities/lesson.entity';
 
@@ -23,7 +30,9 @@ export class Chapter {
   @Column({ name: 'order_index', type: 'int', default: 0 })
   chapter_orderIndex: number;
 
-  @ManyToOne(() => Level, (level) => level.level_chapters, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Level, (level) => level.level_chapters, {
+    onDelete: 'CASCADE',
+  })
   level: Level;
 
   @Column({ name: 'level_id', type: 'int' })
@@ -32,4 +41,3 @@ export class Chapter {
   @OneToMany(() => Lesson, (lesson) => lesson.chapter, { cascade: true })
   lessons: Lesson[];
 }
-

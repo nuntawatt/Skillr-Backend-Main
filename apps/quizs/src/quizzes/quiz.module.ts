@@ -13,9 +13,7 @@ import { QuizsResult } from './entities/quizs-result.entity';
     HttpModule,
   ],
   controllers: [QuizController, QuizAdminController],
-  providers: [
-    QuizService,
-  ],
+  providers: [QuizService],
   exports: [QuizService],
 })
 export class QuizModule {}

@@ -2,8 +2,8 @@ import { Column, Entity, PrimaryGeneratedColumn, Unique } from 'typeorm';
 
 export enum LessonProgressStatus {
   COMPLETED = 'completed',
-  CURRENT = 'current', 
-  LOCKED = 'locked'
+  CURRENT = 'current',
+  LOCKED = 'locked',
 }
 
 @Entity('lesson_progress')
@@ -21,7 +21,7 @@ export class LessonProgress {
   @Column({
     type: 'enum',
     enum: LessonProgressStatus,
-    default: LessonProgressStatus.LOCKED
+    default: LessonProgressStatus.LOCKED,
   })
   status: LessonProgressStatus;
 

@@ -1,5 +1,9 @@
 import { InjectRepository } from '@nestjs/typeorm';
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 
@@ -16,17 +20,31 @@ export class MediaImagesService {
 
   private validateImageMime(mime: string, originalName?: string) {
     const ext = (originalName ?? '').split('.').pop()?.toLowerCase();
-    const allowMime = ['image/jpeg', 'image/png', 'image/jpg', 'image/pjpeg', 'image/webp'];
+    const allowMime = [
+      'image/jpeg',
+      'image/png',
+      'image/jpg',
+      'image/pjpeg',
+      'image/webp',
+    ];
     const allowExt = ['jpg', 'jpeg', 'png', 'webp'];
 
     if (allowMime.includes((mime ?? '').toLowerCase())) return;
-    if ((mime === 'application/octet-stream' || !mime) && ext && allowExt.includes(ext)) return;
+    if (
+      (mime === 'application/octet-stream' || !mime) &&
+      ext &&
+      allowExt.includes(ext)
+    )
+      return;
 
     throw new BadRequestException('invalid image mime type');
   }
 
   // ===== Upload image =====
-  async uploadImageFileAndPersist(file: Express.Multer.File, ownerUserId?: number) {
+  async uploadImageFileAndPersist(
+    file: Express.Multer.File,
+    ownerUserId?: number,
+  ) {
     if (!file) throw new BadRequestException('file missing');
 
     this.validateImageMime(file.mimetype, file.originalname);
@@ -44,13 +62,9 @@ export class MediaImagesService {
     const storageKey = `images/${uuid}${(file.originalname?.match(/\.[^.]+$/) ?? [''])[0]}`;
 
     // upload ผ่าน storage abstraction
-    await storage.putObject(
-      bucket,
-      storageKey,
-      file.buffer,
-      file.size,
-      { 'Content-Type': file.mimetype },
-    );
+    await storage.putObject(bucket, storageKey, file.buffer, file.size, {
+      'Content-Type': file.mimetype,
+    });
 
     // บันทึก metadata ลง DB
     const saved = await this.repo.save(
@@ -94,7 +108,7 @@ export class MediaImagesService {
       bucket,
       asset.storageKey,
       expires,
-      responseHeaders
+      responseHeaders,
     );
 
     return {

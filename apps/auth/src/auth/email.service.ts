@@ -14,29 +14,45 @@ export class EmailService {
 
   constructor(private readonly configService: ConfigService) {
     const resendKey = this.configService.get<string>('RESEND_API_KEY');
-    this.fromEmail = this.configService.get<string>('MAIL_FROM') ?? 'no-reply@skillracademy.com';
+    this.fromEmail =
+      this.configService.get<string>('MAIL_FROM') ??
+      'no-reply@skillracademy.com';
     this.isResendConfigured = !!resendKey;
-    this.resend = this.isResendConfigured ? new Resend(resendKey as string) : null;
+    this.resend = this.isResendConfigured
+      ? new Resend(resendKey as string)
+      : null;
 
-    const smtpHost = this.configService.get<string>('EMAIL_HOST') ?? this.configService.get<string>('SMTP_HOST');
-    const smtpPort = Number(this.configService.get<number>('EMAIL_PORT') ?? this.configService.get<number>('SMTP_PORT') ?? 587);
-    const smtpUser = this.configService.get<string>('EMAIL_USER') ?? this.configService.get<string>('SMTP_USER');
-    const smtpPass = this.configService.get<string>('EMAIL_PASS') ?? this.configService.get<string>('SMTP_PASS');
+    const smtpHost =
+      this.configService.get<string>('EMAIL_HOST') ??
+      this.configService.get<string>('SMTP_HOST');
+    const smtpPort = Number(
+      this.configService.get<number>('EMAIL_PORT') ??
+        this.configService.get<number>('SMTP_PORT') ??
+        587,
+    );
+    const smtpUser =
+      this.configService.get<string>('EMAIL_USER') ??
+      this.configService.get<string>('SMTP_USER');
+    const smtpPass =
+      this.configService.get<string>('EMAIL_PASS') ??
+      this.configService.get<string>('SMTP_PASS');
 
     this.smtpConfigured = !!(smtpHost && smtpUser && smtpPass);
     this.transporter = this.smtpConfigured
       ? nodemailer.createTransport({
-        host: smtpHost as string,
-        port: smtpPort,
-        secure: smtpPort === 465,
-        auth: {
-          user: smtpUser as string,
-          pass: smtpPass as string,
-        },
-      })
+          host: smtpHost as string,
+          port: smtpPort,
+          secure: smtpPort === 465,
+          auth: {
+            user: smtpUser as string,
+            pass: smtpPass as string,
+          },
+        })
       : null;
 
-    this.logger.log(`EmailService initialized - Resend: ${this.isResendConfigured}, SMTP: ${this.smtpConfigured}, From: ${this.fromEmail}`);
+    this.logger.log(
+      `EmailService initialized - Resend: ${this.isResendConfigured}, SMTP: ${this.smtpConfigured}, From: ${this.fromEmail}`,
+    );
   }
 
   async sendOtpEmail(to: string, otp: string): Promise<boolean> {
@@ -187,7 +203,12 @@ export class EmailService {
     return this.sendEmail(to, subject, html, text);
   }
 
-  private async sendEmail(to: string, subject: string, html: string, text: string): Promise<boolean> {
+  private async sendEmail(
+    to: string,
+    subject: string,
+    html: string,
+    text: string,
+  ): Promise<boolean> {
     if (this.smtpConfigured && this.transporter) {
       try {
         const info = await this.transporter.sendMail({
@@ -197,10 +218,14 @@ export class EmailService {
           text,
           html,
         });
-        this.logger.log(`SMTP email sent to ${to}, messageId=${info.messageId}`);
+        this.logger.log(
+          `SMTP email sent to ${to}, messageId=${info.messageId}`,
+        );
         return true;
       } catch (err) {
-        this.logger.error(`SMTP send failed to ${to}: ${(err as Error).message}`);
+        this.logger.error(
+          `SMTP send failed to ${to}: ${(err as Error).message}`,
+        );
       }
     }
 
@@ -220,7 +245,9 @@ export class EmailService {
         this.logger.log(`Resend email sent to ${to}, id: ${result.data?.id}`);
         return true;
       } catch (err) {
-        this.logger.error(`Resend send failed to ${to}: ${(err as Error).message}`);
+        this.logger.error(
+          `Resend send failed to ${to}: ${(err as Error).message}`,
+        );
       }
     }
 

@@ -1,4 +1,11 @@
-import { IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, IsArray } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsArray,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { QuizType } from '../entities/quizs.entity';
 
@@ -16,7 +23,10 @@ export class CreateQuizsDto {
   @IsNotEmpty()
   quizs_questions: string;
 
-  @ApiPropertyOptional({ type: [String], example: ['Superset ของ JavaScript', 'ชื่อตัวละคร', 'ยี่ห้อกาแฟ'] })
+  @ApiPropertyOptional({
+    type: [String],
+    example: ['Superset ของ JavaScript', 'ชื่อตัวละคร', 'ยี่ห้อกาแฟ'],
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
@@ -26,7 +36,9 @@ export class CreateQuizsDto {
   @IsNotEmpty()
   quizs_answer: any;
 
-  @ApiPropertyOptional({ example: 'TypeScript เป็นภาษาที่สร้างครอบ JS เพื่อเพิ่มระบบ Type' })
+  @ApiPropertyOptional({
+    example: 'TypeScript เป็นภาษาที่สร้างครอบ JS เพื่อเพิ่มระบบ Type',
+  })
   @IsOptional()
   @IsString()
   quizs_explanation?: string;

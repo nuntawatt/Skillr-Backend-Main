@@ -1,4 +1,9 @@
-import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -19,7 +24,7 @@ export class UsersService {
     @InjectRepository(AuthAccount)
     private readonly authAccountRepository: Repository<AuthAccount>,
     private readonly config: ConfigService,
-  ) { }
+  ) {}
 
   // Create a new user
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -46,8 +51,12 @@ export class UsersService {
   async getAvatarPresignedUrlByMediaId(mediaId: string): Promise<string> {
     if (!mediaId) throw new NotFoundException('mediaId is required');
 
-    const endpointRaw = this.config.get<string>('S3_ENDPOINT') ?? this.config.get<string>('MINIO_ENDPOINT') ?? '';
-    if (!endpointRaw) throw new BadRequestException('S3_ENDPOINT not configured');
+    const endpointRaw =
+      this.config.get<string>('S3_ENDPOINT') ??
+      this.config.get<string>('MINIO_ENDPOINT') ??
+      '';
+    if (!endpointRaw)
+      throw new BadRequestException('S3_ENDPOINT not configured');
 
     const bucket = this.config.get<string>('S3_BUCKET') ?? 'auth-profile';
     const prefix = this.config.get<string>('S3_AVATAR_PREFIX') ?? 'avatar';
@@ -80,15 +89,22 @@ export class UsersService {
       });
     });
 
-    if (!foundKey) throw new NotFoundException('Avatar object not found in bucket');
+    if (!foundKey)
+      throw new NotFoundException('Avatar object not found in bucket');
 
-    const expires = Number(this.config.get<number>('S3_SIGNED_URL_EXPIRES_SECONDS')) || 900;
+    const expires =
+      Number(this.config.get<number>('S3_SIGNED_URL_EXPIRES_SECONDS')) || 900;
     const presignedUrl: string = await new Promise((resolve, reject) => {
       // @ts-ignore
-      client.presignedGetObject(bucket, foundKey, expires, (err: Error | null, url?: string) => {
-        if (err) return reject(err);
-        resolve(url!);
-      });
+      client.presignedGetObject(
+        bucket,
+        foundKey,
+        expires,
+        (err: Error | null, url?: string) => {
+          if (err) return reject(err);
+          resolve(url!);
+        },
+      );
     });
 
     return presignedUrl;
@@ -141,7 +157,6 @@ export class UsersService {
       providerUserId: null,
       email,
       passwordHash,
-
     });
     return this.authAccountRepository.save(account);
   }
@@ -154,13 +169,11 @@ export class UsersService {
     lastName?: string;
     avatar?: string;
   }): Promise<User> {
-
     // 1. หา Google auth account ก่อน (primary key)
-    const existingGoogleAccount =
-      await this.findAuthAccountByProviderUserId(
-        AuthProvider.GOOGLE,
-        profile.googleId,
-      );
+    const existingGoogleAccount = await this.findAuthAccountByProviderUserId(
+      AuthProvider.GOOGLE,
+      profile.googleId,
+    );
 
     if (existingGoogleAccount?.user) {
       return existingGoogleAccount.user;
@@ -246,7 +259,10 @@ export class UsersService {
   }
 
   // Update user details
-  async update(id: number | string, updateUserDto: UpdateUserDto,): Promise<User> {
+  async update(
+    id: number | string,
+    updateUserDto: UpdateUserDto,
+  ): Promise<User> {
     const user = await this.findById(id);
 
     if (!user) {
@@ -258,16 +274,28 @@ export class UsersService {
   }
 
   // Upload avatar image to media MinIO and update user.avatar with public URL
-  async uploadAvatar(id: number | string, file: Express.Multer.File): Promise<User> {
+  async uploadAvatar(
+    id: number | string,
+    file: Express.Multer.File,
+  ): Promise<User> {
     const user = await this.findById(id);
     if (!user) throw new NotFoundException('User not found');
 
-    if (!file || !file.buffer) throw new BadRequestException('File is required');
-    if (!file.mimetype || (file.mimetype !== 'image/jpeg' && file.mimetype !== 'image/png')) throw new BadRequestException('Only JPG and PNG are allowed');
+    if (!file || !file.buffer)
+      throw new BadRequestException('File is required');
+    if (
+      !file.mimetype ||
+      (file.mimetype !== 'image/jpeg' && file.mimetype !== 'image/png')
+    )
+      throw new BadRequestException('Only JPG and PNG are allowed');
 
     // read config values instead of hardcoding
-    const endpointRaw = this.config.get<string>('S3_ENDPOINT') ?? this.config.get<string>('MINIO_ENDPOINT') ?? '';
-    if (!endpointRaw) throw new BadRequestException('S3_ENDPOINT not configured');
+    const endpointRaw =
+      this.config.get<string>('S3_ENDPOINT') ??
+      this.config.get<string>('MINIO_ENDPOINT') ??
+      '';
+    if (!endpointRaw)
+      throw new BadRequestException('S3_ENDPOINT not configured');
 
     const bucket = this.config.get<string>('S3_BUCKET') ?? 'auth-profile';
     const prefix = this.config.get<string>('S3_AVATAR_PREFIX') ?? 'avatar';
@@ -284,17 +312,29 @@ export class UsersService {
     const mediaId = randomUUID();
     const key = `${prefix}/${mediaId}${ext}`;
 
-    await client.putObject(bucket, key, file.buffer, file.size ?? file.buffer.length, { 'Content-Type': file.mimetype });
+    await client.putObject(
+      bucket,
+      key,
+      file.buffer,
+      file.size ?? file.buffer.length,
+      { 'Content-Type': file.mimetype },
+    );
 
     // generate a presigned GET URL so the client can view immediately
-    const expires = Number(this.config.get<number>('S3_SIGNED_URL_EXPIRES_SECONDS')) || 900;
+    const expires =
+      Number(this.config.get<number>('S3_SIGNED_URL_EXPIRES_SECONDS')) || 900;
     const presignedUrl: string = await new Promise((resolve, reject) => {
       // Minio client uses a callback-style presignedGetObject
       // @ts-ignore
-      client.presignedGetObject(bucket, key, expires, (err: Error | null, url?: string) => {
-        if (err) return reject(err);
-        resolve(url!);
-      });
+      client.presignedGetObject(
+        bucket,
+        key,
+        expires,
+        (err: Error | null, url?: string) => {
+          if (err) return reject(err);
+          resolve(url!);
+        },
+      );
     });
 
     // save media id and presigned URL
@@ -307,8 +347,14 @@ export class UsersService {
     if (this.minioClient) return this.minioClient;
 
     const url = new URL(endpointRaw);
-    const accessKey = this.config.get<string>('S3_ACCESS_KEY_ID') ?? this.config.get<string>('MINIO_ROOT_USER') ?? '';
-    const secretKey = this.config.get<string>('S3_SECRET_ACCESS_KEY') ?? this.config.get<string>('MINIO_ROOT_PASSWORD') ?? '';
+    const accessKey =
+      this.config.get<string>('S3_ACCESS_KEY_ID') ??
+      this.config.get<string>('MINIO_ROOT_USER') ??
+      '';
+    const secretKey =
+      this.config.get<string>('S3_SECRET_ACCESS_KEY') ??
+      this.config.get<string>('MINIO_ROOT_PASSWORD') ??
+      '';
 
     this.minioClient = new Minio.Client({
       endPoint: url.hostname,
@@ -358,7 +404,10 @@ export class UsersService {
   }
 
   // Verify user password
-  async verifyPasswordHash(passwordHash: string | null, password: string): Promise<boolean> {
+  async verifyPasswordHash(
+    passwordHash: string | null,
+    password: string,
+  ): Promise<boolean> {
     if (!passwordHash) {
       return false;
     }

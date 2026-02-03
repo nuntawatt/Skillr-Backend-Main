@@ -1,11 +1,28 @@
-import { Body, Controller, Post, Req, UploadedFile, UseInterceptors, Get, Param, Delete } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  Req,
+  UploadedFile,
+  UseInterceptors,
+  Get,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 
 import * as multer from 'multer';
 import { MediaVideosService } from './media-videos.service';
 import { CreateVideoUploadDto } from './dto/create-video-upload.dto';
 
-import { ApiTags, ApiOperation, ApiCreatedResponse, ApiResponse, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiCreatedResponse,
+  ApiResponse,
+  ApiConsumes,
+  ApiBody,
+} from '@nestjs/swagger';
 import { CreateVideoPresignDto } from './dto/create-video-presign.dto';
 
 type RequestWithUser = { user?: { sub?: number } };
@@ -13,7 +30,7 @@ type RequestWithUser = { user?: { sub?: number } };
 @ApiTags('Media Videos')
 @Controller('media/videos')
 export class MediaVideosController {
-  constructor(private readonly svc: MediaVideosService) { }
+  constructor(private readonly svc: MediaVideosService) {}
 
   // [DEV] Upload video via server-side form-data
   @Post('upload')
@@ -24,7 +41,10 @@ export class MediaVideosController {
       type: 'object',
       properties: {
         file: { type: 'string', format: 'binary', description: 'Video file' },
-        owner_user_id: { type: 'number', description: 'Owner user ID (optional)' },
+        owner_user_id: {
+          type: 'number',
+          description: 'Owner user ID (optional)',
+        },
       },
       required: ['file'],
     },
@@ -36,17 +56,26 @@ export class MediaVideosController {
       limits: { fileSize: 500 * 1024 * 1024 }, // 500MB limit for form upload
     }),
   )
-  async uploadVideo(@UploadedFile() file: Express.Multer.File, @Body() body: Record<string, any>) {
-    const ownerUserId = body?.owner_user_id ? Number(body.owner_user_id) : undefined;
+  async uploadVideo(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: Record<string, any>,
+  ) {
+    const ownerUserId = body?.owner_user_id
+      ? Number(body.owner_user_id)
+      : undefined;
     return this.svc.uploadVideoFileAndPersist(file, ownerUserId);
   }
 
   // 1. ขอ presigned URL สำหรับ upload (สำหรับไฟล์ใหญ่)
   @Post('presign')
-  @ApiOperation({ summary: '[CLIENT] Create presigned URL for video upload (for large files)' })
+  @ApiOperation({
+    summary: '[CLIENT] Create presigned URL for video upload (for large files)',
+  })
   @ApiCreatedResponse({ description: 'Presigned URL created' })
-
-  async presign(@Body() dto: CreateVideoUploadDto, @Req() req: RequestWithUser) {
+  async presign(
+    @Body() dto: CreateVideoUploadDto,
+    @Req() req: RequestWithUser,
+  ) {
     return this.svc.createPresignedUpload(dto, req.user);
   }
 
@@ -65,10 +94,12 @@ export class MediaVideosController {
   @ApiResponse({ status: 200, description: 'Upload confirmed' })
   @ApiResponse({ status: 400, description: 'Invalid media_asset_id' })
   @ApiResponse({ status: 404, description: 'Media asset not found' })
-  @ApiResponse({ status: 409, description: 'Media asset not in UPLOADING status' })
+  @ApiResponse({
+    status: 409,
+    description: 'Media asset not in UPLOADING status',
+  })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-
-  async confirm(@Body('media_asset_id') mediaAssetId: number,) {
+  async confirm(@Body('media_asset_id') mediaAssetId: number) {
     return this.svc.confirmUpload(mediaAssetId);
   }
 

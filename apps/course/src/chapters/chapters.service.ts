@@ -15,7 +15,9 @@ export class ChaptersService {
   ) {}
 
   // Create a new chapter
-  async create(createChapterDto: CreateChapterDto): Promise<ChapterResponseDto> {
+  async create(
+    createChapterDto: CreateChapterDto,
+  ): Promise<ChapterResponseDto> {
     // Verify level exists
     const level = await this.levelRepository.findOne({
       where: { level_id: createChapterDto.level_id },
@@ -32,14 +34,17 @@ export class ChaptersService {
     if (orderIndex === undefined) {
       const maxOrderResult = await this.chapterRepository
         .createQueryBuilder('chapter')
-        .where('chapter.level_id = :levelId', { levelId: createChapterDto.level_id })
+        .where('chapter.level_id = :levelId', {
+          levelId: createChapterDto.level_id,
+        })
         .select('MAX(chapter.order_index)', 'maxOrder') // note: maps to column name; adjust if your column alias differs
         .getRawOne();
 
       // maxOrder may be a string depending on DB; coerce to number
-      const maxOrder = maxOrderResult && maxOrderResult.maxOrder !== null
-        ? Number(maxOrderResult.maxOrder)
-        : -1;
+      const maxOrder =
+        maxOrderResult && maxOrderResult.maxOrder !== null
+          ? Number(maxOrderResult.maxOrder)
+          : -1;
 
       orderIndex = maxOrder + 1;
     }
@@ -139,7 +144,10 @@ export class ChaptersService {
   }
 
   // Reorder chapters within a level
-  async reorder(levelId: number, chapterIds: number[]): Promise<ChapterResponseDto[]> {
+  async reorder(
+    levelId: number,
+    chapterIds: number[],
+  ): Promise<ChapterResponseDto[]> {
     const chapters = await this.chapterRepository.find({
       where: { levelId },
     });

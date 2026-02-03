@@ -1,7 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { MediaConvertClient, DescribeEndpointsCommand, CreateJobCommand } from '@aws-sdk/client-mediaconvert';
+import {
+  MediaConvertClient,
+  DescribeEndpointsCommand,
+  CreateJobCommand,
+} from '@aws-sdk/client-mediaconvert';
 import { randomUUID } from 'crypto';
 
 @Injectable()
@@ -18,7 +27,11 @@ export class AwsService {
     this.s3 = new S3Client({ region: this.region });
   }
 
-  async createPresignedUploadUrl(key: string, contentType: string, expires = 3600) {
+  async createPresignedUploadUrl(
+    key: string,
+    contentType: string,
+    expires = 3600,
+  ) {
     const cmd = new PutObjectCommand({
       Bucket: this._bucket,
       Key: key,
@@ -35,19 +48,36 @@ export class AwsService {
   }
 
   // Storage-compatible presign helpers
-  async presignPut(bucket: string, key: string, contentType: string, expires = 3600) {
-    const cmd = new PutObjectCommand({ Bucket: bucket || this._bucket, Key: key, ContentType: contentType, ACL: 'private' });
+  async presignPut(
+    bucket: string,
+    key: string,
+    contentType: string,
+    expires = 3600,
+  ) {
+    const cmd = new PutObjectCommand({
+      Bucket: bucket || this._bucket,
+      Key: key,
+      ContentType: contentType,
+      ACL: 'private',
+    });
     return await getSignedUrl(this.s3, cmd, { expiresIn: expires });
   }
 
   async presignedPutObject(bucket: string, key: string, expires = 3600) {
     // older callers might not supply contentType; return URL
-    const cmd = new PutObjectCommand({ Bucket: bucket || this._bucket, Key: key, ACL: 'private' });
+    const cmd = new PutObjectCommand({
+      Bucket: bucket || this._bucket,
+      Key: key,
+      ACL: 'private',
+    });
     return await getSignedUrl(this.s3, cmd, { expiresIn: expires });
   }
 
   async presignGet(bucket: string, key: string, expires = 3600) {
-    const cmd = new GetObjectCommand({ Bucket: bucket || this._bucket, Key: key });
+    const cmd = new GetObjectCommand({
+      Bucket: bucket || this._bucket,
+      Key: key,
+    });
     return await getSignedUrl(this.s3, cmd, { expiresIn: expires });
   }
 
@@ -69,9 +99,17 @@ export class AwsService {
       key = args[1];
       body = args[2];
       const maybeMeta = args[4] ?? args[3];
-      contentType = maybeMeta && maybeMeta['Content-Type'] ? maybeMeta['Content-Type'] : undefined;
+      contentType =
+        maybeMeta && maybeMeta['Content-Type']
+          ? maybeMeta['Content-Type']
+          : undefined;
     }
-    const cmd = new PutObjectCommand({ Bucket: bucket, Key: key, Body: body, ContentType: contentType });
+    const cmd = new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+    });
     await this.s3.send(cmd);
   }
 
@@ -112,7 +150,11 @@ export class AwsService {
   }
 
   // Create a MediaConvert job to transcode video
-  async createMediaConvertJob(inputS3Url: string, outputS3Prefix: string, roleArn: string) {
+  async createMediaConvertJob(
+    inputS3Url: string,
+    outputS3Prefix: string,
+    roleArn: string,
+  ) {
     const endpoint = await this.getMediaConvertEndpoint();
     const mc = new MediaConvertClient({
       region: this.region,
@@ -241,7 +283,10 @@ export class AwsService {
       ],
     };
 
-    const createJobCmd = new CreateJobCommand({ Role: roleArn, Settings: jobSettings });
+    const createJobCmd = new CreateJobCommand({
+      Role: roleArn,
+      Settings: jobSettings,
+    });
 
     const res = await mc.send(createJobCmd);
     this.logger.log(`MediaConvert job created: ${res.Job?.Id}`);

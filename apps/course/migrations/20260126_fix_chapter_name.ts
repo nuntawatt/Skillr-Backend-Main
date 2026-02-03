@@ -12,11 +12,15 @@ export class FixChapterName1769370000001 implements MigrationInterface {
     `);
 
     // Set NOT NULL constraint after fixing data
-    await queryRunner.query(`ALTER TABLE chapters ALTER COLUMN chapter_name SET NOT NULL`);
+    await queryRunner.query(
+      `ALTER TABLE chapters ALTER COLUMN chapter_name SET NOT NULL`,
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Remove NOT NULL constraint. We don't attempt to revert generated values.
-    await queryRunner.query(`ALTER TABLE chapters ALTER COLUMN chapter_name DROP NOT NULL`);
+    await queryRunner.query(
+      `ALTER TABLE chapters ALTER COLUMN chapter_name DROP NOT NULL`,
+    );
   }
 }

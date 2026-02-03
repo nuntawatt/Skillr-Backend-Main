@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { QuizService } from './quiz.service';
 import { CreateQuizsDto, CreateCheckpointDto } from './dto/create-quizs.dto';
@@ -23,7 +32,7 @@ function getUserIdOrThrow(user?: AuthUser): number {
 //@UseGuards(JwtAuthGuard, RolesGuard)
 //@Roles(UserRole.ADMIN, UserRole.INSTRUCTOR)
 export class QuizAdminController {
-  constructor(private readonly quizService: QuizService) { }
+  constructor(private readonly quizService: QuizService) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new quiz (1 Lesson = 1 Question)' })
@@ -36,9 +45,14 @@ export class QuizAdminController {
           lesson_id: 1,
           quizs_type: 'multiple_choice',
           quizs_questions: 'TypeScript คืออะไร?',
-          quizs_option: ['Superset ของ JavaScript', 'ชื่อกาแฟ', 'ระบบปฏิบัติการ'],
+          quizs_option: [
+            'Superset ของ JavaScript',
+            'ชื่อกาแฟ',
+            'ระบบปฏิบัติการ',
+          ],
           quizs_answer: 'Superset ของ JavaScript',
-          quizs_explanation: 'TypeScript เป็นภาษาที่สร้างครอบ JS เพื่อเพิ่มระบบ Type',
+          quizs_explanation:
+            'TypeScript เป็นภาษาที่สร้างครอบ JS เพื่อเพิ่มระบบ Type',
         },
       },
       true_false: {
@@ -81,7 +95,10 @@ export class QuizAdminController {
 
   @Patch('lesson/:lessonId')
   @ApiOperation({ summary: 'Update quiz by lesson id' })
-  updateQuiz(@Param('lessonId') lessonId: string, @Body() dto: Partial<CreateQuizsDto>) {
+  updateQuiz(
+    @Param('lessonId') lessonId: string,
+    @Body() dto: Partial<CreateQuizsDto>,
+  ) {
     return this.quizService.updateQuizs(Number(lessonId), dto);
   }
 
@@ -97,7 +114,7 @@ export class QuizAdminController {
 @Controller('quizzes')
 // @UseGuards(JwtAuthGuard) // ปิดไว้ชั่วคราวเพื่อการทดสอบ
 export class QuizController {
-  constructor(private readonly quizService: QuizService) { }
+  constructor(private readonly quizService: QuizService) {}
 
   @Get()
   @ApiOperation({ summary: 'Get all quizzes' })
@@ -107,8 +124,14 @@ export class QuizController {
 
   @Get('lesson/:lessonId')
   @ApiOperation({ summary: 'Get quiz with status by lesson id' })
-  findOneQuizByLesson(@Param('lessonId') lessonId: string, @Request() req: RequestWithUser) {
-    return this.quizService.getQuizWithStatus(Number(lessonId), getUserIdOrThrow(req.user));
+  findOneQuizByLesson(
+    @Param('lessonId') lessonId: string,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.quizService.getQuizWithStatus(
+      Number(lessonId),
+      getUserIdOrThrow(req.user),
+    );
   }
 
   @Get('checkpoint/:lessonId')
@@ -119,14 +142,28 @@ export class QuizController {
 
   @Post('lesson/:lessonId/check')
   @ApiOperation({ summary: 'Check and Save answer for quiz by lesson id' })
-  checkQuizs(@Param('lessonId') lessonId: string, @Body('answer') answer: any, @Request() req: RequestWithUser) {
-    return this.quizService.checkAndSaveAnswer(Number(lessonId), getUserIdOrThrow(req.user), answer);
+  checkQuizs(
+    @Param('lessonId') lessonId: string,
+    @Body('answer') answer: any,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.quizService.checkAndSaveAnswer(
+      Number(lessonId),
+      getUserIdOrThrow(req.user),
+      answer,
+    );
   }
 
   @Post('lesson/:lessonId/skip')
   @ApiOperation({ summary: 'Skip quiz and mark as completed' })
-  skipQuiz(@Param('lessonId') lessonId: string, @Request() req: RequestWithUser) {
-    return this.quizService.skipQuiz(Number(lessonId), getUserIdOrThrow(req.user));
+  skipQuiz(
+    @Param('lessonId') lessonId: string,
+    @Request() req: RequestWithUser,
+  ) {
+    return this.quizService.skipQuiz(
+      Number(lessonId),
+      getUserIdOrThrow(req.user),
+    );
   }
 
   @Post('checkpoint/:id/check')
@@ -138,7 +175,7 @@ export class QuizController {
   @Get('checkpoint/batch')
   @ApiOperation({ summary: 'Get checkpoints by multiple lesson ids' })
   getCheckpointsByLessonIds(@Query('lessonIds') lessonIds: string) {
-    const ids = lessonIds.split(',').map(id => Number(id));
+    const ids = lessonIds.split(',').map((id) => Number(id));
     return this.quizService.getCheckpointsByLessonIds(ids);
   }
 }

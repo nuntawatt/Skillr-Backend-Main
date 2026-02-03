@@ -8,12 +8,13 @@ import { LearningProgressController } from './learning-progress.controller';
 import { LessonProgress } from './entities/lesson-progress.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([LessonProgress]),
-    HttpModule,
-  ],
+  imports: [TypeOrmModule.forFeature([LessonProgress]), HttpModule],
   controllers: [LearningProgressController],
-  providers: [LearningProgressService, LearningDashboardService, RoadmapService],
+  providers: [
+    LearningProgressService,
+    LearningDashboardService,
+    RoadmapService,
+  ],
   exports: [LearningProgressService, LearningDashboardService, RoadmapService],
 })
 export class LearningProgressModule {}

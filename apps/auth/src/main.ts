@@ -30,7 +30,10 @@ async function bootstrap() {
     .setTitle('Skillr Auth Service API')
     .setDescription('API documentation for the Auth Service')
     .setVersion('1.0.0')
-    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'access-token')
+    .addBearerAuth(
+      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+      'access-token',
+    )
     .addServer('https://api.skllracademy.com/s1/api')
     .addServer('/api')
     .build();

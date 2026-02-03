@@ -1,10 +1,34 @@
-import { Controller, Post, Get, Body, UseGuards, HttpCode, HttpStatus, BadRequestException, Logger, Res } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBody, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+  BadRequestException,
+  Logger,
+  Res,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBody,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Response } from 'express';
 
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto, RefreshTokenDto, ForgotPasswordDto, VerifyOtpDto, ResetPasswordDto } from './dto';
+import {
+  RegisterDto,
+  LoginDto,
+  RefreshTokenDto,
+  ForgotPasswordDto,
+  VerifyOtpDto,
+  ResetPasswordDto,
+} from './dto';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -14,7 +38,7 @@ import { CurrentUser } from './decorators/current-user.decorator';
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
-  constructor(private readonly authService: AuthService) { }
+  constructor(private readonly authService: AuthService) {}
 
   // ===================== Register =====================
   @Post('register')
@@ -37,7 +61,6 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Bad Request.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async login(@Body() loginDto: LoginDto) {
-
     // คืน accessToken + refreshToken ให้ client เก็บเอง
     return this.authService.login(loginDto);
   }
@@ -47,9 +70,12 @@ export class AuthController {
   @UseGuards(GoogleAuthGuard)
   @ApiOperation({
     summary: 'Login with Google (OAuth 2.0)',
-    description: `เปลี่ยนเส้นทางผู้ใช้ไปที่ Google เพื่อทำการยืนยันตัวตน จุดเชื่อมต่อนี้จะไม่ส่งคืน Token ใด ๆ โดยตรง แต่จะเปลี่ยนเส้นทางผู้ใช้ไปที่หน้าการยืนยันตัวตนของ Google`
+    description: `เปลี่ยนเส้นทางผู้ใช้ไปที่ Google เพื่อทำการยืนยันตัวตน จุดเชื่อมต่อนี้จะไม่ส่งคืน Token ใด ๆ โดยตรง แต่จะเปลี่ยนเส้นทางผู้ใช้ไปที่หน้าการยืนยันตัวตนของ Google`,
   })
-  @ApiResponse({ status: 302, description: 'Redirect to Google OAuth consent screen' })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirect to Google OAuth consent screen',
+  })
   async googleAuth() {
     // redirect ไปที่ Google
   }
@@ -58,17 +84,24 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
   @ApiOperation({ summary: 'Google OAuth callback' })
-  @ApiResponse({ status: 302, description: 'Redirect to frontend after successful authentication' })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirect to frontend after successful authentication',
+  })
   @ApiResponse({ status: 400, description: 'Bad Request.' })
-  async googleCallback(@CurrentUser() googleProfile: any, @Res() res: Response) {
-
+  async googleCallback(
+    @CurrentUser() googleProfile: any,
+    @Res() res: Response,
+  ) {
     const result = await this.authService.googleLogin(googleProfile);
 
     const frontend = process.env.FRONTEND_URL;
     const accessToken = encodeURIComponent(result.tokens.accessToken);
-    
+
     // redirect กลับไปที่ frontend พร้อมกับ accessToken ใน query string
-    return res.redirect(`${frontend}/google-callback?accessToken=${accessToken}`);
+    return res.redirect(
+      `${frontend}/google-callback?accessToken=${accessToken}`,
+    );
   }
 
   // ===================== Refresh Token =====================
@@ -112,7 +145,10 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('access-token')
-  @ApiResponse({ status: 200, description: 'Logged out from all devices successfully.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Logged out from all devices successfully.',
+  })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   @ApiOperation({ summary: 'Logout from all devices' })
   async logoutAll(@CurrentUser('id') userId: string) {
@@ -124,10 +160,13 @@ export class AuthController {
   // ===================== Forgot Password =====================
   @Post('forgot-password')
   @ApiOperation({ summary: 'Request password reset' })
-  @ApiResponse({ status: 200, description: 'If the email is registered, a password reset link has been sent.' })
+  @ApiResponse({
+    status: 200,
+    description:
+      'If the email is registered, a password reset link has been sent.',
+  })
   @ApiResponse({ status: 400, description: 'Bad Request.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
-
   @Throttle({ short: { ttl: 60, limit: 2 } })
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto.email);

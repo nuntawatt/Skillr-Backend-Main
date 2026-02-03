@@ -11,6 +11,7 @@ import { LevelsController } from './levels/levels.controller';
 import { ChaptersController } from './chapters/chapters.controller';
 import { LessonsController } from './lessons/lessons.controller';
 import { ArticlesController } from './articles/articles.controller';
+import { QuizzesController } from './quizzes/quizzes.controller';
 
 // Services
 import { CoursesService } from './courses/courses.service';
@@ -18,6 +19,7 @@ import { LevelsService } from './levels/levels.service';
 import { ChaptersService } from './chapters/chapters.service';
 import { LessonsService } from './lessons/lessons.service';
 import { ArticlesService } from './articles/articles.service';
+import { QuizzesService } from './quizzes/quizzes.service';
 import { StorageService } from './storage/storage.service';
 
 // Entities
@@ -26,6 +28,7 @@ import { Level } from './levels/entities/level.entity';
 import { Chapter } from './chapters/entities/chapter.entity';
 import { Lesson } from './lessons/entities/lesson.entity';
 import { Article } from './articles/entities/article.entity';
+import { Quiz } from './quizzes/entities/quiz.entity';
 
 const isTest = process.env.NODE_ENV === 'test';
 
@@ -39,22 +42,23 @@ const isTest = process.env.NODE_ENV === 'test';
     ...(isTest
       ? []
       : [
-        TypeOrmModule.forRootAsync({
-          imports: [ConfigModule],
-          useFactory: getDatabaseConfig,
-          inject: [ConfigService],
-        }),
+          TypeOrmModule.forRootAsync({
+            imports: [ConfigModule],
+            useFactory: getDatabaseConfig,
+            inject: [ConfigService],
+          }),
 
-        TypeOrmModule.forFeature([
-          Course,
-          Level,
-          Chapter,
-          Lesson,
-          Article
+          TypeOrmModule.forFeature([
+            Course,
+            Level,
+            Chapter,
+            Lesson,
+            Article,
+            Quiz,
+          ]),
+
+          AuthLibModule,
         ]),
-
-        AuthLibModule
-      ]),
   ],
 
   controllers: [
@@ -62,7 +66,8 @@ const isTest = process.env.NODE_ENV === 'test';
     LevelsController,
     ChaptersController,
     LessonsController,
-    ArticlesController
+    ArticlesController,
+    QuizzesController,
   ],
 
   providers: [
@@ -71,7 +76,8 @@ const isTest = process.env.NODE_ENV === 'test';
     ChaptersService,
     LessonsService,
     ArticlesService,
-    StorageService
+    QuizzesService,
+    StorageService,
   ],
 })
-export class AppModule { }
+export class AppModule {}

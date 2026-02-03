@@ -10,7 +10,10 @@ export class ProfilePublicController {
 
   @Get('profile/:key')
   @ApiOperation({ summary: 'Public: presign avatar by key and redirect' })
-  @ApiResponse({ status: 302, description: 'Redirects to presigned avatar URL.' })
+  @ApiResponse({
+    status: 302,
+    description: 'Redirects to presigned avatar URL.',
+  })
   @ApiResponse({ status: 404, description: 'Not found.' })
   async getProfileAvatarByKey(@Param('key') key: string, @Res() res: Response) {
     const url = await this.usersService.getAvatarPresignedUrlByMediaId(key);

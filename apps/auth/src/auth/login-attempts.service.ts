@@ -17,7 +17,7 @@ export class LoginAttemptsService {
   constructor(
     @InjectRepository(LoginAttempt)
     private readonly loginAttemptRepository: Repository<LoginAttempt>,
-  ) { }
+  ) {}
 
   async getLockStatus(email: string): Promise<LockStatus> {
     const attempt = await this.loginAttemptRepository.findOne({

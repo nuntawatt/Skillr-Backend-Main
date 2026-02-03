@@ -25,10 +25,21 @@ import { getJwtConfig } from '@config/jwt.config';
       useFactory: getJwtConfig,
       inject: [ConfigService],
     }),
-    TypeOrmModule.forFeature([Session, PasswordResetToken, LoginAttempt, AuthAccount]),
+    TypeOrmModule.forFeature([
+      Session,
+      PasswordResetToken,
+      LoginAttempt,
+      AuthAccount,
+    ]),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, GoogleStrategy, LoginAttemptsService, EmailService],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    GoogleStrategy,
+    LoginAttemptsService,
+    EmailService,
+  ],
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

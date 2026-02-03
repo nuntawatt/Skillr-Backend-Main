@@ -35,35 +35,45 @@ export class GamificationService {
     private readonly validationService: ProgressValidationService,
   ) {}
 
-  async getChapterGamificationProgress(userId: number, chapterId: number): Promise<GamificationProgress> {
+  async getChapterGamificationProgress(
+    userId: number,
+    chapterId: number,
+  ): Promise<GamificationProgress> {
     // ดึงข้อมูลความคืบหน้า Chapter
-    const summary = await this.chapterProgressService.getChapterProgressSummary(userId, chapterId);
-    
+    const summary = await this.chapterProgressService.getChapterProgressSummary(
+      userId,
+      chapterId,
+    );
+
     // หา Item ปัจจุบันและถัดไป
-    const currentItem = summary.items.find(item => item.status === LessonProgressStatus.CURRENT);
-    const nextAvailableItem = await this.chapterProgressService.getNextAvailableItem(userId, chapterId);
+    const currentItem = summary.items.find(
+      (item) => item.status === LessonProgressStatus.CURRENT,
+    );
+    const nextAvailableItem =
+      await this.chapterProgressService.getNextAvailableItem(userId, chapterId);
 
     // ตรวจสอบสถานะ Checkpoint (ถ้ามี)
     let checkpointStatus;
-    const checkpointItems = summary.items.filter(item => {
+    const checkpointItems = summary.items.filter((item) => {
       // สมมติว่า checkpoint มี ID ที่ลงท้ายด้วย 999 หรือมีการระบุพิเศษ
       return item.lessonId.toString().endsWith('999');
     });
 
     if (checkpointItems.length > 0) {
       const checkpointItem = checkpointItems[0];
-      const precedingItems = summary.items.filter(item => 
-        item.lessonId !== checkpointItem.lessonId
+      const precedingItems = summary.items.filter(
+        (item) => item.lessonId !== checkpointItem.lessonId,
       );
-      
-      const checkpointProgress = await this.checkpointService.getCheckpointProgress(
-        userId,
-        precedingItems.map(item => item.lessonId)
-      );
+
+      const checkpointProgress =
+        await this.checkpointService.getCheckpointProgress(
+          userId,
+          precedingItems.map((item) => item.lessonId),
+        );
 
       checkpointStatus = {
         isUnlocked: checkpointProgress.percentage === 100,
-        progress: checkpointProgress.percentage
+        progress: checkpointProgress.percentage,
       };
     }
 
@@ -74,28 +84,35 @@ export class GamificationService {
       completedItems: summary.completedItems,
       currentItem: currentItem?.lessonId,
       nextAvailableItem: nextAvailableItem || undefined,
-      checkpointStatus
+      checkpointStatus,
     };
   }
 
   async completeLessonWithGamification(
-    userId: number, 
-    lessonId: number, 
-    chapterId: number
+    userId: number,
+    lessonId: number,
+    chapterId: number,
   ): Promise<{
     success: boolean;
     chapterProgress: GamificationProgress;
     validation: any;
   }> {
     // ตรวจสอบความถูกต้องก่อนทำการ complete
-    const validation = await this.validationService.validateLessonCompletion(userId, lessonId, chapterId);
-    
+    const validation = await this.validationService.validateLessonCompletion(
+      userId,
+      lessonId,
+      chapterId,
+    );
+
     if (!validation.isValid) {
-      const currentProgress = await this.getChapterGamificationProgress(userId, chapterId);
+      const currentProgress = await this.getChapterGamificationProgress(
+        userId,
+        chapterId,
+      );
       return {
         success: false,
         chapterProgress: currentProgress,
-        validation
+        validation,
       };
     }
 
@@ -106,19 +123,22 @@ export class GamificationService {
     await this.chapterProgressService.updateChapterProgress(userId, chapterId);
 
     // ดึงข้อมูลความคืบหน้าล่าสุด
-    const chapterProgress = await this.getChapterGamificationProgress(userId, chapterId);
+    const chapterProgress = await this.getChapterGamificationProgress(
+      userId,
+      chapterId,
+    );
 
     return {
       success: true,
       chapterProgress,
-      validation
+      validation,
     };
   }
 
   async skipQuizWithGamification(
-    userId: number, 
-    quizLessonId: number, 
-    chapterId: number
+    userId: number,
+    quizLessonId: number,
+    chapterId: number,
   ): Promise<{
     success: boolean;
     chapterProgress: GamificationProgress;
@@ -130,20 +150,23 @@ export class GamificationService {
     await this.chapterProgressService.updateChapterProgress(userId, chapterId);
 
     // ดึงข้อมูลความคืบหน้าล่าสุด
-    const chapterProgress = await this.getChapterGamificationProgress(userId, chapterId);
+    const chapterProgress = await this.getChapterGamificationProgress(
+      userId,
+      chapterId,
+    );
 
     return {
       success: true,
-      chapterProgress
+      chapterProgress,
     };
   }
 
   async updateVideoProgressWithGamification(
-    userId: number, 
-    videoLessonId: number, 
+    userId: number,
+    videoLessonId: number,
     chapterId: number,
-    currentTime: number, 
-    duration: number
+    currentTime: number,
+    duration: number,
   ): Promise<{
     success: boolean;
     chapterProgress: GamificationProgress;
@@ -151,26 +174,34 @@ export class GamificationService {
   }> {
     // ตรวจสอบความถูกต้อง
     const validation = await this.validationService.validateVideoProgress(
-      userId, 
-      videoLessonId, 
-      currentTime, 
-      duration
+      userId,
+      videoLessonId,
+      currentTime,
+      duration,
     );
 
     if (!validation.isValid) {
-      const currentProgress = await this.getChapterGamificationProgress(userId, chapterId);
+      const currentProgress = await this.getChapterGamificationProgress(
+        userId,
+        chapterId,
+      );
       return {
         success: false,
         chapterProgress: currentProgress,
-        isCompleted: false
+        isCompleted: false,
       };
     }
 
     // อัปเดตความคืบหน้าวิดีโอ
-    await this.lessonProgressService.updateVideoProgress(userId, videoLessonId, currentTime, duration);
+    await this.lessonProgressService.updateVideoProgress(
+      userId,
+      videoLessonId,
+      currentTime,
+      duration,
+    );
 
     let isCompleted = false;
-    
+
     // ถ้าเล่นจนจบ (95% ขึ้นไป) ให้ทำเครื่องหมายว่าเรียนจบ
     if (currentTime >= duration * 0.95) {
       await this.lessonProgressService.completeLesson(userId, videoLessonId);
@@ -179,67 +210,100 @@ export class GamificationService {
 
     // อัปเดตความคืบหน้า Chapter (ถ้าจบวิดีโอ)
     if (isCompleted) {
-      await this.chapterProgressService.updateChapterProgress(userId, chapterId);
+      await this.chapterProgressService.updateChapterProgress(
+        userId,
+        chapterId,
+      );
     }
 
     // ดึงข้อมูลความคืบหน้าล่าสุด
-    const chapterProgress = await this.getChapterGamificationProgress(userId, chapterId);
+    const chapterProgress = await this.getChapterGamificationProgress(
+      userId,
+      chapterId,
+    );
 
     return {
       success: true,
       chapterProgress,
-      isCompleted
+      isCompleted,
     };
   }
 
-  async getChapterRoadmap(userId: number, chapterId: number): Promise<{
+  async getChapterRoadmap(
+    userId: number,
+    chapterId: number,
+  ): Promise<{
     chapterProgress: GamificationProgress;
     items: ItemStatus[];
   }> {
-    const chapterProgress = await this.getChapterGamificationProgress(userId, chapterId);
-    const summary = await this.chapterProgressService.getChapterProgressSummary(userId, chapterId);
+    const chapterProgress = await this.getChapterGamificationProgress(
+      userId,
+      chapterId,
+    );
+    const summary = await this.chapterProgressService.getChapterProgressSummary(
+      userId,
+      chapterId,
+    );
 
-    const items: ItemStatus[] = summary.items.map(item => ({
+    const items: ItemStatus[] = summary.items.map((item) => ({
       lessonId: item.lessonId,
       status: item.status,
       progressPercentage: item.progressPercentage,
       isAccessible: item.status !== LessonProgressStatus.LOCKED,
-      canSkip: item.status === LessonProgressStatus.CURRENT && 
-               // สมมติว่า Quiz สามารถข้ามได้
-               item.lessonId.toString().startsWith('quiz_')
+      canSkip:
+        item.status === LessonProgressStatus.CURRENT &&
+        // สมมติว่า Quiz สามารถข้ามได้
+        item.lessonId.toString().startsWith('quiz_'),
     }));
 
     return {
       chapterProgress,
-      items
+      items,
     };
   }
 
-  async validateOverallProgress(userId: number, chapterId: number): Promise<{
+  async validateOverallProgress(
+    userId: number,
+    chapterId: number,
+  ): Promise<{
     isValid: boolean;
     issues: string[];
     recommendations: string[];
   }> {
-    const chapterValidation = await this.validationService.validateChapterProgress(userId, chapterId);
-    const integrityValidation = await this.validationService.validateProgressIntegrity(userId, chapterId);
+    const chapterValidation =
+      await this.validationService.validateChapterProgress(userId, chapterId);
+    const integrityValidation =
+      await this.validationService.validateProgressIntegrity(userId, chapterId);
 
-    const allIssues = [...chapterValidation.errors, ...integrityValidation.errors];
-    const allRecommendations = [...chapterValidation.warnings, ...integrityValidation.warnings];
+    const allIssues = [
+      ...chapterValidation.errors,
+      ...integrityValidation.errors,
+    ];
+    const allRecommendations = [
+      ...chapterValidation.warnings,
+      ...integrityValidation.warnings,
+    ];
 
     return {
       isValid: allIssues.length === 0,
       issues: allIssues,
-      recommendations: allRecommendations
+      recommendations: allRecommendations,
     };
   }
 
   async resetChapterProgress(userId: number, chapterId: number): Promise<void> {
     // ดึงรายการ Item ทั้งหมดใน Chapter
-    const summary = await this.chapterProgressService.getChapterProgressSummary(userId, chapterId);
-    
+    const summary = await this.chapterProgressService.getChapterProgressSummary(
+      userId,
+      chapterId,
+    );
+
     // ลบความคืบหน้าของแต่ละ Item
     for (const item of summary.items) {
-      await this.lessonProgressService.resetLessonProgress(userId, item.lessonId);
+      await this.lessonProgressService.resetLessonProgress(
+        userId,
+        item.lessonId,
+      );
     }
 
     // รีเซ็ตความคืบหน้า Chapter

@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 export enum QuizType {
   MULTIPLE_CHOICE = 'multiple_choice',
@@ -10,7 +16,12 @@ export class Quizs {
   @PrimaryGeneratedColumn({ name: 'quizs_id' })
   quizsId: number;
 
-  @Column({ name: 'quizs_type', type: 'enum', enum: QuizType, default: QuizType.MULTIPLE_CHOICE })
+  @Column({
+    name: 'quizs_type',
+    type: 'enum',
+    enum: QuizType,
+    default: QuizType.MULTIPLE_CHOICE,
+  })
   quizsType: QuizType;
 
   @Column({ name: 'quizs_questions', type: 'text' })

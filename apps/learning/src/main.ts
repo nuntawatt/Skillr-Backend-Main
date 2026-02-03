@@ -1,5 +1,9 @@
 import { NestFactory, Reflector } from '@nestjs/core';
-import { ClassSerializerInterceptor, Logger, ValidationPipe, } from '@nestjs/common';
+import {
+  ClassSerializerInterceptor,
+  Logger,
+  ValidationPipe,
+} from '@nestjs/common';
 import { AppModule } from './learning.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
@@ -35,7 +39,6 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document);
-
 
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
