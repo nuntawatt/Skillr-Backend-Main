@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { HttpModule } from '@nestjs/axios';
 import { LearningProgressService } from './learning-progress.service';
 import { LearningDashboardService } from './learning-dashboard.service';
+import { RoadmapService } from '../roadmap/roadmap.service';
 import { LearningProgressController } from './learning-progress.controller';
 import { LessonProgress } from './entities/lesson-progress.entity';
 
@@ -12,7 +13,7 @@ import { LessonProgress } from './entities/lesson-progress.entity';
     HttpModule,
   ],
   controllers: [LearningProgressController],
-  providers: [LearningProgressService, LearningDashboardService],
-  exports: [LearningProgressService, LearningDashboardService],
+  providers: [LearningProgressService, LearningDashboardService, RoadmapService],
+  exports: [LearningProgressService, LearningDashboardService, RoadmapService],
 })
 export class LearningProgressModule {}

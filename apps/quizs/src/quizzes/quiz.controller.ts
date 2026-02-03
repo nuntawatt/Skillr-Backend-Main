@@ -6,7 +6,7 @@ import {
   Patch,
   Param,
   Delete,
-  UseGuards,
+  Query,
   Request,
 } from '@nestjs/common';
 import {
@@ -14,6 +14,7 @@ import {
   ApiOperation,
   ApiBearerAuth,
   ApiBody,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { QuizService } from './quiz.service';
 import { CreateQuizsDto, CreateCheckpointDto } from './dto/create-quizs.dto';
@@ -148,5 +149,12 @@ export class QuizController {
   @ApiOperation({ summary: 'Check answer for checkpoint by id' })
   checkCheckpoint(@Param('id') id: string, @Body('answer') answer: any) {
     return this.quizService.checkCheckpointAnswer(Number(id), answer);
+  }
+
+  @Get('checkpoint/batch')
+  @ApiOperation({ summary: 'Get checkpoints by multiple lesson ids' })
+  getCheckpointsByLessonIds(@Query('lessonIds') lessonIds: string) {
+    const ids = lessonIds.split(',').map(id => Number(id));
+    return this.quizService.getCheckpointsByLessonIds(ids);
   }
 }

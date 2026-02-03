@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { HttpService } from '@nestjs/axios';
 import { Quizs } from './entities/quizs.entity';
 import { QuizsCheckpoint } from './entities/checkpoint.entity';
@@ -160,5 +160,11 @@ export class QuizService {
       isCorrect,
       correctAnswer: checkpoint.checkpointAnswer,
     };
+  }
+
+  async getCheckpointsByLessonIds(lessonIds: number[]): Promise<QuizsCheckpoint[]> {
+    return this.checkpointRepository.find({
+      where: { lessonId: In(lessonIds) }
+    });
   }
 }

@@ -6,6 +6,7 @@ export enum LessonType {
   ARTICLE = 'article',
   VIDEO = 'video',
   QUIZ = 'quiz',
+  CHECKPOINT = 'checkpoint',
 }
 
 @Entity('lessons')
