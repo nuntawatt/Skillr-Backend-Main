@@ -8,16 +8,19 @@ export class MinioStorageService implements StorageProvider {
   private readonly client: Minio.Client;
 
   constructor() {
-    const endpointRaw = process.env.S3_ENDPOINT ?? 'http://localhost:9000';
-    const url = new URL(endpointRaw);
+    const endPoint = process.env.S3_ENDPOINT ?? 'http://localhost:9000';
+    const port = Number(process.env.S3_PORT ?? '9000');
+    const useSSL = process.env.S3_USE_SSL === 'true';
 
     this.client = new Minio.Client({
-      endPoint: url.hostname,
-      port: Number(url.port || 9000),
-      useSSL: url.protocol === 'https:',
+      endPoint,
+      port,
+      useSSL,
       accessKey: process.env.S3_ACCESS_KEY_ID ?? '',
       secretKey: process.env.S3_SECRET_ACCESS_KEY ?? '',
     });
+
+    this.logger.log(`MinIO connected → ${useSSL ? 'https' : 'http'}://${endPoint}:${port}`);
   }
 
   get bucket(): string {
@@ -43,18 +46,28 @@ export class MinioStorageService implements StorageProvider {
     return this.client.presignedPutObject(bucket, key, expiresIn);
   }
 
+
+
   // ================= Presign GET =================
   async presignGet(bucket: string, key: string, expiresIn: number): Promise<string> {
     return this.client.presignedGetObject(bucket, key, expiresIn);
   }
 
-  async presignedGetObject(bucket: string,key: string,expiresIn: number,responseHeaders?: Record<string, string>): Promise<string> {
-    
+  async presignedGetObject(bucket: string, key: string, expiresIn: number, responseHeaders?: Record<string, string>): Promise<string> {
+
     if (responseHeaders) {
       return this.client.presignedGetObject(bucket, key, expiresIn, responseHeaders);
     }
     return this.client.presignedGetObject(bucket, key, expiresIn);
   }
+
+  // ================= Public URL =================
+  buildPublicUrl(bucket: string, key: string): string {
+  const protocol = process.env.S3_USE_SSL === 'true' ? 'https' : 'http';
+  const domain = (process.env.S3_ENDPOINT ?? '').replace(/^https?:\/\//, '');
+  
+  return `${protocol}://${domain}/${bucket}/${encodeURI(key)}`;
+}
 
   // ================= Upload =================
   async putObject(
@@ -70,10 +83,5 @@ export class MinioStorageService implements StorageProvider {
   // ================= Delete =================
   async deleteObject(bucket: string, key: string): Promise<void> {
     await this.client.removeObject(bucket, key);
-  }
-
-  // ================= Public URL =================
-  buildPublicUrl(bucket: string, key: string): string {
-    return `${process.env.S3_ENDPOINT}/${bucket}/${key}`;
   }
 }

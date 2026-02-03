@@ -51,26 +51,26 @@ export class MediaVideosController {
   }
 
   // 2. แจ้ง backend ว่า upload เสร็จแล้ว
-  @Post('confirm')
-  @ApiOperation({ summary: '[CLIENT] Confirm video upload' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        media_asset_id: { type: 'number', description: 'Media Asset ID' },
-      },
-      required: ['media_asset_id'],
-    },
-  })
-  @ApiResponse({ status: 200, description: 'Upload confirmed' })
-  @ApiResponse({ status: 400, description: 'Invalid media_asset_id' })
-  @ApiResponse({ status: 404, description: 'Media asset not found' })
-  @ApiResponse({ status: 409, description: 'Media asset not in UPLOADING status' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
+  // @Post('confirm')
+  // @ApiOperation({ summary: '[CLIENT] Confirm video upload' })
+  // @ApiBody({
+  //   schema: {
+  //     type: 'object',
+  //     properties: {
+  //       media_asset_id: { type: 'number', description: 'Media Asset ID' },
+  //     },
+  //     required: ['media_asset_id'],
+  //   },
+  // })
+  // @ApiResponse({ status: 200, description: 'Upload confirmed' })
+  // @ApiResponse({ status: 400, description: 'Invalid media_asset_id' })
+  // @ApiResponse({ status: 404, description: 'Media asset not found' })
+  // @ApiResponse({ status: 409, description: 'Media asset not in UPLOADING status' })
+  // @ApiResponse({ status: 500, description: 'Internal server error' })
 
-  async confirm(@Body('media_asset_id') mediaAssetId: number,) {
-    return this.svc.confirmUpload(mediaAssetId);
-  }
+  // async confirm(@Body('media_asset_id') mediaAssetId: number,) {
+  //   return this.svc.confirmUpload(mediaAssetId);
+  // }
 
   // 3. Get presigned URL to view/download video by ID
   @Get('view/:id')

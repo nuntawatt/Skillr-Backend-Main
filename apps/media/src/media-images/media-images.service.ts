@@ -12,7 +12,7 @@ export class MediaImagesService {
     private readonly storageFactory: StorageFactory,
     @InjectRepository(ImageAsset)
     private readonly repo: Repository<ImageAsset>,
-  ) {}
+  ) { }
 
   private validateImageMime(mime: string, originalName?: string) {
     const ext = (originalName ?? '').split('.').pop()?.toLowerCase();
@@ -81,7 +81,7 @@ export class MediaImagesService {
 
     const storage = this.storageFactory.image();
     const bucket = storage.bucket;
-    const expires = Number(process.env.PRESIGN_EXPIRES_SECONDS ?? 3600);
+    const expires = Number(process.env.PRESIGN_EXPIRES_SECONDS);
 
     // สร้าง response headers เพื่อให้ browser แสดง inline แทนดาวน์โหลด
     const responseHeaders = {
@@ -102,6 +102,27 @@ export class MediaImagesService {
       expires_in: expires,
     };
   }
+
+  // ===== Get public URL by id =====
+  async getPublicImageById(id: number) {
+    const asset = await this.repo.findOne({ where: { id } });
+    if (!asset) throw new NotFoundException('image asset not found');
+
+    const storage = this.storageFactory.image();
+
+    const publicUrl = storage.buildPublicUrl( 
+      asset.storageBucket,
+      asset.storageKey,
+    );
+
+    console.log('Public URL:', publicUrl);
+
+    return {
+      url: publicUrl,
+      expires_in: null,
+    };
+  }
+
 
   // ===== Delete =====
   async deleteImageById(id: number) {

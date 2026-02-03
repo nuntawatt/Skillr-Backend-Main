@@ -216,7 +216,7 @@ export class MediaVideosService {
       throw new BadRequestException('presign GET not supported by storage provider');
     }
 
-    const expiresSeconds = Number(process.env.PRESIGN_EXPIRES_SECONDS ?? 3600); // 1 hour default
+    const expiresSeconds = Number(process.env.PRESIGN_EXPIRES_SECONDS); // 7 days
     const presignedUrl = await presignGet.call(storage, bucket, key, expiresSeconds);
 
     return {

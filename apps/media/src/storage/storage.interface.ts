@@ -1,7 +1,6 @@
 import type { Readable } from 'stream';
 
 export interface StorageProvider {
-  // bucket property (default bucket used by provider)
   readonly bucket: string;
 
   // Presign PUT for clients to upload
@@ -20,5 +19,5 @@ export interface StorageProvider {
   deleteObject(...args: any[]): Promise<void>;
 
   // Build a public URL if possible
-  buildPublicUrl?(bucket: string, key: string): string;
+  buildPublicUrl(bucket: string, key: string): string;
 }

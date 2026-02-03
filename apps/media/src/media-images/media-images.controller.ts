@@ -49,6 +49,19 @@ export class MediaImagesController {
     return this.svc.getPresignedImageById(Number(id));
   }
 
+
+  // ===== Get public URL by image id =====
+  // @Get(':id')
+  // @ApiOperation({ summary: 'Get public URL by image id' })
+  // @ApiParam({ name: 'id', description: 'Image asset id', type: 'number' })
+  // @ApiResponse({ status: 200, description: 'Public URL retrieved' })
+  // @ApiResponse({ status: 404, description: 'Image not found' })
+  // @ApiResponse({ status: 500, description: 'Internal Server Error' })
+  // async getImage(@Param('id') id: string) {
+  //   return this.svc.getPublicImageById(Number(id));
+  // }
+
+  // ===== Delete image by id =====
   @Delete(':id')
   @ApiOperation({ summary: 'Delete image by ID' })
   @ApiParam({ name: 'id', description: 'Image asset id', type: 'number' })
