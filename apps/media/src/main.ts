@@ -30,6 +30,7 @@ async function bootstrap() {
     .setDescription('API documentation for the Media Service')
     .setVersion('1.0.0')
     .addServer('https://api.skllracademy.com/s4/api')
+    .addServer('https://s3.skllracademy.com/api')
     .addServer('/api')
     .addBearerAuth() 
     .build();
