@@ -31,7 +31,7 @@ async function bootstrap() {
     .setDescription('API documentation for the Auth Service')
     .setVersion('1.0.0')
     .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'access-token')
-    .addServer('https://api.skllracademy.com/api')
+    .addServer('https://api.skllracademy.com/s1/api')
     .addServer('/api')
     .build();
 

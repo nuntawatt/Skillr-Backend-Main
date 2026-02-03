@@ -20,7 +20,7 @@ async function bootstrap() {
     .setTitle('Skillr Quiz Service API')
     .setDescription('API documentation for Quiz Service')
     .setVersion('1.0.0')
-    .addServer('https://api.skllracademy.com/api')
+    .addServer('https://api.skllracademy.com/s3/api')
     .addServer('/api')
     .addBearerAuth()
     .build();
