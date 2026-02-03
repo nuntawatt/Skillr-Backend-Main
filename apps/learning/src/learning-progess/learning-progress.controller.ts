@@ -2,6 +2,7 @@ import { Controller, Get, Post, Param, Request, UseGuards } from '@nestjs/common
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { LearningProgressService } from './learning-progress.service';
 import { LearningDashboardService } from './learning-dashboard.service';
+import { RoadmapService } from '../roadmap/roadmap.service';
 import { LearningDashboardDto, LessonProgressResponseDto, ProgressSummaryDto } from './dto/learning-progress.dto';
 import { JwtAuthGuard } from '@auth';
 import type { AuthUser } from '@auth';
@@ -22,6 +23,7 @@ export class LearningProgressController {
     constructor(
         private readonly learningProgressService: LearningProgressService,
         private readonly learningDashboardService: LearningDashboardService,
+        private readonly roadmapService: RoadmapService,
     ) { }
 
     @Get('dashboard')
@@ -42,6 +44,23 @@ export class LearningProgressController {
     getDashboard(@Request() req: any) {
         return this.learningDashboardService.getDashboard(
             getUserIdOrThrow(req.user, req),
+        );
+    }
+
+    @Get('chapters/:chapterId/roadmap')
+    @ApiOperation({ summary: 'Get chapter roadmap with lessons and checkpoints' })
+    @ApiParam({ name: 'chapterId', example: 1 })
+    @ApiResponse({
+        status: 200,
+        description: 'Roadmap ของ chapter รวมบทเรียนและ checkpoint ท้ายสุด',
+    })
+    getChapterRoadmap(
+        @Param('chapterId') chapterId: string,
+        @Request() req: any
+    ) {
+        return this.roadmapService.getChapterRoadmap(
+            getUserIdOrThrow(req.user, req),
+            Number(chapterId)
         );
     }
 
