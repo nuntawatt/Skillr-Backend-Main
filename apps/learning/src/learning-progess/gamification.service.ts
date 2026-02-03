@@ -73,7 +73,7 @@ export class GamificationService {
       totalItems: summary.totalItems,
       completedItems: summary.completedItems,
       currentItem: currentItem?.lessonId,
-      nextAvailableItem,
+      nextAvailableItem: nextAvailableItem || undefined,
       checkpointStatus
     };
   }
