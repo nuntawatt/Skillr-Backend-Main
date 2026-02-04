@@ -307,13 +307,25 @@ export class UsersService {
     if (this.minioClient) return this.minioClient;
 
     const url = new URL(endpointRaw);
-    const accessKey = this.config.get<string>('S3_ACCESS_KEY_ID') ?? this.config.get<string>('MINIO_ROOT_USER') ?? '';
-    const secretKey = this.config.get<string>('S3_SECRET_ACCESS_KEY') ?? this.config.get<string>('MINIO_ROOT_PASSWORD') ?? '';
+
+    const accessKey =
+      this.config.get<string>('S3_ACCESS_KEY_ID')
+      ?? this.config.get<string>('MINIO_ROOT_USER')
+      ?? '';
+
+    const secretKey =
+      this.config.get<string>('S3_SECRET_ACCESS_KEY')
+      ?? this.config.get<string>('MINIO_ROOT_PASSWORD')
+      ?? '';
+
+    const port =
+      url.port
+        ? Number(url.port)
+        : url.protocol === 'https:' ? 443 : 80;
 
     this.minioClient = new Minio.Client({
       endPoint: url.hostname,
-      port: Number(url.port || 9000),
-      // useSSL should be true for https
+      port,
       useSSL: url.protocol === 'https:',
       accessKey,
       secretKey,

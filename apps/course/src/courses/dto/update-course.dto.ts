@@ -18,11 +18,6 @@ export class UpdateCourseDto {
   @IsNumber()
   course_imageId?: number | null;
 
-  // @ApiPropertyOptional({ description: 'Intro video media asset ID', example: 456 })
-  // @IsOptional()
-  // @IsNumber()
-  // introMediaAssetId?: number | null;
-
   @ApiPropertyOptional({ description: 'Is the course published', default: false })
   @IsOptional()
   @IsBoolean()

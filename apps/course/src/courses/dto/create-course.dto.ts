@@ -29,11 +29,6 @@ export class CreateCourseDto {
   @IsString({ each: true })
   course_tags?: string[];
 
-  // @ApiPropertyOptional({ description: 'Intro video media asset ID', example: 456 })
-  // @IsOptional()
-  // @IsNumber()
-  // introMediaAssetId?: number;
-
   @ApiPropertyOptional({ description: 'Is the course published', default: false })
   @IsOptional()
   @IsBoolean()
