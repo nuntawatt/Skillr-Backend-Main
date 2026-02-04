@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { LessonProgress } from './entities/lesson-progress.entity';
+import { CourseClientService } from './course-client.service';
 
 export type ProgressSummary = {
   totalCompleted: number;
@@ -12,25 +13,38 @@ export type ProgressSummary = {
 @Injectable()
 export class LearningProgressService {
   constructor(
-    @InjectRepository(LessonProgress)
-    private readonly progressRepository: Repository<LessonProgress>,
-  ) {}
+
+    // 🔹 learning DB
+    @InjectRepository(LessonProgress, 'learning')
+    private readonly progressRepo: Repository<LessonProgress>,
+
+    private readonly courseClient: CourseClientService,
+
+  ) { }
 
   async completeLesson(
     userId: string,
     lessonId: string,
   ): Promise<LessonProgress> {
-    const numericUserId = Number(userId);
-    const numericLessonId = Number(lessonId);
     const now = new Date();
 
-    let progress = await this.progressRepository.findOne({
-      where: { userId: numericUserId, lessonId: numericLessonId },
+    const numericLessonId = Number(lessonId);
+    if (!Number.isFinite(numericLessonId)) {
+      throw new BadRequestException('Invalid lesson id');
+    }
+
+    const lesson = await this.courseClient.getLessonById(numericLessonId);
+    if (!lesson) {
+      throw new NotFoundException('Lesson not found');
+    }
+
+    let progress = await this.progressRepo.findOne({
+      where: { userId, lessonId: numericLessonId },
     });
 
     if (!progress) {
-      progress = this.progressRepository.create({
-        userId: numericUserId,
+      progress = this.progressRepo.create({
+        userId,
         lessonId: numericLessonId,
         completedAt: now,
       });
@@ -38,33 +52,34 @@ export class LearningProgressService {
       progress.completedAt = now;
     }
 
-    return this.progressRepository.save(progress);
+    return this.progressRepo.save(progress);
   }
 
   async getLessonProgress(
     userId: string,
     lessonId: string,
   ): Promise<LessonProgress | null> {
-    const numericUserId = Number(userId);
     const numericLessonId = Number(lessonId);
-    return this.progressRepository.findOne({
-      where: { userId: numericUserId, lessonId: numericLessonId },
+    if (!Number.isFinite(numericLessonId)) {
+      throw new BadRequestException('Invalid lesson id');
+    }
+    return this.progressRepo.findOne({
+      where: { userId, lessonId: numericLessonId },
     });
   }
 
   async getSummary(userId: string): Promise<ProgressSummary> {
-    const numericUserId = Number(userId);
-
-    const completions = await this.progressRepository.find({
-      where: { userId: numericUserId },
+    const completions = await this.progressRepo.find({
+      where: { userId },
       order: { completedAt: 'DESC' },
     });
 
     const totalCompleted = completions.length;
     const lastCompletedAt = completions[0]?.completedAt;
-    const uniqueDays = new Set<string>(
-      completions.map((progress) =>
-        progress.completedAt.toISOString().slice(0, 10),
+
+    const uniqueDays = new Set(
+      completions.map(p =>
+        p.completedAt.toISOString().slice(0, 10),
       ),
     );
 
@@ -76,6 +91,7 @@ export class LearningProgressService {
       lastCompletedAt,
     };
   }
+
 
   private calculateStreak(uniqueDays: Set<string>): number {
     if (!uniqueDays.size) {

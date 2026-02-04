@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Request, UseGuards } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Post, Param, Request, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { LearningProgressService } from './learning-progress.service';
 import { LearningDashboardService } from './learning-dashboard.service';
@@ -11,7 +11,9 @@ function getUserIdOrThrow(user?: AuthUser, req?: any): string {
     if (typeof raw === 'string' || typeof raw === 'number') {
         return String(raw);
     }
-    return '1'; // Default for testing as in the original controller
+    throw new BadRequestException(
+        'Missing user id. Provide x-user-id header (UUID) or enable JwtAuthGuard.',
+    );
 }
 
 @ApiTags('Learning Progress')

@@ -3,15 +3,15 @@ import { Column, Entity, PrimaryGeneratedColumn, Unique } from 'typeorm';
 @Entity('lesson_progress')
 @Unique(['userId', 'lessonId'])
 export class LessonProgress {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column()
-  userId: number;
+  @Column({ name: 'user_id', type: 'uuid' })
+  userId: string;
 
-  @Column()
+  @Column({ name: 'lesson_id', type: 'int' })
   lessonId: number;
 
-  @Column({ type: 'timestamptz' })
+  @Column({ name: 'completed_at', type: 'timestamptz' })
   completedAt: Date;
 }
