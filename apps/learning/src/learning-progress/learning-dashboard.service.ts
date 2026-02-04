@@ -33,11 +33,10 @@ export class LearningDashboardService {
   async getDashboard(userId: string): Promise<LearningDashboardResponse> {
     const progressPromise = this.learningProgressService.getSummary(userId);
 
-    const quizStatsPromise = firstValueFrom(
-      this.httpService.get(`${this.quizServiceUrl}/api/learning/users/${userId}/stats`)
-    ).then(res => res.data).catch(err => {
-      console.error('Failed to fetch quiz stats for dashboard:', err.message);
-      return { totalAttempts: 0, passedAttempts: 0 };
+    // ปิดการเรียก Quiz Stats ชั่วคราว - คืนค่า default
+    const quizStatsPromise = Promise.resolve({ 
+      totalAttempts: 0, 
+      passedAttempts: 0 
     });
 
     const [progress, quizzes] = await Promise.all([

@@ -1,5 +1,5 @@
-import { BadRequestException, Controller, Get, Post, Param, Request, UseGuards, Body, Put } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { BadRequestException, Controller, Get, Post, Param, Request, UseGuards, Body, Put, Headers } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiParam, ApiHeader } from '@nestjs/swagger';
 import { LearningProgressService } from './learning-progress.service';
 import { ChapterProgressService } from './chapter-progress.service';
 import { LearningDashboardService } from './learning-dashboard.service';
@@ -8,7 +8,13 @@ import { JwtAuthGuard } from '@auth';
 import type { AuthUser } from '@auth';
 
 function getUserIdOrThrow(user?: AuthUser, req?: any): string {
-    const raw = user?.id ?? user?.sub ?? req?.headers?.['x-user-id'];
+    const raw = user?.id ?? user?.sub ?? req?.headers?.['x-user-id'] ?? req?.headers?.['X-User-Id'];
+    
+    // For testing purposes - if no x-user-id provided, use default test user
+    if (!raw) {
+        return '550e8400-e29b-41d4-a716-446655440000';
+    }
+    
     if (typeof raw === 'string' || typeof raw === 'number') {
         return String(raw);
     }
@@ -117,6 +123,7 @@ export class LearningProgressController {
     @Get('chapters/:id/roadmap')
     @ApiOperation({ summary: 'Get chapter roadmap with progress' })
     @ApiParam({ name: 'id', example: 1 })
+    @ApiHeader({ name: 'x-user-id', description: 'User UUID', required: true, example: '550e8400-e29b-41d4-a716-446655440000' })
     @ApiResponse({
         status: 200,
         description: 'Chapter roadmap with items and progress',

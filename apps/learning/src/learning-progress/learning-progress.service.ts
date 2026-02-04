@@ -69,10 +69,11 @@ export class LearningProgressService {
   }
 
   async getSummary(userId: string): Promise<ProgressSummary> {
-    const completions = await this.progressRepo.find({
-      where: { userId },
-      order: { completedAt: 'DESC' },
-    });
+    const completions = await this.progressRepo
+      .createQueryBuilder('lesson_progress')
+      .where('lesson_progress.user_id = :userId', { userId })
+      .orderBy('lesson_progress.completed_at', 'DESC')
+      .getMany();
 
     const totalCompleted = completions.length;
     const lastCompletedAt = completions[0]?.completedAt;
