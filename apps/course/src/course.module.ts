@@ -11,6 +11,7 @@ import { LevelsController } from './levels/levels.controller';
 import { ChaptersController } from './chapters/chapters.controller';
 import { LessonsController } from './lessons/lessons.controller';
 import { ArticlesController } from './articles/articles.controller';
+import { ProgressController } from './progress/progress.controller';
 
 // Services
 import { CoursesService } from './courses/courses.service';
@@ -19,6 +20,7 @@ import { ChaptersService } from './chapters/chapters.service';
 import { LessonsService } from './lessons/lessons.service';
 import { ArticlesService } from './articles/articles.service';
 import { StorageService } from './storage/storage.service';
+import { ProgressService } from './progress/progress.service';
 
 // Entities
 import { Course } from './courses/entities/course.entity';
@@ -26,6 +28,7 @@ import { Level } from './levels/entities/level.entity';
 import { Chapter } from './chapters/entities/chapter.entity';
 import { Lesson } from './lessons/entities/lesson.entity';
 import { Article } from './articles/entities/article.entity';
+import { LessonProgress } from './progress/entities/lesson-progress.entity';
 
 const isTest = process.env.NODE_ENV === 'test';
 
@@ -50,7 +53,8 @@ const isTest = process.env.NODE_ENV === 'test';
           Level,
           Chapter,
           Lesson,
-          Article
+          Article,
+          LessonProgress,
         ]),
 
         AuthLibModule
@@ -62,7 +66,8 @@ const isTest = process.env.NODE_ENV === 'test';
     LevelsController,
     ChaptersController,
     LessonsController,
-    ArticlesController
+    ArticlesController,
+    ProgressController,
   ],
 
   providers: [
@@ -71,7 +76,8 @@ const isTest = process.env.NODE_ENV === 'test';
     ChaptersService,
     LessonsService,
     ArticlesService,
-    StorageService
+    StorageService,
+    ProgressService,
   ],
 })
 export class AppModule { }

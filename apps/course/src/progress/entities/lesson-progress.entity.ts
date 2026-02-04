@@ -1,0 +1,66 @@
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
+import { Lesson } from '../../lessons/entities/lesson.entity';
+
+export enum LessonProgressStatus {
+  IN_PROGRESS = 'IN_PROGRESS',
+  COMPLETED = 'COMPLETED',
+}
+
+@Entity('lesson_progress')
+@Index('idx_lesson_progress_user_id', ['userId'])
+@Index('uq_lesson_progress_user_lesson', ['userId', 'lessonId'], { unique: true })
+export class LessonProgress {
+  @PrimaryGeneratedColumn({ name: 'lesson_progress_id', type: 'int' })
+  lessonProgressId: number;
+
+  @Column({ name: 'user_id', type: 'uuid' })
+  userId: string;
+
+  @Column({ name: 'lesson_id', type: 'int' })
+  lessonId: number;
+
+  @ManyToOne(() => Lesson, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'lesson_id', referencedColumnName: 'lesson_id' })
+  lesson: Lesson;
+
+  @Column({
+    name: 'status',
+    type: 'varchar',
+    length: 20,
+    default: LessonProgressStatus.IN_PROGRESS,
+  })
+  status: LessonProgressStatus;
+
+  @Column({ name: 'progress_percent', type: 'numeric', precision: 5, scale: 2, default: 0 })
+  progressPercent: number;
+
+  @Column({ name: 'position_seconds', type: 'int', nullable: true })
+  positionSeconds?: number | null;
+
+  @Column({ name: 'duration_seconds', type: 'int', nullable: true })
+  durationSeconds?: number | null;
+
+  @Column({ name: 'checkpoint', type: 'jsonb', nullable: true })
+  checkpoint?: Record<string, unknown> | null;
+
+  @Column({ name: 'last_viewed_at', type: 'timestamptz', nullable: true })
+  lastViewedAt?: Date | null;
+
+  @Column({ name: 'completed_at', type: 'timestamptz', nullable: true })
+  completedAt?: Date | null;
+
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+  createdAt: Date;
+
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
+  updatedAt: Date;
+}
