@@ -3,7 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthLibModule } from '@auth/auth-lib.module';
 
-import { LearningProgressModule } from './learning-progess/learning-progress.module';
+import { LearningProgressModule } from './learning-progress/learning-progress.module';
 import { getLearningDatabaseConfig } from '../database.config';
 
 @Module({
