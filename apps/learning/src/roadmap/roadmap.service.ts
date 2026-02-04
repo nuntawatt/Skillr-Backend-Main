@@ -3,7 +3,7 @@ import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { Repository, In } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessonProgress } from '../learning-progess/entities/lesson-progress.entity';
+import { LessonProgress } from '../learning-progress/entities/lesson-progress.entity';
 
 @Injectable()
 export class RoadmapService {

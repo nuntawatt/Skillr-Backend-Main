@@ -11,7 +11,7 @@ import {
   NotFoundException
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiBody, ApiQuery, ApiResponse } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../../../auth/src/auth/guards/jwt-auth.guard';
 import { GamificationService } from './gamification.service';
 import { LessonProgressStatus } from './entities/lesson-progress.entity';
 

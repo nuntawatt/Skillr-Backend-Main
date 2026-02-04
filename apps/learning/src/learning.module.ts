@@ -4,7 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { getDatabaseConfig } from '@config/database.config';
 import { AuthLibModule } from '@auth/auth-lib.module';
 
-import { LearningProgressModule } from './learning-progess/learning-progress.module';
+import { LearningProgressModule } from './learning-progress/learning-progress.module';
 
 @Module({
   imports: [
