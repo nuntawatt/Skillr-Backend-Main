@@ -11,6 +11,8 @@ import {
 } from './entities/lesson-progress.entity';
 import { LessonProgressResponseDto } from './dto/lesson-progress-response.dto';
 import { CourseProgressSummaryDto } from './dto/course-progress-summary.dto';
+import { ChapterProgressDto } from './dto/chapter-progress.dto';
+import { ChapterRoadmapDto, ItemStatusDto } from './dto/chapter-roadmap.dto';
 
 @Injectable()
 export class ProgressService {
@@ -19,6 +21,8 @@ export class ProgressService {
     private readonly lessonProgressRepository: Repository<LessonProgress>,
     @InjectRepository(Lesson)
     private readonly lessonRepository: Repository<Lesson>,
+    @InjectRepository(Chapter)
+    private readonly chapterRepository: Repository<Chapter>,
   ) {}
 
   async getLessonProgress(userId: string, lessonId: number): Promise<LessonProgressResponseDto | null> {
@@ -84,10 +88,173 @@ export class ProgressService {
       row.status = LessonProgressStatus.COMPLETED;
       row.progressPercent = 100;
       row.completedAt = new Date();
+      
+      // Unlock next items when lesson is completed
+      await this.unlockNextItems(userId, lessonId);
     }
 
     const saved = await this.lessonProgressRepository.save(row);
     return this.toResponse(saved);
+  }
+
+  async getChapterProgress(userId: string, chapterId: number): Promise<ChapterProgressDto> {
+    const chapter = await this.chapterRepository.findOne({ where: { chapter_id: chapterId } });
+    if (!chapter) {
+      throw new NotFoundException(`Chapter with ID ${chapterId} not found`);
+    }
+
+    const lessons = await this.lessonRepository.find({
+      where: { chapter_id: chapterId },
+      order: { orderIndex: 'ASC' }
+    });
+
+    if (lessons.length === 0) {
+      return {
+        chapterId,
+        totalItems: 0,
+        completedItems: 0,
+        percent: 0,
+        resumeLessonId: null,
+        resumeCheckpoint: null,
+      };
+    }
+
+    const lessonIds = lessons.map(l => l.lesson_id);
+    const progressRows = await this.lessonProgressRepository.find({
+      where: { userId, lessonId: In(lessonIds) },
+    });
+
+    const completedSet = new Set(
+      progressRows
+        .filter((p) => p.status === LessonProgressStatus.COMPLETED)
+        .map((p) => p.lessonId),
+    );
+
+    const completedItems = completedSet.size;
+    const totalItems = lessons.length;
+    const percent = Math.round((completedItems / totalItems) * 10000) / 100;
+
+    const resumeLesson = lessons.find(l => !completedSet.has(l.lesson_id));
+    const resumeLessonId = resumeLesson?.lesson_id ?? null;
+    const resumeCheckpoint = resumeLessonId
+      ? progressRows.find((p) => p.lessonId === resumeLessonId)?.checkpoint ?? null
+      : null;
+
+    return {
+      chapterId,
+      totalItems,
+      completedItems,
+      percent,
+      resumeLessonId,
+      resumeCheckpoint,
+    };
+  }
+
+  async getChapterRoadmap(userId: string, chapterId: number): Promise<ChapterRoadmapDto> {
+    const chapter = await this.chapterRepository.findOne({ where: { chapter_id: chapterId } });
+    if (!chapter) {
+      throw new NotFoundException(`Chapter with ID ${chapterId} not found`);
+    }
+
+    const lessons = await this.lessonRepository.find({
+      where: { chapter_id: chapterId },
+      order: { orderIndex: 'ASC' }
+    });
+
+    const lessonIds = lessons.map(l => l.lesson_id);
+    const progressRows = await this.lessonProgressRepository.find({
+      where: { userId, lessonId: In(lessonIds) },
+    });
+
+    const completedSet = new Set(
+      progressRows
+        .filter((p) => p.status === LessonProgressStatus.COMPLETED)
+        .map((p) => p.lessonId),
+    );
+
+    const items: ItemStatusDto[] = [];
+    let hasFoundCurrent = false;
+    let nextAvailableLessonId: number | null = null;
+
+    for (const lesson of lessons) {
+      const progress = progressRows.find(p => p.lessonId === lesson.lesson_id);
+      let status: LessonProgressStatus;
+
+      if (completedSet.has(lesson.lesson_id)) {
+        status = LessonProgressStatus.COMPLETED;
+      } else if (!hasFoundCurrent) {
+        status = LessonProgressStatus.IN_PROGRESS;
+        hasFoundCurrent = true;
+        if (!nextAvailableLessonId) {
+          nextAvailableLessonId = lesson.lesson_id;
+        }
+      } else {
+        status = LessonProgressStatus.LOCKED;
+      }
+
+      items.push({
+        lessonId: lesson.lesson_id,
+        lessonTitle: lesson.lesson_title,
+        lessonType: lesson.lesson_type,
+        status,
+        progressPercent: progress?.progressPercent ?? (status === LessonProgressStatus.COMPLETED ? 100 : 0),
+        positionSeconds: progress?.positionSeconds ?? null,
+        durationSeconds: progress?.durationSeconds ?? null,
+        completedAt: progress?.completedAt ?? null,
+        orderIndex: lesson.orderIndex,
+        checkpoint: progress?.checkpoint ?? null,
+      });
+    }
+
+    const completedItems = completedSet.size;
+    const totalItems = lessons.length;
+    const progressPercent = totalItems > 0 ? Math.round((completedItems / totalItems) * 10000) / 100 : 0;
+
+    // Check if chapter has checkpoints (simplified - assume last lesson is checkpoint)
+    const hasCheckpoint = lessons.length > 0 && lessons[lessons.length - 1].lesson_type === 'quiz';
+    const checkpointUnlocked = hasCheckpoint && completedSet.has(lessons[lessons.length - 1].lesson_id);
+
+    return {
+      chapterId,
+      chapterTitle: chapter.chapter_title,
+      progressPercent,
+      items,
+      nextAvailableLessonId,
+      hasCheckpoint,
+      checkpointUnlocked,
+    };
+  }
+
+  async unlockNextItems(userId: string, completedLessonId: number): Promise<void> {
+    const completedLesson = await this.lessonRepository.findOne({ 
+      where: { lesson_id: completedLessonId } 
+    });
+    
+    if (!completedLesson) {
+      throw new NotFoundException(`Lesson with ID ${completedLessonId} not found`);
+    }
+
+    const nextLessons = await this.lessonRepository.find({
+      where: { 
+        chapter_id: completedLesson.chapter_id,
+        orderIndex: completedLesson.orderIndex + 1 
+      }
+    });
+
+    for (const nextLesson of nextLessons) {
+      const existingProgress = await this.lessonProgressRepository.findOne({
+        where: { userId, lessonId: nextLesson.lesson_id }
+      });
+
+      if (!existingProgress) {
+        await this.lessonProgressRepository.save({
+          userId,
+          lessonId: nextLesson.lesson_id,
+          status: LessonProgressStatus.IN_PROGRESS,
+          progressPercent: 0,
+        });
+      }
+    }
   }
 
   async getCourseSummary(userId: string, courseId: number): Promise<CourseProgressSummaryDto> {

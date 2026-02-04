@@ -5,6 +5,8 @@ import { CurrentUserId } from './decorators/current-user-id.decorator';
 import { CourseProgressSummaryDto } from './dto/course-progress-summary.dto';
 import { LessonProgressResponseDto } from './dto/lesson-progress-response.dto';
 import { UpsertLessonProgressDto } from './dto/upsert-lesson-progress.dto';
+import { ChapterProgressDto } from './dto/chapter-progress.dto';
+import { ChapterRoadmapDto } from './dto/chapter-roadmap.dto';
 import { ProgressService } from './progress.service';
 
 @ApiTags('Progress')
@@ -57,5 +59,27 @@ export class ProgressController {
         @Param('courseId', ParseIntPipe) courseId: number,
     ): Promise<CourseProgressSummaryDto> {
         return this.progressService.getCourseSummary(userId, courseId);
+    }
+
+    @Get('chapters/:chapterId')
+    @ApiOperation({ summary: 'Get current user progress for a chapter' })
+    @ApiParam({ name: 'chapterId', type: Number })
+    @ApiOkResponse({ type: ChapterProgressDto })
+    getChapterProgress(
+        @CurrentUserId() userId: string,
+        @Param('chapterId', ParseIntPipe) chapterId: number,
+    ): Promise<ChapterProgressDto> {
+        return this.progressService.getChapterProgress(userId, chapterId);
+    }
+
+    @Get('chapters/:chapterId/roadmap')
+    @ApiOperation({ summary: 'Get chapter roadmap with item states (Completed/Current/Locked)' })
+    @ApiParam({ name: 'chapterId', type: Number })
+    @ApiOkResponse({ type: ChapterRoadmapDto })
+    getChapterRoadmap(
+        @CurrentUserId() userId: string,
+        @Param('chapterId', ParseIntPipe) chapterId: number,
+    ): Promise<ChapterRoadmapDto> {
+        return this.progressService.getChapterRoadmap(userId, chapterId);
     }
 }

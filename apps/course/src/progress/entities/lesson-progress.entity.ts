@@ -11,6 +11,7 @@ import {
 import { Lesson } from '../../lessons/entities/lesson.entity';
 
 export enum LessonProgressStatus {
+  LOCKED = 'LOCKED',
   IN_PROGRESS = 'IN_PROGRESS',
   COMPLETED = 'COMPLETED',
 }
