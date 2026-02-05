@@ -48,4 +48,10 @@ export class ChapterRoadmapDto {
 
   @ApiProperty({ required: false, nullable: true })
   nextAvailableLessonId?: number | null;
+
+  @ApiProperty({ required: false, nullable: true })
+  hasCheckpoint?: boolean;
+
+  @ApiProperty({ required: false, nullable: true })
+  checkpointUnlocked?: boolean;
 }

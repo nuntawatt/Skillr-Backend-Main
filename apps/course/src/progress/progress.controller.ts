@@ -74,7 +74,7 @@ export class ProgressController {
 
     @Get('chapters/:chapterId/roadmap')
     @ApiOperation({ summary: 'Get chapter roadmap with item states (Completed/Current/Locked)' })
-    @ApiParam({ name: 'chapterId', type: Number })
+    @ApiParam({ name: 'chapterId', type: Number, example: 1 })
     @ApiOkResponse({ type: ChapterRoadmapDto })
     getChapterRoadmap(
         @CurrentUserId() userId: string,

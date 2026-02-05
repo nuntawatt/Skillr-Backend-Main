@@ -193,7 +193,11 @@ export class ProgressService {
 
     const completedItems = completedSet.size;
     const totalItems = lessons.length;
-    const progress_Percent = totalItems > 0 ? Math.round((completedItems / totalItems) * 10000) / 100 : 0;
+    const progressPercent = totalItems > 0 ? Math.round((completedItems / totalItems) * 10000) / 100 : 0;
+
+    // Check if chapter has checkpoints (simplified - assume last lesson is checkpoint)
+    const hasCheckpoint = lessons.length > 0 && lessons[lessons.length - 1].lesson_type === 'quiz';
+    const checkpointUnlocked = hasCheckpoint && completedSet.has(lessons[lessons.length - 1].lesson_id);
 
     return {
       chapterId,
@@ -201,6 +205,8 @@ export class ProgressService {
       progress_Percent,
       items,
       nextAvailableLessonId,
+      hasCheckpoint,
+      checkpointUnlocked,
     };
   }
 
