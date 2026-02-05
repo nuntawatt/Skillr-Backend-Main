@@ -9,7 +9,7 @@ import { CheckpointXpService } from './checkpoint-xp.service';
 export class CheckpointXpController {
   constructor(private readonly checkpointXpService: CheckpointXpService) {}
 
-  @Post(':id/submit')
+  @Post(':chapterId/submit')
   @ApiOperation({ summary: 'Submit checkpoint quiz answers' })
   @ApiParam({ name: 'chapterId', type: Number, example: 1 })
   @ApiOkResponse({ type: CheckpointResultDto })
@@ -21,7 +21,7 @@ export class CheckpointXpController {
     return this.checkpointXpService.submitCheckpoint(userId, chapterId, dto);
   }
 
-  @Post(':Id/skip')
+  @Post(':chapterId/skip')
   @ApiOperation({ summary: 'Skip checkpoint quiz' })
   @ApiParam({ name: 'chapterId', type: Number, example: 1 })
   @ApiOkResponse({ type: CheckpointResultDto })
@@ -32,7 +32,7 @@ export class CheckpointXpController {
     return this.checkpointXpService.skipCheckpoint(userId, chapterId);
   }
 
-  @Get(':Id/status')
+  @Get(':chapterId/status')
   @ApiOperation({ summary: 'Get checkpoint status and XP earned' })
   @ApiParam({ name: 'chapterId', type: Number, example: 1 })
   @ApiOkResponse({ type: CheckpointResultDto })
