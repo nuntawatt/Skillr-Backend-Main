@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-
+import { DataSource } from 'typeorm';
 import { getDatabaseConfig } from '@config/database.config';
 import { AuthLibModule } from '@auth/auth-lib.module';
 
@@ -84,6 +84,11 @@ const isTest = process.env.NODE_ENV === 'test';
     StorageService,
     ProgressService,
     CheckpointXpService,
+    {
+      provide: 'DataSource',
+      useFactory: (dataSource: DataSource) => dataSource,
+      inject: [DataSource],
+    },
   ],
 })
 export class AppModule { }
