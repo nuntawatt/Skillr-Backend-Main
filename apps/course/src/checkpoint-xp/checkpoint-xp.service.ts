@@ -165,6 +165,6 @@ export class CheckpointXpService {
   private validateCheckpointAnswers(answers: string[]): boolean {
     // Simple validation logic - in real implementation, this would check against actual quiz data
     // For now, assume correct if answers array is not empty
-    return answers.length > 0 && answers[0] === 'correct';
+    return answers.length > 0;
   }
 }

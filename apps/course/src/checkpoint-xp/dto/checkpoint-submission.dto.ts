@@ -1,10 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { IsArray, IsOptional, IsNumber } from 'class-validator';
 
 export class CheckpointSubmissionDto {
   @ApiProperty({ 
     description: 'Array of selected answers',
     example: ['A', 'C', 'D']
   })
+  @IsArray()
   answers: string[];
 
   @ApiProperty({ 
@@ -12,5 +14,7 @@ export class CheckpointSubmissionDto {
     required: false,
     example: 120
   })
+  @IsOptional()
+  @IsNumber()
   timeTaken?: number;
 }
