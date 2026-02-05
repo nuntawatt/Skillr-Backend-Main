@@ -15,5 +15,4 @@ export class CourseProgressSummaryDto {
 
   @ApiProperty({ required: false, nullable: true })
   resumeLessonId?: number | null;
-
 }

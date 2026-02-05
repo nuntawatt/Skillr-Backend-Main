@@ -31,7 +31,6 @@ export class UpsertLessonProgressDto {
     @Min(0)
     duration_Seconds?: number;
 
-
     @ApiPropertyOptional({ description: 'If true, mark lesson completed (sets percent=100)' })
     @IsOptional()
     @IsBoolean()
