@@ -84,7 +84,11 @@ const isTest = process.env.NODE_ENV === 'test';
     StorageService,
     ProgressService,
     CheckpointXpService,
-    DataSource,
+    {
+      provide: 'DataSource',
+      useFactory: (dataSource: DataSource) => dataSource,
+      inject: [DataSource],
+    },
   ],
 })
 export class AppModule { }
