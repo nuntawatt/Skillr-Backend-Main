@@ -1,10 +1,13 @@
-import { Controller, Post, Get, Param, ParseIntPipe, Body } from '@nestjs/common';
-import { ApiOperation, ApiParam, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, ParseIntPipe, Post, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { JwtAuthGuard } from '@auth';
 import { CurrentUserId } from '../progress/decorators/current-user-id.decorator';
 import { CheckpointResultDto, CheckpointSubmissionDto } from './dto';
 import { CheckpointXpService } from './checkpoint-xp.service';
 
 @ApiTags('Checkpoint XP')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('checkpoint-xp')
 export class CheckpointXpController {
   constructor(private readonly checkpointXpService: CheckpointXpService) {}

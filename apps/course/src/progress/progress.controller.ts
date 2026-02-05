@@ -2,7 +2,6 @@ import { Body, Controller, Get, Param, ParseIntPipe, Post, Put, UseGuards } from
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiParam, ApiTags, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@auth';
 import { CurrentUserId } from './decorators/current-user-id.decorator';
-import { CourseProgressSummaryDto } from './dto/course-progress-summary.dto';
 import { LessonProgressResponseDto } from './dto/lesson-progress-response.dto';
 import { SkipLessonResponseDto } from './dto/skip-lesson-response.dto';
 import { UpsertLessonProgressDto } from './dto/upsert-lesson-progress.dto';

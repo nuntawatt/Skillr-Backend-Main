@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository } from 'typeorm';
-import { Lesson } from '../lessons/entities/lesson.entity';
+import { Lesson, LessonType } from '../lessons/entities/lesson.entity';
 import { Chapter } from '../chapters/entities/chapter.entity';
 import { LessonProgress } from '../progress/entities/lesson-progress.entity';
 import { LessonProgressStatus } from '../progress/entities/lesson-progress.entity';
@@ -41,14 +41,28 @@ export class CheckpointXpService {
         order: { orderIndex: 'ASC' }
       });
 
-      const lessonIds = lessons.map(l => l.lesson_id);
-      const progressRows = await queryRunner.manager.find(LessonProgress, {
-        where: { userId, lessonId: In(lessonIds) },
-      });
+      const checkpointLesson = this.findCheckpointLesson(lessons);
+      if (!checkpointLesson) {
+        throw new NotFoundException(`Checkpoint lesson for chapter ${chapterId} not found`);
+      }
 
-      const completedLessons = progressRows.filter(p => p.status === LessonProgressStatus.COMPLETED);
-      if (completedLessons.length !== lessons.length) {
-        throw new Error('Cannot submit checkpoint: Not all lessons in chapter are completed');
+      const requiredLessons = lessons.filter((l) => l.lesson_id !== checkpointLesson.lesson_id);
+      const requiredLessonIds = requiredLessons.map((l) => l.lesson_id);
+
+      if (requiredLessonIds.length > 0) {
+        const progressRows = await queryRunner.manager.find(LessonProgress, {
+          where: { userId, lessonId: In(requiredLessonIds) },
+        });
+
+        const completedRequired = progressRows.filter(
+          (p) =>
+            p.status === LessonProgressStatus.COMPLETED ||
+            p.status === LessonProgressStatus.SKIPPED,
+        );
+
+        if (completedRequired.length !== requiredLessons.length) {
+          throw new BadRequestException('Cannot submit checkpoint: Not all required lessons in chapter are completed');
+        }
       }
 
       // Get or create user XP record
@@ -83,6 +97,30 @@ export class CheckpointXpService {
       }
 
       await queryRunner.manager.save(userXp);
+
+      // Mark checkpoint lesson progress as completed (so Progress roadmap shows it as done)
+      let checkpointProgress = await queryRunner.manager.findOne(LessonProgress, {
+        where: { userId, lessonId: checkpointLesson.lesson_id },
+      });
+
+      if (!checkpointProgress) {
+        checkpointProgress = queryRunner.manager.create(LessonProgress, {
+          userId,
+          lessonId: checkpointLesson.lesson_id,
+          status: LessonProgressStatus.IN_PROGRESS,
+          progress_Percent: 0,
+        });
+      }
+
+      if (isCorrect) {
+        checkpointProgress.status = LessonProgressStatus.COMPLETED;
+        checkpointProgress.progress_Percent = 100;
+        checkpointProgress.completedAt = new Date();
+      }
+
+      checkpointProgress.lastViewedAt = new Date();
+      await queryRunner.manager.save(checkpointProgress);
+
       await queryRunner.commitTransaction();
 
       // Get total XP for this chapter
@@ -138,6 +176,35 @@ export class CheckpointXpService {
       }
 
       await queryRunner.manager.save(userXp);
+
+      // Also mark the checkpoint lesson progress as SKIPPED for consistency with progress module
+      const lessons = await queryRunner.manager.find(Lesson, {
+        where: { chapter_id: chapterId },
+        order: { orderIndex: 'ASC' }
+      });
+
+      const checkpointLesson = this.findCheckpointLesson(lessons);
+      if (checkpointLesson) {
+        let checkpointProgress = await queryRunner.manager.findOne(LessonProgress, {
+          where: { userId, lessonId: checkpointLesson.lesson_id },
+        });
+
+        if (!checkpointProgress) {
+          checkpointProgress = queryRunner.manager.create(LessonProgress, {
+            userId,
+            lessonId: checkpointLesson.lesson_id,
+            status: LessonProgressStatus.IN_PROGRESS,
+            progress_Percent: 0,
+          });
+        }
+
+        checkpointProgress.status = LessonProgressStatus.SKIPPED;
+        checkpointProgress.progress_Percent = 100;
+        checkpointProgress.lastViewedAt = new Date();
+        checkpointProgress.completedAt = new Date();
+        await queryRunner.manager.save(checkpointProgress);
+      }
+
       await queryRunner.commitTransaction();
 
       return {
@@ -191,5 +258,17 @@ export class CheckpointXpService {
   private validateCheckpointAnswers(answers: string[]): boolean {
     // Simple validation: if answers array is not empty, consider it correct
     return answers && answers.length > 0;
+  }
+
+  private findCheckpointLesson(lessons: Lesson[]): Lesson | null {
+    // Preferred: explicit checkpoint lesson type
+    const checkpoint = lessons.find((l) => l.lesson_type === LessonType.CHECKPOINT);
+    if (checkpoint) {
+      return checkpoint;
+    }
+
+    // Backward-compat: treat the last quiz lesson as checkpoint
+    const quizzes = lessons.filter((l) => l.lesson_type === LessonType.QUIZ);
+    return quizzes.length > 0 ? quizzes[quizzes.length - 1] : null;
   }
 }
