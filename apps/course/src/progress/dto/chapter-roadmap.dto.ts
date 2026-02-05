@@ -28,9 +28,6 @@ export class ItemStatusDto {
 
   @ApiProperty()
   orderIndex: number;
-
-  @ApiProperty({ required: false, nullable: true })
-  checkpoint?: Record<string, unknown> | null;
 }
 
 export class ChapterRoadmapDto {

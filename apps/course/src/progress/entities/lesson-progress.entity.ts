@@ -3,7 +3,9 @@ import { Lesson } from '../../lessons/entities/lesson.entity';
 
 export enum LessonProgressStatus {
   IN_PROGRESS = 'IN_PROGRESS',
+  LOCKED = 'LOCKED',
   COMPLETED = 'COMPLETED',
+  SKIPPED = 'SKIPPED',
 }
 
 @Entity('lesson_progress')
@@ -33,6 +35,9 @@ export class LessonProgress {
 
   @Column({ name: 'progress_percent', type: 'numeric', precision: 5, scale: 2, default: 0 })
   progress_Percent: number;
+
+  @Column({ name: 'map_lesson_id', type: 'int', nullable: true })
+  mapLessonId?: number | null;
 
   @Column({ name: 'position_seconds', type: 'int', nullable: true })
   position_Seconds?: number | null;

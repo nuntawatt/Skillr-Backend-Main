@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 
@@ -23,6 +23,15 @@ export class ProgressService {
 
   // Lesson Progress
 
+  async getAllLessonProgress(userId: string): Promise<LessonProgressResponseDto[]> {
+    const rows = await this.lessonProgressRepository.find({
+      where: { userId },
+      order: { updatedAt: 'DESC' },
+    });
+
+    return rows.map((r) => this.toResponse(r));
+  }
+
   async getLessonProgress(
     userId: string,
     lessonId: number,
@@ -39,11 +48,11 @@ export class ProgressService {
     lessonId: number,
     dto: UpsertLessonProgressDto,
   ): Promise<LessonProgressResponseDto> {
-    const lessonExists = await this.lessonRepository.exist({
+    const lesson = await this.lessonRepository.findOne({
       where: { lesson_id: lessonId },
     });
 
-    if (!lessonExists) {
+    if (!lesson) {
       throw new NotFoundException(`Lesson with ID ${lessonId} not found`);
     }
 
@@ -58,6 +67,8 @@ export class ProgressService {
         status: LessonProgressStatus.IN_PROGRESS,
         progress_Percent: 0,
       });
+    } else if (row.status === LessonProgressStatus.LOCKED) {
+      throw new BadRequestException('Lesson is locked');
     }
 
     if (dto.position_Seconds !== undefined) {
@@ -98,7 +109,121 @@ export class ProgressService {
     }
 
     const saved = await this.lessonProgressRepository.save(row);
+
+    // Ensure the next lesson exists as LOCKED in DB (mapLessonId=completed/current lesson)
+    const nextLesson = await this.lessonRepository.findOne({
+      where: {
+        chapter_id: lesson.chapter_id,
+        orderIndex: lesson.orderIndex + 1,
+      },
+      order: { orderIndex: 'ASC' },
+    });
+
+    if (nextLesson) {
+      let nextProgress = await this.lessonProgressRepository.findOne({
+        where: { userId, lessonId: nextLesson.lesson_id },
+      });
+
+      if (!nextProgress) {
+        nextProgress = this.lessonProgressRepository.create({
+          userId,
+          lessonId: nextLesson.lesson_id,
+          status: LessonProgressStatus.LOCKED,
+          progress_Percent: 0,
+          mapLessonId: lessonId,
+        });
+        await this.lessonProgressRepository.save(nextProgress);
+      } else if (nextProgress.mapLessonId == null) {
+        nextProgress.mapLessonId = lessonId;
+        await this.lessonProgressRepository.save(nextProgress);
+      }
+
+      // If current lesson is finished, unlock the next lesson
+      if (
+        (saved.status === LessonProgressStatus.COMPLETED ||
+          saved.status === LessonProgressStatus.SKIPPED) &&
+        nextProgress.status === LessonProgressStatus.LOCKED
+      ) {
+        nextProgress.status = LessonProgressStatus.IN_PROGRESS;
+        nextProgress.lastViewedAt = new Date();
+        await this.lessonProgressRepository.save(nextProgress);
+      }
+    }
+
     return this.toResponse(saved);
+  }
+
+  async skipLessonAndUnlockNext(
+    userId: string,
+    lessonId: number,
+  ): Promise<{ skipped: LessonProgressResponseDto; unlockedNext: LessonProgressResponseDto | null }> {
+    const currentLesson = await this.lessonRepository.findOne({
+      where: { lesson_id: lessonId },
+    });
+
+    if (!currentLesson) {
+      throw new NotFoundException(`Lesson with ID ${lessonId} not found`);
+    }
+
+    let currentProgress = await this.lessonProgressRepository.findOne({
+      where: { userId, lessonId },
+    });
+
+    if (!currentProgress) {
+      currentProgress = this.lessonProgressRepository.create({
+        userId,
+        lessonId,
+        status: LessonProgressStatus.IN_PROGRESS,
+        progress_Percent: 0,
+      });
+    }
+
+    currentProgress.status = LessonProgressStatus.SKIPPED;
+    currentProgress.progress_Percent = 100;
+    currentProgress.lastViewedAt = new Date();
+    currentProgress.completedAt = new Date();
+
+    const savedCurrent = await this.lessonProgressRepository.save(currentProgress);
+
+    const nextLesson = await this.lessonRepository.findOne({
+      where: {
+        chapter_id: currentLesson.chapter_id,
+        orderIndex: currentLesson.orderIndex + 1,
+      },
+      order: { orderIndex: 'ASC' },
+    });
+
+    if (!nextLesson) {
+      return { skipped: this.toResponse(savedCurrent), unlockedNext: null };
+    }
+
+    let nextProgress = await this.lessonProgressRepository.findOne({
+      where: { userId, lessonId: nextLesson.lesson_id },
+    });
+
+    if (!nextProgress) {
+      nextProgress = this.lessonProgressRepository.create({
+        userId,
+        lessonId: nextLesson.lesson_id,
+        status: LessonProgressStatus.IN_PROGRESS,
+        progress_Percent: 0,
+        mapLessonId: lessonId,
+        lastViewedAt: new Date(),
+      });
+      nextProgress = await this.lessonProgressRepository.save(nextProgress);
+    } else if (nextProgress.status === LessonProgressStatus.LOCKED) {
+      nextProgress.status = LessonProgressStatus.IN_PROGRESS;
+      nextProgress.lastViewedAt = new Date();
+      if (nextProgress.mapLessonId == null) {
+        nextProgress.mapLessonId = lessonId;
+      }
+      nextProgress = await this.lessonProgressRepository.save(nextProgress);
+    }
+
+    return {
+      skipped: this.toResponse(savedCurrent),
+      unlockedNext: this.toResponse(nextProgress),
+    };
   }
 
   // Chapter Progress
@@ -136,9 +261,14 @@ export class ProgressService {
       where: { userId, lessonId: In(lessonIds) },
     });
 
+    const progressByLessonId = new Map(progressRows.map((p) => [p.lessonId, p] as const));
+
     const completedSet = new Set(
       progressRows
-        .filter(p => p.status === LessonProgressStatus.COMPLETED)
+        .filter(p =>
+          p.status === LessonProgressStatus.COMPLETED ||
+          p.status === LessonProgressStatus.SKIPPED,
+        )
         .map(p => p.lessonId),
     );
 
@@ -148,16 +278,27 @@ export class ProgressService {
     const percent =
       Math.round((completedItems / totalItems) * 10000) / 100;
 
-    const resumeLesson = lessons.find(
-      l => !completedSet.has(l.lesson_id),
-    );
-
     return {
       chapterId,
       totalItems,
       completedItems,
       percent,
-      resumeLessonId: resumeLesson?.lesson_id ?? null,
+      resumeLessonId: (() => {
+        const inProgress = lessons.find(
+          (l) => progressByLessonId.get(l.lesson_id)?.status === LessonProgressStatus.IN_PROGRESS,
+        );
+        if (inProgress) {
+          return inProgress.lesson_id;
+        }
+
+        const firstNotDone = lessons.find((l) => !completedSet.has(l.lesson_id));
+        if (!firstNotDone) {
+          return null;
+        }
+
+        const status = progressByLessonId.get(firstNotDone.lesson_id)?.status;
+        return status === LessonProgressStatus.LOCKED ? null : firstNotDone.lesson_id;
+      })(),
     };
   }
 
@@ -180,19 +321,66 @@ export class ProgressService {
       order: { orderIndex: 'ASC' },
     });
 
+    if (lessons.length === 0) {
+      return {
+        chapterId,
+        chapterTitle: chapter.chapter_title,
+        progress_Percent: 0,
+        items: [],
+        nextAvailableLessonId: null,
+      };
+    }
+
     const lessonIds = lessons.map(l => l.lesson_id);
 
     const progressRows = await this.lessonProgressRepository.find({
       where: { userId, lessonId: In(lessonIds) },
     });
 
+    // If no progress exists at all for this chapter, initialize first lesson as IN_PROGRESS
+    // and ensure the next lesson is present as LOCKED in DB for mapping/visibility.
+    if (progressRows.length === 0) {
+      const firstLesson = lessons[0];
+
+      await this.lessonProgressRepository.save(
+        this.lessonProgressRepository.create({
+          userId,
+          lessonId: firstLesson.lesson_id,
+          status: LessonProgressStatus.IN_PROGRESS,
+          progress_Percent: 0,
+          lastViewedAt: new Date(),
+        }),
+      );
+
+      const secondLesson = lessons[1];
+      if (secondLesson) {
+        await this.lessonProgressRepository.save(
+          this.lessonProgressRepository.create({
+            userId,
+            lessonId: secondLesson.lesson_id,
+            status: LessonProgressStatus.LOCKED,
+            progress_Percent: 0,
+            mapLessonId: firstLesson.lesson_id,
+          }),
+        );
+      }
+
+      // Re-read after initialization
+      const refreshed = await this.lessonProgressRepository.find({
+        where: { userId, lessonId: In(lessonIds) },
+      });
+      progressRows.splice(0, progressRows.length, ...refreshed);
+    }
+
     const completedSet = new Set(
       progressRows
-        .filter(p => p.status === LessonProgressStatus.COMPLETED)
+        .filter(p =>
+          p.status === LessonProgressStatus.COMPLETED ||
+          p.status === LessonProgressStatus.SKIPPED,
+        )
         .map(p => p.lessonId),
     );
 
-    let hasFoundCurrent = false;
     let nextAvailableLessonId: number | null = null;
 
     const items: ItemStatusDto[] = lessons.map(lesson => {
@@ -200,15 +388,8 @@ export class ProgressService {
         p => p.lessonId === lesson.lesson_id,
       );
 
-      const isCompleted = completedSet.has(lesson.lesson_id);
-      let isCurrent = false;
-      let status = LessonProgressStatus.IN_PROGRESS;
-
-      if (isCompleted) {
-        status = LessonProgressStatus.COMPLETED;
-      } else if (!hasFoundCurrent) {
-        isCurrent = true;
-        hasFoundCurrent = true;
+      const status = progress?.status ?? LessonProgressStatus.LOCKED;
+      if (nextAvailableLessonId == null && status === LessonProgressStatus.IN_PROGRESS) {
         nextAvailableLessonId = lesson.lesson_id;
       }
 
@@ -217,10 +398,9 @@ export class ProgressService {
         lessonTitle: lesson.lesson_title,
         lessonType: lesson.lesson_type,
         status,
-        isCurrent,
         progress_Percent:
           progress?.progress_Percent ??
-          (status === LessonProgressStatus.COMPLETED ? 100 : 0),
+          (status === LessonProgressStatus.COMPLETED || status === LessonProgressStatus.SKIPPED ? 100 : 0),
         position_Seconds: progress?.position_Seconds ?? null,
         duration_Seconds: progress?.duration_Seconds ?? null,
         completedAt: progress?.completedAt ?? null,
@@ -251,6 +431,7 @@ export class ProgressService {
       lessonId: row.lessonId,
       userId: row.userId,
       status: row.status,
+      mapLessonId: row.mapLessonId ?? null,
       progress_Percent: Number(row.progress_Percent),
       position_Seconds: row.position_Seconds ?? null,
       duration_Seconds: row.duration_Seconds ?? null,
