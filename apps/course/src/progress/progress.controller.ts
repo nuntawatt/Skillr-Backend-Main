@@ -39,28 +39,6 @@ export class ProgressController {
         return this.progressService.upsertLessonProgress(userId, lessonId, dto);
     }
 
-    @Get('courses/:courseId')
-    @ApiOperation({ summary: 'Get current user progress summary for a course' })
-    @ApiParam({ name: 'courseId', type: Number })
-    @ApiOkResponse({ type: CourseProgressSummaryDto })
-    getCourseSummary(
-        @CurrentUserId() userId: string,
-        @Param('courseId', ParseIntPipe) courseId: number,
-    ): Promise<CourseProgressSummaryDto> {
-        return this.progressService.getCourseSummary(userId, courseId);
-    }
-
-    @Get('courses/:courseId/resume')
-    @ApiOperation({ summary: 'Get recommended resume lesson + checkpoint' })
-    @ApiParam({ name: 'courseId', type: Number })
-    @ApiOkResponse({ type: CourseProgressSummaryDto })
-    resume(
-        @CurrentUserId() userId: string,
-        @Param('courseId', ParseIntPipe) courseId: number,
-    ): Promise<CourseProgressSummaryDto> {
-        return this.progressService.getCourseSummary(userId, courseId);
-    }
-
     @Get('chapters/:chapterId')
     @ApiOperation({ summary: 'Get current user progress for a chapter' })
     @ApiParam({ name: 'chapterId', type: Number })
@@ -78,7 +56,7 @@ export class ProgressController {
     @ApiOkResponse({ type: ChapterRoadmapDto })
     getChapterRoadmap(
         @CurrentUserId() userId: string,
-        @Param('chapterId', ParseIntPipe) chapterId: number,
+        @Param('chapterId', ParseIntPipe) chapterId: number
     ): Promise<ChapterRoadmapDto> {
         return this.progressService.getChapterRoadmap(userId, chapterId);
     }
