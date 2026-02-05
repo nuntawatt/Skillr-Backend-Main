@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsBoolean, IsEnum, IsNumber, IsObject, IsOptional, Max, Min } from 'class-validator';
+import { IsBoolean, IsEnum, IsNumber, IsOptional, Max, Min } from 'class-validator';
 import { LessonProgressStatus } from '../entities/lesson-progress.entity';
 
 export class UpsertLessonProgressDto {
@@ -15,26 +15,22 @@ export class UpsertLessonProgressDto {
     @IsNumber()
     @Min(0)
     @Max(100)
-    progressPercent?: number;
+    progress_Percent?: number;
 
     @ApiPropertyOptional({ description: 'Current playback position (seconds)' })
     @IsOptional()
     @Type(() => Number)
     @IsNumber()
     @Min(0)
-    positionSeconds?: number;
+    position_Seconds?: number;
 
     @ApiPropertyOptional({ description: 'Total duration (seconds)' })
     @IsOptional()
     @Type(() => Number)
     @IsNumber()
     @Min(0)
-    durationSeconds?: number;
+    duration_Seconds?: number;
 
-    @ApiPropertyOptional({ description: 'Arbitrary checkpoint payload (jsonb)' })
-    @IsOptional()
-    @IsObject()
-    checkpoint?: Record<string, unknown>;
 
     @ApiPropertyOptional({ description: 'If true, mark lesson completed (sets percent=100)' })
     @IsOptional()

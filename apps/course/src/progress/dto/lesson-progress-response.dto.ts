@@ -12,13 +12,13 @@ export class LessonProgressResponseDto {
   status: LessonProgressStatus;
 
   @ApiProperty()
-  progressPercent: number;
+  progress_Percent: number;
 
   @ApiProperty({ required: false, nullable: true })
-  positionSeconds?: number | null;
+  position_Seconds?: number | null;
 
   @ApiProperty({ required: false, nullable: true })
-  durationSeconds?: number | null;
+  duration_Seconds?: number | null;
 
   @ApiProperty({ required: false, nullable: true, type: Object })
   checkpoint?: Record<string, unknown> | null;

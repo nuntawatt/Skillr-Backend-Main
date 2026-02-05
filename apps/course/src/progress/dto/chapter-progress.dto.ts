@@ -15,7 +15,4 @@ export class ChapterProgressDto {
 
   @ApiProperty({ required: false, nullable: true })
   resumeLessonId?: number | null;
-
-  @ApiProperty({ required: false, nullable: true, type: Object })
-  resumeCheckpoint?: Record<string, unknown> | null;
 }

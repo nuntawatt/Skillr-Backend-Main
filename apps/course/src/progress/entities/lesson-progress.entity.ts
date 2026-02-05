@@ -1,17 +1,7 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  Index,
-  ManyToOne,
-  JoinColumn,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
 import { Lesson } from '../../lessons/entities/lesson.entity';
 
 export enum LessonProgressStatus {
-  LOCKED = 'LOCKED',
   IN_PROGRESS = 'IN_PROGRESS',
   COMPLETED = 'COMPLETED',
 }
@@ -42,16 +32,13 @@ export class LessonProgress {
   status: LessonProgressStatus;
 
   @Column({ name: 'progress_percent', type: 'numeric', precision: 5, scale: 2, default: 0 })
-  progressPercent: number;
+  progress_Percent: number;
 
   @Column({ name: 'position_seconds', type: 'int', nullable: true })
-  positionSeconds?: number | null;
+  position_Seconds?: number | null;
 
   @Column({ name: 'duration_seconds', type: 'int', nullable: true })
-  durationSeconds?: number | null;
-
-  @Column({ name: 'checkpoint', type: 'jsonb', nullable: true })
-  checkpoint?: Record<string, unknown> | null;
+  duration_Seconds?: number | null;
 
   @Column({ name: 'last_viewed_at', type: 'timestamptz', nullable: true })
   lastViewedAt?: Date | null;
