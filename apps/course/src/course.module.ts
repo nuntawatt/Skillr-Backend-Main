@@ -12,6 +12,7 @@ import { ChaptersController } from './chapters/chapters.controller';
 import { LessonsController } from './lessons/lessons.controller';
 import { ArticlesController } from './articles/articles.controller';
 import { ProgressController } from './progress/progress.controller';
+import { CheckpointXpController } from './checkpoint-xp';
 
 // Services
 import { CoursesService } from './courses/courses.service';
@@ -21,6 +22,7 @@ import { LessonsService } from './lessons/lessons.service';
 import { ArticlesService } from './articles/articles.service';
 import { StorageService } from './storage/storage.service';
 import { ProgressService } from './progress/progress.service';
+import { CheckpointXpService } from './checkpoint-xp';
 
 // Entities
 import { Course } from './courses/entities/course.entity';
@@ -29,6 +31,7 @@ import { Chapter } from './chapters/entities/chapter.entity';
 import { Lesson } from './lessons/entities/lesson.entity';
 import { Article } from './articles/entities/article.entity';
 import { LessonProgress } from './progress/entities/lesson-progress.entity';
+import { UserXp } from './checkpoint-xp';
 
 const isTest = process.env.NODE_ENV === 'test';
 
@@ -55,6 +58,7 @@ const isTest = process.env.NODE_ENV === 'test';
           Lesson,
           Article,
           LessonProgress,
+          UserXp,
         ]),
 
         AuthLibModule
@@ -68,6 +72,7 @@ const isTest = process.env.NODE_ENV === 'test';
     LessonsController,
     ArticlesController,
     ProgressController,
+    CheckpointXpController,
   ],
 
   providers: [
@@ -78,6 +83,7 @@ const isTest = process.env.NODE_ENV === 'test';
     ArticlesService,
     StorageService,
     ProgressService,
+    CheckpointXpService,
   ],
 })
 export class AppModule { }

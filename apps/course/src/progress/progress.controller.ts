@@ -16,7 +16,7 @@ import { ProgressService } from './progress.service';
 export class ProgressController {
     constructor(private readonly progressService: ProgressService) { }
 
-    @Get('lessons/:id')
+    @Get('lessons/:lessonId')
     @ApiOperation({ summary: 'Get current user progress for a lesson' })
     @ApiParam({ name: 'lessonId', type: Number })
     @ApiOkResponse({ type: LessonProgressResponseDto, description: 'Lesson progress (or null if not started)' })
@@ -27,7 +27,7 @@ export class ProgressController {
         return this.progressService.getLessonProgress(userId, lessonId);
     }
 
-    @Put('lessons/:id')
+    @Put('lessons/:lessonId')
     @ApiOperation({ summary: 'Upsert current user progress + checkpoint for a lesson' })
     @ApiParam({ name: 'lessonId', type: Number })
     @ApiOkResponse({ type: LessonProgressResponseDto })
@@ -39,7 +39,7 @@ export class ProgressController {
         return this.progressService.upsertLessonProgress(userId, lessonId, dto);
     }
 
-    @Get('chapters/:id')
+    @Get('chapters/:chapterId')
     @ApiOperation({ summary: 'Get current user progress for a chapter' })
     @ApiParam({ name: 'chapterId', type: Number })
     @ApiOkResponse({ type: ChapterProgressDto })
@@ -50,9 +50,9 @@ export class ProgressController {
         return this.progressService.getChapterProgress(userId, chapterId);
     }
 
-    @Get('chapters/:id/roadmap')
+    @Get('chapters/:chapterId/roadmap')
     @ApiOperation({ summary: 'Get chapter roadmap with item states (Completed/Current/Locked)' })
-    @ApiParam({ name: 'chapterId', type: Number })
+    @ApiParam({ name: 'chapterId', type: Number, example: 1 })
     @ApiOkResponse({ type: ChapterRoadmapDto })
     getChapterRoadmap(
         @CurrentUserId() userId: string,

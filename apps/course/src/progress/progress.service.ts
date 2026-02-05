@@ -246,7 +246,6 @@ export class ProgressService {
   }
 
   // Mapping
-
   private toResponse(row: LessonProgress): LessonProgressResponseDto {
     return {
       lessonId: row.lessonId,
