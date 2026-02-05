@@ -12,7 +12,7 @@ import { ProgressService } from './progress.service';
 
 @ApiTags('Progress')
 @ApiBearerAuth()
-// @UseGuards(JwtAuthGuard) // Temporarily disabled for testing
+@UseGuards(JwtAuthGuard)
 @Controller('progress')
 export class ProgressController {
     constructor(private readonly progressService: ProgressService) { }
