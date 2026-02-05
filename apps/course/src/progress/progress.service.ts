@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 
@@ -9,6 +9,7 @@ import { LessonProgress, LessonProgressStatus } from './entities/lesson-progress
 import { LessonProgressResponseDto } from './dto/lesson-progress-response.dto';
 import { ChapterProgressDto } from './dto/chapter-progress.dto';
 import { ChapterRoadmapDto, ItemStatusDto } from './dto/chapter-roadmap.dto';
+import { StreakService } from '../streak/streak.service';
 
 @Injectable()
 export class ProgressService {
@@ -19,6 +20,8 @@ export class ProgressService {
     private readonly lessonRepository: Repository<Lesson>,
     @InjectRepository(Chapter)
     private readonly chapterRepository: Repository<Chapter>,
+    @Inject(() => StreakService)
+    private readonly streakService: StreakService,
   ) { }
 
   // Lesson Progress
@@ -86,15 +89,28 @@ export class ProgressService {
     }
 
     if (dto.status !== undefined) {
+      const wasAlreadyCompleted = row.status === LessonProgressStatus.COMPLETED;
       row.status = dto.status;
+      
+      // Update streak when status changes to COMPLETED
+      if (dto.status === LessonProgressStatus.COMPLETED && !wasAlreadyCompleted) {
+        row.completedAt = new Date();
+        await this.streakService.updateStreakOnActivity(userId);
+      }
     }
 
     row.lastViewedAt = new Date();
 
     if (dto.markCompleted) {
+      const wasAlreadyCompleted = row.status === LessonProgressStatus.COMPLETED;
       row.status = LessonProgressStatus.COMPLETED;
       row.progress_Percent = 100;
       row.completedAt = new Date();
+      
+      // Update streak only when item is newly completed
+      if (!wasAlreadyCompleted) {
+        await this.streakService.updateStreakOnActivity(userId);
+      }
     }
 
     const saved = await this.lessonProgressRepository.save(row);

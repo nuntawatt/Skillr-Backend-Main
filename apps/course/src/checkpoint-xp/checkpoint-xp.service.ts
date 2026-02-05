@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Lesson } from '../lessons/entities/lesson.entity';
@@ -7,6 +7,7 @@ import { LessonProgress } from '../progress/entities/lesson-progress.entity';
 import { LessonProgressStatus } from '../progress/entities/lesson-progress.entity';
 import { UserXp } from './entities';
 import { CheckpointSubmissionDto, CheckpointResultDto } from './dto';
+import { StreakService } from '../streak/streak.service';
 
 @Injectable()
 export class CheckpointXpService {
@@ -19,6 +20,8 @@ export class CheckpointXpService {
     private readonly chapterRepository: Repository<Chapter>,
     @InjectRepository(LessonProgress)
     private readonly lessonProgressRepository: Repository<LessonProgress>,
+    @Inject(() => StreakService)
+    private readonly streakService: StreakService,
   ) {}
 
   async submitCheckpoint(userId: string, chapterId: number, dto: CheckpointSubmissionDto): Promise<CheckpointResultDto> {
@@ -72,6 +75,8 @@ export class CheckpointXpService {
       userXp.completedAt = new Date();
       if (!wasXpAlreadyEarned) {
         userXp.xpEarned = xpEarned;
+        // Update streak when checkpoint is newly completed
+        await this.streakService.updateStreakOnActivity(userId);
       }
     }
 
@@ -106,6 +111,8 @@ export class CheckpointXpService {
       where: { userId, chapterId }
     });
 
+    const wasAlreadySkipped = userXp?.checkpointStatus === 'SKIPPED';
+
     if (!userXp) {
       userXp = this.userXpRepository.create({
         userId,
@@ -119,6 +126,11 @@ export class CheckpointXpService {
     }
 
     await this.userXpRepository.save(userXp);
+
+    // Update streak when checkpoint is newly skipped (counts as completion)
+    if (!wasAlreadySkipped) {
+      await this.streakService.updateStreakOnActivity(userId);
+    }
 
     return {
       isCorrect: false,

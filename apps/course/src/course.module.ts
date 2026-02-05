@@ -13,6 +13,7 @@ import { LessonsController } from './lessons/lessons.controller';
 import { ArticlesController } from './articles/articles.controller';
 import { ProgressController } from './progress/progress.controller';
 import { CheckpointXpController } from './checkpoint-xp';
+import { StreakController } from './streak/streak.controller';
 
 // Services
 import { CoursesService } from './courses/courses.service';
@@ -23,6 +24,7 @@ import { ArticlesService } from './articles/articles.service';
 import { StorageService } from './storage/storage.service';
 import { ProgressService } from './progress/progress.service';
 import { CheckpointXpService } from './checkpoint-xp';
+import { StreakService } from './streak/streak.service';
 
 // Entities
 import { Course } from './courses/entities/course.entity';
@@ -32,6 +34,8 @@ import { Lesson } from './lessons/entities/lesson.entity';
 import { Article } from './articles/entities/article.entity';
 import { LessonProgress } from './progress/entities/lesson-progress.entity';
 import { UserXp } from './checkpoint-xp';
+import { UserStreak } from './streak/entities/user-streak.entity';
+import { StreakModule } from './streak/streak.module';
 
 const isTest = process.env.NODE_ENV === 'test';
 
@@ -59,9 +63,11 @@ const isTest = process.env.NODE_ENV === 'test';
           Article,
           LessonProgress,
           UserXp,
+          UserStreak,
         ]),
 
-        AuthLibModule
+        AuthLibModule,
+        StreakModule
       ]),
   ],
 
@@ -73,6 +79,7 @@ const isTest = process.env.NODE_ENV === 'test';
     ArticlesController,
     ProgressController,
     CheckpointXpController,
+    StreakController,
   ],
 
   providers: [
@@ -84,6 +91,7 @@ const isTest = process.env.NODE_ENV === 'test';
     StorageService,
     ProgressService,
     CheckpointXpService,
+    StreakService,
   ],
 })
 export class AppModule { }
