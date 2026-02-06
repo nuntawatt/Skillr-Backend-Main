@@ -22,7 +22,6 @@ export class ProgressService {
   ) { }
 
   // Lesson Progress
-
   async getAllLessonProgress(userId: string): Promise<LessonProgressResponseDto[]> {
     const rows = await this.lessonProgressRepository.find({
       where: { userId },
@@ -67,9 +66,10 @@ export class ProgressService {
         status: LessonProgressStatus.IN_PROGRESS,
         progressPercent: 0,
       });
-    } else if (row.status === LessonProgressStatus.LOCKED) {
-      throw new BadRequestException('Lesson is locked');
-    }
+    } 
+    // else if (row.status === LessonProgressStatus.LOCKED) {
+    //   throw new BadRequestException('Lesson is locked');
+    // }
 
     if (dto.positionSeconds !== undefined) {
       row.positionSeconds = dto.positionSeconds;
@@ -431,9 +431,7 @@ export class ProgressService {
       lessonId: row.lessonId,
       userId: row.userId,
       status: row.status,
-      mapLessonId: row.mapLessonId ?? null,
       progressPercent: Number(row.progressPercent),
-      checkpoint: row.checkpoint ?? null,
       positionSeconds: row.positionSeconds ?? null,
       durationSeconds: row.durationSeconds ?? null,
       lastViewedAt: row.lastViewedAt ?? null,

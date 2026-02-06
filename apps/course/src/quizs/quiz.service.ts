@@ -68,8 +68,8 @@ export class QuizService {
       quizs_question: quiz.quizsQuestions,
       quizs_option: quiz.quizsOption,
       lesson_id: quiz.lessonId, 
-      quizs_answer: showAnswer ? quiz.quizsAnswer : null,
-      quizs_explanation: showAnswer ? quiz.quizsExplanation : null,
+      quizsAnswer: showAnswer ? quiz.quizsAnswer : null,
+      quizsExplanation: showAnswer ? quiz.quizsExplanation : null,
       checkpoints: checkpoints.map((c) => ({
         checkpoint_id: c.checkpointId,
         checkpoint_type: c.checkpointType,
@@ -98,7 +98,7 @@ export class QuizService {
     return {
       isCorrect,
       correctAnswer: quiz.quizsAnswer,
-      quizs_explanation: quiz.quizsExplanation,
+      quizsExplanation: quiz.quizsExplanation,
     };
   }
 
@@ -148,13 +148,33 @@ export class QuizService {
   // --- Checkpoints ---
 
   async createCheckpoint(dto: CreateCheckpointDto): Promise<QuizsCheckpoint> {
-    const checkpoint = this.checkpointRepository.create({
+    const lesson = await this.lessonRepository.findOne({
+      where: { lesson_id: dto.lesson_id },
+    });
+    if (!lesson) {
+      throw new NotFoundException(`Lesson ${dto.lesson_id} not found`);
+    }
+
+    // Prevent duplicates: treat checkpoint as 1-per-lesson (upsert by lessonId)
+    const existing = await this.checkpointRepository.findOne({
+      where: { lessonId: dto.lesson_id },
+      order: { checkpointId: 'DESC' },
+    });
+
+    const data = {
       lessonId: dto.lesson_id,
       checkpointType: dto.checkpoint_type,
       checkpointQuestions: dto.checkpoint_questions,
       checkpointOption: dto.checkpoint_option,
       checkpointAnswer: dto.checkpoint_answer,
-    });
+    };
+
+    if (existing) {
+      Object.assign(existing, data);
+      return this.checkpointRepository.save(existing);
+    }
+
+    const checkpoint = this.checkpointRepository.create(data);
     return this.checkpointRepository.save(checkpoint);
   }
 
@@ -175,6 +195,7 @@ export class QuizService {
     const checkpoint = await this.checkpointRepository.findOne({ where: { checkpointId } });
     if (!checkpoint) throw new NotFoundException('Checkpoint not found');
     const isCorrect = JSON.stringify(checkpoint.checkpointAnswer) === JSON.stringify(answer);
+    const score = isCorrect ? 5 : 0;
 
     const lesson = await this.lessonRepository.findOne({
       where: { lesson_id: checkpoint.lessonId },
@@ -183,13 +204,16 @@ export class QuizService {
     // If the lesson row is missing, still return correctness without XP.
     if (!lesson) {
       return {
+        checkpointId: checkpoint.checkpointId,
+        lessonId: checkpoint.lessonId,
+        chapterId: null,
         isCorrect,
+        score,
         correctAnswer: checkpoint.checkpointAnswer,
-        xpEarned: 0,
-        feedback: isCorrect ? 'ผ่านแล้ว' : 'ตอบผิด ลองใหม่อีกครั้ง',
-        totalChapterXp: 0,
+        feedback: isCorrect
+          ? 'ผ่านแล้ว แต่ไม่สามารถให้ XP ได้ (ไม่พบ lesson/chapter ของ checkpoint นี้)'
+          : 'ตอบผิด ลองใหม่อีกครั้ง',
         checkpointStatus: 'PENDING',
-        wasXpAlreadyEarned: false,
       };
     }
 
@@ -226,17 +250,14 @@ export class QuizService {
     userXp = await this.userXpRepository.save(userXp);
 
     return {
+      checkpointId: checkpoint.checkpointId,
+      lessonId: checkpoint.lessonId,
+      chapterId,
       isCorrect,
+      score,
       correctAnswer: checkpoint.checkpointAnswer,
-      xpEarned,
-      feedback: isCorrect
-        ? wasXpAlreadyEarned
-          ? 'ผ่านแล้ว (ได้ XP ไปแล้ว)'
-          : 'ผ่านแล้ว +5 XP'
-        : 'ตอบผิด ลองใหม่อีกครั้ง',
-      totalChapterXp: userXp.xpEarned,
+      feedback: isCorrect ? 'ผ่านแล้ว' : 'ตอบผิด ลองใหม่อีกครั้ง',
       checkpointStatus: userXp.checkpointStatus,
-      wasXpAlreadyEarned,
     };
   }
 }

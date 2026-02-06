@@ -11,14 +11,8 @@ export class LessonProgressResponseDto {
   @ApiProperty({ enum: LessonProgressStatus })
   status: LessonProgressStatus;
 
-  @ApiProperty({ required: false, nullable: true, type: Number, description: 'Prerequisite/previous lesson id that this lesson is mapped/locked to' })
-  mapLessonId?: number | null;
-
   @ApiProperty()
   progressPercent: number;
-
-  @ApiProperty({ required: false, nullable: true, description: 'Arbitrary checkpoint JSON stored by the player (if any)' })
-  checkpoint?: unknown | null;
 
   @ApiProperty({ required: false, nullable: true })
   positionSeconds?: number | null;
