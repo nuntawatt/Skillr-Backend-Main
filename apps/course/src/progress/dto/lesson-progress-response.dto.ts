@@ -15,13 +15,16 @@ export class LessonProgressResponseDto {
   mapLessonId?: number | null;
 
   @ApiProperty()
-  progress_Percent: number;
+  progressPercent: number;
+
+  @ApiProperty({ required: false, nullable: true, description: 'Arbitrary checkpoint JSON stored by the player (if any)' })
+  checkpoint?: unknown | null;
 
   @ApiProperty({ required: false, nullable: true })
-  position_Seconds?: number | null;
+  positionSeconds?: number | null;
 
   @ApiProperty({ required: false, nullable: true })
-  duration_Seconds?: number | null;
+  durationSeconds?: number | null;
 
   @ApiProperty({ required: false, nullable: true })
   lastViewedAt?: Date | null;

@@ -65,32 +65,32 @@ export class ProgressService {
         userId,
         lessonId,
         status: LessonProgressStatus.IN_PROGRESS,
-        progress_Percent: 0,
+        progressPercent: 0,
       });
     } else if (row.status === LessonProgressStatus.LOCKED) {
       throw new BadRequestException('Lesson is locked');
     }
 
-    if (dto.position_Seconds !== undefined) {
-      row.position_Seconds = dto.position_Seconds;
+    if (dto.positionSeconds !== undefined) {
+      row.positionSeconds = dto.positionSeconds;
     }
 
-    if (dto.duration_Seconds !== undefined) {
-      row.duration_Seconds = dto.duration_Seconds;
+    if (dto.durationSeconds !== undefined) {
+      row.durationSeconds = dto.durationSeconds;
     }
 
     const inferredPercent =
-      dto.progress_Percent === undefined &&
-        dto.position_Seconds !== undefined &&
-        dto.duration_Seconds !== undefined &&
-        dto.duration_Seconds > 0
-        ? (dto.position_Seconds / dto.duration_Seconds) * 100
+      dto.progressPercent === undefined &&
+        dto.positionSeconds !== undefined &&
+        dto.durationSeconds !== undefined &&
+        dto.durationSeconds > 0
+        ? (dto.positionSeconds / dto.durationSeconds) * 100
         : undefined;
 
-    const nextPercent = dto.progress_Percent ?? inferredPercent;
+    const nextPercent = dto.progressPercent ?? inferredPercent;
 
     if (nextPercent !== undefined && !Number.isNaN(nextPercent)) {
-      row.progress_Percent = Math.max(
+      row.progressPercent = Math.max(
         0,
         Math.min(100, Number(nextPercent)),
       );
@@ -104,7 +104,7 @@ export class ProgressService {
 
     if (dto.markCompleted) {
       row.status = LessonProgressStatus.COMPLETED;
-      row.progress_Percent = 100;
+      row.progressPercent = 100;
       row.completedAt = new Date();
     }
 
@@ -129,7 +129,7 @@ export class ProgressService {
           userId,
           lessonId: nextLesson.lesson_id,
           status: LessonProgressStatus.LOCKED,
-          progress_Percent: 0,
+          progressPercent: 0,
           mapLessonId: lessonId,
         });
         await this.lessonProgressRepository.save(nextProgress);
@@ -174,12 +174,12 @@ export class ProgressService {
         userId,
         lessonId,
         status: LessonProgressStatus.IN_PROGRESS,
-        progress_Percent: 0,
+        progressPercent: 0,
       });
     }
 
     currentProgress.status = LessonProgressStatus.SKIPPED;
-    currentProgress.progress_Percent = 100;
+    currentProgress.progressPercent = 100;
     currentProgress.lastViewedAt = new Date();
     currentProgress.completedAt = new Date();
 
@@ -206,7 +206,7 @@ export class ProgressService {
         userId,
         lessonId: nextLesson.lesson_id,
         status: LessonProgressStatus.IN_PROGRESS,
-        progress_Percent: 0,
+        progressPercent: 0,
         mapLessonId: lessonId,
         lastViewedAt: new Date(),
       });
@@ -325,7 +325,7 @@ export class ProgressService {
       return {
         chapterId,
         chapterTitle: chapter.chapter_title,
-        progress_Percent: 0,
+        progressPercent: 0,
         items: [],
         nextAvailableLessonId: null,
       };
@@ -347,7 +347,7 @@ export class ProgressService {
           userId,
           lessonId: firstLesson.lesson_id,
           status: LessonProgressStatus.IN_PROGRESS,
-          progress_Percent: 0,
+          progressPercent: 0,
           lastViewedAt: new Date(),
         }),
       );
@@ -359,7 +359,7 @@ export class ProgressService {
             userId,
             lessonId: secondLesson.lesson_id,
             status: LessonProgressStatus.LOCKED,
-            progress_Percent: 0,
+            progressPercent: 0,
             mapLessonId: firstLesson.lesson_id,
           }),
         );
@@ -398,11 +398,11 @@ export class ProgressService {
         lessonTitle: lesson.lesson_title,
         lessonType: lesson.lesson_type,
         status,
-        progress_Percent:
-          progress?.progress_Percent ??
+        progressPercent:
+          progress?.progressPercent ??
           (status === LessonProgressStatus.COMPLETED || status === LessonProgressStatus.SKIPPED ? 100 : 0),
-        position_Seconds: progress?.position_Seconds ?? null,
-        duration_Seconds: progress?.duration_Seconds ?? null,
+        positionSeconds: progress?.positionSeconds ?? null,
+        durationSeconds: progress?.durationSeconds ?? null,
         completedAt: progress?.completedAt ?? null,
         orderIndex: lesson.orderIndex,
       };
@@ -411,7 +411,7 @@ export class ProgressService {
     const completedItems = completedSet.size;
     const totalItems = lessons.length;
 
-    const progress_Percent =
+    const progressPercent =
       totalItems > 0
         ? Math.round((completedItems / totalItems) * 10000) / 100
         : 0;
@@ -419,7 +419,7 @@ export class ProgressService {
     return {
       chapterId,
       chapterTitle: chapter.chapter_title,
-      progress_Percent,
+      progressPercent,
       nextAvailableLessonId,
       items,
     };
@@ -432,9 +432,10 @@ export class ProgressService {
       userId: row.userId,
       status: row.status,
       mapLessonId: row.mapLessonId ?? null,
-      progress_Percent: Number(row.progress_Percent),
-      position_Seconds: row.position_Seconds ?? null,
-      duration_Seconds: row.duration_Seconds ?? null,
+      progressPercent: Number(row.progressPercent),
+      checkpoint: row.checkpoint ?? null,
+      positionSeconds: row.positionSeconds ?? null,
+      durationSeconds: row.durationSeconds ?? null,
       lastViewedAt: row.lastViewedAt ?? null,
       completedAt: row.completedAt ?? null,
       createdAt: row.createdAt,

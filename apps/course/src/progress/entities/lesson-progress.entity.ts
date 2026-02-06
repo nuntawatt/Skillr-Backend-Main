@@ -1,4 +1,13 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Lesson } from '../../lessons/entities/lesson.entity';
 
 export enum LessonProgressStatus {
@@ -10,6 +19,7 @@ export enum LessonProgressStatus {
 
 @Entity('lesson_progress')
 @Index('idx_lesson_progress_user_id', ['userId'])
+@Index('idx_lesson_progress_lesson_id', ['lessonId'])
 @Index('uq_lesson_progress_user_lesson', ['userId', 'lessonId'], { unique: true })
 export class LessonProgress {
   @PrimaryGeneratedColumn({ name: 'lesson_progress_id', type: 'int' })
@@ -34,16 +44,19 @@ export class LessonProgress {
   status: LessonProgressStatus;
 
   @Column({ name: 'progress_percent', type: 'numeric', precision: 5, scale: 2, default: 0 })
-  progress_Percent: number;
+  progressPercent: number;
+
+  @Column({ name: 'checkpoint', type: 'jsonb', nullable: true })
+  checkpoint?: unknown | null;
 
   @Column({ name: 'map_lesson_id', type: 'int', nullable: true })
   mapLessonId?: number | null;
 
   @Column({ name: 'position_seconds', type: 'int', nullable: true })
-  position_Seconds?: number | null;
+  positionSeconds?: number | null;
 
   @Column({ name: 'duration_seconds', type: 'int', nullable: true })
-  duration_Seconds?: number | null;
+  durationSeconds?: number | null;
 
   @Column({ name: 'last_viewed_at', type: 'timestamptz', nullable: true })
   lastViewedAt?: Date | null;

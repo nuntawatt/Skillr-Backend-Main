@@ -1,7 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { HttpService } from '@nestjs/axios';
 import { Quizs } from './entities/quizs.entity';
 import { QuizsCheckpoint } from './entities/checkpoint.entity';
 import { QuizsResult, QuizsStatus } from './entities/quizs-result.entity';
@@ -9,8 +8,6 @@ import { CreateQuizsDto, CreateCheckpointDto } from './dto/create-quizs.dto';
 
 @Injectable()
 export class QuizService {
-  private readonly learningServiceUrl = process.env.LEARNING_SERVICE_URL;
-
   constructor(
     @InjectRepository(Quizs)
     private readonly quizsRepository: Repository<Quizs>,
@@ -18,7 +15,6 @@ export class QuizService {
     private readonly checkpointRepository: Repository<QuizsCheckpoint>,
     @InjectRepository(QuizsResult)
     private readonly resultRepository: Repository<QuizsResult>,
-    private readonly httpService: HttpService,
   ) { }
 
   // --- Quizs (1 Lesson = 1 Question) ---
@@ -59,18 +55,20 @@ export class QuizService {
     const showAnswer = result?.status === QuizsStatus.COMPLETED;
     
     return {
-      quizs_id: quiz.quizsId,
-      quizs_type: quiz.quizsType,
-      quizs_questions: quiz.quizsQuestions,
-      quizs_option: quiz.quizsOption,
-      lesson_id: quiz.lessonId,
-      user_result: result ? {
-        user_answer: result.userAnswer,
-        is_correct: result.isCorrect,
-        status: result.status,
-      } : { status: QuizsStatus.NOT_STARTED },
-      quizs_answer: showAnswer ? quiz.quizsAnswer : undefined,
-      quizs_explanation: showAnswer ? quiz.quizsExplanation : undefined,
+      id: quiz.quizsId,
+      type: quiz.quizsType,
+      question: quiz.quizsQuestions,
+      options: quiz.quizsOption,
+      lessonId: quiz.lessonId,
+      result: result
+        ? {
+            answer: result.userAnswer,
+            correct: result.isCorrect,
+            status: result.status,
+          }
+        : { status: QuizsStatus.NOT_STARTED },
+      answer: showAnswer ? quiz.quizsAnswer : undefined,
+      explanation: showAnswer ? quiz.quizsExplanation : undefined,
     };
   }
 
@@ -106,8 +104,14 @@ export class QuizService {
     return this.resultRepository.save(result);
   }
 
-  async findAllQuizs(): Promise<Quizs[]> {
-    return this.quizsRepository.find();
+  async findAllQuizs(): Promise<Array<{ id: number; lessonId: number; type: string; question: string }>> {
+    const rows = await this.quizsRepository.find();
+    return rows.map((q) => ({
+      id: q.quizsId,
+      lessonId: q.lessonId,
+      type: q.quizsType,
+      question: q.quizsQuestions,
+    }));
   }
 
   async findOneQuizsByLesson(lessonId: number): Promise<Quizs> {
@@ -146,8 +150,17 @@ export class QuizService {
     return this.checkpointRepository.save(checkpoint);
   }
 
-  async findCheckpointsByLesson(lessonId: number): Promise<QuizsCheckpoint[]> {
-    return this.checkpointRepository.find({ where: { lessonId } });
+  async findCheckpointsByLesson(
+    lessonId: number,
+  ): Promise<Array<{ id: number; lessonId: number; type: string; question: string; options?: string[] | null }>> {
+    const rows = await this.checkpointRepository.find({ where: { lessonId } });
+    return rows.map((c) => ({
+      id: c.checkpointId,
+      lessonId: c.lessonId,
+      type: c.checkpointType,
+      question: c.checkpointQuestions,
+      options: c.checkpointOption ?? null,
+    }));
   }
 
   async checkCheckpointAnswer(checkpointId: number, answer: any) {

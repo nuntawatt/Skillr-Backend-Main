@@ -13,6 +13,7 @@ import { LessonsController } from './lessons/lessons.controller';
 import { ArticlesController } from './articles/articles.controller';
 import { ProgressController } from './progress/progress.controller';
 import { CheckpointXpController } from './checkpoint-xp';
+import { QuizAdminController, QuizController } from './quizs/quiz.controller';
 
 // Services
 import { CoursesService } from './courses/courses.service';
@@ -23,6 +24,7 @@ import { ArticlesService } from './articles/articles.service';
 import { StorageService } from './storage/storage.service';
 import { ProgressService } from './progress/progress.service';
 import { CheckpointXpService } from './checkpoint-xp';
+import { QuizService } from "./quizs/quiz.service";
 
 // Entities
 import { Course } from './courses/entities/course.entity';
@@ -32,6 +34,9 @@ import { Lesson } from './lessons/entities/lesson.entity';
 import { Article } from './articles/entities/article.entity';
 import { LessonProgress } from './progress/entities/lesson-progress.entity';
 import { UserXp } from './checkpoint-xp';
+import { Quizs } from './quizs/entities/quizs.entity';
+import { QuizsCheckpoint } from './quizs/entities/checkpoint.entity';
+import { QuizsResult } from './quizs/entities/quizs-result.entity';
 
 const isTest = process.env.NODE_ENV === 'test';
 
@@ -59,6 +64,9 @@ const isTest = process.env.NODE_ENV === 'test';
           Article,
           LessonProgress,
           UserXp,
+          Quizs,
+          QuizsCheckpoint,
+          QuizsResult,
         ]),
 
         AuthLibModule
@@ -73,6 +81,8 @@ const isTest = process.env.NODE_ENV === 'test';
     ArticlesController,
     ProgressController,
     CheckpointXpController,
+    QuizController,
+    QuizAdminController,
   ],
 
   providers: [
@@ -84,6 +94,7 @@ const isTest = process.env.NODE_ENV === 'test';
     StorageService,
     ProgressService,
     CheckpointXpService,
+    QuizService,
     {
       provide: 'DataSource',
       useFactory: (dataSource: DataSource) => dataSource,

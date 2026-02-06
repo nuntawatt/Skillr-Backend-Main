@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { IsBoolean, IsEnum, IsNumber, IsOptional, Max, Min } from 'class-validator';
 import { LessonProgressStatus } from '../entities/lesson-progress.entity';
 
@@ -12,24 +12,27 @@ export class UpsertLessonProgressDto {
     @ApiPropertyOptional({ description: '0..100' })
     @IsOptional()
     @Type(() => Number)
+    @Transform(({ value, obj }) => value ?? obj.progress_Percent)
     @IsNumber()
     @Min(0)
     @Max(100)
-    progress_Percent?: number;
+    progressPercent?: number;
 
     @ApiPropertyOptional({ description: 'Current playback position (seconds)' })
     @IsOptional()
     @Type(() => Number)
+    @Transform(({ value, obj }) => value ?? obj.position_Seconds)
     @IsNumber()
     @Min(0)
-    position_Seconds?: number;
+    positionSeconds?: number;
 
     @ApiPropertyOptional({ description: 'Total duration (seconds)' })
     @IsOptional()
     @Type(() => Number)
+    @Transform(({ value, obj }) => value ?? obj.duration_Seconds)
     @IsNumber()
     @Min(0)
-    duration_Seconds?: number;
+    durationSeconds?: number;
 
     @ApiPropertyOptional({ description: 'If true, mark lesson completed (sets percent=100)' })
     @IsOptional()

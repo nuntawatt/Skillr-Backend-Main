@@ -108,13 +108,13 @@ export class CheckpointXpService {
           userId,
           lessonId: checkpointLesson.lesson_id,
           status: LessonProgressStatus.IN_PROGRESS,
-          progress_Percent: 0,
+          progressPercent: 0,
         });
       }
 
       if (isCorrect) {
         checkpointProgress.status = LessonProgressStatus.COMPLETED;
-        checkpointProgress.progress_Percent = 100;
+        checkpointProgress.progressPercent = 100;
         checkpointProgress.completedAt = new Date();
       }
 
@@ -194,12 +194,12 @@ export class CheckpointXpService {
             userId,
             lessonId: checkpointLesson.lesson_id,
             status: LessonProgressStatus.IN_PROGRESS,
-            progress_Percent: 0,
+            progressPercent: 0,
           });
         }
 
         checkpointProgress.status = LessonProgressStatus.SKIPPED;
-        checkpointProgress.progress_Percent = 100;
+        checkpointProgress.progressPercent = 100;
         checkpointProgress.lastViewedAt = new Date();
         checkpointProgress.completedAt = new Date();
         await queryRunner.manager.save(checkpointProgress);

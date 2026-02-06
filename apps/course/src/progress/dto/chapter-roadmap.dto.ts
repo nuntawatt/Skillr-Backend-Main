@@ -15,13 +15,13 @@ export class ItemStatusDto {
   status: LessonProgressStatus;
 
   @ApiProperty({ description: '0..100', required: false })
-  progress_Percent?: number;
+  progressPercent?: number;
 
   @ApiProperty({ required: false, nullable: true })
-  position_Seconds?: number | null;
+  positionSeconds?: number | null;
 
   @ApiProperty({ required: false, nullable: true })
-  duration_Seconds?: number | null;
+  durationSeconds?: number | null;
 
   @ApiProperty({ required: false, nullable: true })
   completedAt?: Date | null;
@@ -38,7 +38,7 @@ export class ChapterRoadmapDto {
   chapterTitle: string;
 
   @ApiProperty({ description: '0..100' })
-  progress_Percent: number;
+  progressPercent: number;
 
   @ApiProperty({ type: [ItemStatusDto] })
   items: ItemStatusDto[];

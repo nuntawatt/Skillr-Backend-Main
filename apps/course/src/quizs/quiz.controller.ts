@@ -7,6 +7,8 @@ import { UserRole } from '@common/enums';
 
 @ApiTags('Admin | Quiz')
 @ApiBearerAuth()
+// @UseGuards(JwtAuthGuard, RolesGuard)
+// @Roles(UserRole.ADMIN)
 @Controller('admin/quizzes')
 export class QuizAdminController {
   constructor(private readonly quizService: QuizService) { }
