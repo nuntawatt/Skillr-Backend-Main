@@ -8,6 +8,7 @@ export class UpdateArticleDto {
         description: 'Article content as array of { url, article } items',
         example: [{ url: 'https://cdn.example.com/image.png', article: 'Updated caption' }],
     })
+    
     @IsOptional()
     @IsArray()
     @ValidateNested({ each: true })

@@ -12,7 +12,7 @@ export class ChaptersService {
     private readonly chapterRepository: Repository<Chapter>,
     @InjectRepository(Level)
     private readonly levelRepository: Repository<Level>,
-  ) {}
+  ) { }
 
   // Create a new chapter
   async create(createChapterDto: CreateChapterDto): Promise<ChapterResponseDto> {
@@ -22,9 +22,7 @@ export class ChaptersService {
     });
 
     if (!level) {
-      throw new NotFoundException(
-        `Level with ID ${createChapterDto.level_id} not found`,
-      );
+      throw new NotFoundException(`Level with ID ${createChapterDto.level_id} not found`);
     }
 
     // Auto-generate orderIndex if not provided
@@ -33,7 +31,7 @@ export class ChaptersService {
       const maxOrderResult = await this.chapterRepository
         .createQueryBuilder('chapter')
         .where('chapter.level_id = :levelId', { levelId: createChapterDto.level_id })
-        .select('MAX(chapter.order_index)', 'maxOrder') // note: maps to column name; adjust if your column alias differs
+        .select('MAX(chapter.order_index)', 'maxOrder') // Alias as maxOrder
         .getRawOne();
 
       // maxOrder may be a string depending on DB; coerce to number
@@ -89,10 +87,7 @@ export class ChaptersService {
   }
 
   // Update a chapter by ID
-  async update(
-    id: number,
-    updateChapterDto: UpdateChapterDto,
-  ): Promise<ChapterResponseDto> {
+  async update(id: number, updateChapterDto: UpdateChapterDto): Promise<ChapterResponseDto> {
     const chapter = await this.chapterRepository.findOne({
       where: { chapter_id: id },
     });
@@ -146,7 +141,7 @@ export class ChaptersService {
 
     const chapterMap = new Map(chapters.map((c) => [c.chapter_id, c]));
 
-    // Optionally: do this in a transaction to keep it atomic
+    // Update orderIndex based on provided chapterIds array
     for (let i = 0; i < chapterIds.length; i++) {
       const chapter = chapterMap.get(chapterIds[i]);
       if (chapter) {

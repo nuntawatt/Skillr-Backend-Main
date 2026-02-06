@@ -104,13 +104,13 @@ export class QuizService {
     return this.resultRepository.save(result);
   }
 
-  async findAllQuizs(): Promise<Array<{ id: number; lessonId: number; type: string; question: string }>> {
+  async findAllQuizs(): Promise<Array<{ quiz_id: number; lessonId: number; quizs_type: string; quizs_question: string }>> {
     const rows = await this.quizsRepository.find();
     return rows.map((q) => ({
-      id: q.quizsId,
+      quiz_id: q.quizsId,
       lessonId: q.lessonId,
-      type: q.quizsType,
-      question: q.quizsQuestions,
+      quizs_type: q.quizsType,
+      quizs_question: q.quizsQuestions,
     }));
   }
 

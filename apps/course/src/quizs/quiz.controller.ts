@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody, ApiResponse } from '@nestjs/swagger';
 import { QuizService } from './quiz.service';
 import { CreateQuizsDto, CreateCheckpointDto } from './dto/create-quizs.dto';
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
@@ -42,6 +42,9 @@ export class QuizAdminController {
       },
     },
   })
+  @ApiResponse({ status: 201, description: 'Quiz created successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   createQuiz(@Body() dto: CreateQuizsDto) {
     return this.quizService.createQuizs(dto);
   }
@@ -95,7 +98,6 @@ export class QuizController {
   @Get('lesson/:lessonId')
   @ApiOperation({ summary: 'Get quiz with status by lesson id' })
   findOneQuizByLesson(@Param('lessonId') lessonId: string) {
-    // For now using dummy userId = 1, in real scenario get from req.user
     return this.quizService.getQuizWithStatus(Number(lessonId), 1);
   }
 

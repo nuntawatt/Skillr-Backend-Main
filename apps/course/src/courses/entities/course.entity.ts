@@ -4,6 +4,7 @@ import { Level } from '../../levels/entities/level.entity';
 @Entity('courses')
 @Index('idx_courses_course_owner_id', ['course_ownerId'])
 @Index('idx_courses_is_published', ['isPublished'])
+
 export class Course {
   @PrimaryGeneratedColumn()
   course_id: number;
@@ -17,7 +18,7 @@ export class Course {
   @Column({ type: 'text', nullable: true })
   course_description?: string;
 
-  // keep cover reference only (media service id)
+  // cover image (media-service image id)
   @Column({ name: 'course_image_id', type: 'int', nullable: true })
   course_imageId?: number | null;
 

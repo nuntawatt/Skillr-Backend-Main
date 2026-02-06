@@ -47,4 +47,3 @@ export class CreateLessonDto {
   @IsNumber()
   lesson_video_id?: number | null;
 }
-

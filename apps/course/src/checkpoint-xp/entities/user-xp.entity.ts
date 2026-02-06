@@ -3,6 +3,7 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 @Entity('user_xp')
 @Index('idx_user_xp_user_id', ['userId'])
 @Index('uq_user_xp_user_chapter', ['userId', 'chapterId'], { unique: true })
+
 export class UserXp {
   @PrimaryGeneratedColumn({ name: 'user_xp_id', type: 'int' })
   userXpId: number;

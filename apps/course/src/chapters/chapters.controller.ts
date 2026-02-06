@@ -11,6 +11,7 @@ export class ChaptersController {
     @Post()
     @ApiOperation({ summary: 'Create a new chapter' })
     @ApiCreatedResponse({ type: ChapterResponseDto, description: 'Chapter created successfully' })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
     create(@Body() dto: CreateChapterDto): Promise<ChapterResponseDto> {
         return this.chaptersService.create(dto);
     }
@@ -19,6 +20,7 @@ export class ChaptersController {
     @ApiOperation({ summary: 'Get all chapters for a level' })
     @ApiQuery({ name: 'level_id', type: Number, required: true, description: 'ID of the level to fetch chapters for' })
     @ApiOkResponse({ type: ChapterResponseDto, isArray: true })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
     findByLevel(@Query('level_id', ParseIntPipe) levelId: number): Promise<ChapterResponseDto[]> {
         return this.chaptersService.findByLevel(levelId);
     }

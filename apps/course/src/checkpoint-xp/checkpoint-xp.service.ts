@@ -247,7 +247,7 @@ export class CheckpointXpService {
 
     return {
       isCorrect: userXp.checkpointStatus === 'COMPLETED',
-      xpEarned: 0, // XP only awarded on submission
+      xpEarned: 0,
       feedback,
       totalChapterXp: userXp.xpEarned,
       checkpointStatus: userXp.checkpointStatus,
@@ -255,19 +255,17 @@ export class CheckpointXpService {
     };
   }
 
+  // Simple validation logic for checkpoint answers
   private validateCheckpointAnswers(answers: string[]): boolean {
-    // Simple validation: if answers array is not empty, consider it correct
     return answers && answers.length > 0;
   }
 
   private findCheckpointLesson(lessons: Lesson[]): Lesson | null {
-    // Preferred: explicit checkpoint lesson type
     const checkpoint = lessons.find((l) => l.lesson_type === LessonType.CHECKPOINT);
     if (checkpoint) {
       return checkpoint;
     }
 
-    // Backward-compat: treat the last quiz lesson as checkpoint
     const quizzes = lessons.filter((l) => l.lesson_type === LessonType.QUIZ);
     return quizzes.length > 0 ? quizzes[quizzes.length - 1] : null;
   }

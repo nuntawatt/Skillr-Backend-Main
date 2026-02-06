@@ -30,5 +30,4 @@ export class LessonResponseDto {
 
   @ApiProperty({ description: 'Creation timestamp' })
   createdAt: Date;
-  
 }
