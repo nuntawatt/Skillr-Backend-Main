@@ -55,20 +55,11 @@ export class QuizService {
     const showAnswer = result?.status === QuizsStatus.COMPLETED;
     
     return {
-      id: quiz.quizsId,
-      type: quiz.quizsType,
-      question: quiz.quizsQuestions,
-      options: quiz.quizsOption,
-      lessonId: quiz.lessonId,
-      result: result
-        ? {
-            answer: result.userAnswer,
-            correct: result.isCorrect,
-            status: result.status,
-          }
-        : { status: QuizsStatus.NOT_STARTED },
-      answer: showAnswer ? quiz.quizsAnswer : undefined,
-      explanation: showAnswer ? quiz.quizsExplanation : undefined,
+      quizs_id: quiz.quizsId,
+      quizs_type: quiz.quizsType,
+      quizs_question: quiz.quizsQuestions,
+      quizs_option: quiz.quizsOption,
+      lesson_id: quiz.lessonId
     };
   }
 
