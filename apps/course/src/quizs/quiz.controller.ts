@@ -4,8 +4,9 @@ import { QuizService } from './quiz.service';
 import { CreateQuizsDto, CreateCheckpointDto } from './dto/create-quizs.dto';
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import { UserRole } from '@common/enums';
+import { CurrentUserId } from '../progress/decorators/current-user-id.decorator';
 
-@ApiTags('Admin | Quiz')
+@ApiTags('Admin | Quiz and Checkpoint')
 @ApiBearerAuth()
 // @UseGuards(JwtAuthGuard, RolesGuard)
 // @Roles(UserRole.ADMIN)
@@ -91,8 +92,9 @@ export class QuizAdminController {
   }
 }
 
-@ApiTags('Student | Quiz')
+@ApiTags('Student | Quiz and Checkpoint')
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('quizzes')
 export class QuizController {
   constructor(private readonly quizService: QuizService) { }
@@ -110,8 +112,11 @@ export class QuizController {
   @ApiResponse({ status: 200, description: 'Quiz retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Quiz not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  findOneQuizByLesson(@Param('lessonId') lessonId: string) {
-    return this.quizService.getQuizWithStatus(Number(lessonId), 1);
+  findOneQuizByLesson(
+    @Param('lessonId') lessonId: string,
+    @CurrentUserId() userId: string,
+  ) {
+    return this.quizService.getQuizWithStatus(Number(lessonId), userId);
   }
 
   @Get('checkpoint/:lessonId')
@@ -124,25 +129,71 @@ export class QuizController {
 
   @Post('lesson/:lessonId/check')
   @ApiOperation({ summary: 'Check and Save answer for quiz by lesson id' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        answer: {
+          description: 'User answer (string | boolean | number | array | object). Must match stored quiz answer shape.',
+        },
+      },
+      required: ['answer'],
+    },
+    examples: {
+      multiple_choice: {
+        summary: 'ตัวอย่าง: เลือกตอบ',
+        value: { answer: '2' },
+      },
+      true_false: {
+        summary: 'ตัวอย่าง: ถูก/ผิด',
+        value: { answer: 'True' },
+      },
+    },
+  })
   @ApiResponse({ status: 200, description: 'Answer checked and saved successfully' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  checkQuizs(@Param('lessonId') lessonId: string, @Body('answer') answer: any) {
-    return this.quizService.checkAndSaveAnswer(Number(lessonId), 1, answer);
+  checkQuizs(
+    @Param('lessonId') lessonId: string,
+    @CurrentUserId() userId: string,
+    @Body('answer') answer: any,
+  ) {
+    return this.quizService.checkAndSaveAnswer(Number(lessonId), userId, answer);
   }
 
   @Post('lesson/:lessonId/skip')
   @ApiOperation({ summary: 'Skip quiz and mark as completed' })
   @ApiResponse({ status: 200, description: 'Quiz skipped successfully' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  skipQuiz(@Param('lessonId') lessonId: string) {
-    return this.quizService.skipQuiz(Number(lessonId), 1);
+  skipQuiz(@Param('lessonId') lessonId: string, @CurrentUserId() userId: string) {
+    return this.quizService.skipQuiz(Number(lessonId), userId);
   }
 
   @Post('checkpoint/:id/check')
   @ApiOperation({ summary: 'Check answer for checkpoint by id' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        answer: {
+          description: 'User answer (string | boolean | number | array | object). Must match stored checkpoint answer shape.',
+        },
+      },
+      required: ['answer'],
+    },
+    examples: {
+      example: {
+        summary: 'ตัวอย่าง',
+        value: { answer: '2' },
+      },
+    },
+  })
   @ApiResponse({ status: 200, description: 'Checkpoint answer checked successfully' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  checkCheckpoint(@Param('id') id: string, @Body('answer') answer: any) {
-    return this.quizService.checkCheckpointAnswer(Number(id), answer);
+  checkCheckpoint(
+    @Param('id') id: string,
+    @CurrentUserId() userId: string,
+    @Body('answer') answer: any,
+  ) {
+    return this.quizService.checkCheckpointAnswer(Number(id), userId, answer);
   }
 }

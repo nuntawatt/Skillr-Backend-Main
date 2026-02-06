@@ -12,8 +12,8 @@ export class QuizsResult {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'user_id' })
-  userId: number;
+  @Column({ name: 'user_id', type: 'text' })
+  userId: string;
 
   @Column({ name: 'lesson_id' })
   lessonId: number;

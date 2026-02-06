@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { DataSource } from 'typeorm';
 import { getDatabaseConfig } from '@config/database.config';
 import { AuthLibModule } from '@auth/auth-lib.module';
 
@@ -12,7 +11,6 @@ import { ChaptersController } from './chapters/chapters.controller';
 import { LessonsController } from './lessons/lessons.controller';
 import { ArticlesController } from './articles/articles.controller';
 import { ProgressController } from './progress/progress.controller';
-import { CheckpointXpController } from './checkpoint-xp';
 import { QuizAdminController, QuizController } from './quizs/quiz.controller';
 
 // Services
@@ -23,7 +21,6 @@ import { LessonsService } from './lessons/lessons.service';
 import { ArticlesService } from './articles/articles.service';
 import { StorageService } from './storage/storage.service';
 import { ProgressService } from './progress/progress.service';
-import { CheckpointXpService } from './checkpoint-xp';
 import { QuizService } from "./quizs/quiz.service";
 
 // Entities
@@ -33,10 +30,10 @@ import { Chapter } from './chapters/entities/chapter.entity';
 import { Lesson } from './lessons/entities/lesson.entity';
 import { Article } from './articles/entities/article.entity';
 import { LessonProgress } from './progress/entities/lesson-progress.entity';
-import { UserXp } from './checkpoint-xp';
 import { Quizs } from './quizs/entities/quizs.entity';
 import { QuizsCheckpoint } from './quizs/entities/checkpoint.entity';
 import { QuizsResult } from './quizs/entities/quizs-result.entity';
+import { UserXp } from './quizs/entities/user-xp.entity';
 
 const isTest = process.env.NODE_ENV === 'test';
 
@@ -80,7 +77,6 @@ const isTest = process.env.NODE_ENV === 'test';
     LessonsController,
     ArticlesController,
     ProgressController,
-    CheckpointXpController,
     QuizController,
     QuizAdminController,
   ],
@@ -93,13 +89,7 @@ const isTest = process.env.NODE_ENV === 'test';
     ArticlesService,
     StorageService,
     ProgressService,
-    CheckpointXpService,
     QuizService,
-    {
-      provide: 'DataSource',
-      useFactory: (dataSource: DataSource) => dataSource,
-      inject: [DataSource],
-    },
   ],
 })
 export class AppModule { }

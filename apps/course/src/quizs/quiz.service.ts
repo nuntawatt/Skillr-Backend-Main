@@ -5,6 +5,8 @@ import { Quizs } from './entities/quizs.entity';
 import { QuizsCheckpoint } from './entities/checkpoint.entity';
 import { QuizsResult, QuizsStatus } from './entities/quizs-result.entity';
 import { CreateQuizsDto, CreateCheckpointDto } from './dto/create-quizs.dto';
+import { Lesson } from '../lessons/entities/lesson.entity';
+import { UserXp } from './entities/user-xp.entity';
 
 @Injectable()
 export class QuizService {
@@ -15,6 +17,10 @@ export class QuizService {
     private readonly checkpointRepository: Repository<QuizsCheckpoint>,
     @InjectRepository(QuizsResult)
     private readonly resultRepository: Repository<QuizsResult>,
+    @InjectRepository(Lesson)
+    private readonly lessonRepository: Repository<Lesson>,
+    @InjectRepository(UserXp)
+    private readonly userXpRepository: Repository<UserXp>,
   ) { }
 
   // --- Quizs (1 Lesson = 1 Question) ---
@@ -42,11 +48,13 @@ export class QuizService {
     return this.quizsRepository.save(quiz);
   }
 
-  async getQuizWithStatus(lessonId: number, userId: number) {
+  async getQuizWithStatus(lessonId: number, userId: string) {
     const quiz = await this.quizsRepository.findOne({ where: { lessonId } });
     if (!quiz) {
       throw new NotFoundException(`Quiz for lesson ${lessonId} not found`);
     }
+
+    const checkpoints = await this.checkpointRepository.find({ where: { lessonId } });
 
     const result = await this.resultRepository.findOne({
       where: { lessonId, userId },
@@ -62,10 +70,16 @@ export class QuizService {
       lesson_id: quiz.lessonId, 
       quizs_answer: showAnswer ? quiz.quizsAnswer : null,
       quizs_explanation: showAnswer ? quiz.quizsExplanation : null,
+      checkpoints: checkpoints.map((c) => ({
+        checkpoint_id: c.checkpointId,
+        checkpoint_type: c.checkpointType,
+        checkpoint_questions: c.checkpointQuestions,
+        checkpoint_option: c.checkpointOption ?? null,
+      })),
     };
   }
 
-  async checkAndSaveAnswer(lessonId: number, userId: number, answer: any) {
+  async checkAndSaveAnswer(lessonId: number, userId: string, answer: any) {
     const quiz = await this.quizsRepository.findOne({ where: { lessonId } });
     if (!quiz) throw new NotFoundException('Quiz not found');
 
@@ -88,7 +102,7 @@ export class QuizService {
     };
   }
 
-  async skipQuiz(lessonId: number, userId: number) {
+  async skipQuiz(lessonId: number, userId: string) {
     let result = await this.resultRepository.findOne({ where: { lessonId, userId } });
     if (!result) {
       result = this.resultRepository.create({ lessonId, userId });
@@ -157,13 +171,72 @@ export class QuizService {
     }));
   }
 
-  async checkCheckpointAnswer(checkpointId: number, answer: any) {
+  async checkCheckpointAnswer(checkpointId: number, userId: string, answer: any) {
     const checkpoint = await this.checkpointRepository.findOne({ where: { checkpointId } });
     if (!checkpoint) throw new NotFoundException('Checkpoint not found');
     const isCorrect = JSON.stringify(checkpoint.checkpointAnswer) === JSON.stringify(answer);
+
+    const lesson = await this.lessonRepository.findOne({
+      where: { lesson_id: checkpoint.lessonId },
+    });
+
+    // If the lesson row is missing, still return correctness without XP.
+    if (!lesson) {
+      return {
+        isCorrect,
+        correctAnswer: checkpoint.checkpointAnswer,
+        xpEarned: 0,
+        feedback: isCorrect ? 'ผ่านแล้ว' : 'ตอบผิด ลองใหม่อีกครั้ง',
+        totalChapterXp: 0,
+        checkpointStatus: 'PENDING',
+        wasXpAlreadyEarned: false,
+      };
+    }
+
+    const chapterId = lesson.chapter_id;
+
+    let userXp = await this.userXpRepository.findOne({
+      where: { userId, chapterId },
+    });
+
+    if (!userXp) {
+      userXp = this.userXpRepository.create({
+        userId,
+        chapterId,
+        xpEarned: 0,
+        checkpointStatus: 'PENDING',
+        completedAt: null,
+        lastAttemptAt: null,
+      });
+    }
+
+    const wasXpAlreadyEarned = userXp.xpEarned > 0;
+    const xpEarned = isCorrect && !wasXpAlreadyEarned ? 5 : 0;
+
+    userXp.lastAttemptAt = new Date();
+
+    if (isCorrect) {
+      userXp.checkpointStatus = 'COMPLETED';
+      userXp.completedAt = new Date();
+      if (!wasXpAlreadyEarned) {
+        userXp.xpEarned = xpEarned;
+      }
+    }
+
+    userXp = await this.userXpRepository.save(userXp);
+
     return {
       isCorrect,
       correctAnswer: checkpoint.checkpointAnswer,
+      xpEarned,
+      feedback: isCorrect
+        ? wasXpAlreadyEarned
+          ? 'ผ่านแล้ว (ได้ XP ไปแล้ว)'
+          : 'ผ่านแล้ว +5 XP'
+        : 'ตอบผิด ลองใหม่อีกครั้ง',
+      totalChapterXp: userXp.xpEarned,
+      checkpointStatus: userXp.checkpointStatus,
+      wasXpAlreadyEarned,
     };
   }
 }
