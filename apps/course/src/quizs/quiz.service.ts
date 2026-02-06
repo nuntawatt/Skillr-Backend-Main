@@ -59,7 +59,9 @@ export class QuizService {
       quizs_type: quiz.quizsType,
       quizs_question: quiz.quizsQuestions,
       quizs_option: quiz.quizsOption,
-      lesson_id: quiz.lessonId
+      lesson_id: quiz.lessonId, 
+      quizs_answer: showAnswer ? quiz.quizsAnswer : null,
+      quizs_explanation: showAnswer ? quiz.quizsExplanation : null,
     };
   }
 
@@ -82,7 +84,7 @@ export class QuizService {
     return {
       isCorrect,
       correctAnswer: quiz.quizsAnswer,
-      explanation: quiz.quizsExplanation,
+      quizs_explanation: quiz.quizsExplanation,
     };
   }
 
@@ -102,6 +104,7 @@ export class QuizService {
       lessonId: q.lessonId,
       quizs_type: q.quizsType,
       quizs_question: q.quizsQuestions,
+      quizs_result: q.quizsAnswer,
     }));
   }
 

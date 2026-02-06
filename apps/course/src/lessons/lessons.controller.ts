@@ -29,14 +29,6 @@ export class LessonsController {
     return this.lessonsService.createArticleLesson(lessonData, content);
   }
 
-  // @Get()
-  // @ApiOperation({ summary: 'Get all lessons with optional filters' })
-  // @ApiOkResponse({ type: LessonResponseDto, isArray: true })
-  // @ApiResponse({ status: 500, description: 'Internal server error' })
-  // findAll(): Promise<LessonResponseDto[]> {
-  //   return this.lessonsService.findAll();
-  // }
-
   @Get()
   @ApiOperation({ summary: 'Get all lessons for a chapter' })
   @ApiQuery({ name: 'chapterId', required: true, type: Number })
