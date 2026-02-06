@@ -15,10 +15,11 @@ async function bootstrap() {
   // origin: [process.env.FRONTEND_URL, 'http://localhost:3000', 'https://skllracademy.com'],
   // credentials: true,
   app.enableCors({
-    origin: '*',
+    // origin: '*',
+    origin: ['*', 'http://localhost:3000', 'https://skllracademy.com'],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: '*',
-    credentials: false,
+    credentials: true,
   });
 
   app.useGlobalPipes(

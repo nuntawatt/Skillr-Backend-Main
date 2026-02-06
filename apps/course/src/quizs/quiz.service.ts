@@ -24,7 +24,6 @@ export class QuizService {
   ) { }
 
   // --- Quizs (1 Lesson = 1 Question) ---
-
   async createQuizs(dto: CreateQuizsDto): Promise<Quizs> {
     const existing = await this.quizsRepository.findOne({
       where: { lessonId: dto.lesson_id },
