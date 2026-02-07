@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, LessThan, Repository } from 'typeorm';
 
 import { Lesson } from '../lessons/entities/lesson.entity';
 import { Chapter } from '../chapters/entities/chapter.entity';
@@ -334,6 +334,23 @@ export class ProgressService {
 
     const lessonIds = lessons.map((l) => l.lesson_id);
 
+    // Chapter-to-chapter lock: if this chapter is locked and the user has no progress in it yet,
+    // treat progress as 0% and no resume lesson.
+    const isUnlocked = await this.isChapterUnlockedForUser(
+      userId,
+      chapter,
+      lessonIds,
+    );
+    if (!isUnlocked) {
+      return {
+        chapterId,
+        totalItems: lessons.length,
+        completedItems: 0,
+        percent: 0,
+        resumeLessonId: null,
+      };
+    }
+
     const progressRows = await this.lessonProgressRepository.find({
       where: { userId, lessonId: In(lessonIds) },
     });
@@ -425,6 +442,33 @@ export class ProgressService {
     }
 
     const lessonIds = lessons.map((l) => l.lesson_id);
+
+    const isUnlocked = await this.isChapterUnlockedForUser(
+      userId,
+      chapter,
+      lessonIds,
+    );
+    if (!isUnlocked) {
+      const items: ItemStatusDto[] = lessons.map((lesson) => ({
+        lessonId: lesson.lesson_id,
+        lessonTitle: lesson.lesson_title,
+        lessonType: lesson.lesson_type,
+        status: LessonProgressStatus.LOCKED,
+        progressPercent: 0,
+        positionSeconds: null,
+        durationSeconds: null,
+        completedAt: null,
+        orderIndex: lesson.orderIndex,
+      }));
+
+      return {
+        chapterId,
+        chapterTitle: chapter.chapter_title,
+        progressPercent: 0,
+        nextAvailableLessonId: null,
+        items,
+      };
+    }
 
     const progressRows = await this.lessonProgressRepository.find({
       where: { userId, lessonId: In(lessonIds) },
@@ -540,5 +584,67 @@ export class ProgressService {
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
+  }
+
+  private async isChapterUnlockedForUser(
+    userId: string,
+    chapter: Chapter,
+    chapterLessonIds: number[],
+  ): Promise<boolean> {
+    // If the user already has any progress in this chapter, keep it accessible.
+    if (chapterLessonIds.length > 0) {
+      const existing = await this.lessonProgressRepository.findOne({
+        where: { userId, lessonId: In(chapterLessonIds) },
+      });
+      if (existing) {
+        return true;
+      }
+    }
+
+    // First chapter in a level is always unlocked.
+    const prevChapter = await this.chapterRepository.findOne({
+      where: {
+        levelId: chapter.levelId,
+        chapter_orderIndex: LessThan(chapter.chapter_orderIndex),
+      },
+      order: { chapter_orderIndex: 'DESC' },
+    });
+
+    if (!prevChapter) {
+      return true;
+    }
+
+    return this.isChapterCompletedForUser(userId, prevChapter.chapter_id);
+  }
+
+  private async isChapterCompletedForUser(
+    userId: string,
+    chapterId: number,
+  ): Promise<boolean> {
+    const lessons = await this.lessonRepository.find({
+      where: { chapter_id: chapterId },
+      order: { orderIndex: 'ASC' },
+    });
+
+    if (lessons.length === 0) {
+      return true;
+    }
+
+    const lessonIds = lessons.map((l) => l.lesson_id);
+    const progressRows = await this.lessonProgressRepository.find({
+      where: { userId, lessonId: In(lessonIds) },
+    });
+
+    const completed = new Set(
+      progressRows
+        .filter(
+          (p) =>
+            p.status === LessonProgressStatus.COMPLETED ||
+            p.status === LessonProgressStatus.SKIPPED,
+        )
+        .map((p) => p.lessonId),
+    );
+
+    return completed.size === lessonIds.length;
   }
 }
