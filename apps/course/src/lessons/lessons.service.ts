@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Lesson, LessonType } from './entities/lesson.entity';
@@ -189,7 +189,36 @@ export class LessonsService {
       where: { chapter_id: chapterId },
     });
 
+    if (lessons.length === 0) {
+      return [];
+    }
+
+    if (!Array.isArray(lessonIds) || lessonIds.length === 0) {
+      throw new BadRequestException('lessonIds is required');
+    }
+
+    if (lessonIds.length !== lessons.length) {
+      throw new BadRequestException(
+        `lessonIds must include all lessons in the chapter (expected ${lessons.length}, got ${lessonIds.length})`,
+      );
+    }
+
     const lessonMap = new Map(lessons.map((l) => [l.lesson_id, l]));
+
+    for (const id of lessonIds) {
+      if (!lessonMap.has(id)) {
+        throw new BadRequestException(`Lesson ID ${id} does not belong to chapter ${chapterId}`);
+      }
+    }
+
+    const provided = new Set(lessonIds);
+    for (const lesson of lessons) {
+      if (!provided.has(lesson.lesson_id)) {
+        throw new BadRequestException(
+          `lessonIds must include all lessons in the chapter; missing ${lesson.lesson_id}`,
+        );
+      }
+    }
 
     for (let i = 0; i < lessonIds.length; i++) {
       const lesson = lessonMap.get(lessonIds[i]);

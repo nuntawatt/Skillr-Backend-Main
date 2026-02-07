@@ -1,9 +1,8 @@
 import { CoursesService } from './courses.service';
-import { Controller, Get, Post, Put, Body, Patch, Param, Delete, ParseIntPipe, HttpCode, HttpStatus, Req, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, HttpCode, HttpStatus } from '@nestjs/common';
 import { CreateCourseDto, UpdateCourseDto, CourseResponseDto, CourseStructureResponseDto } from './dto';
-import { CourseStructureSaveDto } from './dto/course-structure-save.dto';
 
-import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiResponse, ApiNoContentResponse, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiResponse, ApiNoContentResponse } from '@nestjs/swagger';
 
 @ApiTags('Courses')
 @Controller('courses')
@@ -47,17 +46,6 @@ export class CoursesController {
   @ApiResponse({ status: 500, description: 'Internal server error' })
   getStructure(@Param('id', ParseIntPipe) id: number): Promise<CourseStructureResponseDto> {
     return this.coursesService.getStructure(id);
-  }
-
-  @Put(':id/structure')
-  @ApiOperation({ summary: 'Save full course structure (transactional)' })
-  @ApiParam({ name: 'id', type: Number })
-  @ApiOkResponse({ type: CourseStructureResponseDto })
-  @ApiResponse({ status: 200, description: 'Course structure saved successfully' })
-  @ApiResponse({ status: 404, description: 'Course not found' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  async saveStructure(@Param('id', ParseIntPipe) id: number, @Body() dto: CourseStructureSaveDto): Promise<CourseStructureResponseDto> {
-    return this.coursesService.saveStructure(id, dto);
   }
 
   @Patch(':id')

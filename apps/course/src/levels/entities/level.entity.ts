@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, Index, JoinColumn } from 'typeorm';
 import { Course } from '../../courses/entities/course.entity';
 import { Chapter } from '../../chapters/entities/chapter.entity';
 
@@ -15,6 +15,7 @@ export class Level {
     level_orderIndex: number;
 
     @ManyToOne(() => Course, (course) => course.course_levels, { onDelete: 'CASCADE' })
+    @JoinColumn({ name: 'course_id', referencedColumnName: 'course_id' })
     course: Course;
 
     @Column({ name: 'course_id', type: 'int' })

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { LessonProgressStatus } from '../entities/lesson-progress.entity';
+import { LessonProgressStatus } from '../entities/progress.entity';
 
 export class ItemStatusDto {
   @ApiProperty()

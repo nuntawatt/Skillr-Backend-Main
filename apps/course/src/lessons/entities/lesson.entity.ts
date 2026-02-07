@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, Index, JoinColumn } from 'typeorm';
 import { Chapter } from '../../chapters/entities/chapter.entity';
 import { Article } from '../../articles/entities/article.entity';
 
@@ -43,6 +43,7 @@ export class Lesson {
   lesson_video_id?: number | null;
 
   @ManyToOne(() => Chapter, (chapter) => chapter.lessons, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'chapter_id', referencedColumnName: 'chapter_id' })
   chapter: Chapter;
   @Column({ name: 'chapter_id', type: 'int' })
   chapter_id: number;

@@ -1,25 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Course } from './entities/course.entity';
 import { CreateCourseDto, UpdateCourseDto, CourseResponseDto, CourseStructureResponseDto, LevelStructureDto, ChapterStructureDto, LessonStructureDto } from './dto';
-import { CourseStructureSaveDto, LevelSaveDto, ChapterSaveDto, LessonSaveDto } from './dto/course-structure-save.dto';
-import { Level } from '../levels/entities/level.entity';
-import { Chapter } from '../chapters/entities/chapter.entity';
-import { Lesson } from '../lessons/entities/lesson.entity';
 
 @Injectable()
 export class CoursesService {
   constructor(
     @InjectRepository(Course)
     private readonly courseRepository: Repository<Course>,
-    private readonly dataSource: DataSource,
-    @InjectRepository(Level)
-    private readonly levelRepository: Repository<Level>,
-    @InjectRepository(Chapter)
-    private readonly chapterRepository: Repository<Chapter>,
-    @InjectRepository(Lesson)
-    private readonly lessonRepository: Repository<Lesson>,
   ) { }
 
   // Create a new course
@@ -86,9 +75,10 @@ export class CoursesService {
     return this.toResponseDto(course);
   }
 
-  // Get the full nested structure of a course
+  // Get the full nested structure of a course (read-only)
   async getStructure(id: number): Promise<CourseStructureResponseDto> {
-    const course = await this.courseRepository.findOne({where: { course_id: id },
+    const course = await this.courseRepository.findOne({
+      where: { course_id: id },
       relations: [
         'course_levels',
         'course_levels.level_chapters',
@@ -100,15 +90,16 @@ export class CoursesService {
       throw new NotFoundException(`Course with ID ${id} not found`);
     }
 
-    // Sort levels by orderIndex (entity uses snake_case fields)
-    const sortedLevels = (course.course_levels || []).sort((a, b) => a.level_orderIndex - b.level_orderIndex);
+    const sortedLevels = (course.course_levels || []).sort(
+      (a, b) => a.level_orderIndex - b.level_orderIndex,
+    );
 
     const levels: LevelStructureDto[] = sortedLevels.map((level) => {
-      // Sort chapters by orderIndex
-      const sortedChapters = (level.level_chapters || []).sort((a, b) => a.chapter_orderIndex - b.chapter_orderIndex);
+      const sortedChapters = (level.level_chapters || []).sort(
+        (a, b) => a.chapter_orderIndex - b.chapter_orderIndex,
+      );
 
       const chapters: ChapterStructureDto[] = sortedChapters.map((chapter) => {
-        // Sort lessons by orderIndex
         const sortedLessons = (chapter.lessons || []).sort(
           (a, b) => a.orderIndex - b.orderIndex,
         );
@@ -177,58 +168,6 @@ export class CoursesService {
     }
 
     await this.courseRepository.remove(course);
-  }
-
-  // Save full course structure (transactional)
-  async saveStructure(courseId: number, dto: CourseStructureSaveDto): Promise<CourseStructureResponseDto> {
-    const course = await this.courseRepository.findOne({ where: { course_id: courseId } });
-    if (!course) throw new NotFoundException(`Course with ID ${courseId} not found`);
-
-    await this.dataSource.transaction(async (manager) => {
-      // delete existing levels (cascades to chapters and lessons)
-      await manager.delete(Level, { course_id: courseId });
-
-      // create new levels/chapters/lessons
-      for (const lv of dto.levels || []) {
-        const level = this.levelRepository.create({
-          level_title: lv.title,
-          level_orderIndex: lv.orderIndex,
-          course_id: courseId,
-        });
-
-        const savedLevel = await manager.save(Level, level);
-
-        for (const ch of lv.chapters || []) {
-          const chapter = this.chapterRepository.create({
-            chapter_title: ch.title,
-            chapter_orderIndex: ch.orderIndex,
-            levelId: savedLevel.level_id,
-          });
-
-          const savedChapter = await manager.save(Chapter, chapter);
-
-          for (const les of ch.lessons || []) {
-            const lesson = this.lessonRepository.create({
-              lesson_title: les.title,
-              lesson_type: les.type as any,
-              ref_id: les.ref_id ?? 0,
-              orderIndex: les.orderIndex,
-              chapter_id: savedChapter.chapter_id,
-            });
-
-            await manager.save(Lesson, lesson);
-          }
-        }
-      }
-    });
-
-    // update course basic fields if provided
-    if (dto.course_title !== undefined) course.course_title = dto.course_title;
-    if (dto.course_description !== undefined) course.course_description = dto.course_description;
-    if ((dto as any).course_tags !== undefined) course.course_tags = (dto as any).course_tags ?? null;
-    await this.courseRepository.save(course);
-
-    return this.getStructure(courseId);
   }
 
   // Convert Course entity to CourseResponseDto

@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import { IsBoolean, IsEnum, IsNumber, IsOptional, Max, Min } from 'class-validator';
-import { LessonProgressStatus } from '../entities/lesson-progress.entity';
+import { LessonProgressStatus } from '../entities/progress.entity';
 
 export class UpsertLessonProgressDto {
     @ApiPropertyOptional({ enum: LessonProgressStatus })

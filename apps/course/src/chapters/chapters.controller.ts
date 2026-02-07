@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiQuery, ApiNoContentResponse, ApiResponse } from '@nestjs/swagger';
 import { ChaptersService } from './chapters.service';
-import { CreateChapterDto, UpdateChapterDto, ChapterResponseDto } from './dto';
+import { CreateChapterDto, UpdateChapterDto, ChapterResponseDto, ReorderChaptersDto } from './dto';
 
 @ApiTags('Chapters')
 @Controller('chapters')
@@ -57,11 +57,11 @@ export class ChaptersController {
     }
 
     @Post('reorder')
-    @ApiOperation({ summary: 'Reorder chapters within a level - เผื่อได้ใช้' })
+    @ApiOperation({ summary: 'Reorder chapters within a level' })
     @ApiOkResponse({ type: ChapterResponseDto, isArray: true })
     @ApiResponse({ status: 400, description: 'Bad Request' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
-    reorder(@Body() body: { level_id: number; chapter_ids: number[] }): Promise<ChapterResponseDto[]> {
+    reorder(@Body() body: ReorderChaptersDto): Promise<ChapterResponseDto[]> {
         return this.chaptersService.reorder(body.level_id, body.chapter_ids);
     }
 }

@@ -29,7 +29,7 @@ import { Level } from './levels/entities/level.entity';
 import { Chapter } from './chapters/entities/chapter.entity';
 import { Lesson } from './lessons/entities/lesson.entity';
 import { Article } from './articles/entities/article.entity';
-import { LessonProgress } from './progress/entities/lesson-progress.entity';
+import { LessonProgress } from './progress/entities/progress.entity';
 import { Quizs } from './quizs/entities/quizs.entity';
 import { QuizsCheckpoint } from './quizs/entities/checkpoint.entity';
 import { QuizsResult } from './quizs/entities/quizs-result.entity';

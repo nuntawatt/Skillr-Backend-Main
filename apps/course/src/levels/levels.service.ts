@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Level } from './entities/level.entity';
@@ -56,15 +56,6 @@ export class LevelsService {
     return levels.map((l) => this.toResponseDto(l));
   }
 
-  // Find all levels
-  async findAll(): Promise<LevelResponseDto[]> {
-    const levels = await this.levelRepository.find({
-      order: { level_orderIndex: 'ASC' },
-    });
-    
-    return levels.map((l) => this.toResponseDto(l));
-  }
-
   // Find a level by ID
   async findOne(id: number): Promise<LevelResponseDto> {
     const level = await this.levelRepository.findOne({ where: { level_id: id } });
@@ -113,7 +104,36 @@ export class LevelsService {
       where: { course_id: courseId },
     });
 
+    if (levels.length === 0) {
+      return [];
+    }
+
+    if (!Array.isArray(levelIds) || levelIds.length === 0) {
+      throw new BadRequestException('level_ids is required');
+    }
+
+    if (levelIds.length !== levels.length) {
+      throw new BadRequestException(
+        `level_ids must include all levels in the course (expected ${levels.length}, got ${levelIds.length})`,
+      );
+    }
+
     const levelMap = new Map(levels.map((l) => [l.level_id, l]));
+
+    for (const id of levelIds) {
+      if (!levelMap.has(id)) {
+        throw new BadRequestException(`Level ID ${id} does not belong to course ${courseId}`);
+      }
+    }
+
+    const provided = new Set(levelIds);
+    for (const level of levels) {
+      if (!provided.has(level.level_id)) {
+        throw new BadRequestException(
+          `level_ids must include all levels in the course; missing ${level.level_id}`,
+        );
+      }
+    }
 
     for (let i = 0; i < levelIds.length; i++) {
       const level = levelMap.get(levelIds[i]);

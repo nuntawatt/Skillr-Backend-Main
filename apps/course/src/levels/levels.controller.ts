@@ -1,7 +1,7 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, HttpCode, HttpStatus, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiQuery, ApiNoContentResponse, ApiResponse } from '@nestjs/swagger';
 import { LevelsService } from './levels.service';
-import { CreateLevelDto, UpdateLevelDto, LevelResponseDto } from './dto';
+import { CreateLevelDto, UpdateLevelDto, LevelResponseDto, ReorderLevelsDto } from './dto';
 
 @ApiTags('Levels')
 @Controller('levels')
@@ -16,14 +16,6 @@ export class LevelsController {
     create(@Body() dto: CreateLevelDto): Promise<LevelResponseDto> {
         return this.levelsService.create(dto);
     }
-
-    // @Get()
-    // @ApiOperation({ summary: 'Get all levels' })
-    // @ApiOkResponse({ type: LevelResponseDto, isArray: true })
-    // @ApiResponse({ status: 500, description: 'Internal server error' })
-    // findAll(): Promise<LevelResponseDto[]> {
-    //     return this.levelsService.findAll();
-    // }
 
     @Get()
     @ApiOperation({ summary: 'Get all levels for a course' })
@@ -64,11 +56,11 @@ export class LevelsController {
     }
 
     @Post('reorder')
-    @ApiOperation({ summary: 'Reorder levels within a course - เผื่อได้ใช้' })
+    @ApiOperation({ summary: 'Reorder levels within a course' })
     @ApiOkResponse({ type: LevelResponseDto, isArray: true })
     @ApiResponse({ status: 400, description: 'Bad Request' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
-    reorder(@Body() body: { course_id: number; level_ids: number[] }): Promise<LevelResponseDto[]> {
+    reorder(@Body() body: ReorderLevelsDto): Promise<LevelResponseDto[]> {
         return this.levelsService.reorder(body.course_id, body.level_ids);
     }
 }

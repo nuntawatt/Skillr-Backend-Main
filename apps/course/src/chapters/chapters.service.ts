@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Chapter } from './entities/chapter.entity';
@@ -139,7 +139,36 @@ export class ChaptersService {
       where: { levelId },
     });
 
+    if (chapters.length === 0) {
+      return [];
+    }
+
+    if (!Array.isArray(chapterIds) || chapterIds.length === 0) {
+      throw new BadRequestException('chapter_ids is required');
+    }
+
+    if (chapterIds.length !== chapters.length) {
+      throw new BadRequestException(
+        `chapter_ids must include all chapters in the level (expected ${chapters.length}, got ${chapterIds.length})`,
+      );
+    }
+
     const chapterMap = new Map(chapters.map((c) => [c.chapter_id, c]));
+
+    for (const id of chapterIds) {
+      if (!chapterMap.has(id)) {
+        throw new BadRequestException(`Chapter ID ${id} does not belong to level ${levelId}`);
+      }
+    }
+
+    const provided = new Set(chapterIds);
+    for (const chapter of chapters) {
+      if (!provided.has(chapter.chapter_id)) {
+        throw new BadRequestException(
+          `chapter_ids must include all chapters in the level; missing ${chapter.chapter_id}`,
+        );
+      }
+    }
 
     // Update orderIndex based on provided chapterIds array
     for (let i = 0; i < chapterIds.length; i++) {

@@ -1,11 +1,14 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 
 import { Lesson } from '../lessons/entities/lesson.entity';
 import { Chapter } from '../chapters/entities/chapter.entity';
 import { UpsertLessonProgressDto } from './dto/upsert-lesson-progress.dto';
-import { LessonProgress, LessonProgressStatus } from './entities/lesson-progress.entity';
+import {
+  LessonProgress,
+  LessonProgressStatus,
+} from './entities/progress.entity';
 import { LessonProgressResponseDto } from './dto/lesson-progress-response.dto';
 import { ChapterProgressDto } from './dto/chapter-progress.dto';
 import { ChapterRoadmapDto, ItemStatusDto } from './dto/chapter-roadmap.dto';
@@ -19,16 +22,44 @@ export class ProgressService {
     private readonly lessonRepository: Repository<Lesson>,
     @InjectRepository(Chapter)
     private readonly chapterRepository: Repository<Chapter>,
-  ) { }
+  ) {}
 
   // Lesson Progress
-  async getAllLessonProgress(userId: string): Promise<LessonProgressResponseDto[]> {
+  async getAllLessonProgress(
+    userId: string,
+  ): Promise<LessonProgressResponseDto[]> {
     const rows = await this.lessonProgressRepository.find({
       where: { userId },
       order: { updatedAt: 'DESC' },
     });
 
-    return rows.map((r) => this.toResponse(r));
+    if (rows.length === 0) {
+      return [];
+    }
+
+    const lessonIds = Array.from(new Set(rows.map((r) => r.lessonId)));
+    const lessons = await this.lessonRepository.find({
+      where: { lesson_id: In(lessonIds) },
+    });
+    const lessonById = new Map(lessons.map((l) => [l.lesson_id, l] as const));
+
+    const chapterIds = Array.from(new Set(lessons.map((l) => l.chapter_id)));
+    const chapters = chapterIds.length
+      ? await this.chapterRepository.find({
+          where: { chapter_id: In(chapterIds) },
+        })
+      : [];
+    const levelIdByChapterId = new Map(
+      chapters.map((c) => [c.chapter_id, c.levelId] as const),
+    );
+
+    return rows.map((r) => {
+      const lesson = lessonById.get(r.lessonId);
+      const chapterId = lesson?.chapter_id ?? null;
+      const levelId =
+        chapterId != null ? (levelIdByChapterId.get(chapterId) ?? null) : null;
+      return this.toResponse(r, { chapterId, levelId });
+    });
   }
 
   async getLessonProgress(
@@ -39,7 +70,23 @@ export class ProgressService {
       where: { userId, lessonId },
     });
 
-    return row ? this.toResponse(row) : null;
+    if (!row) {
+      return null;
+    }
+
+    const lesson = await this.lessonRepository.findOne({
+      where: { lesson_id: lessonId },
+    });
+    const chapterId = lesson?.chapter_id ?? null;
+    const chapter =
+      chapterId != null
+        ? await this.chapterRepository.findOne({
+            where: { chapter_id: chapterId },
+          })
+        : null;
+    const levelId = chapter?.levelId ?? null;
+
+    return this.toResponse(row, { chapterId, levelId });
   }
 
   async upsertLessonProgress(
@@ -66,10 +113,7 @@ export class ProgressService {
         status: LessonProgressStatus.IN_PROGRESS,
         progressPercent: 0,
       });
-    } 
-    // else if (row.status === LessonProgressStatus.LOCKED) {
-    //   throw new BadRequestException('Lesson is locked');
-    // }
+    }
 
     if (dto.positionSeconds !== undefined) {
       row.positionSeconds = dto.positionSeconds;
@@ -81,19 +125,16 @@ export class ProgressService {
 
     const inferredPercent =
       dto.progressPercent === undefined &&
-        dto.positionSeconds !== undefined &&
-        dto.durationSeconds !== undefined &&
-        dto.durationSeconds > 0
+      dto.positionSeconds !== undefined &&
+      dto.durationSeconds !== undefined &&
+      dto.durationSeconds > 0
         ? (dto.positionSeconds / dto.durationSeconds) * 100
         : undefined;
 
     const nextPercent = dto.progressPercent ?? inferredPercent;
 
     if (nextPercent !== undefined && !Number.isNaN(nextPercent)) {
-      row.progressPercent = Math.max(
-        0,
-        Math.min(100, Number(nextPercent)),
-      );
+      row.progressPercent = Math.max(0, Math.min(100, Number(nextPercent)));
     }
 
     if (dto.status !== undefined) {
@@ -150,13 +191,23 @@ export class ProgressService {
       }
     }
 
-    return this.toResponse(saved);
+    const chapter = await this.chapterRepository.findOne({
+      where: { chapter_id: lesson.chapter_id },
+    });
+
+    return this.toResponse(saved, {
+      chapterId: lesson.chapter_id,
+      levelId: chapter?.levelId ?? null,
+    });
   }
 
   async skipLessonAndUnlockNext(
     userId: string,
     lessonId: number,
-  ): Promise<{ skipped: LessonProgressResponseDto; unlockedNext: LessonProgressResponseDto | null }> {
+  ): Promise<{
+    skipped: LessonProgressResponseDto;
+    unlockedNext: LessonProgressResponseDto | null;
+  }> {
     const currentLesson = await this.lessonRepository.findOne({
       where: { lesson_id: lessonId },
     });
@@ -183,7 +234,13 @@ export class ProgressService {
     currentProgress.lastViewedAt = new Date();
     currentProgress.completedAt = new Date();
 
-    const savedCurrent = await this.lessonProgressRepository.save(currentProgress);
+    const savedCurrent =
+      await this.lessonProgressRepository.save(currentProgress);
+
+    const currentChapter = await this.chapterRepository.findOne({
+      where: { chapter_id: currentLesson.chapter_id },
+    });
+    const currentLevelId = currentChapter?.levelId ?? null;
 
     const nextLesson = await this.lessonRepository.findOne({
       where: {
@@ -194,7 +251,13 @@ export class ProgressService {
     });
 
     if (!nextLesson) {
-      return { skipped: this.toResponse(savedCurrent), unlockedNext: null };
+      return {
+        skipped: this.toResponse(savedCurrent, {
+          chapterId: currentLesson.chapter_id,
+          levelId: currentLevelId,
+        }),
+        unlockedNext: null,
+      };
     }
 
     let nextProgress = await this.lessonProgressRepository.findOne({
@@ -220,9 +283,23 @@ export class ProgressService {
       nextProgress = await this.lessonProgressRepository.save(nextProgress);
     }
 
+    const nextChapter =
+      nextLesson.chapter_id === currentLesson.chapter_id
+        ? currentChapter
+        : await this.chapterRepository.findOne({
+            where: { chapter_id: nextLesson.chapter_id },
+          });
+    const nextLevelId = nextChapter?.levelId ?? null;
+
     return {
-      skipped: this.toResponse(savedCurrent),
-      unlockedNext: this.toResponse(nextProgress),
+      skipped: this.toResponse(savedCurrent, {
+        chapterId: currentLesson.chapter_id,
+        levelId: currentLevelId,
+      }),
+      unlockedNext: this.toResponse(nextProgress, {
+        chapterId: nextLesson.chapter_id,
+        levelId: nextLevelId,
+      }),
     };
   }
 
@@ -255,28 +332,38 @@ export class ProgressService {
       };
     }
 
-    const lessonIds = lessons.map(l => l.lesson_id);
+    const lessonIds = lessons.map((l) => l.lesson_id);
 
     const progressRows = await this.lessonProgressRepository.find({
       where: { userId, lessonId: In(lessonIds) },
     });
 
-    const progressByLessonId = new Map(progressRows.map((p) => [p.lessonId, p] as const));
+    const progressByLessonId = new Map(
+      progressRows.map((p) => [p.lessonId, p] as const),
+    );
 
     const completedSet = new Set(
       progressRows
-        .filter(p =>
-          p.status === LessonProgressStatus.COMPLETED ||
-          p.status === LessonProgressStatus.SKIPPED,
+        .filter(
+          (p) =>
+            p.status === LessonProgressStatus.COMPLETED ||
+            p.status === LessonProgressStatus.SKIPPED,
         )
-        .map(p => p.lessonId),
+        .map((p) => p.lessonId),
     );
 
     const completedItems = completedSet.size;
+
     const totalItems = lessons.length;
 
+    const sumPercent = lessons.reduce((sum, lesson) => {
+      const progress = progressByLessonId.get(lesson.lesson_id);
+      const pct = progress ? Number(progress.progressPercent) : 0;
+      return sum + Math.max(0, Math.min(100, Number.isFinite(pct) ? pct : 0));
+    }, 0);
+
     const percent =
-      Math.round((completedItems / totalItems) * 10000) / 100;
+      totalItems > 0 ? Math.round((sumPercent / totalItems) * 100) / 100 : 0;
 
     return {
       chapterId,
@@ -285,19 +372,25 @@ export class ProgressService {
       percent,
       resumeLessonId: (() => {
         const inProgress = lessons.find(
-          (l) => progressByLessonId.get(l.lesson_id)?.status === LessonProgressStatus.IN_PROGRESS,
+          (l) =>
+            progressByLessonId.get(l.lesson_id)?.status ===
+            LessonProgressStatus.IN_PROGRESS,
         );
         if (inProgress) {
           return inProgress.lesson_id;
         }
 
-        const firstNotDone = lessons.find((l) => !completedSet.has(l.lesson_id));
+        const firstNotDone = lessons.find(
+          (l) => !completedSet.has(l.lesson_id),
+        );
         if (!firstNotDone) {
           return null;
         }
 
         const status = progressByLessonId.get(firstNotDone.lesson_id)?.status;
-        return status === LessonProgressStatus.LOCKED ? null : firstNotDone.lesson_id;
+        return status === LessonProgressStatus.LOCKED
+          ? null
+          : firstNotDone.lesson_id;
       })(),
     };
   }
@@ -331,7 +424,7 @@ export class ProgressService {
       };
     }
 
-    const lessonIds = lessons.map(l => l.lesson_id);
+    const lessonIds = lessons.map((l) => l.lesson_id);
 
     const progressRows = await this.lessonProgressRepository.find({
       where: { userId, lessonId: In(lessonIds) },
@@ -372,24 +465,18 @@ export class ProgressService {
       progressRows.splice(0, progressRows.length, ...refreshed);
     }
 
-    const completedSet = new Set(
-      progressRows
-        .filter(p =>
-          p.status === LessonProgressStatus.COMPLETED ||
-          p.status === LessonProgressStatus.SKIPPED,
-        )
-        .map(p => p.lessonId),
-    );
-
     let nextAvailableLessonId: number | null = null;
 
-    const items: ItemStatusDto[] = lessons.map(lesson => {
+    const items: ItemStatusDto[] = lessons.map((lesson) => {
       const progress = progressRows.find(
-        p => p.lessonId === lesson.lesson_id,
+        (p) => p.lessonId === lesson.lesson_id,
       );
 
       const status = progress?.status ?? LessonProgressStatus.LOCKED;
-      if (nextAvailableLessonId == null && status === LessonProgressStatus.IN_PROGRESS) {
+      if (
+        nextAvailableLessonId == null &&
+        status === LessonProgressStatus.IN_PROGRESS
+      ) {
         nextAvailableLessonId = lesson.lesson_id;
       }
 
@@ -400,7 +487,10 @@ export class ProgressService {
         status,
         progressPercent:
           progress?.progressPercent ??
-          (status === LessonProgressStatus.COMPLETED || status === LessonProgressStatus.SKIPPED ? 100 : 0),
+          (status === LessonProgressStatus.COMPLETED ||
+          status === LessonProgressStatus.SKIPPED
+            ? 100
+            : 0),
         positionSeconds: progress?.positionSeconds ?? null,
         durationSeconds: progress?.durationSeconds ?? null,
         completedAt: progress?.completedAt ?? null,
@@ -408,12 +498,18 @@ export class ProgressService {
       };
     });
 
-    const completedItems = completedSet.size;
     const totalItems = lessons.length;
 
     const progressPercent =
       totalItems > 0
-        ? Math.round((completedItems / totalItems) * 10000) / 100
+        ? Math.round(
+            (items.reduce(
+              (sum, item) => sum + (Number(item.progressPercent) || 0),
+              0,
+            ) /
+              totalItems) *
+              100,
+          ) / 100
         : 0;
 
     return {
@@ -426,9 +522,14 @@ export class ProgressService {
   }
 
   // Mapping
-  private toResponse(row: LessonProgress): LessonProgressResponseDto {
+  private toResponse(
+    row: LessonProgress,
+    location?: { chapterId?: number | null; levelId?: number | null },
+  ): LessonProgressResponseDto {
     return {
       lessonId: row.lessonId,
+      chapterId: location?.chapterId ?? null,
+      levelId: location?.levelId ?? null,
       userId: row.userId,
       status: row.status,
       progressPercent: Number(row.progressPercent),
