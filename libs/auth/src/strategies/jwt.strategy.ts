@@ -27,10 +27,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   validate(payload: JwtPayload): AuthUser {
-    const role = payload.role === 'INSTRUCTOR' ? 'ADMIN' : payload.role;
+    const role = payload.role === 'ADMIN' || payload.role === 'STUDENT'
+      ? payload.role
+      : 'STUDENT';
+      
     return {
+      // id: payload.id,
       sub: payload.sub ?? payload.id,
-      id: payload.id,
       email: payload.email,
       role,
     };
