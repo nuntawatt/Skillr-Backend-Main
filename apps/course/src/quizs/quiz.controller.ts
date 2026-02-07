@@ -92,6 +92,7 @@ export class QuizAdminController {
   }
 }
 
+
 @ApiTags('Student | Quiz and Checkpoint')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)

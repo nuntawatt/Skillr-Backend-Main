@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiQuery, ApiResponse, ApiNoContentResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiQuery, ApiResponse, ApiNoContentResponse, ApiBody } from '@nestjs/swagger';
 import { LessonsService } from './lessons.service';
 import { CreateLessonDto, UpdateLessonDto, LessonResponseDto, ReorderLessonsDto } from './dto/lesson';
 
@@ -15,17 +15,6 @@ export class LessonsController {
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
   create(@Body() dto: CreateLessonDto): Promise<LessonResponseDto> {
     return this.lessonsService.create(dto);
-  }
-
-  @Post('article')
-  @ApiOperation({ summary: 'Create a new article lesson with content' })
-  @ApiCreatedResponse({ type: LessonResponseDto, description: 'Article lesson created successfully' })
-  @ApiResponse({ status: 400, description: 'Bad Request' })
-  @ApiResponse({ status: 500, description: 'Internal Server Error' })
-  createArticleLesson(
-    @Body() body: { lesson_title: string; lesson_description?: string; chapter_id: number; orderIndex?: number; content: any }): Promise<LessonResponseDto> {
-    const { content, ...lessonData } = body;
-    return this.lessonsService.createArticleLesson(lessonData, content);
   }
 
   @Get()

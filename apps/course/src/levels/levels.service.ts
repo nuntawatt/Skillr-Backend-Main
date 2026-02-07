@@ -16,7 +16,7 @@ export class LevelsService {
 
   // Create a new level
   async create(createLevelDto: CreateLevelDto): Promise<LevelResponseDto> {
-    // Verify course exists
+    // อนุมัติ course มีอยู่จริง
     const course = await this.courseRepository.findOne({
       where: { course_id: createLevelDto.course_id },
     });
@@ -25,7 +25,7 @@ export class LevelsService {
       throw new NotFoundException(`Course with ID ${createLevelDto.course_id} not found`);
     }
 
-    // Auto-generate orderIndex if not provided
+    // สร้าง orderIndex อัตโนมัติถ้าไม่ได้ระบุ
     let orderIndex = createLevelDto.level_orderIndex;
     if (orderIndex === undefined) {
       const maxOrderResult = await this.levelRepository

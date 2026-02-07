@@ -26,7 +26,7 @@ export class ArticlesController {
             },
         },
     })
-    @ApiCreatedResponse({ type: ArticleResponseDto, description: 'Article created successfully'})
+    @ApiCreatedResponse({ type: ArticleResponseDto, description: 'Article created successfully' })
     @ApiResponse({ status: 400, description: 'Bad Request' })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     async create(@Body() body: CreateArticleDto) {
@@ -36,11 +36,11 @@ export class ArticlesController {
 
     @Get()
     @ApiOperation({ summary: 'Get all articles with optional filters' })
-      @ApiOkResponse({ type: ArticleResponseDto, isArray: true })
-      @ApiResponse({ status: 500, description: 'Internal server error' })
-      findAll(): Promise<ArticleResponseDto[]> {
+    @ApiOkResponse({ type: ArticleResponseDto, isArray: true })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
+    findAll(): Promise<ArticleResponseDto[]> {
         return this.svc.findAll();
-      }
+    }
 
     @Get(':id')
     @ApiOperation({ summary: 'Get article by id' })

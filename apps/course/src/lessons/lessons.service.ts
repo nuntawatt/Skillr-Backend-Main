@@ -1,9 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Lesson, LessonType } from './entities/lesson.entity';
 import { Chapter } from '../chapters/entities/chapter.entity';
-import { Article } from '../articles/entities/article.entity';
 import { CreateLessonDto, UpdateLessonDto, LessonResponseDto } from './dto/lesson';
 
 @Injectable()
@@ -13,14 +12,11 @@ export class LessonsService {
     private readonly lessonRepository: Repository<Lesson>,
     @InjectRepository(Chapter)
     private readonly chapterRepository: Repository<Chapter>,
-    @InjectRepository(Article)
-    private readonly articleRepository: Repository<Article>,
-    private readonly dataSource: DataSource,
   ) {}
 
   // Create a new lesson
   async create(createLessonDto: CreateLessonDto): Promise<LessonResponseDto> {
-    // Verify chapter exists
+    // อนุมัติ chapter มีอยู่จริง
     const chapter = await this.chapterRepository.findOne({
       where: { chapter_id: createLessonDto.chapter_id },
     });
@@ -29,7 +25,7 @@ export class LessonsService {
       throw new NotFoundException(`Chapter with ID ${createLessonDto.chapter_id} not found`);
     }
 
-    // Auto-generate orderIndex if not provided
+    // สร้าง orderIndex อัตโนมัติถ้าไม่ได้ระบุ
     let orderIndex = createLessonDto.orderIndex;
     if (orderIndex === undefined) {
       const maxOrderResult = await this.lessonRepository
@@ -53,62 +49,6 @@ export class LessonsService {
 
     const saved = await this.lessonRepository.save(lesson);
     return this.toResponseDto(saved);
-  }
-
-  // Create a new article lesson with content in a transaction
-  async createArticleLesson(
-    createLessonDto: Omit<CreateLessonDto, 'lesson_type' | 'ref_id'>,
-    content: any,
-  ): Promise<LessonResponseDto> {
-    return await this.dataSource.transaction(async (manager) => {
-      // Verify chapter exists
-      const chapter = await manager.findOne(Chapter, {
-        where: { chapter_id: createLessonDto.chapter_id },
-      });
-
-      if (!chapter) {
-        throw new NotFoundException(`Chapter with ID ${createLessonDto.chapter_id} not found`);
-      }
-
-      // Auto-generate orderIndex if not provided
-      let orderIndex = createLessonDto.orderIndex;
-      if (orderIndex === undefined) {
-        const maxOrderResult = await manager
-          .createQueryBuilder(Lesson, 'lesson')
-          .where('lesson.chapter_id = :chapterId', { chapterId: createLessonDto.chapter_id })
-          .select('MAX(lesson.order_index)', 'maxOrder')
-          .getRawOne();
-        orderIndex = (maxOrderResult?.maxOrder ?? -1) + 1;
-      }
-
-      // Create article first to get its ID
-      const article = manager.create(Article, {
-        content,
-        lesson_id: 0, // Will be updated after lesson creation
-      });
-
-      // We need to save the lesson first to get its ID
-      const lesson = manager.create(Lesson, {
-        lesson_title: createLessonDto.lesson_title,
-        lesson_description: createLessonDto.lesson_description,
-        chapter_id: createLessonDto.chapter_id,
-        lesson_type: LessonType.ARTICLE,
-        ref_id: 0, // Will be updated
-        orderIndex: orderIndex,
-      });
-
-      const savedLesson = await manager.save(lesson);
-
-      // Now create the article with the lesson ID
-      article.lesson_id = savedLesson.lesson_id;
-      const savedArticle = await manager.save(article);
-
-      // Update the lesson with the article's ID
-      savedLesson.ref_id = savedArticle.article_id;
-      await manager.save(savedLesson);
-
-      return this.toResponseDto(savedLesson);
-    });
   }
 
   // Get all lessons for a chapter

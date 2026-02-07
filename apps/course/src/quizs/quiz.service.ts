@@ -23,7 +23,7 @@ export class QuizService {
     private readonly userXpRepository: Repository<UserXp>,
   ) { }
 
-  // --- Quizs (1 Lesson = 1 Question) ---
+  // สร้างหรืออัปเดต quiz สำหรับบทเรียน (1 บทเรียน = 1 ควิซ)
   async createQuizs(dto: CreateQuizsDto): Promise<Quizs> {
     const existing = await this.quizsRepository.findOne({
       where: { lessonId: dto.lesson_id },
@@ -47,6 +47,7 @@ export class QuizService {
     return this.quizsRepository.save(quiz);
   }
 
+  // ดึง quiz พร้อมสถานะสำหรับผู้ใช้
   async getQuizWithStatus(lessonId: number, userId: string) {
     const quiz = await this.quizsRepository.findOne({ where: { lessonId } });
     if (!quiz) {
@@ -78,6 +79,7 @@ export class QuizService {
     };
   }
 
+  // ตรวจคำตอบ quiz และบันทึกผล
   async checkAndSaveAnswer(lessonId: number, userId: string, answer: any) {
     const quiz = await this.quizsRepository.findOne({ where: { lessonId } });
     if (!quiz) throw new NotFoundException('Quiz not found');
@@ -101,6 +103,7 @@ export class QuizService {
     };
   }
 
+  // ข้าม quiz โดยบันทึกสถานะเป็น SKIPPED
   async skipQuiz(lessonId: number, userId: string) {
     let result = await this.resultRepository.findOne({ where: { lessonId, userId } });
     if (!result) {
@@ -110,6 +113,7 @@ export class QuizService {
     return this.resultRepository.save(result);
   }
 
+  // Quizs CRUD operations
   async findAllQuizs(): Promise<Array<{ quiz_id: number; lessonId: number; quizs_type: string; quizs_question: string }>> {
     const rows = await this.quizsRepository.find();
     return rows.map((q) => ({
@@ -121,12 +125,14 @@ export class QuizService {
     }));
   }
 
+  // หา quiz ตาม lesson ID
   async findOneQuizsByLesson(lessonId: number): Promise<Quizs> {
     const quiz = await this.quizsRepository.findOne({ where: { lessonId } });
     if (!quiz) throw new NotFoundException('Quiz not found');
     return quiz;
   }
 
+  // อัปเดต quiz ตาม lesson ID
   async updateQuizs(lessonId: number, dto: Partial<CreateQuizsDto>): Promise<Quizs> {
     const quiz = await this.findOneQuizsByLesson(lessonId);
     Object.assign(quiz, {
@@ -139,13 +145,15 @@ export class QuizService {
     return this.quizsRepository.save(quiz);
   }
 
+  // ลบ quiz ตาม lesson ID
   async removeQuizs(lessonId: number): Promise<void> {
     const quiz = await this.findOneQuizsByLesson(lessonId);
     await this.quizsRepository.remove(quiz);
   }
 
-  // --- Checkpoints ---
 
+  // Checkpoint CRUD operations
+  // สร้างหรืออัปเดต checkpoint สำหรับบทเรียน (1 บทเรียน = 1 checkpoint)
   async createCheckpoint(dto: CreateCheckpointDto): Promise<QuizsCheckpoint> {
     const lesson = await this.lessonRepository.findOne({
       where: { lesson_id: dto.lesson_id },
@@ -154,12 +162,13 @@ export class QuizService {
       throw new NotFoundException(`Lesson ${dto.lesson_id} not found`);
     }
 
-    // Prevent duplicates: treat checkpoint as 1-per-lesson (upsert by lessonId)
+    // ตรวจสอบว่ามี checkpoint อยู่แล้วหรือไม่
     const existing = await this.checkpointRepository.findOne({
       where: { lessonId: dto.lesson_id },
       order: { checkpointId: 'DESC' },
     });
 
+    // เตรียมข้อมูลสำหรับสร้างหรืออัปเดต checkpoint
     const data = {
       lessonId: dto.lesson_id,
       checkpointType: dto.checkpoint_type,
@@ -168,15 +177,18 @@ export class QuizService {
       checkpointAnswer: dto.checkpoint_answer,
     };
 
+    // ถ้ามีอยู่แล้วให้ Update
     if (existing) {
       Object.assign(existing, data);
       return this.checkpointRepository.save(existing);
     }
 
+    // ถ้าไม่มีให้สร้างใหม่
     const checkpoint = this.checkpointRepository.create(data);
     return this.checkpointRepository.save(checkpoint);
   }
 
+  // หา checkpoints ตาม lesson ID
   async findCheckpointsByLesson(
     lessonId: number,
   ): Promise<Array<{ id: number; lessonId: number; type: string; question: string; options?: string[] | null }>> {
@@ -190,6 +202,7 @@ export class QuizService {
     }));
   }
 
+  // ตรวจคำตอบ checkpoint และบันทึกผล
   async checkCheckpointAnswer(checkpointId: number, userId: string, answer: any) {
     const checkpoint = await this.checkpointRepository.findOne({ where: { checkpointId } });
     if (!checkpoint) throw new NotFoundException('Checkpoint not found');
@@ -200,7 +213,7 @@ export class QuizService {
       where: { lesson_id: checkpoint.lessonId },
     });
 
-    // If the lesson row is missing, still return correctness without XP.
+    // ถ้าไม่พบ lesson ให้คืนค่าความถูกต้องโดยไม่ให้ XP
     if (!lesson) {
       return {
         checkpointId: checkpoint.checkpointId,
@@ -216,12 +229,14 @@ export class QuizService {
       };
     }
 
+    // บันทึกหรืออัปเดต UserXp
     const chapterId = lesson.chapter_id;
 
     let userXp = await this.userXpRepository.findOne({
       where: { userId, chapterId },
     });
 
+    // ถ้าไม่มีเรคคอร์ด ให้สร้างใหม่
     if (!userXp) {
       userXp = this.userXpRepository.create({
         userId,
@@ -233,11 +248,13 @@ export class QuizService {
       });
     }
 
+    // คำนวณ XP ที่จะได้รับ (ให้ XP ครั้งเดียวเมื่อผ่าน)
     const wasXpAlreadyEarned = userXp.xpEarned > 0;
     const xpEarned = isCorrect && !wasXpAlreadyEarned ? 5 : 0;
 
     userXp.lastAttemptAt = new Date();
 
+    // อัปเดตสถานะถ้าผ่าน
     if (isCorrect) {
       userXp.checkpointStatus = 'COMPLETED';
       userXp.completedAt = new Date();
@@ -246,6 +263,7 @@ export class QuizService {
       }
     }
 
+    // บันทึกข้อมูล UserXp
     userXp = await this.userXpRepository.save(userXp);
 
     return {

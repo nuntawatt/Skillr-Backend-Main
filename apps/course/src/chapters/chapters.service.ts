@@ -16,7 +16,7 @@ export class ChaptersService {
 
   // Create a new chapter
   async create(createChapterDto: CreateChapterDto): Promise<ChapterResponseDto> {
-    // Verify level exists
+    // ตรวจสอบว่า level มีอยู่จริง
     const level = await this.levelRepository.findOne({
       where: { level_id: createChapterDto.level_id },
     });
@@ -25,16 +25,16 @@ export class ChaptersService {
       throw new NotFoundException(`Level with ID ${createChapterDto.level_id} not found`);
     }
 
-    // Auto-generate orderIndex if not provided
+    // สร้าง orderIndex อัตโนมัติถ้าไม่ได้ระบุ
     let orderIndex = createChapterDto.chapter_orderIndex;
     if (orderIndex === undefined) {
       const maxOrderResult = await this.chapterRepository
         .createQueryBuilder('chapter')
         .where('chapter.level_id = :levelId', { levelId: createChapterDto.level_id })
-        .select('MAX(chapter.order_index)', 'maxOrder') // Alias as maxOrder
+        .select('MAX(chapter.order_index)', 'maxOrder') // สมมติว่าชื่อคอลัมน์ในฐานข้อมูลคือ order_index
         .getRawOne();
 
-      // maxOrder may be a string depending on DB; coerce to number
+      // maxOrder อาจเป็นสตริงขึ้นอยู่กับฐานข้อมูล; แปลงเป็นตัวเลข
       const maxOrder = maxOrderResult && maxOrderResult.maxOrder !== null
         ? Number(maxOrderResult.maxOrder)
         : -1;
@@ -42,6 +42,7 @@ export class ChaptersService {
       orderIndex = maxOrder + 1;
     }
 
+    // สร้างบทใหม่
     const chapter = this.chapterRepository.create({
       chapter_title: createChapterDto.chapter_title,
       chapter_name: createChapterDto.chapter_name,
@@ -55,7 +56,7 @@ export class ChaptersService {
     return this.toResponseDto(saved);
   }
 
-  // Find all chapters for a level
+  // ดึงบททั้งหมดสำหรับ Level
   async findByLevel(levelId: number): Promise<ChapterResponseDto[]> {
     const chapters = await this.chapterRepository.find({
       where: { levelId },
@@ -65,15 +66,7 @@ export class ChaptersService {
     return chapters.map((c) => this.toResponseDto(c));
   }
 
-  // Find all chapters
-  async findAll(): Promise<ChapterResponseDto[]> {
-    const chapters = await this.chapterRepository.find({
-      order: { chapter_orderIndex: 'ASC' },
-    });
-    return chapters.map((c) => this.toResponseDto(c));
-  }
-
-  // Find a chapter by ID
+  // หา chapter โดยใช้ ID
   async findOne(id: number): Promise<ChapterResponseDto> {
     const chapter = await this.chapterRepository.findOne({
       where: { chapter_id: id },
@@ -86,16 +79,18 @@ export class ChaptersService {
     return this.toResponseDto(chapter);
   }
 
-  // Update a chapter by ID
+  // อัปเดตบทโดยใช้ ID
   async update(id: number, updateChapterDto: UpdateChapterDto): Promise<ChapterResponseDto> {
     const chapter = await this.chapterRepository.findOne({
       where: { chapter_id: id },
     });
 
+    // ตรวจสอบว่าพบบทหรือไม่
     if (!chapter) {
       throw new NotFoundException(`Chapter with ID ${id} not found`);
     }
 
+    // อัปเดตฟิลด์ที่ระบุ
     if (updateChapterDto.chapter_title !== undefined) {
       chapter.chapter_title = updateChapterDto.chapter_title;
     }
@@ -120,7 +115,7 @@ export class ChaptersService {
     return this.toResponseDto(saved);
   }
 
-  // Delete a chapter by ID
+  // ลบบทโดยใช้ ID
   async remove(id: number): Promise<void> {
     const chapter = await this.chapterRepository.findOne({
       where: { chapter_id: id },
@@ -133,7 +128,7 @@ export class ChaptersService {
     await this.chapterRepository.remove(chapter);
   }
 
-  // Reorder chapters within a level
+  // จัดลำดับบทภายใน Level
   async reorder(levelId: number, chapterIds: number[]): Promise<ChapterResponseDto[]> {
     const chapters = await this.chapterRepository.find({
       where: { levelId },
@@ -182,7 +177,7 @@ export class ChaptersService {
     return this.findByLevel(levelId);
   }
 
-  // Convert Chapter entity to ChapterResponseDto
+  // แปลง Chapter entity เป็น ChapterResponseDto
   private toResponseDto(chapter: Chapter): ChapterResponseDto {
     return {
       chapter_id: chapter.chapter_id,

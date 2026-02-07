@@ -13,8 +13,9 @@ export class ArticlesService {
     private readonly articleRepo: Repository<Article>,
     @InjectRepository(Lesson)
     private readonly lessonRepo: Repository<Lesson>,
-  ) {}
+  ) { }
 
+  // สร้างบทความใหม่
   async create(dto: CreateArticleDto): Promise<ArticleResponseDto> {
     const lesson = await this.lessonRepo.findOne({ where: { lesson_id: dto.lesson_id } });
     if (!lesson) throw new NotFoundException('lesson not found');
@@ -43,19 +44,24 @@ export class ArticlesService {
     return this.toResponseDto(saved);
   }
 
+  // หา article โดยใช้ ID
   async findOne(id: number): Promise<ArticleResponseDto> {
     const article = await this.articleRepo.findOne({ where: { article_id: id } });
+
     if (!article) throw new NotFoundException('article not found');
     return this.toResponseDto(article);
   }
 
+  // หา articles ทั้งหมด พร้อม pagination
   async findAll(params?: { limit?: number; offset?: number }): Promise<ArticleResponseDto[]> {
     const limit = params?.limit && params.limit > 0 ? Math.min(params.limit, 100) : 50;
     const offset = params?.offset && params.offset >= 0 ? params.offset : 0;
     const rows = await this.articleRepo.find({ take: limit, skip: offset, order: { updatedAt: 'DESC' } });
+    
     return rows.map((r) => this.toResponseDto(r));
   }
 
+  // แปลงเป็น ArticleResponseDto
   private toResponseDto(article: Article): ArticleResponseDto {
     const lessonIdValue = typeof (article as any).lesson_id === 'number' ? (article as any).lesson_id : (article as any).lesson?.lesson_id ?? null;
     return {

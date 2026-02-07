@@ -20,6 +20,9 @@ export class LevelsController {
     @Get()
     @ApiOperation({ summary: 'Get all levels for a course' })
     @ApiQuery({ name: 'course_id', required: true, type: Number })
+    @ApiOkResponse({ type: LevelResponseDto, isArray: true })
+    @ApiResponse({ status: 400, description: 'Invalid course ID' })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
     findByCourse(@Query('course_id', ParseIntPipe) course_id: number,): Promise<LevelResponseDto[]> {
         return this.levelsService.findByCourse(course_id);
     }

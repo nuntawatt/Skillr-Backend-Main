@@ -43,9 +43,11 @@ export class LessonProgress {
   @Column({ name: 'map_lesson_id', type: 'int', nullable: true })
   mapLessonId?: number | null;
 
+  // เวลาที่ผู้เรียนดูหรือเล่นไปถึง ณ ตอนล่าสุด (หน่วยวินาที)
   @Column({ name: 'position_seconds', type: 'int', nullable: true })
   positionSeconds?: number | null;
 
+  // ความยาวทั้งหมดของสื่อบทเรียน (หน่วยวินาที)
   @Column({ name: 'duration_seconds', type: 'int', nullable: true })
   durationSeconds?: number | null;
 
