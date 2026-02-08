@@ -46,7 +46,6 @@ export class ChaptersService {
     const chapter = this.chapterRepository.create({
       chapter_title: createChapterDto.chapter_title,
       chapter_name: createChapterDto.chapter_name,
-      chapter_type: createChapterDto.chapter_type,
       chapter_description: createChapterDto.chapter_description,
       levelId: createChapterDto.level_id,
       chapter_orderIndex: orderIndex,
@@ -97,10 +96,6 @@ export class ChaptersService {
 
     if (updateChapterDto.chapter_name !== undefined) {
       chapter.chapter_name = updateChapterDto.chapter_name;
-    }
-
-    if (updateChapterDto.chapter_type !== undefined) {
-      chapter.chapter_type = updateChapterDto.chapter_type;
     }
 
     if (updateChapterDto.chapter_description !== undefined) {
@@ -183,10 +178,11 @@ export class ChaptersService {
       chapter_id: chapter.chapter_id,
       chapter_title: chapter.chapter_title,
       chapter_name: chapter.chapter_name,
-      chapter_type: chapter.chapter_type,
       chapter_description: chapter.chapter_description,
       chapter_orderIndex: chapter.chapter_orderIndex,
       level_id: chapter.levelId,
+      createdAt: chapter.createdAt,
+      updatedAt: chapter.updatedAt,
     };
   }
 }

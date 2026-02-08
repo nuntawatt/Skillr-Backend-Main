@@ -12,10 +12,6 @@ export class UpdateChapterDto {
 
     @IsString()
     @IsOptional()
-    chapter_type?: string;
-
-    @IsString()
-    @IsOptional()
     @MaxLength(255)
     chapter_description?: string;
 

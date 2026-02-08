@@ -8,10 +8,10 @@ export enum LessonProgressStatus {
   SKIPPED = 'SKIPPED',
 }
 
-@Entity('lesson_progress')
-@Index('idx_lesson_progress_user_id', ['userId'])
-@Index('idx_lesson_progress_lesson_id', ['lessonId'])
-@Index('uq_lesson_progress_user_lesson', ['userId', 'lessonId'], { unique: true })
+@Entity('progress')
+@Index('idx_progress_user_id', ['userId'])
+@Index('idx_progress_lesson_id', ['lessonId'])
+@Index('uq_progress_user_lesson', ['userId', 'lessonId'], { unique: true })
 export class LessonProgress {
   @PrimaryGeneratedColumn({ name: 'lesson_progress_id', type: 'int' })
   lessonProgressId: number;
@@ -37,8 +37,6 @@ export class LessonProgress {
   @Column({ name: 'progress_percent', type: 'numeric', precision: 5, scale: 2, default: 0 })
   progressPercent: number;
 
-  @Column({ name: 'checkpoint', type: 'jsonb', nullable: true })
-  checkpoint?: unknown | null;
 
   @Column({ name: 'map_lesson_id', type: 'int', nullable: true })
   mapLessonId?: number | null;

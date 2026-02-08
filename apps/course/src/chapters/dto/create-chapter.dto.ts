@@ -12,11 +12,6 @@ export class CreateChapterDto {
     @IsNotEmpty()
     chapter_name: string;
 
-    @ApiProperty({ description: 'Type of the chapter', example: 'video' })
-    @IsString()
-    @IsNotEmpty()
-    chapter_type: string;
-
     @ApiPropertyOptional({ description: 'Description of the chapter', example: 'This chapter covers the basics of TypeScript.' })
     @IsString()
     @IsOptional()

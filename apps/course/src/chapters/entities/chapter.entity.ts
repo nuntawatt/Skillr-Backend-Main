@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, Index, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, Index, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Level } from '../../levels/entities/level.entity';
 import { Lesson } from '../../lessons/entities/lesson.entity';
 
@@ -14,9 +14,6 @@ export class Chapter {
   @Column({ name: 'chapter_name', type: 'varchar', length: 100 })
   chapter_name: string;
 
-  @Column({ name: 'chapter_type', type: 'varchar', length: 50 })
-  chapter_type: string;
-
   @Column({ name: 'chapter_description', type: 'text', nullable: true })
   chapter_description?: string;
 
@@ -29,6 +26,12 @@ export class Chapter {
 
   @Column({ name: 'level_id', type: 'int' })
   levelId: number;
+
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+  createdAt: Date;
+
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
+  updatedAt: Date;
 
   @OneToMany(() => Lesson, (lesson) => lesson.chapter, { cascade: true })
   lessons: Lesson[];
