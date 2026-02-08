@@ -69,27 +69,32 @@ export class ProgressService {
     userId: string,
     lessonId: number,
   ): Promise<LessonProgressResponseDto | null> {
+    // ตรวจสอบว่ามีบทเรียน (lesson) อยู่จริงก่อน
+    const lesson = await this.lessonRepository.findOne({
+      where: { lesson_id: lessonId },
+    });
+
+    // ถ้าไม่พบบทเรียน ให้โยน 404 (Lesson not found)
+    if (!lesson) {
+      throw new NotFoundException(`Lesson with ID ${lessonId} not found`);
+    }
+
     // ดึงแถว progress สำหรับบทเรียนและผู้ใช้ที่ระบุ
     const row = await this.lessonProgressRepository.findOne({
       where: { userId, lessonId },
     });
 
+    // ถ้าไม่มีแถว progress ให้คืน 404
     if (!row) {
-      return null;
+      throw new NotFoundException(`Progress for lesson ${lessonId} not found`);
     }
 
-    // ดึงบทเรียนและบทที่เกี่ยวข้อง
-    const lesson = await this.lessonRepository.findOne({
-      where: { lesson_id: lessonId },
-    });
-
-    // ถ้าไม่พบบทเรียน ให้โยนข้อผิดพลาด
+    // ดึงบทที่เกี่ยวข้อง
     const chapterId = lesson?.chapter_id ?? null;
     const chapter = chapterId != null ? await this.chapterRepository.findOne({
       where: { chapter_id: chapterId },
     })
       : null;
-
 
     const levelId = chapter?.levelId ?? null;
 
