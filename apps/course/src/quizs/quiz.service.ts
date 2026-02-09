@@ -255,7 +255,7 @@ export class QuizService {
         checkpoint_explanation: checkpoint.checkpointExplanation ?? null,
         feedback: isCorrect
           ? 'ผ่านแล้ว แต่ไม่สามารถให้ XP ได้ (ไม่พบ lesson/chapter ของ checkpoint นี้)'
-          : 'ตอบผิด ลองใหม่อีกครั้ง',
+          : 'เกือบถูกแล้ว !',
         checkpoint_status: 'PENDING',
       };
     }
@@ -305,7 +305,7 @@ export class QuizService {
       score,
       correct_answer: checkpoint.checkpointAnswer,
       checkpoint_explanation: checkpoint.checkpointExplanation ?? null,
-      feedback: isCorrect ? 'ผ่านแล้ว' : 'ตอบผิด ลองใหม่อีกครั้ง',
+      feedback: isCorrect ? 'ยอดเยี่ยมมาก !' : 'เกือบถูกแล้ว !',
       checkpoint_status: userXp.checkpointStatus,
     };
   }
