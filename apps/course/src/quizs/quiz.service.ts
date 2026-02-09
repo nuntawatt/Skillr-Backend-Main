@@ -54,8 +54,6 @@ export class QuizService {
       throw new NotFoundException(`Quiz for lesson ${lessonId} not found`);
     }
 
-    const checkpoints = await this.checkpointRepository.find({ where: { lessonId } });
-
     const result = await this.resultRepository.findOne({
       where: { lessonId, userId },
     });
@@ -70,12 +68,6 @@ export class QuizService {
       lesson_id: quiz.lessonId, 
       quizs_answer: showAnswer ? quiz.quizsAnswer : null,
       quizs_explanation: showAnswer ? quiz.quizsExplanation : null,
-      checkpoints: checkpoints.map((c) => ({
-        checkpoint_id: c.checkpointId,
-        checkpoint_type: c.checkpointType,
-        checkpoint_questions: c.checkpointQuestions,
-        checkpoint_option: c.checkpointOption ?? null,
-      })),
     };
   }
 
@@ -175,6 +167,7 @@ export class QuizService {
       checkpointQuestions: dto.checkpoint_questions,
       checkpointOption: dto.checkpoint_option,
       checkpointAnswer: dto.checkpoint_answer,
+      checkpointExplanation: dto.checkpoint_explanation,
     };
 
     // ถ้ามีอยู่แล้วให้ Update
@@ -191,7 +184,7 @@ export class QuizService {
   // หา checkpoints ตาม lesson ID
   async findCheckpointsByLesson(
     lessonId: number,
-  ): Promise<Array<{ id: number; lessonId: number; type: string; question: string; options?: string[] | null }>> {
+  ): Promise<Array<{ id: number; lessonId: number; type: string; question: string; options?: string[]  | null; checkpoint_answer: any; checkpoint_explanation?: string | null }>> {
     const rows = await this.checkpointRepository.find({ where: { lessonId } });
     return rows.map((c) => ({
       id: c.checkpointId,
@@ -199,6 +192,8 @@ export class QuizService {
       type: c.checkpointType,
       question: c.checkpointQuestions,
       options: c.checkpointOption ?? null,
+      checkpoint_answer: c.checkpointAnswer,
+      checkpoint_explanation: c.checkpointExplanation ?? null,
     }));
   }
 
@@ -222,6 +217,7 @@ export class QuizService {
         isCorrect,
         score,
         correctAnswer: checkpoint.checkpointAnswer,
+        checkpoint_explanation: checkpoint.checkpointExplanation ?? null,
         feedback: isCorrect
           ? 'ผ่านแล้ว แต่ไม่สามารถให้ XP ได้ (ไม่พบ lesson/chapter ของ checkpoint นี้)'
           : 'ตอบผิด ลองใหม่อีกครั้ง',
@@ -273,6 +269,7 @@ export class QuizService {
       isCorrect,
       score,
       correctAnswer: checkpoint.checkpointAnswer,
+      checkpoint_explanation: checkpoint.checkpointExplanation ?? null,
       feedback: isCorrect ? 'ผ่านแล้ว' : 'ตอบผิด ลองใหม่อีกครั้ง',
       checkpointStatus: userXp.checkpointStatus,
     };

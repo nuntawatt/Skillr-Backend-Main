@@ -18,6 +18,9 @@ export class QuizsCheckpoint {
   @Column({ name: 'checkpoint_answer', type: 'jsonb' })
   checkpointAnswer: any;
 
+  @Column({ name: 'checkpoint_explanation', type: 'text', nullable: true })
+  checkpointExplanation?: string | null;
+
   @Column({ name: 'lesson_id' })
   lessonId: number;
 

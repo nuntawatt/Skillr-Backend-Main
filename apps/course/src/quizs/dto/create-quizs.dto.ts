@@ -55,4 +55,9 @@ export class CreateCheckpointDto {
   @ApiProperty({ example: '2' })
   @IsNotEmpty()
   checkpoint_answer: any;
+
+  @ApiPropertyOptional({ example: 'คำอธิบาย/เฉลยของ checkpoint' })
+  @IsOptional()
+  @IsString()
+  checkpoint_explanation?: string;
 }
