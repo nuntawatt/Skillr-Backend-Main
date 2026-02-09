@@ -17,7 +17,7 @@ export class ProgressController {
     constructor(private readonly progressService: ProgressService) { }
 
     @Get('lessons')
-    @ApiOperation({ summary: 'Get all current user lesson_progress rows' })
+    @ApiOperation({ summary: 'ดึงข้อมูลความคืบหน้าของบทเรียนทั้งหมด' })
     @ApiOkResponse({ type: [LessonProgressResponseDto] })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     getAllLessonProgress(
@@ -27,7 +27,7 @@ export class ProgressController {
     }
 
     @Get('lessons/:lessonId')
-    @ApiOperation({ summary: 'Get current user progress for a lesson' })
+    @ApiOperation({ summary: 'ดึงข้อมูลความคืบหน้าของบทเรียน' })
     @ApiParam({ name: 'lessonId', type: Number })
     @ApiOkResponse({ type: LessonProgressResponseDto, description: 'Lesson progress (or null if not started)' })
     @ApiResponse({ status: 404, description: 'Lesson not found' })
@@ -40,7 +40,7 @@ export class ProgressController {
     }
 
     @Put('lessons/:lessonId')
-    @ApiOperation({ summary: 'Upsert current user progress for a lesson' })
+    @ApiOperation({ summary: 'เพิ่มหรือแก้ไขความคืบหน้าของบทเรียน' })
     @ApiParam({ name: 'lessonId', type: Number })
     @ApiOkResponse({ type: LessonProgressResponseDto })
     @ApiResponse({ status: 400, description: 'Bad Request' })
@@ -54,7 +54,7 @@ export class ProgressController {
     }
 
     @Post('lessons/:lessonId/skip')
-    @ApiOperation({ summary: 'Skip a lesson and unlock next lesson' })
+    @ApiOperation({ summary: 'ข้ามบทเรียนและปลดล็อกบทเรียนถัดไป' })
     @ApiParam({ name: 'lessonId', type: Number })
     @ApiOkResponse({ type: SkipLessonResponseDto })
     @ApiResponse({ status: 400, description: 'Bad Request' })
@@ -67,7 +67,7 @@ export class ProgressController {
     }
 
     @Get('chapters/:chapterId')
-    @ApiOperation({ summary: 'Get current user progress for a chapter' })
+    @ApiOperation({ summary: 'ดึงข้อมูลความคืบหน้าของบทเรียน' })
     @ApiParam({ name: 'chapterId', type: Number })
     @ApiOkResponse({ type: ChapterProgressDto })
     @ApiResponse({ status: 404, description: 'Chapter not found' })
@@ -80,7 +80,7 @@ export class ProgressController {
     }
 
     @Get('chapters/:chapterId/roadmap')
-    @ApiOperation({ summary: 'Get chapter roadmap with item states (Completed/Current/Locked)' })
+    @ApiOperation({ summary: 'ดึงแผนที่เส้นทางของบทเรียนพร้อมสถานะของแต่ละรายการ Completed/Current/Locked' })
     @ApiParam({ name: 'chapterId', type: Number, example: 1 })
     @ApiOkResponse({ type: ChapterRoadmapDto })
     @ApiResponse({ status: 404, description: 'Chapter not found' })

@@ -10,7 +10,7 @@ export class CoursesController {
   constructor(private readonly coursesService: CoursesService) { }
 
   @Post()
-  @ApiOperation({ summary: 'Create a new course' })
+  @ApiOperation({ summary: 'สร้างคอร์สใหม่' })
   @ApiCreatedResponse({ type: CourseResponseDto, description: 'Course created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
@@ -19,7 +19,7 @@ export class CoursesController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all courses with optional filters' })
+  @ApiOperation({ summary: 'ดึงข้อมูลคอร์สทั้งหมดพร้อมตัวกรองที่เลือกได้' })
   @ApiOkResponse({ type: CourseResponseDto, isArray: true })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   findAll(): Promise<CourseResponseDto[]> {
@@ -27,7 +27,7 @@ export class CoursesController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get a course by ID' })
+  @ApiOperation({ summary: 'ดึงข้อมูลคอร์สด้วย ID' })
   @ApiParam({ name: 'id', type: Number })
   @ApiOkResponse({ type: CourseResponseDto })
   @ApiResponse({ status: 200, description: 'Course retrieved successfully' })
@@ -38,7 +38,7 @@ export class CoursesController {
   }
 
   @Get(':id/structure')
-  @ApiOperation({ summary: 'Get the full nested structure of a course' })
+  @ApiOperation({ summary: 'ดึงโครงสร้างแบบ nested ทั้งหมดของคอร์ส' })
   @ApiParam({ name: 'id', type: Number })
   @ApiOkResponse({ type: CourseStructureResponseDto })
   @ApiResponse({ status: 200, description: 'Course structure retrieved successfully' })
@@ -49,7 +49,7 @@ export class CoursesController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update a course by ID' })
+  @ApiOperation({ summary: 'แก้ไขคอร์สด้วย ID' })
   @ApiParam({ name: 'id', type: Number })
   @ApiOkResponse({ type: CourseResponseDto })
   @ApiResponse({ status: 200, description: 'Course updated successfully' })
@@ -62,7 +62,7 @@ export class CoursesController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete a course by ID' })
+  @ApiOperation({ summary: 'ลบคอร์สด้วย ID' })
   @ApiParam({ name: 'id', type: Number })
   @ApiNoContentResponse({ description: 'Course deleted successfully' })
   @ApiResponse({ status: 404, description: 'Course not found' })

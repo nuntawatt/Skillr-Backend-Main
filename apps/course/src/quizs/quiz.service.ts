@@ -68,8 +68,8 @@ export class QuizService {
       quizs_question: quiz.quizsQuestions,
       quizs_option: quiz.quizsOption,
       lesson_id: quiz.lessonId, 
-      quizsAnswer: showAnswer ? quiz.quizsAnswer : null,
-      quizsExplanation: showAnswer ? quiz.quizsExplanation : null,
+      quizs_answer: showAnswer ? quiz.quizsAnswer : null,
+      quizs_explanation: showAnswer ? quiz.quizsExplanation : null,
       checkpoints: checkpoints.map((c) => ({
         checkpoint_id: c.checkpointId,
         checkpoint_type: c.checkpointType,
@@ -99,7 +99,7 @@ export class QuizService {
     return {
       isCorrect,
       correctAnswer: quiz.quizsAnswer,
-      quizsExplanation: quiz.quizsExplanation,
+      quizs_explanation: quiz.quizsExplanation,
     };
   }
 
