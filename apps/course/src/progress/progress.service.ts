@@ -423,9 +423,8 @@ export class ProgressService {
         .filter(
           (p) =>
             p.status === LessonProgressStatus.COMPLETED ||
-            p.status === LessonProgressStatus.SKIPPED,
-        )
-        .map((p) => p.lessonId),
+            p.status === LessonProgressStatus.SKIPPED)
+        .map((p) => p.lessonId)
     );
 
     const completedItems = completedSet.size;
@@ -433,14 +432,28 @@ export class ProgressService {
     const totalItems = lessons.length;
 
     // คำนวณเปอร์เซ็นต์ความคืบหน้า
-    const sumPercent = lessons.reduce((sum, lesson) => {
-      const progress = progressByLessonId.get(lesson.lesson_id);
-      const pct = progress ? Number(progress.progressPercent) : 0;
-      return sum + Math.max(0, Math.min(100, Number.isFinite(pct) ? pct : 0));
-    }, 0);
+    // นับเฉพาะบทที่มีสถานะ COMPLETED หรือ SKIPPED (ยกเว้น IN_PROGRESS และ LOCKED)
+    let sumPercent = 0;
+    let includedCount = 0;
 
-    // คำนวณเปอร์เซ็นต์รวม (คืนเป็นจำนวนเต็ม ไม่มีทศนิยม)
-    const percent = totalItems > 0 ? Math.round(sumPercent / totalItems) : 0;
+    for (const lesson of lessons) {
+      const progress = progressByLessonId.get(lesson.lesson_id);
+      const status = progress?.status ?? LessonProgressStatus.LOCKED;
+
+      if (
+        status !== LessonProgressStatus.COMPLETED &&
+        status !== LessonProgressStatus.SKIPPED
+      ) {
+        continue;
+      }
+
+      // COMPLETED/SKIPPED = 100
+      sumPercent += 100;
+      includedCount += 1;
+    }
+
+    // คืนค่าเปอร์เซ็นต์เฉลี่ยเป็นจำนวนเต็ม (ถ้าไม่มีรายการที่นับ ให้เป็น 0)
+    const percent = includedCount > 0 ? Math.round(sumPercent / includedCount) : 0;
 
     // ค้นหาบทเรียนถัดไปที่ควรดำเนินการต่อ
     return {
@@ -454,7 +467,7 @@ export class ProgressService {
             progressByLessonId.get(l.lesson_id)?.status ===
             LessonProgressStatus.IN_PROGRESS,
         );
-        
+
         // ถ้ามีบทเรียนที่กำลังดำเนินการอยู่ ให้คืนค่า ID ของบทเรียนนั้น
         if (inProgress) {
           return inProgress.lesson_id;
@@ -464,7 +477,7 @@ export class ProgressService {
         const firstNotDone = lessons.find(
           (l) => !completedSet.has(l.lesson_id),
         );
-        
+
         if (!firstNotDone) {
           return null;
         }
@@ -610,9 +623,9 @@ export class ProgressService {
           progress?.progressPercent != null
             ? Math.round(Number(progress.progressPercent))
             : (status === LessonProgressStatus.COMPLETED ||
-                status === LessonProgressStatus.SKIPPED
-                ? 100
-                : 0),
+              status === LessonProgressStatus.SKIPPED
+              ? 100
+              : 0),
         positionSeconds: progress?.positionSeconds ?? null,
         durationSeconds: progress?.durationSeconds ?? null,
         completedAt: progress?.completedAt ?? null,
@@ -623,14 +636,31 @@ export class ProgressService {
     const totalItems = lessons.length;
 
     // คำนวณเปอร์เซ็นต์ความคืบหน้าโดยรวม
-    // รวมเปอร์เซ็นต์จาก items (แต่ละ item.progressPercent เป็น integer)
-    const progressPercent =
-      totalItems > 0
-        ? Math.round(
-            items.reduce((sum, item) => sum + (Number(item.progressPercent) || 0), 0) /
-              totalItems,
-          )
-        : 0;
+    // นับเฉพาะรายการที่สถานะเป็น COMPLETED หรือ SKIPPED
+    const roadmapAcc = items.reduce(
+      (acc, item) => {
+        // นับเฉพาะรายการที่เป็น COMPLETED หรือ SKIPPED
+        // (ข้ามรายการที่ยัง IN_PROGRESS หรือ LOCKED)
+        if (
+          item.status !== LessonProgressStatus.COMPLETED &&
+          item.status !== LessonProgressStatus.SKIPPED
+        ) {
+          // ข้ามรายการนี้
+          return acc;
+        }
+
+        // รวมค่า progressPercent (fallback เป็น 0 ถ้าไม่มีค่า)
+        acc.sum += Number(item.progressPercent) || 0;
+        // เพิ่มตัวนับรายการที่ถูกนับ
+        acc.count += 1;
+        return acc;
+      },
+      // ค่าเริ่มต้น accumulator
+      { sum: 0, count: 0 },
+    );
+
+    // ถ้าไม่มีรายการที่นับ ให้คืน 0 มิฉะนั้นคืนค่าเฉลี่ยปัดเป็นจำนวนเต็ม
+    const progressPercent = roadmapAcc.count > 0 ? Math.round(roadmapAcc.sum / roadmapAcc.count) : 0;
 
     return {
       chapterId,
@@ -640,7 +670,6 @@ export class ProgressService {
       items,
     };
   }
-
   // Mapping
   private toResponse(
     row: LessonProgress,
