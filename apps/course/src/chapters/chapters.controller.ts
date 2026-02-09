@@ -9,7 +9,7 @@ export class ChaptersController {
     constructor(private readonly chaptersService: ChaptersService) { }
 
     @Post()
-    @ApiOperation({ summary: 'Create a new chapter' })
+    @ApiOperation({ summary: 'สร้างบทใหม่' })
     @ApiCreatedResponse({ type: ChapterResponseDto, description: 'Chapter created successfully' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     create(@Body() dto: CreateChapterDto): Promise<ChapterResponseDto> {
@@ -17,7 +17,7 @@ export class ChaptersController {
     }
 
     @Get()
-    @ApiOperation({ summary: 'Get all chapters for a level' })
+    @ApiOperation({ summary: 'ดึงบททั้งหมดสำหรับระดับ' })
     @ApiQuery({ name: 'level_id', type: Number, required: true, description: 'ID of the level to fetch chapters for' })
     @ApiOkResponse({ type: ChapterResponseDto, isArray: true })
     @ApiResponse({ status: 500, description: 'Internal server error' })
@@ -26,7 +26,7 @@ export class ChaptersController {
     }
 
     @Get(':id')
-    @ApiOperation({ summary: 'Get a chapter by ID' })
+    @ApiOperation({ summary: 'ดึงบทตาม ID' })
     @ApiParam({ name: 'id', type: Number })
     @ApiOkResponse({ type: ChapterResponseDto })
     @ApiResponse({ status: 404, description: 'Chapter not found' })
@@ -36,7 +36,7 @@ export class ChaptersController {
     }
 
     @Patch(':id')
-    @ApiOperation({ summary: 'Update a chapter by ID' })
+    @ApiOperation({ summary: 'อัปเดตบทตาม ID' })
     @ApiParam({ name: 'id', type: Number })
     @ApiOkResponse({ type: ChapterResponseDto })
     @ApiResponse({ status: 404, description: 'Chapter not found' })
@@ -47,7 +47,7 @@ export class ChaptersController {
 
     @Delete(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
-    @ApiOperation({ summary: 'Delete a chapter by ID' })
+    @ApiOperation({ summary: 'ลบบทตาม ID' })
     @ApiParam({ name: 'id', type: Number })
     @ApiNoContentResponse({ description: 'Chapter deleted successfully' })
     @ApiResponse({ status: 404, description: 'Chapter not found' })
@@ -57,7 +57,7 @@ export class ChaptersController {
     }
 
     @Post('reorder')
-    @ApiOperation({ summary: 'Reorder chapters within a level' })
+    @ApiOperation({ summary: 'จัดลำดับบทภายในระดับ' })
     @ApiOkResponse({ type: ChapterResponseDto, isArray: true })
     @ApiResponse({ status: 400, description: 'Bad Request' })
     @ApiResponse({ status: 500, description: 'Internal server error' })

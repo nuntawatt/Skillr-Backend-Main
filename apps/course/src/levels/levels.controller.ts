@@ -9,7 +9,7 @@ export class LevelsController {
     constructor(private readonly levelsService: LevelsService) { }
 
     @Post()
-    @ApiOperation({ summary: 'Create a new level' })
+    @ApiOperation({ summary: 'สร้างระดับใหม่' })
     @ApiCreatedResponse({ type: LevelResponseDto, description: 'Level created successfully' })
     @ApiResponse({ status: 400, description: 'Invalid input data' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
@@ -18,7 +18,7 @@ export class LevelsController {
     }
 
     @Get()
-    @ApiOperation({ summary: 'Get all levels for a course' })
+    @ApiOperation({ summary: 'ดึงระดับทั้งหมดสำหรับคอร์ส' })
     @ApiQuery({ name: 'course_id', required: true, type: Number })
     @ApiOkResponse({ type: LevelResponseDto, isArray: true })
     @ApiResponse({ status: 400, description: 'Invalid course ID' })
@@ -28,7 +28,7 @@ export class LevelsController {
     }
 
     @Get(':id')
-    @ApiOperation({ summary: 'Get a level by ID' })
+    @ApiOperation({ summary: 'ดึงระดับตาม ID' })
     @ApiParam({ name: 'id', type: Number })
     @ApiOkResponse({ type: LevelResponseDto })
     @ApiResponse({ status: 404, description: 'Level not found' })
@@ -38,7 +38,7 @@ export class LevelsController {
     }
 
     @Patch(':id')
-    @ApiOperation({ summary: 'Update a level by ID' })
+    @ApiOperation({ summary: 'อัปเดตระดับตาม ID' })
     @ApiParam({ name: 'id', type: Number })
     @ApiOkResponse({ type: LevelResponseDto })
     @ApiResponse({ status: 404, description: 'Level not found' })
@@ -49,7 +49,7 @@ export class LevelsController {
 
     @Delete(':id')
     @HttpCode(HttpStatus.NO_CONTENT)
-    @ApiOperation({ summary: 'Delete a level by ID' })
+    @ApiOperation({ summary: 'ลบระดับตาม ID' })
     @ApiParam({ name: 'id', type: Number })
     @ApiNoContentResponse({ description: 'Level deleted successfully' })
     @ApiResponse({ status: 404, description: 'Level not found' })
@@ -59,7 +59,7 @@ export class LevelsController {
     }
 
     @Post('reorder')
-    @ApiOperation({ summary: 'Reorder levels within a course' })
+    @ApiOperation({ summary: 'จัดลำดับระดับภายในคอร์ส' })
     @ApiOkResponse({ type: LevelResponseDto, isArray: true })
     @ApiResponse({ status: 400, description: 'Bad Request' })
     @ApiResponse({ status: 500, description: 'Internal server error' })

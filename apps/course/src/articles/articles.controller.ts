@@ -10,7 +10,7 @@ export class ArticlesController {
     constructor(private readonly svc: ArticlesService) { }
 
     @Post()
-    @ApiOperation({ summary: 'Create an article (JSON body) - image_id should come from media-service' })
+    @ApiOperation({ summary: 'สร้างบทความใหม่' })
     @ApiBody({
         type: CreateArticleDto,
         examples: {
@@ -35,7 +35,7 @@ export class ArticlesController {
     }
 
     @Get()
-    @ApiOperation({ summary: 'Get all articles with optional filters' })
+    @ApiOperation({ summary: 'ดึงบทความทั้งหมดพร้อมตัวกรองที่เลือกได้' })
     @ApiOkResponse({ type: ArticleResponseDto, isArray: true })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     findAll(): Promise<ArticleResponseDto[]> {
@@ -43,7 +43,7 @@ export class ArticlesController {
     }
 
     @Get(':id')
-    @ApiOperation({ summary: 'Get article by id' })
+    @ApiOperation({ summary: 'ดึงบทความตาม ID' })
     @ApiParam({ name: 'id', description: 'Article id', type: 'number' })
     @ApiResponse({ status: 200, description: 'Article retrieved successfully' })
     @ApiResponse({ status: 404, description: 'Article not found' })

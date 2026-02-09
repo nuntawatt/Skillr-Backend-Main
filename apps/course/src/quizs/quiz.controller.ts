@@ -15,7 +15,7 @@ export class QuizAdminController {
   constructor(private readonly quizService: QuizService) { }
 
   @Post()
-  @ApiOperation({ summary: 'Create a new quiz (1 Lesson = 1 Question)' })
+  @ApiOperation({ summary: 'สร้างหรืออัปเดต quiz สำหรับบทเรียน (1 บทเรียน = 1 ควิซ)' })
   @ApiBody({
     type: CreateQuizsDto,
     examples: {
@@ -51,7 +51,7 @@ export class QuizAdminController {
   }
 
   @Post('checkpoint')
-  @ApiOperation({ summary: 'Create a new checkpoint' })
+  @ApiOperation({ summary: 'สร้างหรืออัปเดต checkpoint สำหรับบทเรียน (1 บทเรียน = 1 checkpoint)' })
   @ApiBody({
     type: CreateCheckpointDto,
     examples: {
@@ -75,7 +75,7 @@ export class QuizAdminController {
   }
 
   @Patch('lesson/:lessonId')
-  @ApiOperation({ summary: 'Update quiz by lesson id' })
+  @ApiOperation({ summary: 'อัปเดต quiz ตาม lesson ID' })
   @ApiResponse({ status: 200, description: 'Quiz updated successfully' })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
@@ -84,7 +84,7 @@ export class QuizAdminController {
   }
 
   @Delete('lesson/:lessonId')
-  @ApiOperation({ summary: 'Delete quiz by lesson id' })
+  @ApiOperation({ summary: 'ลบ quiz ตาม lesson ID' })
   @ApiResponse({ status: 204, description: 'Quiz deleted successfully' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   removeQuiz(@Param('lessonId') lessonId: string) {
@@ -101,7 +101,7 @@ export class QuizController {
   constructor(private readonly quizService: QuizService) { }
 
   @Get()
-  @ApiOperation({ summary: 'Get all quizzes' })
+  @ApiOperation({ summary: 'ดึงรายการ quiz ทั้งหมด' })
   @ApiResponse({ status: 200, description: 'List of quizzes retrieved successfully' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   findAllQuizzes() {
@@ -109,7 +109,7 @@ export class QuizController {
   }
 
   @Get('lesson/:lessonId')
-  @ApiOperation({ summary: 'Get quiz with status by lesson id' })
+  @ApiOperation({ summary: 'ดึง quiz พร้อมสถานะตาม lesson ID' })
   @ApiResponse({ status: 200, description: 'Quiz retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Quiz not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
@@ -121,7 +121,7 @@ export class QuizController {
   }
 
   @Get('checkpoint/:lessonId')
-  @ApiOperation({ summary: 'Get checkpoints by lesson id' })
+  @ApiOperation({ summary: 'ดึง checkpoint ตาม lesson ID' })
   @ApiResponse({ status: 200, description: 'Checkpoints retrieved successfully' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   findCheckpointsByLesson(@Param('lessonId') lessonId: string) {
@@ -129,7 +129,7 @@ export class QuizController {
   }
 
   @Post('lesson/:lessonId/check')
-  @ApiOperation({ summary: 'Check and Save answer for quiz by lesson id' })
+  @ApiOperation({ summary: 'ตรวจคำตอบ quiz และบันทึกผล' })
   @ApiBody({
     schema: {
       type: 'object',
@@ -162,7 +162,7 @@ export class QuizController {
   }
 
   @Post('lesson/:lessonId/skip')
-  @ApiOperation({ summary: 'Skip quiz and mark as completed' })
+  @ApiOperation({ summary: 'ข้าม quiz และบันทึกสถานะเป็น completed' })
   @ApiResponse({ status: 200, description: 'Quiz skipped successfully' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   skipQuiz(@Param('lessonId') lessonId: string, @CurrentUserId() userId: string) {
@@ -170,7 +170,7 @@ export class QuizController {
   }
 
   @Post('checkpoint/:id/check')
-  @ApiOperation({ summary: 'Check answer for checkpoint by id' })
+  @ApiOperation({ summary: 'ตรวจคำตอบ checkpoint ตาม id' })
   @ApiBody({
     schema: {
       type: 'object',

@@ -9,7 +9,7 @@ export class LessonsController {
   constructor(private readonly lessonsService: LessonsService) { }
 
   @Post()
-  @ApiOperation({ summary: 'Create a new lesson' })
+  @ApiOperation({ summary: 'สร้างบทเรียนใหม่' })
   @ApiCreatedResponse({ type: LessonResponseDto, description: 'Lesson created successfully' })
   @ApiResponse({ status: 400, description: 'Bad Request' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
@@ -18,7 +18,7 @@ export class LessonsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all lessons for a chapter' })
+  @ApiOperation({ summary: 'ดึงบทเรียนทั้งหมดสำหรับบท' })
   @ApiQuery({ name: 'chapterId', required: true, type: Number })
   @ApiOkResponse({ type: LessonResponseDto, isArray: true })
   @ApiResponse({ status: 400, description: 'Bad Request' })
@@ -28,7 +28,7 @@ export class LessonsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get a lesson by ID' })
+  @ApiOperation({ summary: 'ดึงบทเรียนตาม ID' })
   @ApiParam({ name: 'id', type: Number })
   @ApiOkResponse({ type: LessonResponseDto })
   @ApiResponse({ status: 404, description: 'Lesson not found' })
@@ -38,7 +38,7 @@ export class LessonsController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'Update a lesson by ID' })
+  @ApiOperation({ summary: 'อัปเดตบทเรียนตาม ID' })
   @ApiParam({ name: 'id', type: Number })
   @ApiOkResponse({ type: LessonResponseDto })
   @ApiResponse({ status: 404, description: 'Lesson not found' })
@@ -49,7 +49,7 @@ export class LessonsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete a lesson by ID' })
+  @ApiOperation({ summary: 'ลบบทเรียนตาม ID' })
   @ApiParam({ name: 'id', type: Number })
   @ApiNoContentResponse({ description: 'Lesson deleted successfully' })
   @ApiResponse({ status: 404, description: 'Lesson not found' })
@@ -59,7 +59,7 @@ export class LessonsController {
   }
 
   @Post('reorder')
-  @ApiOperation({ summary: 'Reorder lessons within a chapter' })
+  @ApiOperation({ summary: 'จัดลำดับบทเรียนภายในบท' })
   @ApiOkResponse({ type: LessonResponseDto, isArray: true })
   @ApiResponse({ status: 400, description: 'Bad Request' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
