@@ -315,11 +315,12 @@ export class QuizService {
       throw new NotFoundException('Checkpoint not found');
     }
 
-    // ✅ เทียบคำตอบแบบถูกต้องจริง
+    // เทียบคำตอบแบบถูกต้องจริง
     const isCorrect = isEqual(
       checkpoint.checkpointAnswer,
       answer,
     );
+
 
     const score = isCorrect ? 5 : 0;
 
@@ -396,10 +397,23 @@ export class QuizService {
   }
 
 }
+
 function normalize(value: any): any {
-  if (Array.isArray(value)) {
-    return [...value].sort();
+  // แปลง "2" -> 2
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+
+    if (!isNaN(Number(trimmed))) {
+      return Number(trimmed);
+    }
+
+    return trimmed.toLowerCase();
   }
+
+  if (Array.isArray(value)) {
+    return value.map(normalize).sort();
+  }
+
   if (value && typeof value === 'object') {
     return Object.keys(value)
       .sort()
@@ -408,6 +422,7 @@ function normalize(value: any): any {
         return acc;
       }, {} as any);
   }
+
   return value;
 }
 
