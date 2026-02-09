@@ -163,8 +163,8 @@ export class ProgressService {
     // ตรวจสอบให้แน่ใจว่าเปอร์เซ็นต์อยู่ในช่วง 0-100
     if (nextPercent !== undefined && !Number.isNaN(nextPercent)) {
       const clamped = Math.max(0, Math.min(100, Number(nextPercent)));
-      // เก็บค่าเป็นทศนิยมปัด 2 ตำแหน่ง
-      row.progressPercent = Math.round(clamped * 100) / 100;
+      // เก็บค่าเป็นจำนวนเต็ม (ปัดให้เป็น integer)
+      row.progressPercent = Math.round(clamped);
     }
 
     // อัปเดตสถานะถ้ามี
@@ -439,9 +439,8 @@ export class ProgressService {
       return sum + Math.max(0, Math.min(100, Number.isFinite(pct) ? pct : 0));
     }, 0);
 
-    // คำนวณเปอร์เซ็นต์รวม
-    const percent =
-      totalItems > 0 ? Math.round((sumPercent / totalItems) * 100) / 100 : 0;
+    // คำนวณเปอร์เซ็นต์รวม (คืนเป็นจำนวนเต็ม ไม่มีทศนิยม)
+    const percent = totalItems > 0 ? Math.round(sumPercent / totalItems) : 0;
 
     // ค้นหาบทเรียนถัดไปที่ควรดำเนินการต่อ
     return {
@@ -609,7 +608,7 @@ export class ProgressService {
         status,
         progressPercent:
           progress?.progressPercent != null
-            ? Math.round(Number(progress.progressPercent) * 100) / 100
+            ? Math.round(Number(progress.progressPercent))
             : (status === LessonProgressStatus.COMPLETED ||
                 status === LessonProgressStatus.SKIPPED
                 ? 100
@@ -624,16 +623,13 @@ export class ProgressService {
     const totalItems = lessons.length;
 
     // คำนวณเปอร์เซ็นต์ความคืบหน้าโดยรวม
+    // รวมเปอร์เซ็นต์จาก items (แต่ละ item.progressPercent เป็น integer)
     const progressPercent =
       totalItems > 0
         ? Math.round(
-          (items.reduce(
-            (sum, item) => sum + (Number(item.progressPercent) || 0),
-            0,
-          ) /
-            totalItems) *
-          100,
-        ) / 100
+            items.reduce((sum, item) => sum + (Number(item.progressPercent) || 0), 0) /
+              totalItems,
+          )
         : 0;
 
     return {
@@ -658,7 +654,7 @@ export class ProgressService {
       status: row.status,
       progressPercent:
         row.progressPercent != null
-          ? Math.round(Number(row.progressPercent) * 100) / 100
+          ? Math.round(Number(row.progressPercent))
           : null,
       positionSeconds: row.positionSeconds ?? null,
       durationSeconds: row.durationSeconds ?? null,
