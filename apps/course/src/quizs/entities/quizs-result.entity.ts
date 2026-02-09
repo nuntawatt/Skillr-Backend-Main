@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 
 export enum QuizsStatus {
-  NOT_STARTED = 'NOT_STARTED',
+  PENDING = 'PENDING',
   COMPLETED = 'COMPLETED',
   SKIPPED = 'SKIPPED',
 }
@@ -27,7 +27,7 @@ export class QuizsResult {
   @Column({
     type: 'enum',
     enum: QuizsStatus,
-    default: QuizsStatus.NOT_STARTED,
+    default: QuizsStatus.PENDING,
   })
   status: QuizsStatus;
 
