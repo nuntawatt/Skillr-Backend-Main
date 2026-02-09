@@ -61,6 +61,16 @@ export class ArticlesService {
     return rows.map((r) => this.toResponseDto(r));
   }
 
+  async findByLesson(lessonId: number): Promise<ArticleResponseDto[]> {
+    const lesson = await this.lessonRepo.findOne({ where: { lesson_id: lessonId } });
+    if (!lesson) {
+      throw new NotFoundException(`lesson with ID ${lessonId} not found`);
+    };
+    const articles = await this.articleRepo.find({ where: { lesson: { lesson_id: lessonId } } });
+    
+    return articles.map((a) => this.toResponseDto(a));
+  }
+
   // แปลงเป็น ArticleResponseDto
   private toResponseDto(article: Article): ArticleResponseDto {
     const lessonIdValue = typeof (article as any).lesson_id === 'number' ? (article as any).lesson_id : (article as any).lesson?.lesson_id ?? null;

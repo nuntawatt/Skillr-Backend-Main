@@ -52,4 +52,15 @@ export class ArticlesController {
     async findOne(@Param('id', ParseIntPipe) id: number) {
         return this.svc.findOne(id);
     }
+
+    @Get('lesson/:id')
+    @ApiOperation({ summary: 'ดึงบทความตาม lesson ID' })
+    @ApiParam({ name: 'id', description: 'Lesson id', type: 'number' })
+    @ApiResponse({ status: 200, description: 'Articles retrieved successfully' })
+    @ApiResponse({ status: 404, description: 'Articles not found' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    @ApiOkResponse({ type: ArticleResponseDto, isArray: true })
+    async findByLesson(@Param('id', ParseIntPipe) lessonId: number) {
+        return this.svc.findByLesson(lessonId);
+    }
 }

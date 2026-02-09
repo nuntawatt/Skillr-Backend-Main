@@ -137,7 +137,7 @@ export class QuizController {
   }
 
   @Get('checkpoint/:lessonId')
-  @ApiOperation({ summary: 'ดึง checkpoint ตาม lesson ID' })
+  @ApiOperation({ summary: 'ดึง checkpoint พร้อม Student_Progress ตาม lesson ID' })
   @ApiParam({
     name: 'lessonId',
     type: Number,
@@ -145,8 +145,11 @@ export class QuizController {
   })
   @ApiResponse({ status: 200, description: 'Checkpoints retrieved successfully' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  findCheckpointsByLesson(@Param('lessonId', ParseIntPipe) lessonId: number) {
-    return this.quizService.findCheckpointsByLesson(lessonId);
+  findCheckpointsByLesson(
+    @Param('lessonId', ParseIntPipe) lessonId: number,
+    @CurrentUserId() userId: string,
+  ) {
+    return this.quizService.findCheckpointsByLesson(lessonId, userId);
   }
 
   @Post('lesson/:lessonId/check')

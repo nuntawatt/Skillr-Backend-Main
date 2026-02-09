@@ -184,7 +184,35 @@ export class QuizService {
   // หา checkpoints ตาม lesson ID
   async findCheckpointsByLesson(
     lessonId: number,
-  ): Promise<Array<{ id: number; lessonId: number; type: string; question: string; options?: string[]  | null; checkpoint_answer: any; checkpoint_explanation?: string | null }>> {
+    userId: string,
+  ): Promise<
+    Array<{
+      id: number;
+      lessonId: number;
+      type: string;
+      question: string;
+      options?: string[] | null;
+      Student_Progress: {
+        correctAnswer: any;
+        feedback: string | null;
+        checkpointStatus: 'PENDING' | 'COMPLETED' | 'SKIPPED';
+      };
+    }>
+  > {
+    const lesson = await this.lessonRepository.findOne({ where: { lesson_id: lessonId } });
+    if (!lesson) {
+      throw new NotFoundException(`Lesson with ID ${lessonId} not found`);
+    }
+
+    const userXp = await this.userXpRepository.findOne({
+      where: { userId, chapterId: lesson.chapter_id },
+    });
+
+    const checkpointStatus = (userXp?.checkpointStatus ?? 'PENDING') as
+      | 'PENDING'
+      | 'COMPLETED'
+      | 'SKIPPED';
+
     const rows = await this.checkpointRepository.find({ where: { lessonId } });
     return rows.map((c) => ({
       id: c.checkpointId,
@@ -192,8 +220,11 @@ export class QuizService {
       type: c.checkpointType,
       question: c.checkpointQuestions,
       options: c.checkpointOption ?? null,
-      checkpoint_answer: c.checkpointAnswer,
-      checkpoint_explanation: c.checkpointExplanation ?? null,
+      Student_Progress: {
+        correctAnswer: checkpointStatus === 'COMPLETED' ? c.checkpointAnswer : null,
+        feedback: checkpointStatus === 'COMPLETED' ? 'ผ่านแล้ว' : null,
+        checkpointStatus,
+      },
     }));
   }
 
