@@ -141,7 +141,7 @@ export class QuizController {
   @ApiParam({
     name: 'lessonId',
     type: Number,
-    description: 'ID ของบทเรียน',
+    description: 'ID ของบทเรียน (lessons.lesson_id). Use lesson_id when calling this endpoint',
   })
   @ApiResponse({ status: 200, description: 'Checkpoints retrieved successfully' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
@@ -200,6 +200,11 @@ export class QuizController {
 
   @Post('checkpoint/:id/check')
   @ApiOperation({ summary: 'ตรวจคำตอบ checkpoint ตาม id' })
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    description: 'Enter Checkpoint ID',
+  })
   @ApiBody({
     schema: {
       type: 'object',

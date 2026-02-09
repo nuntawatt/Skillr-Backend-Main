@@ -187,16 +187,18 @@ export class QuizService {
     userId: string,
   ): Promise<
     Array<{
-      id: number;
-      lessonId: number;
+      checkpoint_id: number;
+      lesson_id: number;
+      chapter_id: number;
       type: string;
       question: string;
       options?: string[] | null;
-      Student_Progress: {
-        correctAnswer: any;
+      student_progress: {
+        correct_answer: any;
         feedback: string | null;
-        checkpointStatus: 'PENDING' | 'COMPLETED' | 'SKIPPED';
+        checkpoint_status: 'PENDING' | 'COMPLETED' | 'SKIPPED';
       };
+      checkpoint_explanation?: string | null;
     }>
   > {
     const lesson = await this.lessonRepository.findOne({ where: { lesson_id: lessonId } });
@@ -215,16 +217,18 @@ export class QuizService {
 
     const rows = await this.checkpointRepository.find({ where: { lessonId } });
     return rows.map((c) => ({
-      id: c.checkpointId,
-      lessonId: c.lessonId,
+      checkpoint_id: c.checkpointId,
+      lesson_id: c.lessonId,
+      chapter_id: lesson.chapter_id,
       type: c.checkpointType,
       question: c.checkpointQuestions,
       options: c.checkpointOption ?? null,
-      Student_Progress: {
-        correctAnswer: checkpointStatus === 'COMPLETED' ? c.checkpointAnswer : null,
+      student_progress: {
+        correct_answer: checkpointStatus === 'COMPLETED' ? c.checkpointAnswer : null,
         feedback: checkpointStatus === 'COMPLETED' ? 'ผ่านแล้ว' : null,
-        checkpointStatus,
+        checkpoint_status: checkpointStatus,
       },
+      checkpoint_explanation: c.checkpointExplanation ?? null,
     }));
   }
 
@@ -242,17 +246,17 @@ export class QuizService {
     // ถ้าไม่พบ lesson ให้คืนค่าความถูกต้องโดยไม่ให้ XP
     if (!lesson) {
       return {
-        checkpointId: checkpoint.checkpointId,
-        lessonId: checkpoint.lessonId,
-        chapterId: null,
-        isCorrect,
+        checkpoint_id: checkpoint.checkpointId,
+        lesson_id: checkpoint.lessonId,
+        chapter_id: null,
+        is_correct: isCorrect,
         score,
-        correctAnswer: checkpoint.checkpointAnswer,
+        correct_answer: checkpoint.checkpointAnswer,
         checkpoint_explanation: checkpoint.checkpointExplanation ?? null,
         feedback: isCorrect
           ? 'ผ่านแล้ว แต่ไม่สามารถให้ XP ได้ (ไม่พบ lesson/chapter ของ checkpoint นี้)'
           : 'ตอบผิด ลองใหม่อีกครั้ง',
-        checkpointStatus: 'PENDING',
+        checkpoint_status: 'PENDING',
       };
     }
 
@@ -294,15 +298,15 @@ export class QuizService {
     userXp = await this.userXpRepository.save(userXp);
 
     return {
-      checkpointId: checkpoint.checkpointId,
-      lessonId: checkpoint.lessonId,
-      chapterId,
-      isCorrect,
+      checkpoint_id: checkpoint.checkpointId,
+      lesson_id: checkpoint.lessonId,
+      chapter_id: chapterId,
+      is_correct: isCorrect,
       score,
-      correctAnswer: checkpoint.checkpointAnswer,
+      correct_answer: checkpoint.checkpointAnswer,
       checkpoint_explanation: checkpoint.checkpointExplanation ?? null,
       feedback: isCorrect ? 'ผ่านแล้ว' : 'ตอบผิด ลองใหม่อีกครั้ง',
-      checkpointStatus: userXp.checkpointStatus,
+      checkpoint_status: userXp.checkpointStatus,
     };
   }
 }
