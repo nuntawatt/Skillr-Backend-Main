@@ -292,11 +292,13 @@ export class QuizService {
             ? 'ผ่านแล้ว'
             : null,
         checkpoint_status: checkpointStatus,
+
       },
       checkpoint_explanation:
         checkpointStatus === 'COMPLETED'
           ? c.checkpointExplanation
           : null,
+      score: checkpointStatus === 'COMPLETED' ? 5 : 0,
     }));
   }
 
@@ -320,7 +322,6 @@ export class QuizService {
       checkpoint.checkpointAnswer,
       answer,
     );
-
 
     const score = isCorrect ? 5 : 0;
 

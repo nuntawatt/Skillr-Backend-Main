@@ -25,8 +25,9 @@ export class LessonProgressResponseDto {
   @ApiProperty({ enum: LessonProgressStatus })
   status: LessonProgressStatus;
 
-  @ApiProperty()
-  progressPercent: number;
+  // @ApiProperty()
+  @ApiProperty({ required: false, nullable: true })
+  progressPercent?: number | null;
 
   @ApiProperty({ required: false, nullable: true })
   positionSeconds?: number | null;

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, LessThan, Repository } from 'typeorm';
 
@@ -131,6 +131,13 @@ export class ProgressService {
       });
     }
 
+    // ถ้าแถวนี้ถูกทำเครื่องหมายว่า COMPLETED แล้ว ห้ามเปลี่ยนสถานะให้เป็นอย่างอื่น
+    if (row && row.status === LessonProgressStatus.COMPLETED) {
+      if (dto.status !== undefined && dto.status !== LessonProgressStatus.COMPLETED) {
+        throw new BadRequestException('Cannot change status of a completed lesson');
+      }
+    }
+
     // อัปเดตตำแหน่งวิดีโอถ้ามี
     if (dto.positionSeconds !== undefined) {
       row.positionSeconds = dto.positionSeconds;
@@ -155,7 +162,9 @@ export class ProgressService {
 
     // ตรวจสอบให้แน่ใจว่าเปอร์เซ็นต์อยู่ในช่วง 0-100
     if (nextPercent !== undefined && !Number.isNaN(nextPercent)) {
-      row.progressPercent = Math.max(0, Math.min(100, Number(nextPercent)));
+      const clamped = Math.max(0, Math.min(100, Number(nextPercent)));
+      // เก็บค่าเป็นทศนิยมปัด 2 ตำแหน่ง
+      row.progressPercent = Math.round(clamped * 100) / 100;
     }
 
     // อัปเดตสถานะถ้ามี
@@ -599,11 +608,12 @@ export class ProgressService {
         lessonType: lesson.lesson_type,
         status,
         progressPercent:
-          progress?.progressPercent ??
-          (status === LessonProgressStatus.COMPLETED ||
-            status === LessonProgressStatus.SKIPPED
-            ? 100
-            : 0),
+          progress?.progressPercent != null
+            ? Math.round(Number(progress.progressPercent) * 100) / 100
+            : (status === LessonProgressStatus.COMPLETED ||
+                status === LessonProgressStatus.SKIPPED
+                ? 100
+                : 0),
         positionSeconds: progress?.positionSeconds ?? null,
         durationSeconds: progress?.durationSeconds ?? null,
         completedAt: progress?.completedAt ?? null,
@@ -646,7 +656,10 @@ export class ProgressService {
       levelId: location?.levelId ?? null,
       userId: row.userId,
       status: row.status,
-      progressPercent: Number(row.progressPercent),
+      progressPercent:
+        row.progressPercent != null
+          ? Math.round(Number(row.progressPercent) * 100) / 100
+          : null,
       positionSeconds: row.positionSeconds ?? null,
       durationSeconds: row.durationSeconds ?? null,
       lastViewedAt: row.lastViewedAt ?? null,
