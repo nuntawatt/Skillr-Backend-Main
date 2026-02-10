@@ -8,7 +8,10 @@ export class AddPendingToQuizsResultsEnum20260209120000 implements MigrationInte
         await queryRunner.query(`
 DO $$
 BEGIN
-  IF NOT EXISTS (
+  IF EXISTS (
+    SELECT 1 FROM pg_type
+    WHERE typname = 'quizs_results_status_enum'
+  ) AND NOT EXISTS (
     SELECT 1
     FROM pg_type t
     JOIN pg_enum e ON t.oid = e.enumtypid

@@ -9,7 +9,10 @@ export const CourseDataSource = new DataSource({
   type: 'postgres',
   url: process.env.DATABASE_URL,
   entities: [path.resolve(process.cwd(), 'apps/course/src/**/*.entity{.ts,.js}')],
-  migrations: [path.resolve(process.cwd(), 'apps/course/migrations/*{.ts,.js}')],
+  migrations: [
+    path.resolve(process.cwd(), 'apps/course/src/migrations/*{.ts,.js}'),
+    path.resolve(process.cwd(), 'apps/course/migrations/*{.ts,.js}'),
+  ],
   synchronize: false,
   logging: false,
 });

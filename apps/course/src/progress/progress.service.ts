@@ -9,6 +9,7 @@ import { LessonProgress, LessonProgressStatus } from './entities/progress.entity
 import { LessonProgressResponseDto } from './dto/lesson-progress-response.dto';
 import { ChapterProgressDto } from './dto/chapter-progress.dto';
 import { ChapterRoadmapDto, ItemStatusDto } from './dto/chapter-roadmap.dto';
+import { StreakService } from '../streaks/streak.service';
 
 @Injectable()
 export class ProgressService {
@@ -19,6 +20,7 @@ export class ProgressService {
     private readonly lessonRepository: Repository<Lesson>,
     @InjectRepository(Chapter)
     private readonly chapterRepository: Repository<Chapter>,
+    private readonly streakService: StreakService,
   ) { }
 
   // Lesson Progress
@@ -138,6 +140,8 @@ export class ProgressService {
       }
     }
 
+    const previousStatus = row.status;
+
     // อัปเดตตำแหน่งวิดีโอถ้ามี
     if (dto.positionSeconds !== undefined) {
       row.positionSeconds = dto.positionSeconds;
@@ -183,6 +187,13 @@ export class ProgressService {
     }
 
     const saved = await this.lessonProgressRepository.save(row);
+
+    // Bump streak only on first transition to COMPLETED or SKIPPED
+    const wasCompleted = previousStatus === LessonProgressStatus.COMPLETED || previousStatus === LessonProgressStatus.SKIPPED;
+    const nowCompleted = saved.status === LessonProgressStatus.COMPLETED || saved.status === LessonProgressStatus.SKIPPED;
+    if (!wasCompleted && nowCompleted) {
+      await this.streakService.bumpStreak(userId, saved.completedAt ?? new Date());
+    }
 
     // ตรวจสอบบทเรียนถัดไปในบทเดียวกัน
     const nextLesson = await this.lessonRepository.findOne({
@@ -270,6 +281,8 @@ export class ProgressService {
       });
     }
 
+    const previousStatus = currentProgress.status;
+
     // อัปเดตสถานะเป็น SKIPPED
     currentProgress.status = LessonProgressStatus.SKIPPED;
     currentProgress.progressPercent = 100;
@@ -278,6 +291,12 @@ export class ProgressService {
 
     // บันทึกแถวปัจจุบัน
     const savedCurrent = await this.lessonProgressRepository.save(currentProgress);
+
+    // Bump streak on first-time skip completion
+    const wasCompleted = previousStatus === LessonProgressStatus.COMPLETED || previousStatus === LessonProgressStatus.SKIPPED;
+    if (!wasCompleted) {
+      await this.streakService.bumpStreak(userId, savedCurrent.completedAt ?? new Date());
+    }
 
     // ดึงบทที่เกี่ยวข้อง
     const currentChapter = await this.chapterRepository.findOne({

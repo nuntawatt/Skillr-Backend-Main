@@ -22,8 +22,17 @@ END $$;
     `);
 
     await queryRunner.query(`
-CREATE UNIQUE INDEX IF NOT EXISTS idx_quizs_results_user_id_lesson_id
-ON public.quizs_results (user_id, lesson_id);
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public'
+      AND table_name = 'quizs_results'
+  ) THEN
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_quizs_results_user_id_lesson_id
+    ON public.quizs_results (user_id, lesson_id);
+  END IF;
+END $$;
     `);
   }
 

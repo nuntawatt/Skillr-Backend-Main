@@ -12,6 +12,7 @@ import { LessonsController } from './lessons/lessons.controller';
 import { ArticlesController } from './articles/articles.controller';
 import { ProgressController } from './progress/progress.controller';
 import { QuizAdminController, QuizController } from './quizs/quiz.controller';
+import { StreakController } from './streaks/streak.controller';
 
 // Services
 import { CoursesService } from './courses/courses.service';
@@ -22,6 +23,7 @@ import { ArticlesService } from './articles/articles.service';
 import { StorageService } from './storage/storage.service';
 import { ProgressService } from './progress/progress.service';
 import { QuizService } from "./quizs/quiz.service";
+import { StreakService } from './streaks/streak.service';
 
 // Entities
 import { Course } from './courses/entities/course.entity';
@@ -34,6 +36,7 @@ import { Quizs } from './quizs/entities/quizs.entity';
 import { QuizsCheckpoint } from './quizs/entities/checkpoint.entity';
 import { QuizsResult } from './quizs/entities/quizs-result.entity';
 import { UserXp } from './quizs/entities/user-xp.entity';
+import { UserStreak } from './streaks/entities/user-streak.entity';
 
 const isTest = process.env.NODE_ENV === 'test';
 
@@ -60,6 +63,7 @@ const isTest = process.env.NODE_ENV === 'test';
           Lesson,
           Article,
           LessonProgress,
+          UserStreak,
           UserXp,
           Quizs,
           QuizsCheckpoint,
@@ -77,6 +81,7 @@ const isTest = process.env.NODE_ENV === 'test';
     LessonsController,
     ArticlesController,
     ProgressController,
+    StreakController,
     QuizController,
     QuizAdminController,
   ],
@@ -90,6 +95,7 @@ const isTest = process.env.NODE_ENV === 'test';
     StorageService,
     ProgressService,
     QuizService,
+    StreakService,
   ],
 })
 export class AppModule { }

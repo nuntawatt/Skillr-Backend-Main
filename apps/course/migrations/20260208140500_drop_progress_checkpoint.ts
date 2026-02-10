@@ -6,11 +6,21 @@ export class DropProgressCheckpoint20260208140500 implements MigrationInterface 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Backup non-null checkpoint rows to a safekeep table (optional)
     await queryRunner.query(`
-      CREATE SCHEMA IF NOT EXISTS backups;
-      CREATE TABLE IF NOT EXISTS backups.progress_checkpoint_backup AS
-      SELECT lesson_progress_id, user_id, lesson_id, checkpoint, created_at, updated_at
-      FROM public.progress
-      WHERE checkpoint IS NOT NULL;
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND table_name = 'progress'
+            AND column_name = 'checkpoint'
+        ) THEN
+          CREATE SCHEMA IF NOT EXISTS backups;
+          CREATE TABLE IF NOT EXISTS backups.progress_checkpoint_backup AS
+          SELECT lesson_progress_id, user_id, lesson_id, checkpoint, created_at, updated_at
+          FROM public.progress
+          WHERE checkpoint IS NOT NULL;
+        END IF;
+      END $$;
     `);
 
     // Drop the checkpoint column
