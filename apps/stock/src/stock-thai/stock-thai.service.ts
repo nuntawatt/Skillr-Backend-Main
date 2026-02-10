@@ -16,7 +16,7 @@ export class StockThaiService {
         const yahooSymbol = `${symbol}.BK`;
 
         const { data } = await axios.get(
-          ``,
+          `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?region=US&lang=en-US&includePrePost=false&interval=2m&useYfid=true&range=1d&corsDomain=finance.yahoo.com&.tsrc=finance`,
           { timeout: 10000 },
         );
 
