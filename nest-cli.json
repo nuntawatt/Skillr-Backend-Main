@@ -17,14 +17,23 @@
         "tsConfigPath": "apps/auth/tsconfig.app.json"
       }
     },
-    "learning": {
-      "type": "application",
-      "root": "apps/learning",
-      "entryFile": "main",
-      "sourceRoot": "apps/learning/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/learning/tsconfig.app.json"
-      }
+    "auth-lib": {
+      "type": "library",
+      "root": "libs/auth",
+      "entryFile": "index",
+      "sourceRoot": "libs/auth/src"
+    },
+    "common": {
+      "type": "library",
+      "root": "libs/common",
+      "entryFile": "index",
+      "sourceRoot": "libs/common/src"
+    },
+    "config": {
+      "type": "library",
+      "root": "libs/config",
+      "entryFile": "index",
+      "sourceRoot": "libs/config/src"
     },
     "course": {
       "type": "application",
@@ -44,38 +53,20 @@
         "tsConfigPath": "apps/media/tsconfig.app.json"
       }
     },
-    "quizs": {
-      "type": "application",
-      "root": "apps/quizs",
-      "entryFile": "main",
-      "sourceRoot": "apps/quizs/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/quizs/tsconfig.app.json"
-      }
-    },
-    "common": {
-      "type": "library",
-      "root": "libs/common",
-      "entryFile": "index",
-      "sourceRoot": "libs/common/src"
-    },
-    "config": {
-      "type": "library",
-      "root": "libs/config",
-      "entryFile": "index",
-      "sourceRoot": "libs/config/src"
-    },
     "shared": {
       "type": "library",
       "root": "libs/shared",
       "entryFile": "index",
       "sourceRoot": "libs/shared/src"
     },
-    "auth-lib": {
-      "type": "library",
-      "root": "libs/auth",
-      "entryFile": "index",
-      "sourceRoot": "libs/auth/src"
+    "stock": {
+      "type": "application",
+      "root": "apps/stock",
+      "entryFile": "main",
+      "sourceRoot": "apps/stock/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/stock/tsconfig.app.json"
+      }
     }
   }
 }

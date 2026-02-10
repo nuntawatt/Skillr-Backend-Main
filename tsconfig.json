@@ -14,11 +14,21 @@
     "outDir": "./dist",
     "baseUrl": "./",
     "paths": {
-      "@common/*": ["libs/common/src/*"],
-      "@config/*": ["libs/config/src/*"],
-      "@shared/*": ["libs/shared/src/*"],
-      "@auth": ["libs/auth/src"],
-      "@auth/*": ["libs/auth/src/*"]
+      "@auth": [
+        "libs/auth/src"
+      ],
+      "@auth/*": [
+        "libs/auth/src/*"
+      ],
+      "@common/*": [
+        "libs/common/src/*"
+      ],
+      "@config/*": [
+        "libs/config/src/*"
+      ],
+      "@shared/*": [
+        "libs/shared/src/*"
+      ]
     },
     "incremental": true,
     "skipLibCheck": true,

@@ -12,8 +12,6 @@
     "build:auth": "nest build auth",
     "build:course": "nest build course",
     "build:media": "nest build media",
-    "build:learning": "nest build learning",
-    "build:payment": "nest build payment",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\" \"test/**/*.ts\"",
     "start": "cross-env PORT=3001 nest start course",
     "start:dev": "cross-env PORT=3001 nest start course --watch",
@@ -21,9 +19,9 @@
     "start:prod": "cross-env PORT=3002 node dist/apps/course/apps/course/src/main.js",
     "start:auth": "cross-env PORT=3001 nest start auth --watch",
     "start:course": "cross-env PORT=3002 nest start course --watch",
-    "start:quizs": "cross-env PORT=3003 nest start quizs --watch",
+    "start:stock": "cross-env PORT=3003 node dist/apps/stock/src/main.js",
+    "start:stock:dev": "cross-env PORT=3003 nest start stock --watch",
     "start:media": "cross-env PORT=3004 nest start media --watch",
-    "start:learning": "cross-env PORT=3005 nest start learning --watch",
     "migration:run:learning": "npx typeorm-ts-node-commonjs migration:run -d apps/learning/data-source.ts",
     "migration:run:auth": "node -r ts-node/register -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d apps/auth/data-source.ts",
     "migration:run:course": "npx typeorm-ts-node-commonjs migration:run -d apps/course/data-source.ts",
@@ -34,7 +32,7 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./apps/skillr/test/jest-e2e.json"
   },
   "dependencies": {
     "@aws-sdk/client-mediaconvert": "^3.971.0",
@@ -50,9 +48,11 @@
     "@nestjs/mapped-types": "^2.1.0",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/platform-socket.io": "^11.1.13",
     "@nestjs/swagger": "^11.2.3",
     "@nestjs/throttler": "^6.5.0",
     "@nestjs/typeorm": "^11.0.0",
+    "@nestjs/websockets": "^11.1.13",
     "@types/cookie-parser": "^1.4.10",
     "@types/passport-google-oauth20": "^2.0.17",
     "@types/passport-jwt": "^4.0.1",
@@ -79,6 +79,7 @@
     "reflect-metadata": "^0.2.2",
     "resend": "^6.7.0",
     "rxjs": "^7.8.1",
+    "socket.io": "^4.8.3",
     "swagger-ui-express": "^5.0.1",
     "typeorm": "^0.3.28",
     "uuid": "^13.0.0"
@@ -129,6 +130,9 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "roots": [
+      "<rootDir>/apps/"
+    ]
   }
 }
