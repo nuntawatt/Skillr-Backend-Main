@@ -237,6 +237,55 @@ export class ProgressService {
       }
     }
 
+    // หากไม่มีบทเรียนถัดไปในบทเดียวกัน ให้พยายามปลดล็อกบทถัดไปของบทถัดไป (next chapter)
+    if (!nextLesson) {
+      // ตรวจสอบว่า chapter ปัจจุบันเสร็จสมบูรณ์สำหรับผู้ใช้หรือไม่
+      const chapterCompleted = await this.isChapterCompletedForUser(userId, lesson.chapter_id);
+      if (chapterCompleted) {
+        // หา chapter ถัดไปในระดับเดียวกัน
+        const currentChapter = await this.chapterRepository.findOne({ where: { chapter_id: lesson.chapter_id } });
+        if (currentChapter) {
+          const nextChapter = await this.chapterRepository.findOne({
+            where: {
+              levelId: currentChapter.levelId,
+              chapter_orderIndex: (currentChapter.chapter_orderIndex ?? 0) + 1,
+            },
+            order: { chapter_orderIndex: 'ASC' },
+          });
+
+          if (nextChapter) {
+            // ดึงบทเรียนตัวแรกของบทถัดไป
+            const firstLessonNextChapter = await this.lessonRepository.findOne({
+              where: { chapter_id: nextChapter.chapter_id },
+              order: { orderIndex: 'ASC' },
+            });
+
+            if (firstLessonNextChapter) {
+              let nextChapterProgress = await this.lessonProgressRepository.findOne({
+                where: { userId, lessonId: firstLessonNextChapter.lesson_id },
+              });
+
+              if (!nextChapterProgress) {
+                nextChapterProgress = this.lessonProgressRepository.create({
+                  userId,
+                  lessonId: firstLessonNextChapter.lesson_id,
+                  status: LessonProgressStatus.IN_PROGRESS,
+                  progressPercent: 0,
+                  mapLessonId: lesson.lesson_id,
+                  lastViewedAt: new Date(),
+                });
+                await this.lessonProgressRepository.save(nextChapterProgress);
+              } else if (nextChapterProgress.status === LessonProgressStatus.LOCKED) {
+                nextChapterProgress.status = LessonProgressStatus.IN_PROGRESS;
+                nextChapterProgress.mapLessonId = nextChapterProgress.mapLessonId ?? lesson.lesson_id;
+                nextChapterProgress.lastViewedAt = new Date();
+                await this.lessonProgressRepository.save(nextChapterProgress);
+              }
+            }
+          }
+        }
+      }
+    }
     // ดึงบทที่เกี่ยวข้อง
     const chapter = await this.chapterRepository.findOne({
       where: { chapter_id: lesson.chapter_id },
@@ -694,6 +743,22 @@ export class ProgressService {
       items,
     };
   }
+
+  // Return roadmap for all chapters in a level
+  async getLevelChapterRoadmaps(userId: string, levelId: number): Promise<ChapterRoadmapDto[]> {
+    const chapters = await this.chapterRepository.find({
+      where: { levelId },
+      order: { chapter_orderIndex: 'ASC' },
+    });
+
+    // If no chapters, return empty array
+    if (!chapters || chapters.length === 0) return [];
+
+    // Map each chapter to its roadmap (in parallel)
+    const promises = chapters.map((c) => this.getChapterRoadmap(userId, c.chapter_id));
+    return Promise.all(promises);
+  }
+  
   // Mapping
   private toResponse(
     row: LessonProgress,
