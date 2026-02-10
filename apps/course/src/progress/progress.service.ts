@@ -271,6 +271,11 @@ export class ProgressService {
       where: { userId, lessonId },
     });
 
+    // ห้ามข้าม (skip) ถ้าบทเรียนถูกทำเครื่องหมายว่าเสร็จสมบูรณ์แล้ว
+    if (currentProgress && currentProgress.status === LessonProgressStatus.COMPLETED) {
+      throw new BadRequestException('Cannot skip a completed lesson');
+    }
+
     // ถ้าไม่มีแถว ให้สร้างใหม่
     if (!currentProgress) {
       currentProgress = this.lessonProgressRepository.create({
