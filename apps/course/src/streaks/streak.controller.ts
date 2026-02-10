@@ -67,7 +67,7 @@ export class StreakController {
         }
       },
       'master': {
-        summary: 'ผู้เชี่ยวชาญสุด 100+ วัน',
+        summary: 'ผู้เชี่ยวชาญสูงสุด 100+ วัน',
         value: {
           currentStreak: 105,
           longestStreak: 120,
