@@ -36,7 +36,7 @@ export class StreakService {
     // Apply break if missed at least one full day since last completion
     if (streak.lastCompletedAt) {
       const gap = diffDaysUtc(now, streak.lastCompletedAt);
-      if (gap >= 2 && streak.currentStreak !== 0) {
+      if (gap >= 1 && streak.currentStreak !== 0) {
         streak.currentStreak = 0;
         streak = await this.streakRepository.save(streak);
       }
@@ -64,7 +64,7 @@ export class StreakService {
     // If user has been inactive for at least one full day after last completion, reset to 0
     if (streak.lastCompletedAt) {
       const gap = diffDaysUtc(new Date(), streak.lastCompletedAt);
-      if (gap >= 2 && streak.currentStreak !== 0) {
+      if (gap >= 1 && streak.currentStreak !== 0) {
         streak.currentStreak = 0;
         streak = await this.streakRepository.save(streak);
       }

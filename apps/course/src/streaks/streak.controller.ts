@@ -6,7 +6,7 @@ import { StreakService } from './streak.service';
 import { StreakResponseDto } from './dto/streak-response.dto';
 
 @ApiTags('Streaks')
-@Controller('Streaks')
+@Controller('streaks')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class StreakController {
