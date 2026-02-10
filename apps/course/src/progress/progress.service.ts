@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, LessThan, Repository } from 'typeorm';
+import { In, LessThan, MoreThan, Repository } from 'typeorm';
 
 import { Lesson } from '../lessons/entities/lesson.entity';
 import { Chapter } from '../chapters/entities/chapter.entity';
@@ -242,13 +242,13 @@ export class ProgressService {
       // ตรวจสอบว่า chapter ปัจจุบันเสร็จสมบูรณ์สำหรับผู้ใช้หรือไม่
       const chapterCompleted = await this.isChapterCompletedForUser(userId, lesson.chapter_id);
       if (chapterCompleted) {
-        // หา chapter ถัดไปในระดับเดียวกัน
+        // หา chapter ถัดไปในระดับเดียวกัน (ทนต่อช่องว่างของ chapter_orderIndex)
         const currentChapter = await this.chapterRepository.findOne({ where: { chapter_id: lesson.chapter_id } });
         if (currentChapter) {
           const nextChapter = await this.chapterRepository.findOne({
             where: {
               levelId: currentChapter.levelId,
-              chapter_orderIndex: (currentChapter.chapter_orderIndex ?? 0) + 1,
+              chapter_orderIndex: MoreThan(currentChapter.chapter_orderIndex ?? 0),
             },
             order: { chapter_orderIndex: 'ASC' },
           });
@@ -367,14 +367,81 @@ export class ProgressService {
       order: { orderIndex: 'ASC' },
     });
 
-    // ถ้าไม่มีบทเรียนถัดไป ให้คืนค่า null
+    // ถ้าไม่มีบทเรียนถัดไปในบทเดียวกัน ให้พยายามปลดล็อกบทแรกของ chapter ถัดไป
     if (!nextLesson) {
+      let unlockedNextProgress: LessonProgress | null = null;
+      let unlockedChapterId: number | null = null;
+      let unlockedLevelId: number | null = null;
+
+      // ตรวจสอบว่า chapter ปัจจุบันถูกทำครบจริงก่อน (ถ้ายังไม่ครบ ห้ามปลดล็อก chapter ถัดไป)
+      const chapterCompleted = await this.isChapterCompletedForUser(userId, currentLesson.chapter_id);
+      if (!chapterCompleted) {
+        return {
+          skipped: this.toResponse(savedCurrent, {
+            chapterId: currentLesson.chapter_id,
+            levelId: currentLevelId,
+          }),
+          unlockedNext: null,
+        };
+      }
+
+      if (currentChapter) {
+        const nextChapter = await this.chapterRepository.findOne({
+          where: {
+            levelId: currentChapter.levelId,
+            chapter_orderIndex: MoreThan(currentChapter.chapter_orderIndex ?? 0),
+          },
+          order: { chapter_orderIndex: 'ASC' },
+        });
+
+        if (nextChapter) {
+          const firstLessonNextChapter = await this.lessonRepository.findOne({
+            where: { chapter_id: nextChapter.chapter_id },
+            order: { orderIndex: 'ASC' },
+          });
+
+          if (firstLessonNextChapter) {
+            let nextChapterProgress = await this.lessonProgressRepository.findOne({
+              where: { userId, lessonId: firstLessonNextChapter.lesson_id },
+            });
+
+            if (!nextChapterProgress) {
+              nextChapterProgress = this.lessonProgressRepository.create({
+                userId,
+                lessonId: firstLessonNextChapter.lesson_id,
+                status: LessonProgressStatus.IN_PROGRESS,
+                progressPercent: 0,
+                mapLessonId: lessonId,
+                lastViewedAt: new Date(),
+              });
+              nextChapterProgress = await this.lessonProgressRepository.save(nextChapterProgress);
+            } else if (nextChapterProgress.status === LessonProgressStatus.LOCKED) {
+              nextChapterProgress.status = LessonProgressStatus.IN_PROGRESS;
+              nextChapterProgress.mapLessonId = nextChapterProgress.mapLessonId ?? lessonId;
+              nextChapterProgress.lastViewedAt = new Date();
+              nextChapterProgress = await this.lessonProgressRepository.save(nextChapterProgress);
+            }
+
+            if (nextChapterProgress) {
+              unlockedNextProgress = nextChapterProgress;
+              unlockedChapterId = firstLessonNextChapter.chapter_id;
+              unlockedLevelId = nextChapter.levelId ?? null;
+            }
+          }
+        }
+      }
+
       return {
         skipped: this.toResponse(savedCurrent, {
           chapterId: currentLesson.chapter_id,
           levelId: currentLevelId,
         }),
-        unlockedNext: null,
+        unlockedNext: unlockedNextProgress
+          ? this.toResponse(unlockedNextProgress, {
+              chapterId: unlockedChapterId,
+              levelId: unlockedLevelId,
+            })
+          : null,
       };
     }
 

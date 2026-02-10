@@ -7,7 +7,6 @@ import { SkipLessonResponseDto } from './dto/skip-lesson-response.dto';
 import { UpsertLessonProgressDto } from './dto/upsert-lesson-progress.dto';
 import { ChapterProgressDto } from './dto/chapter-progress.dto';
 import { ChapterRoadmapDto } from './dto/chapter-roadmap.dto';
-import { ChapterRoadmapDto as ChapterRoadmapDtoType } from './dto/chapter-roadmap.dto';
 import { ProgressService } from './progress.service';
 
 @ApiTags('Progress')
@@ -96,12 +95,12 @@ export class ProgressController {
     @Get('levels/:levelId/chapters')
     @ApiOperation({ summary: 'ดึง roadmap ของทุกบทใน level' })
     @ApiParam({ name: 'levelId', type: Number, example: 1 })
-    @ApiOkResponse({ type: [ChapterRoadmapDtoType] })
+    @ApiOkResponse({ type: [ChapterRoadmapDto] })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     getLevelChapterRoadmaps(
         @CurrentUserId() userId: string,
         @Param('levelId', ParseIntPipe) levelId: number,
-    ): Promise<ChapterRoadmapDtoType[]> {
+    ): Promise<ChapterRoadmapDto[]> {
         return this.progressService.getLevelChapterRoadmaps(userId, levelId);
     }
 }
