@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Quizs } from './entities/quizs.entity';
@@ -58,8 +58,8 @@ export class QuizService {
       where: { lessonId, userId },
     });
 
-    // ถ้ายังไม่เคยทำ quiz หรือสถานะ PENDING → แสดง quiz ปกติ (ซ่อนคำตอบ)
-    if (!result || result.status === QuizsStatus.PENDING) {
+    // ถ้ายังไม่เคยทำ quiz → แสดง quiz ปกติ (ซ่อนคำตอบ)
+    if (!result) {
       return {
         quizs_id: quiz.quizsId,
         quizs_type: quiz.quizsType,
@@ -68,9 +68,28 @@ export class QuizService {
         lesson_id: quiz.lessonId,
         quizs_answer: null,
         quizs_explanation: null,
-        status: result?.status || 'NOT_ATTEMPTED',
-        user_answer: result?.userAnswer || null,
-        is_correct: result?.isCorrect || null,
+        status: 'NOT_ATTEMPTED',
+        user_answer: null,
+        is_correct: null,
+        completed_at: null,
+      };
+    }
+
+    // Legacy/backward-compat: previously, wrong answers were stored as PENDING.
+    // Treat any row with userAnswer as attempted and show review data.
+    const attempted = result.userAnswer != null;
+    if (!attempted) {
+      return {
+        quizs_id: quiz.quizsId,
+        quizs_type: quiz.quizsType,
+        quizs_question: quiz.quizsQuestions,
+        quizs_option: quiz.quizsOption,
+        lesson_id: quiz.lessonId,
+        quizs_answer: null,
+        quizs_explanation: null,
+        status: result.status,
+        user_answer: null,
+        is_correct: null,
         completed_at: null,
       };
     }
@@ -84,7 +103,7 @@ export class QuizService {
       lesson_id: quiz.lessonId,
       quizs_answer: quiz.quizsAnswer,
       quizs_explanation: quiz.quizsExplanation,
-      status: result.status,
+      status: result.status === QuizsStatus.PENDING ? QuizsStatus.COMPLETED : result.status,
       user_answer: result.userAnswer,
       is_correct: result.isCorrect,
       completed_at: result.updatedAt,
@@ -110,9 +129,14 @@ export class QuizService {
       where: { lessonId, userId },
     });
 
-    // 3. ถ้าเคยทำแล้วและสถานะเป็น COMPLETED หรือ SKIPPED -> ไม่ให้ทำซ้ำ
-    if (existingResult && (existingResult.status === QuizsStatus.COMPLETED || existingResult.status === QuizsStatus.SKIPPED)) {
-      throw new BadRequestException('This quiz has already been completed and cannot be retaken. You can review your answers instead.');
+    // 3. บังคับให้ทำครั้งเดียว: หากมีคำตอบบันทึกอยู่แล้ว หรือข้าม/ทำเสร็จแล้ว จะไม่สามารถลองทำใหม่ได้
+    if (existingResult) {
+      const alreadyAttempted = existingResult.userAnswer != null;
+      const alreadyFinal = existingResult.status === QuizsStatus.COMPLETED || existingResult.status === QuizsStatus.SKIPPED;
+
+      if (alreadyAttempted || alreadyFinal) {
+        throw new ConflictException('This quiz has already been attempted and cannot be answered again.');
+      }
     }
 
     // 4. ตรวจคำตอบ (ใช้ isEqual กันลำดับ array / object)
@@ -133,9 +157,8 @@ export class QuizService {
     // 6. บันทึกผลลัพธ์การทำ quiz
     result.userAnswer = answer;
     result.isCorrect = isCorrect;
-    result.status = isCorrect
-      ? QuizsStatus.COMPLETED
-      : QuizsStatus.PENDING;
+    // Mark as COMPLETED regardless of correctness (single attempt).
+    result.status = QuizsStatus.COMPLETED;
 
     await this.resultRepository.save(result);
 
