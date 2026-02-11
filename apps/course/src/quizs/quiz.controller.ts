@@ -55,8 +55,8 @@ export class QuizAdminController {
   @ApiBody({
     type: CreateCheckpointDto,
     examples: {
-      checkpoint_example: {
-        summary: 'ตัวอย่าง: Checkpoint ระหว่างเรียน',
+      multiple_choice: {
+        summary: 'ตัวอย่าง: Checkpoint แบบเลือกตอบ',
         value: {
           lesson_id: 1,
           checkpoint_type: 'multiple_choice',
@@ -64,6 +64,17 @@ export class QuizAdminController {
           checkpoint_option: ['1', '2', '3'],
           checkpoint_answer: '2',
           checkpoint_explanation: '1 + 1 = 2',
+        },
+      },
+      true_false: {
+        summary: 'ตัวอย่าง: Checkpoint แบบถูก/ผิด',
+        value: {
+          lesson_id: 2,
+          checkpoint_type: 'true_false',
+          checkpoint_questions: 'Node.js คือภาษาโปรแกรมใช่หรือไม่?',
+          checkpoint_option: ['True', 'False'],
+          checkpoint_answer: 'False',
+          checkpoint_explanation: 'Node.js เป็น Runtime environment สำหรับรัน JavaScript ไม่ใช่ภาษาโปรแกรม',
         },
       },
     },

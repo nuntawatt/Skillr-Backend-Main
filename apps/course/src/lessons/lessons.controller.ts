@@ -10,6 +10,63 @@ export class LessonsController {
 
   @Post()
   @ApiOperation({ summary: 'สร้างบทเรียนใหม่' })
+  @ApiBody({
+    type: CreateLessonDto,
+    examples: {
+      article: {
+        summary: 'ตัวอย่าง: บทเรียนแบบบทความ',
+        value: {
+          lesson_title: 'Introduction to Variables',
+          lesson_description: 'Learn about variable types and declarations',
+          chapter_id: 1,
+          lesson_type: 'article',
+          ref_id: 1,
+          orderIndex: 0,
+          lesson_coverImage_id: 123,
+          lesson_video_id: null
+        }
+      },
+      video: {
+        summary: 'ตัวอย่าง: บทเรียนแบบวิดีโอ',
+        value: {
+          lesson_title: 'Variables in Action',
+          lesson_description: 'Watch how variables work in practice',
+          chapter_id: 1,
+          lesson_type: 'video',
+          ref_id: 2,
+          orderIndex: 1,
+          lesson_coverImage_id: 124,
+          lesson_video_id: 456
+        }
+      },
+      quiz: {
+        summary: 'ตัวอย่าง: บทเรียนแบบแบบทดสอบ',
+        value: {
+          lesson_title: 'Variables Quiz',
+          lesson_description: 'Test your knowledge about variables',
+          chapter_id: 1,
+          lesson_type: 'quiz',
+          ref_id: 3,
+          orderIndex: 2,
+          lesson_coverImage_id: 125,
+          lesson_video_id: null
+        }
+      },
+      checkpoint: {
+        summary: 'ตัวอย่าง: บทเรียนแบบจุดตรวจสอบ',
+        value: {
+          lesson_title: 'Variables Checkpoint',
+          lesson_description: 'Quick check on variable concepts',
+          chapter_id: 1,
+          lesson_type: 'checkpoint',
+          ref_id: 4,
+          orderIndex: 3,
+          lesson_coverImage_id: 126,
+          lesson_video_id: null
+        }
+      }
+    }
+  })
   @ApiCreatedResponse({ type: LessonResponseDto, description: 'Lesson created successfully' })
   @ApiResponse({ status: 400, description: 'Bad Request' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })

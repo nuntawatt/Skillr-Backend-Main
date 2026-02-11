@@ -1,6 +1,7 @@
 import { IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, IsArray } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { QuizType } from '../entities/quizs.entity';
+import { Transform } from 'class-transformer';
 
 export class CreateQuizsDto {
   @ApiProperty({ example: 1 })
@@ -35,6 +36,13 @@ export class CreateQuizsDto {
 export class CreateCheckpointDto {
   @ApiProperty({ example: 1 })
   @IsInt()
+  @Transform(({ value }) => {
+    // Handle both lesson_id and lessonId
+    if (typeof value === 'string') {
+      return parseInt(value, 10);
+    }
+    return value;
+  })
   lesson_id: number;
 
   @ApiProperty({ enum: QuizType, example: QuizType.MULTIPLE_CHOICE })
