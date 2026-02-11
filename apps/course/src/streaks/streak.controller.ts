@@ -4,6 +4,8 @@ import { JwtAuthGuard } from '@auth';
 import { CurrentUserId } from './decorators/current-user-id.decorator';
 import { StreakService } from './streak.service';
 import { StreakResponseDto } from './dto/streak-response.dto';
+import { TestBumpDto } from './dto/test-bump.dto';
+import { getStreakColor } from './dto/streak-color.dto';
 
 @ApiTags('Streaks')
 @Controller('streaks')
@@ -141,16 +143,20 @@ export class StreakController {
   })
   async testBumpStreak(
     @CurrentUserId() userId: string,
-    @Body() body: { date: string }
+    @Body() body: TestBumpDto
   ): Promise<StreakResponseDto> {
     const testDate = new Date(body.date);
+    if (isNaN(testDate.getTime())) {
+      throw new Error('Invalid date format. Use ISO format: YYYY-MM-DDTHH:mm:ss.sssZ');
+    }
+    
     const streak = await this.streakService.bumpStreak(userId, testDate);
-    const { streak: currentStreak, color } = await this.streakService.getStreak(userId);
+    const color = getStreakColor(streak.currentStreak);
     
     return {
-      currentStreak: currentStreak.currentStreak,
-      longestStreak: currentStreak.longestStreak,
-      lastCompletedAt: currentStreak.lastCompletedAt,
+      currentStreak: streak.currentStreak,
+      longestStreak: streak.longestStreak,
+      lastCompletedAt: streak.lastCompletedAt,
       color,
     };
   }
