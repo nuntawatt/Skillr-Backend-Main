@@ -89,4 +89,11 @@ export class StreakService {
     }
     return streak;
   }
+
+  async resetStreak(userId: string): Promise<UserStreak> {
+    const streak = await this.ensureStreak(userId);
+    streak.currentStreak = 0;
+    streak.lastCompletedAt = null;
+    return this.streakRepository.save(streak);
+  }
 }
