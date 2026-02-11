@@ -28,4 +28,10 @@ export class StreakResponseDto {
     enum: ['yellow', 'orange', 'red', 'pink', 'purple']
   })
   color: StreakColor | null;
+
+  @ApiProperty({ 
+    example: true,
+    description: 'มี streak ที่สามารถรับรางวัลได้ (currentStreak > 0)'
+  })
+  isReward: boolean;
 }

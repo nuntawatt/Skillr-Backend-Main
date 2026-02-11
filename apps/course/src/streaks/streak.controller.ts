@@ -29,7 +29,8 @@ export class StreakController {
           currentStreak: 0,
           longestStreak: 0,
           lastCompletedAt: null,
-          color: null
+          color: null,
+          isReward: false
         }
       },
       'beginner': {
@@ -38,7 +39,8 @@ export class StreakController {
           currentStreak: 2,
           longestStreak: 2,
           lastCompletedAt: '2025-01-02T10:30:00.000Z',
-          color: null
+          color: null,
+          isReward: true
         }
       },
       'intermediate': {
@@ -47,7 +49,8 @@ export class StreakController {
           currentStreak: 7,
           longestStreak: 15,
           lastCompletedAt: '2025-01-07T09:15:00.000Z',
-          color: 'yellow'
+          color: 'yellow',
+          isReward: true
         }
       },
       'advanced': {
@@ -56,7 +59,8 @@ export class StreakController {
           currentStreak: 12,
           longestStreak: 25,
           lastCompletedAt: '2025-01-12T14:20:00.000Z',
-          color: 'orange'
+          color: 'orange',
+          isReward: true
         }
       },
       'expert': {
@@ -65,7 +69,8 @@ export class StreakController {
           currentStreak: 45,
           longestStreak: 60,
           lastCompletedAt: '2025-01-12T08:45:00.000Z',
-          color: 'red'
+          color: 'red',
+          isReward: true
         }
       },
       'master': {
@@ -74,7 +79,8 @@ export class StreakController {
           currentStreak: 105,
           longestStreak: 120,
           lastCompletedAt: '2025-01-12T11:30:00.000Z',
-          color: 'pink'
+          color: 'pink',
+          isReward: true
         }
       },
       'legend': {
@@ -83,7 +89,18 @@ export class StreakController {
           currentStreak: 250,
           longestStreak: 250,
           lastCompletedAt: '2025-01-12T07:00:00.000Z',
-          color: 'purple'
+          color: 'purple',
+          isReward: true
+        }
+      },
+      'inactive': {
+        summary: 'streak หมดอายุ (currentStreak = 0)',
+        value: {
+          currentStreak: 0,
+          longestStreak: 15,
+          lastCompletedAt: '2025-01-05T10:00:00.000Z',
+          color: null,
+          isReward: false
         }
       }
     }
@@ -99,6 +116,7 @@ export class StreakController {
       longestStreak: streak.longestStreak,
       lastCompletedAt: streak.lastCompletedAt,
       color,
+      isReward: streak.currentStreak > 0,
     };
   }
 
@@ -118,7 +136,8 @@ export class StreakController {
           currentStreak: 1,
           longestStreak: 1,
           lastCompletedAt: '2025-01-01T10:00:00.000Z',
-          color: null
+          color: null,
+          isReward: true
         }
       },
       'consecutive_day': {
@@ -127,7 +146,8 @@ export class StreakController {
           currentStreak: 3,
           longestStreak: 3,
           lastCompletedAt: '2025-01-03T10:00:00.000Z',
-          color: 'yellow'
+          color: 'yellow',
+          isReward: true
         }
       },
       'after_reset': {
@@ -136,7 +156,18 @@ export class StreakController {
           currentStreak: 1,
           longestStreak: 3,
           lastCompletedAt: '2025-01-05T10:00:00.000Z',
-          color: null
+          color: null,
+          isReward: true
+        }
+      },
+      'broken_streak': {
+        summary: 'streak หมดอายุ',
+        value: {
+          currentStreak: 0,
+          longestStreak: 3,
+          lastCompletedAt: '2025-01-03T10:00:00.000Z',
+          color: null,
+          isReward: false
         }
       }
     }
@@ -158,6 +189,7 @@ export class StreakController {
       longestStreak: streak.longestStreak,
       lastCompletedAt: streak.lastCompletedAt,
       color,
+      isReward: streak.currentStreak > 0,
     };
   }
 
