@@ -58,16 +58,36 @@ export class QuizService {
       where: { lessonId, userId },
     });
 
-    const showAnswer = result?.status === QuizsStatus.COMPLETED;
+    // ถ้ายังไม่เคยทำ quiz หรือสถานะ PENDING → แสดง quiz ปกติ (ซ่อนคำตอบ)
+    if (!result || result.status === QuizsStatus.PENDING) {
+      return {
+        quizs_id: quiz.quizsId,
+        quizs_type: quiz.quizsType,
+        quizs_question: quiz.quizsQuestions,
+        quizs_option: quiz.quizsOption,
+        lesson_id: quiz.lessonId,
+        quizs_answer: null,
+        quizs_explanation: null,
+        status: result?.status || 'NOT_ATTEMPTED',
+        user_answer: result?.userAnswer || null,
+        is_correct: result?.isCorrect || null,
+        completed_at: null,
+      };
+    }
 
+    // ถ้าทำ quiz แล้ว (COMPLETED หรือ SKIPPED) → แสดงข้อมูล review ทั้งหมด
     return {
       quizs_id: quiz.quizsId,
       quizs_type: quiz.quizsType,
       quizs_question: quiz.quizsQuestions,
       quizs_option: quiz.quizsOption,
       lesson_id: quiz.lessonId,
-      quizs_answer: showAnswer ? quiz.quizsAnswer : null,
-      quizs_explanation: showAnswer ? quiz.quizsExplanation : null,
+      quizs_answer: quiz.quizsAnswer,
+      quizs_explanation: quiz.quizsExplanation,
+      status: result.status,
+      user_answer: result.userAnswer,
+      is_correct: result.isCorrect,
+      completed_at: result.updatedAt,
     };
   }
 
@@ -85,18 +105,24 @@ export class QuizService {
       throw new NotFoundException('Quiz not found');
     }
 
-    // 2. ตรวจคำตอบ (ใช้ isEqual กันลำดับ array / object)
+    // 2. ตรวจสอบว่าเคยทำ quiz นี้แล้วหรือไม่
+    const existingResult = await this.resultRepository.findOne({
+      where: { lessonId, userId },
+    });
+
+    // 3. ถ้าเคยทำแล้วและสถานะเป็น COMPLETED หรือ SKIPPED -> ไม่ให้ทำซ้ำ
+    if (existingResult && (existingResult.status === QuizsStatus.COMPLETED || existingResult.status === QuizsStatus.SKIPPED)) {
+      throw new BadRequestException('This quiz has already been completed and cannot be retaken. You can review your answers instead.');
+    }
+
+    // 4. ตรวจคำตอบ (ใช้ isEqual กันลำดับ array / object)
     const isCorrect = isEqual(
       quiz.quizsAnswer,
       answer,
     );
 
-    // 3. หา result เดิมของ user
-    let result = await this.resultRepository.findOne({
-      where: { lessonId, userId },
-    });
-
-    // 4. ถ้ายังไม่เคยทำ quiz นี้ → สร้าง record ใหม่
+    // 5. สร้างหรืออัปเดต result
+    let result = existingResult;
     if (!result) {
       result = this.resultRepository.create({
         lessonId,
@@ -104,7 +130,7 @@ export class QuizService {
       });
     }
 
-    // 5. บันทึกผลลัพธ์การทำ quiz
+    // 6. บันทึกผลลัพธ์การทำ quiz
     result.userAnswer = answer;
     result.isCorrect = isCorrect;
     result.status = isCorrect
@@ -113,7 +139,7 @@ export class QuizService {
 
     await this.resultRepository.save(result);
 
-    // 6. ถ้าตอบถูก → sync progress (UserXp)
+    // 7. ถ้าตอบถูก → sync progress (UserXp)
     if (isCorrect) {
       const lesson = await this.lessonRepository.findOne({
         where: { lesson_id: lessonId },
@@ -148,7 +174,7 @@ export class QuizService {
       }
     }
 
-    // 7. ส่งผลลัพธ์กลับไปให้ frontend
+    // 8. ส่งผลลัพธ์กลับไปให้ frontend
     return {
       isCorrect,
       correctAnswer: quiz.quizsAnswer,

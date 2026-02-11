@@ -120,13 +120,62 @@ export class QuizController {
   }
 
   @Get('lesson/:lessonId')
-  @ApiOperation({ summary: 'ดึง quiz พร้อมสถานะตาม lesson ID' })
+  @ApiOperation({ summary: 'ดึง quiz พร้อมสถานะตาม lesson ID - ถ้าทำแล้วจะแสดงผลลัพธ์ทั้งหมด' })
   @ApiParam({
     name: 'lessonId',
     type: Number,
     description: 'ID ของบทเรียน',
   })
-  @ApiResponse({ status: 200, description: 'Quiz retrieved successfully' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Quiz retrieved successfully',
+    schema: {
+      oneOf: [
+        {
+          title: 'Quiz not attempted',
+          type: 'object',
+          properties: {
+            quizs_id: { type: 'number', example: 1 },
+            quizs_type: { type: 'string', example: 'multiple_choice' },
+            quizs_question: { type: 'string', example: 'TypeScript คืออะไร?' },
+            quizs_option: { 
+              type: 'array', 
+              items: { type: 'string' },
+              example: ['Superset ของ JavaScript', 'ชื่อกาแฟ', 'ระบบปฏิบัติการ']
+            },
+            lesson_id: { type: 'number', example: 1 },
+            quizs_answer: { type: 'null', example: null },
+            quizs_explanation: { type: 'null', example: null },
+            status: { type: 'string', example: 'NOT_ATTEMPTED' },
+            user_answer: { type: 'null', example: null },
+            is_correct: { type: 'null', example: null },
+            completed_at: { type: 'null', example: null }
+          }
+        },
+        {
+          title: 'Quiz completed',
+          type: 'object',
+          properties: {
+            quizs_id: { type: 'number', example: 1 },
+            quizs_type: { type: 'string', example: 'multiple_choice' },
+            quizs_question: { type: 'string', example: 'TypeScript คืออะไร?' },
+            quizs_option: { 
+              type: 'array', 
+              items: { type: 'string' },
+              example: ['Superset ของ JavaScript', 'ชื่อกาแฟ', 'ระบบปฏิบัติการ']
+            },
+            lesson_id: { type: 'number', example: 1 },
+            quizs_answer: { type: 'string', example: 'Superset ของ JavaScript' },
+            quizs_explanation: { type: 'string', example: 'TypeScript เป็นภาษาที่สร้างครอบ JS เพื่อเพิ่มระบบ Type' },
+            status: { type: 'string', example: 'COMPLETED' },
+            user_answer: { type: 'string', example: 'Superset ของ JavaScript' },
+            is_correct: { type: 'boolean', example: true },
+            completed_at: { type: 'string', example: '2024-01-15T10:30:00Z' }
+          }
+        }
+      ]
+    }
+  })
   @ApiResponse({ status: 404, description: 'Quiz not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   findOneQuizByLesson(
