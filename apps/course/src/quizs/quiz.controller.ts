@@ -188,6 +188,7 @@ export class QuizController {
     }
   })
   @ApiResponse({ status: 404, description: 'Quiz not found' })
+  @ApiResponse({ status: 409, description: 'This quiz has already been attempted and cannot be answered again' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   findOneQuizByLesson(
     @Param('lessonId', ParseIntPipe) lessonId: number,
