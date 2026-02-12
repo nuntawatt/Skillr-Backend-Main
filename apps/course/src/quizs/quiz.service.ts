@@ -391,11 +391,14 @@ export class QuizService {
       throw new NotFoundException('Checkpoint not found');
     }
 
+    // NOTE: There's a legacy unique index on (user_id, lesson_id) in some DBs.
+    // To avoid duplicate-key errors, first try to find any existing result
+    // for this user+lesson (regardless of type/checkpoint). If found,
+    // reuse/update it instead of inserting a new row.
     const existing = await this.resultRepository.findOne({
       where: {
         userId,
-        type: QuizsResultType.CHECKPOINT,
-        checkpointId,
+        lessonId: checkpoint.lessonId,
       },
     });
 
@@ -419,13 +422,23 @@ export class QuizService {
       };
     }
 
-    const toSave = existing ??
-      this.resultRepository.create({
+    // Prepare object to save. If an existing row is present (possibly from a
+    // legacy unique index), update it to represent this checkpoint result.
+    let toSave = existing;
+    if (!toSave) {
+      toSave = this.resultRepository.create({
         userId,
         lessonId: checkpoint.lessonId,
         type: QuizsResultType.CHECKPOINT,
         checkpointId,
       });
+    } else {
+      // If existing row was for a different type/row, normalize it to be a
+      // checkpoint row so we don't attempt to insert a duplicate (this avoids
+      // conflicts when the DB still has a unique constraint on user+lesson).
+      toSave.type = QuizsResultType.CHECKPOINT;
+      toSave.checkpointId = checkpoint.checkpointId;
+    }
 
     toSave.status = QuizsStatus.SKIPPED;
     toSave.userAnswer = null;
