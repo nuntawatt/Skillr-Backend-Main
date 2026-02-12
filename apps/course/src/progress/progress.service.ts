@@ -10,6 +10,7 @@ import { LessonProgressResponseDto } from './dto/lesson-progress-response.dto';
 import { ChapterProgressDto } from './dto/chapter-progress.dto';
 import { ChapterRoadmapDto, ItemStatusDto } from './dto/chapter-roadmap.dto';
 import { StreakService } from '../streaks/streak.service';
+import { QuizService } from '../quizs/quiz.service';
 
 @Injectable()
 export class ProgressService {
@@ -21,6 +22,7 @@ export class ProgressService {
     @InjectRepository(Chapter)
     private readonly chapterRepository: Repository<Chapter>,
     private readonly streakService: StreakService,
+    private readonly quizService: QuizService,
   ) { }
 
   // Lesson Progress
@@ -313,6 +315,12 @@ export class ProgressService {
 
     if (!currentLesson) {
       throw new NotFoundException(`Lesson with ID ${lessonId} not found`);
+    }
+
+    // ถ้าเป็นบทเรียนประเภท checkpoint: sync สถานะ checkpoint เป็น SKIPPED ด้วย
+    // (เพื่อไม่ต้องมี 2 เส้น skip แยกกัน และให้ progress/quiz สอดคล้องกัน)
+    if (currentLesson.lesson_type === 'checkpoint') {
+      await this.quizService.skipCheckpointsByLesson(lessonId, userId);
     }
 
     // ดึงหรือสร้างแถว progress สำหรับบทเรียนปัจจุบัน

@@ -445,6 +445,22 @@ export class QuizService {
     };
   }
 
+  // ใช้กรณีเรียกจาก progress: เมื่อบทเรียนเป็น checkpoint แล้วกด skip
+  // ให้ sync สถานะเฉพาะของ checkpoint (อาจมีมากกว่า 1 ข้อต่อ lesson)
+  async skipCheckpointsByLesson(lessonId: number, userId: string) {
+    const checkpoints = await this.checkpointRepository.find({
+      where: { lessonId },
+    });
+
+    if (!checkpoints.length) {
+      return [];
+    }
+
+    return Promise.all(
+      checkpoints.map((c) => this.skipCheckpoint(c.checkpointId, userId)),
+    );
+  }
+
 
   // ตรวจคำตอบ checkpoint และบันทึกผล
   async checkCheckpointAnswer(
