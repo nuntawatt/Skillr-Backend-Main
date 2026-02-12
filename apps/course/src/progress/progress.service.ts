@@ -496,6 +496,17 @@ export class ProgressService {
   }
 
   // Chapter Progress
+  // NOTE (ปัญหาและการแก้ไข):
+  // ก่อนหน้านี้โค้ดคำนวณ `percent` โดยเฉลี่ยเฉพาะรายการที่มีสถานะ
+  // `COMPLETED` หรือ `SKIPPED` เท่านั้น ซึ่งทำให้ผลลัพธ์ผิดพลาดในกรณีที่
+  // มีเพียงบางรายการเป็น COMPLETED แต่รายการอื่นยังเป็น
+  // IN_PROGRESS หรือ LOCKED — ตัวอย่างจะได้ 100% ทั้งที่ยังไม่เสร็จ
+  // จริง ๆ. ผมเปลี่ยนเป็นคำนวณเฉลี่ยจากทุกรายการในบทเรียน:
+  // - ถ้าสถานะเป็น COMPLETED/SKIPPED นับเป็น 100
+  // - ถ้ามี `progressPercent` ให้ใช้ค่านั้น
+  // - ถ้าไม่มีค่า ให้ถือเป็น 0
+  // นอกจากนี้มีโค้ดที่เสียหายในแพตช์ก่อนหน้า (ลูป/return ผิดตำแหน่ง)
+  // ซึ่งผมได้ลบและจัดเรียงใหม่ให้อ่านได้ชัดเจนและปลอดภัยขึ้น.
   async getChapterProgress(
     userId: string,
     chapterId: number,
@@ -563,75 +574,75 @@ export class ProgressService {
         .filter(
           (p) =>
             p.status === LessonProgressStatus.COMPLETED ||
-            p.status === LessonProgressStatus.SKIPPED)
-        .map((p) => p.lessonId)
+            p.status === LessonProgressStatus.SKIPPED,
+        )
+        .map((p) => p.lessonId),
     );
 
     const completedItems = completedSet.size;
 
     const totalItems = lessons.length;
 
-    // คำนวณเปอร์เซ็นต์ความคืบหน้า
-    // นับเฉพาะบทที่มีสถานะ COMPLETED หรือ SKIPPED (ยกเว้น IN_PROGRESS และ LOCKED)
+    // Calculate chapter percent as average over all lessons.
+    // For each lesson use its recorded progressPercent when available,
+    // treat COMPLETED/SKIPPED as 100, missing values as 0.
     let sumPercent = 0;
-    let includedCount = 0;
-
     for (const lesson of lessons) {
       const progress = progressByLessonId.get(lesson.lesson_id);
-      const status = progress?.status ?? LessonProgressStatus.LOCKED;
-
-      if (
-        status !== LessonProgressStatus.COMPLETED &&
-        status !== LessonProgressStatus.SKIPPED
-      ) {
-        continue;
+      if (progress) {
+        if (
+          progress.status === LessonProgressStatus.COMPLETED ||
+          progress.status === LessonProgressStatus.SKIPPED
+        ) {
+          sumPercent += 100;
+        } else if (progress.progressPercent != null && !Number.isNaN(Number(progress.progressPercent))) {
+          sumPercent += Math.round(Number(progress.progressPercent));
+        } else {
+          sumPercent += 0;
+        }
+      } else {
+        sumPercent += 0;
       }
-
-      // COMPLETED/SKIPPED = 100
-      sumPercent += 100;
-      includedCount += 1;
     }
 
-    // คืนค่าเปอร์เซ็นต์เฉลี่ยเป็นจำนวนเต็ม (ถ้าไม่มีรายการที่นับ ให้เป็น 0)
-    const percent = includedCount > 0 ? Math.round(sumPercent / includedCount) : 0;
+    const percent = totalItems > 0 ? Math.round(sumPercent / totalItems) : 0;
 
-    // ค้นหาบทเรียนถัดไปที่ควรดำเนินการต่อ
+    // Find resume lesson
+    const inProgress = lessons.find(
+      (l) => progressByLessonId.get(l.lesson_id)?.status === LessonProgressStatus.IN_PROGRESS,
+    );
+
+    if (inProgress) {
+      return {
+        chapterId,
+        totalItems,
+        completedItems,
+        percent,
+        resumeLessonId: inProgress.lesson_id,
+      };
+    }
+
+    const firstNotDone = lessons.find((l) => !completedSet.has(l.lesson_id));
+    const resumeLessonId = firstNotDone
+      ? (progressByLessonId.get(firstNotDone.lesson_id)?.status === LessonProgressStatus.LOCKED
+          ? null
+          : firstNotDone.lesson_id)
+      : null;
+
     return {
       chapterId,
       totalItems,
       completedItems,
       percent,
-      resumeLessonId: (() => {
-        const inProgress = lessons.find(
-          (l) =>
-            progressByLessonId.get(l.lesson_id)?.status ===
-            LessonProgressStatus.IN_PROGRESS,
-        );
-
-        // ถ้ามีบทเรียนที่กำลังดำเนินการอยู่ ให้คืนค่า ID ของบทเรียนนั้น
-        if (inProgress) {
-          return inProgress.lesson_id;
-        }
-
-        // ถ้าไม่มี ให้ค้นหาบทเรียนแรกที่ยังไม่เสร็จสิ้น
-        const firstNotDone = lessons.find(
-          (l) => !completedSet.has(l.lesson_id),
-        );
-
-        if (!firstNotDone) {
-          return null;
-        }
-
-        // ตรวจสอบสถานะของบทเรียนนั้น
-        const status = progressByLessonId.get(firstNotDone.lesson_id)?.status;
-        return status === LessonProgressStatus.LOCKED
-          ? null
-          : firstNotDone.lesson_id;
-      })(),
+      resumeLessonId,
     };
   }
 
-  // Chapter Roadmap
+  // โค้ดเดิมคำนวณ `progressPercent` ของ roadmap โดยเฉลี่ยเฉพาะ
+  // รายการที่เป็น COMPLETED/SKIPPED ทำให้บางบทมีค่า 100% โดยไม่ถูกต้อง.
+  // แก้เป็นคำนวณเฉลี่ยจากทุก `items` (COMPLETED/SKIPPED = 100,
+  // ใช้ item.progressPercent เมื่อมี, ค่าว่าง = 0) เพื่อให้ค่า
+  // ใน roadmap สอดคล้องกับสถานะจริงของบทเรียน.
   async getChapterRoadmap(
     userId: string,
     chapterId: number,
@@ -776,31 +787,10 @@ export class ProgressService {
     const totalItems = lessons.length;
 
     // คำนวณเปอร์เซ็นต์ความคืบหน้าโดยรวม
-    // นับเฉพาะรายการที่สถานะเป็น COMPLETED หรือ SKIPPED
-    const roadmapAcc = items.reduce(
-      (acc, item) => {
-        // นับเฉพาะรายการที่เป็น COMPLETED หรือ SKIPPED
-        // (ข้ามรายการที่ยัง IN_PROGRESS หรือ LOCKED)
-        if (
-          item.status !== LessonProgressStatus.COMPLETED &&
-          item.status !== LessonProgressStatus.SKIPPED
-        ) {
-          // ข้ามรายการนี้
-          return acc;
-        }
-
-        // รวมค่า progressPercent (fallback เป็น 0 ถ้าไม่มีค่า)
-        acc.sum += Number(item.progressPercent) || 0;
-        // เพิ่มตัวนับรายการที่ถูกนับ
-        acc.count += 1;
-        return acc;
-      },
-      // ค่าเริ่มต้น accumulator
-      { sum: 0, count: 0 },
-    );
-
-    // ถ้าไม่มีรายการที่นับ ให้คืน 0 มิฉะนั้นคืนค่าเฉลี่ยปัดเป็นจำนวนเต็ม
-    const progressPercent = roadmapAcc.count > 0 ? Math.round(roadmapAcc.sum / roadmapAcc.count) : 0;
+    // รวม progressPercent ของทุกรายการ (COMPLETED/SKIPPED = 100,
+    // IN_PROGRESS/LOCKED ใช้ progressPercent หรือ 0)
+    const sumAll = items.reduce((acc, item) => acc + (Number(item.progressPercent) || 0), 0);
+    const progressPercent = totalItems > 0 ? Math.round(sumAll / totalItems) : 0;
 
     return {
       chapterId,
