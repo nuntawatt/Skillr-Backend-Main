@@ -460,9 +460,7 @@ export class QuizService {
       throw new NotFoundException('Checkpoint not found');
     }
 
-    // บันทึกผล per-checkpoint
-    // - ถ้าตอบถูกแล้ว: ห้ามทำซ้ำ
-    // - ถ้าตอบผิด: ทำใหม่ได้จนกว่าจะถูก (update แถวเดิม)
+    // ตรวจสอบว่าเคยทำ checkpoint นี้แล้วหรือไม่
     const existing = await this.resultRepository.findOne({
       where: {
         userId,
