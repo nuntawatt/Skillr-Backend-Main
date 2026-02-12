@@ -351,6 +351,7 @@ export class QuizService {
       const attempted = r?.userAnswer != null;
       const isCorrect = attempted ? r?.isCorrect === true : false;
       const checkpointStatus = isCorrect ? 'COMPLETED' : 'PENDING';
+      const showSolution = attempted;
 
       return {
         checkpoint_id: c.checkpointId,
@@ -360,18 +361,19 @@ export class QuizService {
         question: c.checkpointQuestions,
         options: c.checkpointOption ?? null,
         student_progress: {
-          // ไม่เผยคำตอบใน GET ถ้ายังไม่ผ่าน
-          correct_answer: isCorrect ? c.checkpointAnswer : null,
+          // ตาม requirement: เมื่อ "ตอบแล้ว" ให้ดึงเฉลยจาก GET ได้
+          // (เริ่มต้นยังไม่ตอบ ต้องเป็น null)
+          correct_answer: showSolution ? c.checkpointAnswer : null,
           // แสดงคำตอบที่ผู้ใช้ตอบล่าสุด (เพื่อกลับเข้าหน้าเดิมแล้วเห็นคำตอบที่เคยเลือก)
           user_answer: r?.userAnswer ?? null,
           // ถ้ายังไม่เคยตอบ ให้เป็น null (ไม่ใช่ true/false)
           is_correct: attempted ? (r?.isCorrect ?? null) : null,
-          feedback: isCorrect ? 'ผ่านแล้ว' : null,
+          feedback: attempted ? (isCorrect ? 'ผ่านแล้ว' : 'เกือบถูกแล้ว !') : null,
           checkpoint_status: checkpointStatus,
         },
-        checkpoint_explanation: isCorrect ? (c.checkpointExplanation ?? null) : null,
-        // ถ้ายังไม่ผ่านให้เป็น null (ตามที่ต้องการ)
-        score: isCorrect ? 5 : null,
+        checkpoint_explanation: showSolution ? (c.checkpointExplanation ?? null) : null,
+        // ตาม requirement: เมื่อ "ตอบแล้ว" ให้ GET คืนคะแนนได้ (ผิด = 0, ถูก = 5)
+        score: attempted ? (isCorrect ? 5 : 0) : null,
       };
     });
   }
@@ -440,11 +442,12 @@ export class QuizService {
         checkpoint_id: checkpoint.checkpointId,
         lesson_id: checkpoint.lessonId,
         chapter_id: null,
+        user_answer: answer,
         is_correct: isCorrect,
         score,
-        // ห้ามเผยเฉลยถ้าตอบผิด (เพื่อให้สามารถลองใหม่ได้อย่างยุติธรรม)
-        correct_answer: isCorrect ? checkpoint.checkpointAnswer : null,
-        checkpoint_explanation: isCorrect ? (checkpoint.checkpointExplanation ?? null) : null,
+        // ตาม requirement: ถ้าตอบผิดต้องส่งคำตอบที่ถูก + คำอธิบายกลับไปด้วย
+        correct_answer: checkpoint.checkpointAnswer,
+        checkpoint_explanation: checkpoint.checkpointExplanation ?? null,
         feedback: isCorrect
           ? 'ผ่านแล้ว แต่ไม่สามารถให้ XP ได้'
           : 'เกือบถูกแล้ว !',
@@ -491,11 +494,12 @@ export class QuizService {
       checkpoint_id: checkpoint.checkpointId,
       lesson_id: checkpoint.lessonId,
       chapter_id: chapterId,
+      user_answer: answer,
       is_correct: isCorrect,
       score,
-      // ห้ามเผยเฉลยถ้าตอบผิด (เพื่อให้สามารถลองใหม่ได้)
-      correct_answer: isCorrect ? checkpoint.checkpointAnswer : null,
-      checkpoint_explanation: isCorrect ? (checkpoint.checkpointExplanation ?? null) : null,
+      // ตาม requirement: ถ้าตอบผิดต้องส่งคำตอบที่ถูก + คำอธิบายกลับไปด้วย
+      correct_answer: checkpoint.checkpointAnswer,
+      checkpoint_explanation: checkpoint.checkpointExplanation ?? null,
       feedback: isCorrect
         ? 'ยอดเยี่ยมมาก !'
         : 'เกือบถูกแล้ว !',
