@@ -40,7 +40,7 @@ export class QuizsResult {
   userAnswer: any;
 
   @Column({ name: 'is_correct', type: 'boolean', nullable: true })
-  isCorrect: boolean;
+  isCorrect: boolean | null;
 
   @Column({
     type: 'enum',

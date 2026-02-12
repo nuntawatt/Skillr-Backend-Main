@@ -292,4 +292,20 @@ export class QuizController {
   ) {
     return this.quizService.checkCheckpointAnswer(checkpointId, userId, answer);
   }
+
+  @Post('checkpoint/:checkpointId/skip')
+  @ApiOperation({ summary: 'ข้าม checkpoint (บันทึกสถานะเป็น SKIPPED)' })
+  @ApiParam({
+    name: 'checkpointId',
+    type: Number,
+    description: 'Checkpoint ID (ไม่ใช่ lessonId)',
+  })
+  @ApiResponse({ status: 200, description: 'Checkpoint skipped successfully' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  skipCheckpoint(
+    @Param('checkpointId', ParseIntPipe) checkpointId: number,
+    @CurrentUserId() userId: string,
+  ) {
+    return this.quizService.skipCheckpoint(checkpointId, userId);
+  }
 }

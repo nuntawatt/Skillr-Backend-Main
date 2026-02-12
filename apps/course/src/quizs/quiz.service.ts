@@ -350,8 +350,11 @@ export class QuizService {
       const r = resultByCheckpointId.get(c.checkpointId) ?? null;
       const attempted = r?.userAnswer != null;
       const isCorrect = attempted ? r?.isCorrect === true : false;
-      const checkpointStatus = isCorrect ? 'COMPLETED' : 'PENDING';
-      const showSolution = attempted;
+      const isSkipped = r?.status === QuizsStatus.SKIPPED;
+      const checkpointStatus = isCorrect ? 'COMPLETED' : isSkipped ? 'SKIPPED' : 'PENDING';
+      // ตาม requirement: เมื่อ "ตอบแล้ว" ให้ดึงเฉลยจาก GET ได้
+      // เพิ่มเติม: ถ้ากดข้าม (SKIPPED) ให้เห็นเฉลยได้เช่นกัน
+      const showSolution = attempted || isSkipped;
 
       return {
         checkpoint_id: c.checkpointId,
@@ -368,14 +371,78 @@ export class QuizService {
           user_answer: r?.userAnswer ?? null,
           // ถ้ายังไม่เคยตอบ ให้เป็น null (ไม่ใช่ true/false)
           is_correct: attempted ? (r?.isCorrect ?? null) : null,
-          feedback: attempted ? (isCorrect ? 'ผ่านแล้ว' : 'เกือบถูกแล้ว !') : null,
+          feedback: isSkipped ? 'ข้ามแล้ว' : attempted ? (isCorrect ? 'ผ่านแล้ว' : 'เกือบถูกแล้ว !') : null,
           checkpoint_status: checkpointStatus,
         },
         checkpoint_explanation: showSolution ? (c.checkpointExplanation ?? null) : null,
         // ตาม requirement: เมื่อ "ตอบแล้ว" ให้ GET คืนคะแนนได้ (ผิด = 0, ถูก = 5)
-        score: attempted ? (isCorrect ? 5 : 0) : null,
+        score: attempted ? (isCorrect ? 5 : 0) : isSkipped ? 0 : null,
       };
     });
+  }
+
+  // ข้าม checkpoint (บันทึกเป็น SKIPPED)
+  async skipCheckpoint(checkpointId: number, userId: string) {
+    const checkpoint = await this.checkpointRepository.findOne({
+      where: { checkpointId },
+    });
+
+    if (!checkpoint) {
+      throw new NotFoundException('Checkpoint not found');
+    }
+
+    const existing = await this.resultRepository.findOne({
+      where: {
+        userId,
+        type: QuizsResultType.CHECKPOINT,
+        checkpointId,
+      },
+    });
+
+    // ถ้าตอบถูกแล้ว ห้ามข้าม/ทำซ้ำ
+    if (existing?.isCorrect === true && existing.userAnswer != null) {
+      throw new ConflictException('This checkpoint has already been completed and cannot be skipped.');
+    }
+
+    // ถ้าข้ามแล้วแล้ว ให้คืนค่าเดิม
+    if (existing?.status === QuizsStatus.SKIPPED) {
+      return {
+        checkpoint_id: checkpoint.checkpointId,
+        lesson_id: checkpoint.lessonId,
+        user_answer: null,
+        is_correct: null,
+        score: 0,
+        correct_answer: checkpoint.checkpointAnswer,
+        checkpoint_explanation: checkpoint.checkpointExplanation ?? null,
+        feedback: 'ข้ามแล้ว',
+        checkpoint_status: 'SKIPPED',
+      };
+    }
+
+    const toSave = existing ??
+      this.resultRepository.create({
+        userId,
+        lessonId: checkpoint.lessonId,
+        type: QuizsResultType.CHECKPOINT,
+        checkpointId,
+      });
+
+    toSave.status = QuizsStatus.SKIPPED;
+    toSave.userAnswer = null;
+    toSave.isCorrect = null;
+    await this.resultRepository.save(toSave);
+
+    return {
+      checkpoint_id: checkpoint.checkpointId,
+      lesson_id: checkpoint.lessonId,
+      user_answer: null,
+      is_correct: null,
+      score: 0,
+      correct_answer: checkpoint.checkpointAnswer,
+      checkpoint_explanation: checkpoint.checkpointExplanation ?? null,
+      feedback: 'ข้ามแล้ว',
+      checkpoint_status: 'SKIPPED',
+    };
   }
 
 
@@ -403,6 +470,10 @@ export class QuizService {
         checkpointId,
       },
     });
+
+    if (existing?.status === QuizsStatus.SKIPPED) {
+      throw new ConflictException('This checkpoint has been skipped and cannot be answered.');
+    }
 
     // ล็อกการทำซ้ำ "เฉพาะ" กรณีที่เคยตอบถูกจริง ๆ (มีคำตอบที่บันทึกไว้)
     // กันเคสข้อมูล legacy ที่อาจมี isCorrect=true แต่ userAnswer=null ทำให้ตอบไม่ได้ทั้งที่ยังไม่เคยตอบจริง
