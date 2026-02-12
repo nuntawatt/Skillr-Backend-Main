@@ -1,5 +1,10 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 
+export enum QuizsResultType {
+  QUIZ = 'QUIZ',
+  CHECKPOINT = 'CHECKPOINT',
+}
+
 export enum QuizsStatus {
   PENDING = 'PENDING',
   COMPLETED = 'COMPLETED',
@@ -7,7 +12,8 @@ export enum QuizsStatus {
 }
 
 @Entity('quizs_results')
-@Index(['userId', 'lessonId'], { unique: true })
+@Index(['userId', 'lessonId'])
+@Index(['userId', 'type', 'checkpointId'])
 export class QuizsResult {
   @PrimaryGeneratedColumn()
   id: number;
@@ -15,8 +21,20 @@ export class QuizsResult {
   @Column({ name: 'user_id', type: 'text' })
   userId: string;
 
+  @Column({
+    name: 'type',
+    type: 'enum',
+    enum: QuizsResultType,
+    default: QuizsResultType.QUIZ,
+  })
+  type: QuizsResultType;
+
   @Column({ name: 'lesson_id' })
   lessonId: number;
+
+  // ใช้เมื่อ type = CHECKPOINT
+  @Column({ name: 'checkpoint_id', type: 'integer', nullable: true })
+  checkpointId: number | null;
 
   @Column({ name: 'user_answer', type: 'jsonb', nullable: true })
   userAnswer: any;

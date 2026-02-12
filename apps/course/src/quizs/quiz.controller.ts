@@ -259,12 +259,12 @@ export class QuizController {
     return this.quizService.skipQuiz(lessonId, userId);
   }
 
-  @Post('checkpoint/:id/check')
+  @Post('checkpoint/:checkpointId/check')
   @ApiOperation({ summary: 'ตรวจคำตอบ checkpoint ตาม id' })
   @ApiParam({
-    name: 'id',
+    name: 'checkpointId',
     type: Number,
-    description: 'Enter Checkpoint ID',
+    description: 'Checkpoint ID (ไม่ใช่ lessonId)',
   })
   @ApiBody({
     schema: {
@@ -286,10 +286,10 @@ export class QuizController {
   @ApiResponse({ status: 200, description: 'Checkpoint answer checked successfully' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   checkCheckpoint(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('checkpointId', ParseIntPipe) checkpointId: number,
     @CurrentUserId() userId: string,
     @Body('answer') answer: any,
   ) {
-    return this.quizService.checkCheckpointAnswer(id, userId, answer);
+    return this.quizService.checkCheckpointAnswer(checkpointId, userId, answer);
   }
 }
