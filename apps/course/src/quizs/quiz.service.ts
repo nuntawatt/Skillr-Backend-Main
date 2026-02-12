@@ -200,7 +200,7 @@ export class QuizService {
     // 8. ส่งผลลัพธ์กลับไปให้ frontend
     return {
       isCorrect,
-      correctAnswer: quiz.quizsAnswer,
+      quizs_answer: quiz.quizsAnswer,
       quizs_explanation: quiz.quizsExplanation,
     };
   }
