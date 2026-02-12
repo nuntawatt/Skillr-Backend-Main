@@ -792,12 +792,18 @@ export class ProgressService {
     const sumAll = items.reduce((acc, item) => acc + (Number(item.progressPercent) || 0), 0);
     const progressPercent = totalItems > 0 ? Math.round(sumAll / totalItems) : 0;
 
+    // ดึงสถานะ streak ของผู้ใช้ (ใช้ currentStreak > 0 เป็น COMPLETE)
+    const { streak, isReward } = await this.streakService.getStreak(userId);
+    const streakStatus: 'IN_PROGRESS' | 'COMPLETE' = streak.currentStreak > 0 ? 'COMPLETE' : 'IN_PROGRESS';
+
     return {
       chapterId,
       chapterTitle: chapter.chapter_title,
       progressPercent,
       nextAvailableLessonId,
       items,
+      streakStatus,
+      isReward,
     };
   }
 

@@ -18,6 +18,9 @@ export class UserStreak {
   @Column({ name: 'last_completed_at', type: 'timestamptz', nullable: true })
   lastCompletedAt: Date | null;
 
+  @Column({ name: 'reward_shown_at', type: 'timestamptz', nullable: true })
+  rewardShownAt: Date | null;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 

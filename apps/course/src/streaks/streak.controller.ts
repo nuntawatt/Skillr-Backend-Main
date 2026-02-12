@@ -1,5 +1,5 @@
 import { Controller, Get, Post, UseGuards, Body } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiOkResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@auth';
 import { CurrentUserId } from './decorators/current-user-id.decorator';
 import { StreakService } from './streak.service';
@@ -110,14 +110,37 @@ export class StreakController {
     description: 'ไม่ได้รับอนุญาต (ไม่มี JWT token)'
   })
   async getStreak(@CurrentUserId() userId: string): Promise<StreakResponseDto> {
-    const { streak, color } = await this.streakService.getStreak(userId);
+    const { streak, color, isReward } = await this.streakService.getStreak(userId);
     return {
       currentStreak: streak.currentStreak,
       longestStreak: streak.longestStreak,
       lastCompletedAt: streak.lastCompletedAt,
       color,
-      isReward: streak.currentStreak > 0,
+      isReward,
     };
+  }
+
+  @Post('reward/shown')
+  @ApiOperation({ 
+    summary: 'ทำเครื่องหมายโมดอลรางวัลตามที่แสดง',
+    description: 'บันทึกว่าผู้ใช้ได้เห็น reward modal แล้วสำหรับวันนี้'
+  })
+  @ApiOkResponse({ 
+    description: 'บันทึกสำเร็จ',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string', example: 'Reward modal marked as shown' }
+      }
+    }
+  })
+  @ApiResponse({ 
+    status: 401, 
+    description: 'ไม่ได้รับอนุญาต (ไม่มี JWT token)'
+  })
+  async markRewardShown(@CurrentUserId() userId: string): Promise<{ message: string }> {
+    await this.streakService.markRewardShown(userId);
+    return { message: 'Reward modal marked as shown' };
   }
 
   // DEV ONLY: Test endpoints

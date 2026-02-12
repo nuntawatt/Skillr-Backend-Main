@@ -54,4 +54,12 @@ export class ChapterRoadmapDto {
   // เก็บสถานะของ Checkpoint ว่าถูกปลดล็อคหรือไม่
   @ApiProperty({ required: false, nullable: true })
   checkpointUnlocked?: boolean;
+
+  // Streak status for this user (derived from streak service)
+  @ApiProperty({ required: false, enum: ['IN_PROGRESS', 'COMPLETE'], description: 'สถานะ streak ของผู้ใช้' })
+  streakStatus?: 'IN_PROGRESS' | 'COMPLETE';
+
+  // Whether the user currently has an active streak that can claim reward
+  @ApiProperty({ required: false, description: 'ผู้ใช้มี streak ที่รับรางวัลได้หรือไม่ (currentStreak > 0)' })
+  isReward?: boolean;
 }

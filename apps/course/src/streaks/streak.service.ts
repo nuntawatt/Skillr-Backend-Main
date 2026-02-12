@@ -58,7 +58,7 @@ export class StreakService {
     return this.streakRepository.save(streak);
   }
 
-  async getStreak(userId: string): Promise<{ streak: UserStreak; color: ReturnType<typeof getStreakColor>; }> {
+  async getStreak(userId: string): Promise<{ streak: UserStreak; color: ReturnType<typeof getStreakColor>; isReward: boolean; }> {
     let streak = await this.ensureStreak(userId);
 
     // If user has been inactive for at least one full day after last completion, reset to 0
@@ -66,34 +66,50 @@ export class StreakService {
       const gap = diffDaysUtc(new Date(), streak.lastCompletedAt);
       if (gap >= 1 && streak.currentStreak !== 0) {
         streak.currentStreak = 0;
+        streak.rewardShownAt = null; // Reset reward shown when streak resets
         streak = await this.streakRepository.save(streak);
       }
     }
 
+    // Calculate isReward: true if currentStreak > 0 AND reward not shown for this streak
+    const isReward = streak.currentStreak > 0 && 
+      (!streak.rewardShownAt || !isSameUtcDay(streak.rewardShownAt, new Date()));
+
     return {
       streak,
       color: getStreakColor(streak.currentStreak),
+      isReward,
     };
   }
 
   private async ensureStreak(userId: string): Promise<UserStreak> {
     let streak = await this.streakRepository.findOne({ where: { userId } });
     if (!streak) {
-      streak = this.streakRepository.create({
-        userId,
-        currentStreak: 0,
-        longestStreak: 0,
-        lastCompletedAt: null,
-      });
-      streak = await this.streakRepository.save(streak);
+      await this.streakRepository.upsert(
+        {
+          userId,
+          currentStreak: 0,
+          longestStreak: 0,
+          lastCompletedAt: null,
+        },
+        ['userId'],
+      );
+      streak = await this.streakRepository.findOne({ where: { userId } });
     }
-    return streak;
+    return streak!;
   }
 
   async resetStreak(userId: string): Promise<UserStreak> {
     const streak = await this.ensureStreak(userId);
     streak.currentStreak = 0;
     streak.lastCompletedAt = null;
+    streak.rewardShownAt = null;
+    return this.streakRepository.save(streak);
+  }
+
+  async markRewardShown(userId: string): Promise<UserStreak> {
+    const streak = await this.ensureStreak(userId);
+    streak.rewardShownAt = new Date();
     return this.streakRepository.save(streak);
   }
 }

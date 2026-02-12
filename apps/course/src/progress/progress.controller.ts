@@ -80,9 +80,91 @@ export class ProgressController {
     }
 
     @Get('chapters/:chapterId/roadmap')
-    @ApiOperation({ summary: 'ดึงแผนที่เส้นทางของบทเรียนพร้อมสถานะของแต่ละรายการ Completed/Current/Locked' })
+    @ApiOperation({ 
+      summary: 'ดึงแผนที่เส้นทางของบทเรียนพร้อมสถานะของแต่ละรายการ Completed/Current/Locked และสถานะ Streak',
+      description: 'คืนข้อมูล roadmap ของบทเรียนพร้อมสถานะของแต่ละบทเรียน และสถานะ Streak ปัจจุบันของผู้ใช้'
+    })
     @ApiParam({ name: 'chapterId', type: Number, example: 1 })
-    @ApiOkResponse({ type: ChapterRoadmapDto })
+    @ApiOkResponse({ 
+      type: ChapterRoadmapDto,
+      description: 'ดึงข้อมูล roadmap สำเร็จ',
+      examples: {
+        'with_active_streak': {
+          summary: 'มี Streak ที่กำลังทำอยู่',
+          value: {
+            chapterId: 1,
+            chapterTitle: 'บทเรียนพื้นฐาน',
+            progressPercent: 65,
+            items: [
+              {
+                lessonId: 1,
+                lessonTitle: 'บทนำ',
+                lessonType: 'video',
+                status: 'COMPLETED',
+                progressPercent: 100,
+                positionSeconds: 300,
+                durationSeconds: 300,
+                completedAt: '2025-01-10T10:00:00.000Z',
+                orderIndex: 1
+              },
+              {
+                lessonId: 2,
+                lessonTitle: 'เนื้อหาหลัก',
+                lessonType: 'video',
+                status: 'IN_PROGRESS',
+                progressPercent: 30,
+                positionSeconds: 90,
+                durationSeconds: 300,
+                completedAt: null,
+                orderIndex: 2
+              },
+              {
+                lessonId: 3,
+                lessonTitle: 'แบบฝึกหัด',
+                lessonType: 'quiz',
+                status: 'LOCKED',
+                progressPercent: 0,
+                positionSeconds: null,
+                durationSeconds: null,
+                completedAt: null,
+                orderIndex: 3
+              }
+            ],
+            nextAvailableLessonId: 2,
+            hasCheckpoint: false,
+            checkpointUnlocked: null,
+            streakStatus: 'COMPLETE',
+            isReward: true
+          }
+        },
+        'without_streak': {
+          summary: 'ไม่มี Streak',
+          value: {
+            chapterId: 2,
+            chapterTitle: 'บทเรียนขั้นสูง',
+            progressPercent: 0,
+            items: [
+              {
+                lessonId: 4,
+                lessonTitle: 'เริ่มต้น',
+                lessonType: 'video',
+                status: 'LOCKED',
+                progressPercent: 0,
+                positionSeconds: null,
+                durationSeconds: null,
+                completedAt: null,
+                orderIndex: 1
+              }
+            ],
+            nextAvailableLessonId: null,
+            hasCheckpoint: false,
+            checkpointUnlocked: null,
+            streakStatus: 'IN_PROGRESS',
+            isReward: false
+          }
+        }
+      }
+    })
     @ApiResponse({ status: 404, description: 'Chapter not found' })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     getChapterRoadmap(
