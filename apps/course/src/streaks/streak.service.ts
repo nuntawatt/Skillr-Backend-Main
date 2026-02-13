@@ -36,10 +36,8 @@ export class StreakService {
     // Apply break if missed at least one full day since last completion
     if (streak.lastCompletedAt) {
       const gap = diffDaysUtc(now, streak.lastCompletedAt);
-      // gap === 1 means consecutive day (OK). Reset only if missed at least one day in between.
-      if (gap > 1 && streak.currentStreak !== 0) {
+      if (gap >= 1 && streak.currentStreak !== 0) {
         streak.currentStreak = 0;
-        streak.rewardShownAt = null;
         streak = await this.streakRepository.save(streak);
       }
     }
@@ -66,8 +64,7 @@ export class StreakService {
     // If user has been inactive for at least one full day after last completion, reset to 0
     if (streak.lastCompletedAt) {
       const gap = diffDaysUtc(new Date(), streak.lastCompletedAt);
-      // gap === 1 means last completion was yesterday (still can continue today)
-      if (gap > 1 && streak.currentStreak !== 0) {
+      if (gap >= 1 && streak.currentStreak !== 0) {
         streak.currentStreak = 0;
         streak.rewardShownAt = null; // Reset reward shown when streak resets
         streak = await this.streakRepository.save(streak);
@@ -75,7 +72,7 @@ export class StreakService {
     }
 
     // Calculate isReward: true if currentStreak > 0 AND reward not shown for this streak
-    const isReward = streak.currentStreak > 0 &&
+    const isReward = streak.currentStreak > 0 && 
       (!streak.rewardShownAt || !isSameUtcDay(streak.rewardShownAt, new Date()));
 
     return {
