@@ -6,31 +6,46 @@ export class RegisterDto {
   @IsEmail({}, { message: 'Please provide a valid email address' })
   email: string;
 
-  @ApiProperty({ example: 'StrongPassword123', description: 'User password' })
+  @ApiProperty({
+    example: 'StrongPassword123',
+    description:
+      'Password must be 12-64 characters, ASCII only, include uppercase, lowercase and number',
+  })
   @IsString()
-  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[\x21-\x7E]{12,64}$/, {
-    message:
-      'Password must be 12-64 characters, include uppercase, lowercase, number, and contain no whitespace or emoji',
-  },)
+  @Matches(
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[\x21-\x7E]{12,64}$/,
+    {
+      message:
+        'Password must be 12-64 ASCII characters, include uppercase, lowercase and number, and contain no whitespace or non-English characters',
+    },
+  )
   password: string;
 
-  @ApiProperty({ example: 'skllr', description: 'First name of the user', required: false })
+   @ApiProperty({
+    example: 'skllr',
+    description: 'First name of the user',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   @Matches(/^[\p{L} '\-]+$/u, {
     message:
-      "First name may contain letters, spaces, hyphens and apostrophes only",
+      "First name may contain letters (all languages), spaces, hyphens and apostrophes only",
   })
   @MinLength(1)
   @MaxLength(64)
   firstName?: string;
 
-  @ApiProperty({ example: 'test', description: 'Last name of the user', required: false })
+  @ApiProperty({
+    example: 'test',
+    description: 'Last name of the user',
+    required: false,
+  })
   @IsString()
   @IsOptional()
   @Matches(/^[\p{L} '\-]+$/u, {
     message:
-      "Last name may contain letters, spaces, hyphens and apostrophes only",
+      "Last name may contain letters (all languages), spaces, hyphens and apostrophes only",
   })
   @MinLength(1)
   @MaxLength(64)
