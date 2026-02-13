@@ -802,9 +802,9 @@ export class ProgressService {
     // ถ้าไม่มีรายการที่นับ ให้คืน 0 มิฉะนั้นคืนค่าเฉลี่ยปัดเป็นจำนวนเต็ม
     const progressPercent = roadmapAcc.count > 0 ? Math.round(roadmapAcc.sum / roadmapAcc.count) : 0;
 
-    // ดึงสถานะ streak ของผู้ใช้ (ใช้ currentStreak > 0 เป็น COMPLETE)
-    const { streak, isReward } = await this.streakService.getStreak(userId);
-    const streakStatus: 'IN_PROGRESS' | 'COMPLETE' = streak.currentStreak > 0 ? 'COMPLETE' : 'IN_PROGRESS';
+    // ดึงสถานะ streak ของผู้ใช้ (COMPLETE = ไฟติด)
+    const { isReward, isFlameOn } = await this.streakService.getStreak(userId);
+    const streakStatus: 'IN_PROGRESS' | 'COMPLETE' = isFlameOn ? 'COMPLETE' : 'IN_PROGRESS';
 
     return {
       chapterId,

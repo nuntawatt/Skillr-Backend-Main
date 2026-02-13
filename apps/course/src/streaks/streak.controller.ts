@@ -30,7 +30,8 @@ export class StreakController {
           longestStreak: 0,
           lastCompletedAt: null,
           color: null,
-          isReward: false
+          isReward: false,
+          isFlameOn: false
         }
       },
       'beginner': {
@@ -40,47 +41,52 @@ export class StreakController {
           longestStreak: 2,
           lastCompletedAt: '2025-01-02T10:30:00.000Z',
           color: null,
-          isReward: true
+          isReward: true,
+          isFlameOn: true
         }
       },
       'intermediate': {
         summary: 'ผู้ใช้ระดับกลาง (3-9 วัน)',
         value: {
           currentStreak: 7,
-          longestStreak: 15,
+          longestStreak: 7,
           lastCompletedAt: '2025-01-07T09:15:00.000Z',
           color: 'yellow',
-          isReward: true
+          isReward: true,
+          isFlameOn: true
         }
       },
       'advanced': {
         summary: 'ผู้ใช้ขั้นสูง (10-29 วัน)',
         value: {
           currentStreak: 12,
-          longestStreak: 25,
+          longestStreak: 12,
           lastCompletedAt: '2025-01-12T14:20:00.000Z',
           color: 'orange',
-          isReward: true
+          isReward: true,
+          isFlameOn: true
         }
       },
       'expert': {
         summary: 'ผู้เชี่ยวชาญ (30-99 วัน)',
         value: {
           currentStreak: 45,
-          longestStreak: 60,
+          longestStreak: 45,
           lastCompletedAt: '2025-01-12T08:45:00.000Z',
           color: 'red',
-          isReward: true
+          isReward: true,
+          isFlameOn: true
         }
       },
       'master': {
         summary: 'ผู้เชี่ยวชาญสูงสุด 100+ วัน',
         value: {
           currentStreak: 105,
-          longestStreak: 120,
+          longestStreak: 105,
           lastCompletedAt: '2025-01-12T11:30:00.000Z',
           color: 'pink',
-          isReward: true
+          isReward: true,
+          isFlameOn: true
         }
       },
       'legend': {
@@ -90,17 +96,19 @@ export class StreakController {
           longestStreak: 250,
           lastCompletedAt: '2025-01-12T07:00:00.000Z',
           color: 'purple',
-          isReward: true
+          isReward: true,
+          isFlameOn: true
         }
       },
-      'inactive': {
-        summary: 'streak หมดอายุ (currentStreak = 0)',
+      'flame_off': {
+        summary: 'ขาดวัน (ไฟดับ) แต่เลขสะสมยังอยู่',
         value: {
-          currentStreak: 0,
+          currentStreak: 15,
           longestStreak: 15,
           lastCompletedAt: '2025-01-05T10:00:00.000Z',
-          color: null,
-          isReward: false
+          color: 'orange',
+          isReward: false,
+          isFlameOn: false
         }
       }
     }
@@ -110,13 +118,14 @@ export class StreakController {
     description: 'ไม่ได้รับอนุญาต (ไม่มี JWT token)'
   })
   async getStreak(@CurrentUserId() userId: string): Promise<StreakResponseDto> {
-    const { streak, color, isReward } = await this.streakService.getStreak(userId);
+    const { streak, color, isReward, isFlameOn } = await this.streakService.getStreak(userId);
     return {
       currentStreak: streak.currentStreak,
       longestStreak: streak.longestStreak,
       lastCompletedAt: streak.lastCompletedAt,
       color,
       isReward,
+      isFlameOn,
     };
   }
 
@@ -160,7 +169,8 @@ export class StreakController {
           longestStreak: 1,
           lastCompletedAt: '2025-01-01T10:00:00.000Z',
           color: null,
-          isReward: true
+          isReward: true,
+          isFlameOn: true
         }
       },
       'consecutive_day': {
@@ -170,27 +180,19 @@ export class StreakController {
           longestStreak: 3,
           lastCompletedAt: '2025-01-03T10:00:00.000Z',
           color: 'yellow',
-          isReward: true
+          isReward: true,
+          isFlameOn: true
         }
       },
-      'after_reset': {
-        summary: 'หลังจากขาดวัน (reset)',
+      'after_gap': {
+        summary: 'ขาดวัน (ไฟดับ) แต่เลขสะสมเพิ่มต่อเมื่อกลับมาทำ',
         value: {
-          currentStreak: 1,
-          longestStreak: 3,
-          lastCompletedAt: '2025-01-05T10:00:00.000Z',
-          color: null,
-          isReward: true
-        }
-      },
-      'broken_streak': {
-        summary: 'streak หมดอายุ',
-        value: {
-          currentStreak: 0,
-          longestStreak: 3,
-          lastCompletedAt: '2025-01-03T10:00:00.000Z',
-          color: null,
-          isReward: false
+          currentStreak: 11,
+          longestStreak: 11,
+          lastCompletedAt: '2025-01-20T10:00:00.000Z',
+          color: 'orange',
+          isReward: true,
+          isFlameOn: false
         }
       }
     }
@@ -204,15 +206,16 @@ export class StreakController {
       throw new Error('Invalid date format. Use ISO format: YYYY-MM-DDTHH:mm:ss.sssZ');
     }
     
-    const streak = await this.streakService.bumpStreak(userId, testDate);
-    const color = getStreakColor(streak.currentStreak);
-    
+    await this.streakService.bumpStreak(userId, testDate);
+    const { streak, color, isReward, isFlameOn } = await this.streakService.getStreak(userId);
+
     return {
       currentStreak: streak.currentStreak,
       longestStreak: streak.longestStreak,
       lastCompletedAt: streak.lastCompletedAt,
       color,
-      isReward: streak.currentStreak > 0,
+      isReward,
+      isFlameOn,
     };
   }
 
@@ -252,22 +255,26 @@ export class StreakController {
         value: {
           userId: '123e4567-e89b-12d3-a456-426614174000',
           currentStreak: 5,
-          longestStreak: 12,
+          longestStreak: 5,
           lastCompletedAt: '2025-01-05T10:00:00.000Z',
           color: 'yellow',
+          isReward: true,
+          isFlameOn: true,
           serverTime: '2025-01-05T15:30:00.000Z',
           serverTimeUTC: 'Mon, 05 Jan 2025 15:30:00 GMT',
           lastCompletedDays: 0
         }
       },
       'broken_streak': {
-        summary: 'streak หมดอายุ (reset)',
+        summary: 'ขาดวัน (ไฟดับ) แต่เลขสะสมยังอยู่',
         value: {
           userId: '123e4567-e89b-12d3-a456-426614174000',
-          currentStreak: 0,
+          currentStreak: 12,
           longestStreak: 12,
           lastCompletedAt: '2025-01-03T10:00:00.000Z',
-          color: null,
+          color: 'orange',
+          isReward: false,
+          isFlameOn: false,
           serverTime: '2025-01-05T15:30:00.000Z',
           serverTimeUTC: 'Mon, 05 Jan 2025 15:30:00 GMT',
           lastCompletedDays: 2
@@ -281,6 +288,8 @@ export class StreakController {
           longestStreak: 0,
           lastCompletedAt: null,
           color: null,
+          isReward: false,
+          isFlameOn: false,
           serverTime: '2025-01-05T15:30:00.000Z',
           serverTimeUTC: 'Mon, 05 Jan 2025 15:30:00 GMT',
           lastCompletedDays: null
@@ -289,7 +298,7 @@ export class StreakController {
     }
   })
   async testGetStatus(@CurrentUserId() userId: string): Promise<any> {
-    const { streak, color } = await this.streakService.getStreak(userId);
+    const { streak, color, isReward, isFlameOn } = await this.streakService.getStreak(userId);
     const now = new Date();
     
     return {
@@ -298,6 +307,8 @@ export class StreakController {
       longestStreak: streak.longestStreak,
       lastCompletedAt: streak.lastCompletedAt,
       color,
+      isReward,
+      isFlameOn,
       serverTime: now.toISOString(),
       serverTimeUTC: now.toUTCString(),
       lastCompletedDays: streak.lastCompletedAt ? 
