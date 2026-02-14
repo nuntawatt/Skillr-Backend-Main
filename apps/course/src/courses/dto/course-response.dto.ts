@@ -13,8 +13,8 @@ export class CourseResponseDto {
   @ApiPropertyOptional({ description: 'Course description' })
   course_description?: string;
 
-  @ApiPropertyOptional({ description: 'Cover image media asset ID' })
-  course_imageId?: number;
+  @ApiPropertyOptional({ description: 'Cover image URL (CloudFront CDN)' })
+  course_imageUrl?: string;
 
   @ApiPropertyOptional({ description: 'Course tags', type: [String] })
   course_tags?: string[];

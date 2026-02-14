@@ -178,28 +178,7 @@ export class MediaVideosService {
     };
   }
 
-  // 3. Cleanup and delete asset
-  async cleanupDeleteAsset(id: number) {
-    const asset = await this.repo.findOne({ where: { id } });
-    if (!asset) return { deleted: false };
-
-    const storage = this.storageFactory.video();
-    const bucket = asset.storageBucket ?? storage.bucket;
-    const key = asset.storageKey;
-
-    if (bucket && key) {
-      try {
-        await storage.deleteObject(bucket, key);
-      } catch (err) {
-        this.logger.warn(`Failed to delete video file ${key}: ${String(err)}`);
-      }
-    }
-
-    await this.repo.remove(asset);
-    return { deleted: true };
-  }
-
-  // 4. Get presigned view URL
+  // 3. Get presigned view URL
   async getPresignedViewUrl(id: number) {
     const asset = await this.repo.findOne({ where: { id } });
     if (!asset) throw new NotFoundException('video asset not found');
@@ -229,7 +208,7 @@ export class MediaVideosService {
     };
   }
 
-  // 5. Delete video by ID
+  // 4. Delete video by ID
   async deleteVideoById(id: number) {
     const asset = await this.repo.findOne({ where: { id } });
     if (!asset) throw new NotFoundException('video asset not found');

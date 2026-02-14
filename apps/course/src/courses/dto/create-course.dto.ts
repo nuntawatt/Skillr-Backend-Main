@@ -18,10 +18,10 @@ export class CreateCourseDto {
   @Min(0)
   course_ownerId?: number;
 
-  @ApiPropertyOptional({ description: 'Cover image media asset ID', example: 123 })
+  @ApiPropertyOptional({ description: 'Cover image URL (CloudFront CDN)', example: 'https://cdn.skillacademy.com/images/abc123.jpg' })
   @IsOptional()
-  @IsNumber()
-  course_imageId?: number;
+  @IsString()
+  course_imageUrl?: string;
 
   @ApiPropertyOptional({ description: 'Course tags', type: [String], example: ['programming','typescript'] })
   @IsOptional()

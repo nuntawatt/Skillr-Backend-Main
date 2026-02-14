@@ -35,13 +35,13 @@ export class UpdateLessonDto {
   @Min(0)
   orderIndex?: number;
 
-  @ApiPropertyOptional({ description: 'Cover image ID from media service', example: 123 })
+  @ApiPropertyOptional({ description: 'Cover image URL (CloudFront CDN)', example: 'https://cdn.skillacademy.com/images/abc123.jpg' })
   @IsOptional()
-  @IsNumber()
-  lesson_coverImage_id?: number | null;
+  @IsString()
+  lesson_coverImageUrl?: string | null;
 
-  @ApiPropertyOptional({ description: 'Main video ID from media service', example: 456 })
+  @ApiPropertyOptional({ description: 'Main video URL (CloudFront CDN)', example: 'https://cdn.skillacademy.com/videos/abc123.mp4' })
   @IsOptional()
-  @IsNumber()
-  lesson_video_id?: number | null;
+  @IsString()
+  lesson_videoUrl?: string | null;
 }

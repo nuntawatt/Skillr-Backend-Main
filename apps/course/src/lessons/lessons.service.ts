@@ -43,8 +43,8 @@ export class LessonsService {
       lesson_type: createLessonDto.lesson_type,
       ref_id: createLessonDto.ref_id,
       orderIndex: orderIndex,
-      lesson_coverImage_id: createLessonDto.lesson_coverImage_id,
-      lesson_video_id: createLessonDto.lesson_video_id,
+      lesson_coverImageUrl: createLessonDto.lesson_coverImageUrl,
+      lesson_videoUrl: createLessonDto.lesson_videoUrl,
     });
 
     const saved = await this.lessonRepository.save(lesson);
@@ -100,12 +100,12 @@ export class LessonsService {
       lesson.orderIndex = updateLessonDto.orderIndex;
     }
 
-    if (updateLessonDto.lesson_coverImage_id !== undefined) {
-      lesson.lesson_coverImage_id = updateLessonDto.lesson_coverImage_id;
+    if (updateLessonDto.lesson_coverImageUrl !== undefined) {
+      lesson.lesson_coverImageUrl = updateLessonDto.lesson_coverImageUrl;
     }
 
-    if (updateLessonDto.lesson_video_id !== undefined) {
-      lesson.lesson_video_id = updateLessonDto.lesson_video_id;
+    if (updateLessonDto.lesson_videoUrl !== undefined) {
+      lesson.lesson_videoUrl = updateLessonDto.lesson_videoUrl;
     }
 
     const saved = await this.lessonRepository.save(lesson);
@@ -182,8 +182,8 @@ export class LessonsService {
       orderIndex: lesson.orderIndex,
       chapter_id: lesson.chapter_id,
       
-      lesson_coverImage_id: lesson.lesson_coverImage_id,
-      lesson_video_id: lesson.lesson_video_id,
+      lesson_coverImageUrl: lesson.lesson_coverImageUrl,
+      lesson_videoUrl: lesson.lesson_videoUrl,
 
       createdAt: lesson.createdAt,
     };

@@ -22,8 +22,8 @@ export class LessonsController {
           lesson_type: 'article',
           ref_id: 1,
           orderIndex: 0,
-          lesson_coverImage_id: 123,
-          lesson_video_id: null
+          lesson_coverImageUrl: 'https://cdn.skillacademy.com/images/abc123.jpg',
+          lesson_videoUrl: null
         }
       },
       video: {
@@ -35,8 +35,8 @@ export class LessonsController {
           lesson_type: 'video',
           ref_id: 2,
           orderIndex: 1,
-          lesson_coverImage_id: 124,
-          lesson_video_id: 456
+          lesson_coverImageUrl: 'https://cdn.skillacademy.com/images/def456.jpg',
+          lesson_videoUrl: 'https://cdn.skillacademy.com/videos/abc123.mp4'
         }
       },
       quiz: {
@@ -48,8 +48,8 @@ export class LessonsController {
           lesson_type: 'quiz',
           ref_id: 3,
           orderIndex: 2,
-          lesson_coverImage_id: 125,
-          lesson_video_id: null
+          lesson_coverImageUrl: 'https://cdn.skillacademy.com/images/ghi789.jpg',
+          lesson_videoUrl: null
         }
       },
       checkpoint: {
@@ -61,8 +61,8 @@ export class LessonsController {
           lesson_type: 'checkpoint',
           ref_id: 4,
           orderIndex: 3,
-          lesson_coverImage_id: 126,
-          lesson_video_id: null
+          lesson_coverImageUrl: 'https://cdn.skillacademy.com/images/jkl012.jpg',
+          lesson_videoUrl: null
         }
       }
     }

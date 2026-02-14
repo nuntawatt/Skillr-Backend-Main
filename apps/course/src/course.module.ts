@@ -20,7 +20,9 @@ import { LevelsService } from './levels/levels.service';
 import { ChaptersService } from './chapters/chapters.service';
 import { LessonsService } from './lessons/lessons.service';
 import { ArticlesService } from './articles/articles.service';
-import { StorageService } from './storage/storage.service';
+import { StorageModule } from './storage/storage.module';
+import { MediaImagesModule } from './media-images/media-images.module';
+import { MediaVideosModule } from './media-videos/media-videos.module';
 import { ProgressService } from './progress/progress.service';
 import { QuizService } from "./quizs/quiz.service";
 import { StreakService } from './streaks/streak.service';
@@ -70,7 +72,10 @@ const isTest = process.env.NODE_ENV === 'test';
           QuizsResult,
         ]),
 
-        AuthLibModule
+        AuthLibModule,
+        StorageModule,
+        MediaImagesModule,
+        MediaVideosModule
       ]),
   ],
 
@@ -92,7 +97,6 @@ const isTest = process.env.NODE_ENV === 'test';
     ChaptersService,
     LessonsService,
     ArticlesService,
-    StorageService,
     ProgressService,
     QuizService,
     StreakService,

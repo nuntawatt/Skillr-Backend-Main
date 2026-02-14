@@ -34,13 +34,13 @@ export class Lesson {
   @Column({ name: 'order_index', type: 'int', default: 0 })
   orderIndex: number;
 
-  // cover image (media-service image id)
-  @Column({ name: 'lesson_cover_image_id', type: 'int', nullable: true })
-  lesson_coverImage_id?: number | null;
+  // cover image URL (CloudFront CDN)
+  @Column({ name: 'lesson_cover_image_url', type: 'varchar', length: 2048, nullable: true })
+  lesson_coverImageUrl?: string | null;
 
-  // main video (media-service video id)
-  @Column({ name: 'lesson_video_id', type: 'int', nullable: true })
-  lesson_video_id?: number | null;
+  // main video URL (CloudFront CDN)
+  @Column({ name: 'lesson_video_url', type: 'varchar', length: 2048, nullable: true })
+  lesson_videoUrl?: string | null;
 
   @ManyToOne(() => Chapter, (chapter) => chapter.lessons, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'chapter_id', referencedColumnName: 'chapter_id' })

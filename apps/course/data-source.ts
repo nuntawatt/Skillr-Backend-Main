@@ -17,5 +17,3 @@ export const CourseDataSource = new DataSource({
   logging: false,
 });
 
-// Export only the named DataSource instance. Do not export a default to
-// satisfy TypeORM CLI requirement of a single DataSource export.

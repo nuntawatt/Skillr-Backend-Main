@@ -17,7 +17,7 @@ export class CoursesService {
       course_ownerId: createCourseDto.course_ownerId ?? 0,
       course_title: createCourseDto.course_title,
       course_description: createCourseDto.course_description,
-      course_imageId: createCourseDto.course_imageId,
+      course_imageUrl: createCourseDto.course_imageUrl,
       course_tags: createCourseDto.course_tags ?? null,
       isPublished: createCourseDto.isPublished ?? false,
     });
@@ -160,7 +160,7 @@ export class CoursesService {
     // อัปเดตฟิลด์ที่ระบุ
     if (updateCourseDto.course_title !== undefined) course.course_title = updateCourseDto.course_title;
     if (updateCourseDto.course_description !== undefined) course.course_description = updateCourseDto.course_description;
-    if (updateCourseDto.course_imageId !== undefined) course.course_imageId = updateCourseDto.course_imageId;
+    if (updateCourseDto.course_imageUrl !== undefined) course.course_imageUrl = updateCourseDto.course_imageUrl;
     if (updateCourseDto.course_tags !== undefined) course.course_tags = updateCourseDto.course_tags ?? null;
 
     if (updateCourseDto.isPublished !== undefined) {
@@ -190,7 +190,7 @@ export class CoursesService {
       course_title: course.course_title,
       course_description: course.course_description,
       course_tags: course.course_tags ?? undefined,
-      course_imageId: course.course_imageId ?? undefined,
+      course_imageUrl: course.course_imageUrl ?? undefined,
       isPublished: course.isPublished,
       createdAt: course.createdAt,
       updatedAt: course.updatedAt,

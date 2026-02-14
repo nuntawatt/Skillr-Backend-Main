@@ -13,10 +13,10 @@ export class UpdateCourseDto {
   @IsString()
   course_description?: string;
 
-  @ApiPropertyOptional({ description: 'Cover image media asset ID', example: 123 })
+  @ApiPropertyOptional({ description: 'Cover image URL (CloudFront CDN)', example: 'https://cdn.skillacademy.com/images/abc123.jpg' })
   @IsOptional()
-  @IsNumber()
-  course_imageId?: number | null;
+  @IsString()
+  course_imageUrl?: string | null;
 
   @ApiPropertyOptional({ description: 'Is the course published', default: false })
   @IsOptional()

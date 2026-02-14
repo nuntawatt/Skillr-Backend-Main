@@ -18,9 +18,9 @@ export class Course {
   @Column({ type: 'text', nullable: true })
   course_description?: string;
 
-  // cover image (media-service image id)
-  @Column({ name: 'course_image_id', type: 'int', nullable: true })
-  course_imageId?: number | null;
+  // cover image URL (CloudFront CDN)
+  @Column({ name: 'course_image_url', type: 'varchar', length: 2048, nullable: true })
+  course_imageUrl?: string | null;
 
   @Column({ name: 'course_tags', type: 'text', array: true, nullable: true })
   course_tags?: string[] | null;
