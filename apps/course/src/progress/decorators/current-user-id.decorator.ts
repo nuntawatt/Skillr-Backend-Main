@@ -1,17 +1,4 @@
-import { createParamDecorator, ExecutionContext, UnauthorizedException } from '@nestjs/common';
-import type { AuthUser } from '@auth';
-
-export const CurrentUserId = createParamDecorator((_: unknown, ctx: ExecutionContext): string => {
-  const request = ctx.switchToHttp().getRequest<{ user?: AuthUser }>();
-  const user = request.user;
-  const userId = user?.sub ?? user?.id;
-
-  if (!userId) {
-    if (process.env.NODE_ENV === 'test') {
-      return '123e4567-e89b-12d3-a456-426614174000';
-    }
-    throw new UnauthorizedException('Missing or invalid authentication');
-  }
-  
-  return String(userId);
-});
+/**
+ * @deprecated ใช้ import { CurrentUserId } from '@auth' แทน
+ */
+export { CurrentUserId } from '@auth';

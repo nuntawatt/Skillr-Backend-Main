@@ -66,7 +66,7 @@ export class MediaVideosService {
   }
 
   // 1. สร้าง presigned upload URL สำหรับอัพโหลดวิดีโอ (สำหรับไฟล์ขนาดใหญ่ - สูงสุด 2GB)
-  async createPresignedUpload(dto: CreateVideoUploadDto, user?: { sub?: number }) {
+  async createPresignedUpload(dto: CreateVideoUploadDto, user?: { userId?: string }) {
     this.validateVideoMime(dto.mime_type);
 
     const maxSize = Number(process.env.VIDEO_MAX_SIZE_BYTES ?? 2 * 1024 * 1024 * 1024); // 2GB

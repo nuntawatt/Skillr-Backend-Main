@@ -112,7 +112,7 @@ export class MediaVideosService {
   }
 
   // 1. Create presigned upload URL
-  async createPresignedUpload(dto: CreateVideoUploadDto, user?: { sub?: number }) {
+  async createPresignedUpload(dto: CreateVideoUploadDto, user?: { userId?: string }) {
     this.validateVideoMime(dto.mime_type);
 
     const maxSize = Number(process.env.VIDEO_MAX_SIZE_BYTES ?? 2 * 1024 * 1024 * 1024); // 2GB
@@ -136,7 +136,7 @@ export class MediaVideosService {
 
     // Save DB record with UPLOADING status
     const asset = this.repo.create({
-      ownerUserId: Number(user?.sub ?? 0),
+      ownerUserId: Number(user?.userId ?? 0),
       originalFilename: dto.original_filename ?? safeName,
       mimeType: dto.mime_type,
       sizeBytes: String(dto.size_bytes),

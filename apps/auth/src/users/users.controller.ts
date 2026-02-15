@@ -1,56 +1,57 @@
-import { Controller, Get, Patch, Param, Body, UseGuards, Request, Delete, HttpCode, HttpStatus, UseInterceptors, UploadedFile, BadRequestException, Post, Res } from '@nestjs/common';
+import { Controller, Get, Patch, Body, UseGuards, UseInterceptors, UploadedFile, BadRequestException, Param } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
 
-import type { Response, Request as ExpressRequest } from 'express';
 import { UsersService } from './users.service';
-import { UpdateUserDto, UpdateRoleDto } from './dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '@common/enums';
-import { ApiTags, ApiOperation, ApiBody, ApiResponse, ApiConsumes, ApiBearerAuth } from '@nestjs/swagger';
+import { UpdateUserDto } from './dto';
+import { JwtAuthGuard, CurrentUserId } from '@auth';
 
-type AuthedRequest = ExpressRequest & { user: { id: string } };
+import { ApiTags, ApiBearerAuth, ApiConsumes, ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
-@ApiTags('Users')
-@Controller('users')
+@ApiTags('User')
 @ApiBearerAuth('access-token')
+@Controller('users')
 @UseGuards(JwtAuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) { }
 
-  // Get current user profile
+  // =========================
+  // Profile
+  // =========================
+
   @Get('profile')
   @ApiOperation({ summary: 'Get current user profile' })
-  @ApiResponse({ status: 200, description: 'Current user profile retrieved successfully.' })
-  @ApiResponse({ status: 400, description: 'Bad Request.' })
-  @ApiResponse({ status: 401, description: 'Unauthorized. Invalid or missing JWT token.' })
+  @ApiResponse({ status: 200, description: 'User profile retrieved successfully.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
-  async getProfile(@Request() req: AuthedRequest) {
-    const user = await this.usersService.findById(req.user.id);
-    if (!user) {
-      return null;
-    }
-    return user;
+  async getProfile(@CurrentUserId() userId: string) {
+    return this.usersService.findById(userId);
   }
 
-  // Update current user profile
   @Patch('profile')
   @ApiOperation({ summary: 'Update current user profile' })
+  @ApiBody({ type: UpdateUserDto })
   @ApiResponse({ status: 200, description: 'User profile updated successfully.' })
-  @ApiResponse({ status: 400, description: 'Bad Request. Invalid input data.' })
-  @ApiResponse({ status: 401, description: 'Unauthorized. Invalid or missing JWT token.' })
+  @ApiResponse({ status: 400, description: 'Bad Request.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async updateProfile(
-    @Request() req: AuthedRequest,
-    @Body() updateUserDto: UpdateUserDto,
+    @CurrentUserId() userId: string,
+    @Body() dto: UpdateUserDto,
   ) {
-    const user = await this.usersService.update(req.user.id, updateUserDto);
-    return user;
+    return this.usersService.update(userId, dto);
   }
 
-  @Patch('profile/avatar')
+  // =========================
+  // Avatar Upload
+  // =========================
+
+  @Patch('avatar')
+  @ApiOperation({ summary: 'Upload or update user avatar' })
+  @ApiResponse({ status: 200, description: 'Avatar uploaded successfully.' })
+  @ApiResponse({ status: 400, description: 'Bad Request.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -63,90 +64,36 @@ export class UsersController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: multer.memoryStorage(),
-      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+      limits: { fileSize: 5 * 1024 * 1024 },
       fileFilter: (req, file, cb) => {
-        const ok = file.mimetype === 'image/jpeg' || file.mimetype === 'image/png';
-        if (!ok) return cb(new BadRequestException('Only JPG and PNG are allowed'), false);
+        const allowed = ['image/jpeg', 'image/png'];
+        if (!allowed.includes(file.mimetype)) {
+          return cb(
+            new BadRequestException('Only JPG and PNG are allowed'),
+            false,
+          );
+        }
         cb(null, true);
       },
     }),
   )
-  async uploadAvatar(@Request() req: AuthedRequest, @UploadedFile() file: Express.Multer.File) {
-    if (!file) throw new BadRequestException('File is required');
-    const updated = await this.usersService.uploadAvatar(req.user.id, file);
-    return updated;
-  }
-
-  @Get('profile/:key')
-    @ApiOperation({ summary: 'Public: presign avatar by key and redirect' })
-    @ApiResponse({ status: 302, description: 'Redirects to presigned avatar URL.' })
-    @ApiResponse({ status: 404, description: 'Not found.' })
-    async getProfileAvatarByKey(@Param('key') key: string, @Res() res: Response) {
-      const url = await this.usersService.getAvatarPresignedUrlByMediaId(key);
-      return res.redirect(url);
-  }
-
-  // Get all users (Admin only)
-  @Get()
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get all users' })
-  @ApiResponse({ status: 200, description: 'List of all users retrieved successfully.' })
-  @ApiResponse({ status: 401, description: 'Unauthorized. Invalid or missing JWT token.' })
-  @ApiResponse({ status: 403, description: 'Forbidden. Insufficient permissions.' })
-  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
-  async findAll() {
-    return this.usersService.findAll();
-  }
-
-  // Get user by ID (Admin only)
-  @Get(':id')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Get user by ID' })
-  @ApiResponse({ status: 200, description: 'User retrieved successfully.' })
-  @ApiResponse({ status: 401, description: 'Unauthorized. Invalid or missing JWT token.' })
-  @ApiResponse({ status: 403, description: 'Forbidden. Insufficient permissions.' })
-  @ApiResponse({ status: 404, description: 'Not Found. User does not exist.' })
-  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
-  async findOne(@Param('id') id: string) {
-    const user = await this.usersService.findById(id);
-    if (!user) {
-      return null;
-    }
-    return user;
-  }
-
-  // Update user role (Admin only)
-  @Patch(':id/role')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Update user role' })
-  @ApiBody({ type: UpdateRoleDto })
-  @ApiResponse({ status: 200, description: 'User role updated successfully.' })
-  @ApiResponse({ status: 400, description: 'Bad Request. Invalid input data.' })
-  @ApiResponse({ status: 401, description: 'Unauthorized. Invalid or missing JWT token.' })
-  @ApiResponse({ status: 403, description: 'Forbidden. Insufficient permissions.' })
-  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
-  async updateRole(
-    @Param('id') id: string,
-    @Body() updateRoleDto: UpdateRoleDto,
+  async uploadAvatar(
+    @CurrentUserId() userId: string,
+    @UploadedFile() file: Express.Multer.File,
   ) {
-    const user = await this.usersService.updateRole(id, updateRoleDto);
-    return user;
+    if (!file) throw new BadRequestException('File is required');
+    return this.usersService.uploadAvatar(userId, file);
   }
 
-  // Delete user (Admin only)
-  @Delete(':id')
-  @UseGuards(RolesGuard)
-  @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Delete user' })
-  @ApiResponse({ status: 204, description: 'User deleted successfully.' })
-  @ApiResponse({ status: 401, description: 'Unauthorized. Invalid or missing JWT token.' })
-  @ApiResponse({ status: 403, description: 'Forbidden. Insufficient permissions.' })
+  
+  @Get('avatar/:id')
+  @ApiOperation({ summary: 'Get user avatar by ID' })
+  @ApiResponse({ status: 200, description: 'User avatar retrieved successfully.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 404, description: 'User not found.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id') id: string) {
-    await this.usersService.delete(id);
+  async getAvatar(@Param('id') id: string) {
+    const url = await this.usersService.getAvatarPresignedUrl(id);
+    return { url };
   }
 }

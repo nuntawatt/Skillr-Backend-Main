@@ -3,8 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as argon2 from 'argon2';
-import * as Minio from 'minio';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
+
 import { User } from './entities/user.entity';
 import { AuthAccount } from './entities/auth-account.entity';
 import { CreateUserDto, UpdateUserDto, UpdateRoleDto } from './dto';
@@ -12,141 +14,119 @@ import { AuthProvider } from '@common/enums';
 
 @Injectable()
 export class UsersService {
-  private minioClient?: Minio.Client;
+  private readonly s3Client: S3Client;
+
   constructor(
     @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-    @InjectRepository(AuthAccount)
-    private readonly authAccountRepository: Repository<AuthAccount>,
-    private readonly config: ConfigService,
-  ) { }
+    private readonly userRepo: Repository<User>,
 
-  // Create a new user
-  async create(createUserDto: CreateUserDto): Promise<User> {
-    if (createUserDto.email) {
-      const existingUser = await this.findByEmail(createUserDto.email);
-      if (existingUser) {
+    @InjectRepository(AuthAccount)
+    private readonly authRepo: Repository<AuthAccount>,
+
+    private readonly config: ConfigService,
+  ) {
+    this.s3Client = this.createS3Client();
+  }
+
+  // =====================================================
+  // USER CRUD
+  // =====================================================
+
+  // สร้าง user ใหม่ (ส่วนใหญ่ใช้สำหรับการลงทะเบียนผ่าน email/password หรือสร้างจาก Google profile)
+  async create(dto: CreateUserDto): Promise<User> {
+    if (dto.email) {
+      const existing = await this.findByEmail(dto.email);
+      if (existing) {
         throw new ConflictException('Email already exists');
       }
     }
 
-    const user = this.userRepository.create({
-      email: createUserDto.email,
-      firstName: createUserDto.firstName,
-      lastName: createUserDto.lastName,
-      avatar: createUserDto.avatar,
-      avatar_media_id: (createUserDto as any).avatar_media_id ?? null,
-      role: createUserDto.role,
-    });
-
-    return this.userRepository.save(user);
+    const user = this.userRepo.create(dto);
+    return this.userRepo.save(user);
   }
 
-  // Get a fresh presigned avatar URL for a given media id
-  async getAvatarPresignedUrlByMediaId(mediaId: string): Promise<string> {
-    if (!mediaId) throw new NotFoundException('mediaId is required');
-
-    const endpointRaw = this.config.get<string>('S3_ENDPOINT') ?? this.config.get<string>('MINIO_ENDPOINT') ?? '';
-    if (!endpointRaw) throw new BadRequestException('S3_ENDPOINT not configured');
-
-    const bucket = this.config.get<string>('S3_BUCKET') ?? 'auth-profile';
-    const prefix = this.config.get<string>('S3_AVATAR_PREFIX') ?? 'avatar';
-
-    const client = this.getMinioClient(endpointRaw);
-
-    // Find the object key under the avatar prefix that starts with the mediaId
-    const searchPrefix = `${prefix}/${mediaId}`;
-    const foundKey: string | null = await new Promise((resolve, reject) => {
-      const stream = client.listObjectsV2(bucket, searchPrefix, true);
-      let resolved = false;
-      stream.on('data', (obj: any) => {
-        if (!resolved && obj && obj.name) {
-          resolved = true;
-          resolve(obj.name);
-          stream.destroy();
-        }
-      });
-      stream.on('error', (err: Error) => {
-        if (!resolved) {
-          resolved = true;
-          reject(err);
-        }
-      });
-      stream.on('end', () => {
-        if (!resolved) {
-          resolved = true;
-          resolve(null);
-        }
-      });
-    });
-
-    if (!foundKey) throw new NotFoundException('Avatar object not found in bucket');
-
-    const expires = Number(this.config.get<number>('S3_SIGNED_URL_EXPIRES_SECONDS')) || 900;
-    const presignedUrl: string = await new Promise((resolve, reject) => {
-      // @ts-ignore
-      client.presignedGetObject(bucket, foundKey, expires, (err: Error | null, url?: string) => {
-        if (err) return reject(err);
-        resolve(url!);
-      });
-    });
-
-    return presignedUrl;
+  // ค้นหา user ตาม ID (ใช้สำหรับแสดง profile หรือ admin ดูข้อมูล user)
+  async findById(id: string): Promise<User> {
+    const user = await this.userRepo.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
+    return user;
   }
 
-  // Find user by ID
-  async findById(id: number | string): Promise<User | null> {
-    const lookupId = typeof id === 'string' ? id : String(id);
-    if (!lookupId) {
-      return null;
-    }
-    return this.userRepository.findOne({ where: { id: lookupId } });
-  }
-
-  // Find user by email
+  // ค้นหา user ตาม email (ใช้สำหรับการลงทะเบียนและล็อกอิน)
   async findByEmail(email: string): Promise<User | null> {
-    return this.userRepository.findOne({ where: { email } });
+    return this.userRepo.findOne({ where: { email } });
   }
 
+  // Get all users (สำหรับ admin ดูรายชื่อผู้ใช้ทั้งหมด)
+  async findAll(): Promise<User[]> {
+    return this.userRepo.find();
+  }
+
+  async update(id: string, dto: UpdateUserDto): Promise<User> {
+    const user = await this.findById(id);
+    Object.assign(user, dto);
+    return this.userRepo.save(user);
+  }
+
+  async delete(id: string): Promise<void> {
+    const result = await this.userRepo.delete(id);
+    if (!result.affected) {
+      throw new NotFoundException('User not found');
+    }
+  }
+
+  async updateRole(id: string, dto: UpdateRoleDto): Promise<User> {
+    const user = await this.findById(id);
+    user.role = dto.role;
+    return this.userRepo.save(user);
+  }
+
+  // =====================================================
+  // AUTH ACCOUNT METHODS (AuthService ใช้ตรงนี้)
+  // =====================================================
+
+  // ค้นหา AuthAccount ตาม provider และ email (ใช้สำหรับล็อกอินด้วย email/password)
   async findAuthAccountByProviderAndEmail(
     provider: AuthProvider,
     email: string,
   ): Promise<AuthAccount | null> {
-    return this.authAccountRepository.findOne({
+    return this.authRepo.findOne({
       where: { provider, email },
       relations: ['user'],
     });
   }
 
+  // ค้นหา AuthAccount ตาม provider และ providerUserId (ใช้สำหรับล็อกอินด้วย Google)
   async findAuthAccountByProviderUserId(
     provider: AuthProvider,
     providerUserId: string,
   ): Promise<AuthAccount | null> {
-    return this.authAccountRepository.findOne({
+    return this.authRepo.findOne({
       where: { provider, providerUserId },
       relations: ['user'],
     });
   }
 
+  // สร้าง AuthAccount สำหรับ email/password (ใช้เมื่อผู้ใช้ลงทะเบียนด้วย email/password)
   async createEmailAuthAccount(
     user: User,
     email: string,
     password: string,
   ): Promise<AuthAccount> {
     const passwordHash = await argon2.hash(password);
-    const account = this.authAccountRepository.create({
+
+    const account = this.authRepo.create({
       userId: user.id,
       user,
       provider: AuthProvider.LOCAL,
-      providerUserId: null,
       email,
       passwordHash,
-
     });
-    return this.authAccountRepository.save(account);
+
+    return this.authRepo.save(account);
   }
 
-  // Find or create user from Google OAuth
+  // สร้างหรือค้นหา user จาก Google profile (ใช้เมื่อผู้ใช้ล็อกอินด้วย Google)
   async findOrCreateFromGoogle(profile: {
     googleId: string;
     email: string;
@@ -154,252 +134,142 @@ export class UsersService {
     lastName?: string;
     avatar?: string;
   }): Promise<User> {
-
-    // 1. หา Google auth account ก่อน (primary key)
-    const existingGoogleAccount =
+    const existingGoogle =
       await this.findAuthAccountByProviderUserId(
         AuthProvider.GOOGLE,
         profile.googleId,
       );
 
-    if (existingGoogleAccount?.user) {
-      return existingGoogleAccount.user;
+    if (existingGoogle?.user) {
+      return existingGoogle.user;
     }
 
-    // 2. หา user ด้วย email (secondary)
-    let user: User | null = null;
+    let user = await this.findByEmail(profile.email);
 
-    if (profile.email) {
-      user = await this.findByEmail(profile.email);
-
-      // ถ้าเจอ user แต่เป็น LOCAL-only account
-      if (user) {
-        const existingLocalAccount =
-          await this.findAuthAccountByProviderAndEmail(
-            AuthProvider.LOCAL,
-            profile.email,
-          );
-
-        if (existingLocalAccount) {
-          // policy: ไม่ auto-merge
-          // ป้องกัน account takeover
-          throw new ConflictException(
-            'Email already registered with password login',
-          );
-        }
-      }
-    }
-
-    // 3. ถ้าไม่มี user → สร้างใหม่
     if (!user) {
-      user = this.userRepository.create({
-        email: profile.email || null,
+      user = await this.create({
+        email: profile.email,
         firstName: profile.firstName,
         lastName: profile.lastName,
         avatar: profile.avatar,
         isVerified: true,
-      });
-
-      user = await this.userRepository.save(user);
-    } else {
-      // 4. ถ้ามี user อยู่แล้ว → update profile แบบ safe
-      let shouldUpdate = false;
-
-      if (!user.firstName && profile.firstName) {
-        user.firstName = profile.firstName;
-        shouldUpdate = true;
-      }
-
-      if (!user.lastName && profile.lastName) {
-        user.lastName = profile.lastName;
-        shouldUpdate = true;
-      }
-
-      if (!user.avatar && profile.avatar) {
-        user.avatar = profile.avatar;
-        shouldUpdate = true;
-      }
-
-      if (!user.isVerified) {
-        user.isVerified = true;
-        shouldUpdate = true;
-      }
-
-      if (shouldUpdate) {
-        user = await this.userRepository.save(user);
-      }
+      } as any);
     }
 
-    // 5. สร้าง Google auth account
-    const account = this.authAccountRepository.create({
-      userId: user.id,
-      user,
-      provider: AuthProvider.GOOGLE,
-      providerUserId: profile.googleId,
-      email: profile.email || null,
-      passwordHash: null,
-    });
-
-    await this.authAccountRepository.save(account);
+    await this.authRepo.save(
+      this.authRepo.create({
+        userId: user.id,
+        user,
+        provider: AuthProvider.GOOGLE,
+        providerUserId: profile.googleId,
+        email: profile.email,
+      }),
+    );
 
     return user;
   }
 
-  // Update user details
-  async update(id: number | string, updateUserDto: UpdateUserDto,): Promise<User> {
-    const user = await this.findById(id);
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    Object.assign(user, updateUserDto);
-    return this.userRepository.save(user);
-  }
-
-  // Upload avatar image to media MinIO and update user.avatar with public URL
-  async uploadAvatar(id: number | string, file: Express.Multer.File): Promise<User> {
-    const user = await this.findById(id);
-    if (!user) throw new NotFoundException('User not found');
-
-    if (!file || !file.buffer) throw new BadRequestException('File is required');
-    if (!file.mimetype || (file.mimetype !== 'image/jpeg' && file.mimetype !== 'image/png')) throw new BadRequestException('Only JPG and PNG are allowed');
-
-    // read config values instead of hardcoding
-    const endpointRaw = this.config.get<string>('S3_ENDPOINT') ?? this.config.get<string>('MINIO_ENDPOINT') ?? '';
-    if (!endpointRaw) throw new BadRequestException('S3_ENDPOINT not configured');
-
-    const bucket = this.config.get<string>('S3_BUCKET') ?? 'auth-profile';
-    const prefix = this.config.get<string>('S3_AVATAR_PREFIX') ?? 'avatar';
-
-    // create or reuse MinIO client
-    const client = this.getMinioClient(endpointRaw);
-
-    const ext = (() => {
-      const m = file.originalname?.match(/\.([a-z0-9]+)$/i);
-      if (m) return `.${m[1]}`;
-      return file.mimetype === 'image/png' ? '.png' : '.jpg';
-    })();
-    // generate media id and use it as the object key under the avatar prefix
-    const mediaId = randomUUID();
-    const key = `${prefix}/${mediaId}${ext}`;
-
-    await client.putObject(bucket, key, file.buffer, file.size ?? file.buffer.length, { 'Content-Type': file.mimetype });
-
-    // generate a presigned GET URL so the client can view immediately
-    const expires = Number(this.config.get<number>('S3_SIGNED_URL_EXPIRES_SECONDS')) || 900;
-    const presignedUrl: string = await new Promise((resolve, reject) => {
-      // Minio client uses a callback-style presignedGetObject
-      // @ts-ignore
-      client.presignedGetObject(bucket, key, expires, (err: Error | null, url?: string) => {
-        if (err) return reject(err);
-        resolve(url!);
-      });
+  // อัปเดตรหัสผ่าน (ใช้เมื่อผู้ใช้เปลี่ยนรหัสผ่านในโปรไฟล์)
+  async updatePassword(id: string, newPassword: string) {
+    const account = await this.authRepo.findOne({
+      where: { userId: id, provider: AuthProvider.LOCAL },
     });
 
-    // save media id and presigned URL
-    user.avatar_media_id = mediaId;
-    user.avatar = presignedUrl;
-    return this.userRepository.save(user);
-  }
-
-  private getMinioClient(endpointRaw: string): Minio.Client {
-    if (this.minioClient) return this.minioClient;
-
-    const url = new URL(endpointRaw);
-
-    const accessKey =
-      this.config.get<string>('S3_ACCESS_KEY_ID')
-      ?? this.config.get<string>('MINIO_ROOT_USER')
-      ?? '';
-
-    const secretKey =
-      this.config.get<string>('S3_SECRET_ACCESS_KEY')
-      ?? this.config.get<string>('MINIO_ROOT_PASSWORD')
-      ?? '';
-
-    const port =
-      url.port
-        ? Number(url.port)
-        : url.protocol === 'https:' ? 443 : 80;
-
-    this.minioClient = new Minio.Client({
-      endPoint: url.hostname,
-      port,
-      useSSL: url.protocol === 'https:',
-      accessKey,
-      secretKey,
-    });
-
-    return this.minioClient;
-  }
-
-  // Update user role
-  async updateRole(
-    id: number | string,
-    updateRoleDto: UpdateRoleDto,
-  ): Promise<User> {
-    const user = await this.findById(id);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    user.role = updateRoleDto.role;
-    return this.userRepository.save(user);
-  }
-
-  // Update user password
-  async updatePassword(
-    id: number | string,
-    newPassword: string,
-  ): Promise<void> {
-    const user = await this.findById(id);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    const account = await this.authAccountRepository.findOne({
-      where: { userId: user.id, provider: AuthProvider.LOCAL },
-    });
     if (!account) {
-      throw new NotFoundException('Local auth account not found');
+      throw new NotFoundException('Local account not found');
     }
 
     account.passwordHash = await argon2.hash(newPassword);
-    await this.authAccountRepository.save(account);
+    await this.authRepo.save(account);
   }
 
-  // Verify user password
-  async verifyPasswordHash(passwordHash: string | null, password: string): Promise<boolean> {
-    if (!passwordHash) {
-      return false;
+  async verifyPasswordHash(hash: string | null, password: string) {
+    if (!hash) return false;
+    return argon2.verify(hash, password);
+  }
+
+  // =====================================================
+  // AVATAR (S3)
+  // =====================================================
+
+  // อัปโหลดหรืออัปเดต avatar ของผู้ใช้ (ใช้เมื่อผู้ใช้อัปโหลดรูปโปรไฟล์ใหม่)
+  async uploadAvatar(
+    id: string,
+    file: Express.Multer.File,
+  ): Promise<User> {
+    const user = await this.findById(id);
+
+    if (!file?.buffer) {
+      throw new BadRequestException('Invalid file');
     }
-    return argon2.verify(passwordHash, password);
+
+    const mediaId = randomUUID();
+    const key = `profile/${mediaId}`;
+
+    await this.s3Client.send(
+      new PutObjectCommand({
+        Bucket: this.getBucket(),
+        Key: key,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      }),
+    );
+
+    user.avatar_media_id = mediaId;
+    user.avatar = await this.getAvatarPresignedUrl(mediaId);
+
+    return this.userRepo.save(user);
   }
 
-  // Get all users
-  async findAll(): Promise<User[]> {
-    return this.userRepository.find({
-      select: [
-        'id',
-        'email',
-        'firstName',
-        'lastName',
-        'avatar',
-        'avatar_media_id',
-        'role',
-        'isVerified',
-        'createdAt',
-      ],
+  // ดึง URL สำหรับดาวน์โหลด avatar ของผู้ใช้ (ใช้เมื่อแอปต้องการแสดงรูปโปรไฟล์)
+  async getAvatarPresignedUrl(mediaId: string): Promise<string> {
+    const key = `profile/${mediaId}`;
+
+    const cloudFront = this.config.get<string>('AWS_CLOUDFRONT_DOMAIN');
+
+    if (cloudFront) {
+      const domain = cloudFront.startsWith('http')
+        ? cloudFront
+        : `https://${cloudFront}`;
+      return `${domain}/${key}`;
+    }
+
+    return getSignedUrl(
+      this.s3Client,
+      new GetObjectCommand({
+        Bucket: this.getBucket(),
+        Key: key,
+      }),
+      { expiresIn: 900 },
+    );
+  }
+
+  // =====================================================
+  // S3 CLIENT FIX (แก้ type error)
+  // =====================================================
+
+  private createS3Client(): S3Client {
+    const region = this.config.get<string>('AWS_REGION');
+    const accessKeyId = this.config.get<string>('AWS_ACCESS_KEY_ID');
+    const secretAccessKey =
+      this.config.get<string>('AWS_SECRET_ACCESS_KEY');
+
+    if (!region || !accessKeyId || !secretAccessKey) {
+      throw new Error('Missing AWS configuration');
+    }
+
+    return new S3Client({
+      region,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
     });
   }
 
-  // Delete user
-  async delete(id: number | string): Promise<void> {
-    const lookupId = typeof id === 'string' ? id : String(id);
-    const result = await this.userRepository.delete(lookupId);
-    if (result.affected === 0) {
-      throw new NotFoundException('User not found');
-    }
+  private getBucket(): string {
+    const bucket = this.config.get<string>('AWS_S3_BUCKET');
+    if (!bucket) throw new Error('AWS_S3_BUCKET missing');
+    return bucket;
   }
 }

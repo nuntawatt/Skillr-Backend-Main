@@ -6,8 +6,9 @@ import { MediaVideosService } from './media-videos.service';
 import { CreateVideoUploadDto } from './dto/create-video-upload.dto';
 
 import { ApiTags, ApiOperation, ApiCreatedResponse, ApiResponse, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import type { AuthUser } from '@auth';
 
-type RequestWithUser = { user?: { sub?: number } };
+type RequestWithUser = { user?: AuthUser };
 
 @ApiTags('Media Videos')
 @Controller('media/videos')

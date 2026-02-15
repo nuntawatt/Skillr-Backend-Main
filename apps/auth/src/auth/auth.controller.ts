@@ -6,8 +6,7 @@ import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto, LoginDto, RefreshTokenDto, ForgotPasswordDto, VerifyOtpDto, ResetPasswordDto } from './dto';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { CurrentUser } from './decorators/current-user.decorator';
+import { JwtAuthGuard, CurrentUser } from '@auth';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -116,7 +115,7 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'Logged out from all devices successfully.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   @ApiOperation({ summary: 'Logout from all devices' })
-  async logoutAll(@CurrentUser('id') userId: string) {
+  async logoutAll(@CurrentUser('userId') userId: string) {
     await this.authService.logoutAll(userId);
 
     return { message: 'Logged out from all devices successfully' };
