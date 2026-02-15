@@ -19,7 +19,7 @@
     "start": "cross-env PORT=3001 nest start course",
     "start:dev": "cross-env PORT=3001 nest start course --watch",
     "start:debug": "cross-env PORT=3001 nest start course --debug --watch",
-    "start:prod": "cross-env PORT=3002 node dist/apps/course/apps/course/src/main.js",
+    "start:prod": "cross-env PORT=3002 node dist/apps/course/src/main.js",
     "start:auth": "cross-env PORT=3001 nest start auth --watch",
     "start:course": "cross-env PORT=3002 nest start course --watch",
     "start:quizs": "cross-env PORT=3003 nest start quizs --watch",
