@@ -3,9 +3,17 @@ import { IsNumber, IsOptional, Min, IsString, IsArray, ValidateNested } from 'cl
 import { Type } from 'class-transformer';
 
 export class ArticleContentItem {
-  @ApiPropertyOptional({ description: 'ID of the image from media-service', example: 123 })
-  @IsNumber()
-  id: number | null;
+  // @ApiPropertyOptional({ description: 'ID of the image from media-service', example: 123 })
+  // @IsNumber()
+  // id: number | null;
+
+  @ApiPropertyOptional({
+    description: 'Image URL',
+    example: 'https://cdn.example.com/image.png',
+  })
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
 
   @ApiPropertyOptional({ description: 'Article text associated with the URL', example: 'Image caption or paragraph text' })
   @IsString()
@@ -17,14 +25,21 @@ export class ArticleContentItem {
 }
 
 export class CreateArticleDto {
+  
   @ApiProperty({ description: 'Lesson ID this article belongs to', example: 1 })
   @IsNumber()
   @Min(1)
   lesson_id: number;
 
   @ApiPropertyOptional({
-    description: 'Article content as array of { url, article } items',
-    example: [{ url: 'https://cdn.example.com/image.png', article: 'Caption or text' }],
+    description: 'Article content array',
+    example: [
+      {
+        imageUrl: 'https://cdn.example.com/image.png',
+        article: 'Some text',
+        order: 1,
+      },
+    ],
   })
   @IsOptional()
   @IsArray()

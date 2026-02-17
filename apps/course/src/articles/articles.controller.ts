@@ -15,16 +15,24 @@ export class ArticlesController {
         type: CreateArticleDto,
         examples: {
             example1: {
-                summary: 'Example payload to create an article',
+                summary: 'Create article example',
                 value: {
                     lesson_id: 1,
                     article_content: [
-                        { id: 123, article: 'This is a sample article block', order: 1 },
-                        { id: 124, article: 'Another article block', order: 2 },
+                        {
+                            imageUrl: 'https://cdn.yoursite.com/images/abc.jpg',
+                            article: 'Another article block',
+                            order: 1,
+                        },
+                        {
+                            imageUrl: 'https://cdn.yoursite.com/images/xyz.jpg',
+                            article: 'Another article block',
+                            order: 2,
+                        },
                     ],
                 },
             },
-        },
+        },  
     })
     @ApiCreatedResponse({ type: ArticleResponseDto, description: 'Article created successfully' })
     @ApiResponse({ status: 400, description: 'Bad Request' })
