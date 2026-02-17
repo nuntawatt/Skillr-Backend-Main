@@ -5,6 +5,7 @@ import { Article } from './entities/article.entity';
 import { Lesson, LessonType } from '../lessons/entities/lesson.entity';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { ArticleResponseDto } from './dto/article-response.dto';
+import { UpdateArticleDto } from './dto';
 
 @Injectable()
 export class ArticlesService {
@@ -57,8 +58,25 @@ export class ArticlesService {
     const limit = params?.limit && params.limit > 0 ? Math.min(params.limit, 100) : 50;
     const offset = params?.offset && params.offset >= 0 ? params.offset : 0;
     const rows = await this.articleRepo.find({ take: limit, skip: offset, order: { updatedAt: 'DESC' } });
-    
+
     return rows.map((r) => this.toResponseDto(r));
+  }
+
+  async update(id: number, dto: UpdateArticleDto) {
+    const article = await this.articleRepo.findOne({ where: { article_id: id } });
+    if (!article) return null;
+
+    Object.assign(article, dto);
+
+    return this.articleRepo.save(article);
+  }
+
+  async remove(id: number) {
+    const article = await this.articleRepo.findOne({ where: { article_id: id } });
+    if (!article) return null;
+
+    await this.articleRepo.remove(article);
+    return true;
   }
 
   async findByLesson(lessonId: number): Promise<ArticleResponseDto[]> {
@@ -67,7 +85,7 @@ export class ArticlesService {
       throw new NotFoundException(`lesson with ID ${lessonId} not found`);
     };
     const articles = await this.articleRepo.find({ where: { lesson: { lesson_id: lessonId } } });
-    
+
     return articles.map((a) => this.toResponseDto(a));
   }
 

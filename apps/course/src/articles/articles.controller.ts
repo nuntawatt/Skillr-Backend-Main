@@ -1,8 +1,9 @@
-import { Body, Controller, Post, Get, Param, Query, BadRequestException, ParseIntPipe } from '@nestjs/common';
+import { Body, Controller, Post, Get, Param, Query, Patch, Delete, BadRequestException, ParseIntPipe, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiCreatedResponse, ApiOkResponse, ApiBody, ApiParam, ApiResponse } from '@nestjs/swagger';
 import { ArticlesService } from './articles.service';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { ArticleResponseDto } from './dto/article-response.dto';
+import { UpdateArticleDto } from './dto';
 
 @ApiTags('Articles')
 @Controller('articles')
@@ -32,7 +33,7 @@ export class ArticlesController {
                     ],
                 },
             },
-        },  
+        },
     })
     @ApiCreatedResponse({ type: ArticleResponseDto, description: 'Article created successfully' })
     @ApiResponse({ status: 400, description: 'Bad Request' })
@@ -44,7 +45,7 @@ export class ArticlesController {
 
     @Get()
     @ApiOperation({ summary: 'ดึงบทความทั้งหมดพร้อมตัวกรองที่เลือกได้' })
-    @ApiResponse({ status: 200, description: 'Articles retrieved successfully'})
+    @ApiResponse({ status: 200, description: 'Articles retrieved successfully' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     findAll(): Promise<ArticleResponseDto[]> {
         return this.svc.findAll();
@@ -71,4 +72,45 @@ export class ArticlesController {
     async findByLesson(@Param('id', ParseIntPipe) lessonId: number) {
         return this.svc.findByLesson(lessonId);
     }
+
+    @Patch(':id')
+    @ApiOperation({ summary: 'แก้ไขบทความตาม ID' })
+    @ApiParam({ name: 'id', description: 'Article id', type: 'number' })
+    @ApiBody({ type: UpdateArticleDto })
+    @ApiOkResponse({ type: ArticleResponseDto })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 404, description: 'Article not found' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async update(
+        @Param('id', ParseIntPipe) id: number,
+        @Body() body: UpdateArticleDto,
+    ) {
+        if (!id) throw new BadRequestException('Invalid article id');
+
+        const updated = await this.svc.update(id, body);
+        if (!updated) throw new NotFoundException('Article not found');
+
+        return updated;
+    }
+
+    @Delete(':id')
+    @ApiOperation({ summary: 'ลบบทความตาม ID' })
+    @ApiParam({ name: 'id', description: 'Article id', type: 'number' })
+    @ApiOkResponse({ description: 'Article deleted successfully' })
+    @ApiResponse({ status: 404, description: 'Article not found' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    async remove(
+        @Param('id', ParseIntPipe) id: number,
+    ) {
+        const deleted = await this.svc.remove(id);
+
+        if (!deleted) {
+            throw new NotFoundException('Article not found');
+        }
+
+        return {
+            message: 'Article deleted successfully',
+        };
+    }
+
 }
