@@ -77,14 +77,10 @@ export class ArticlesController {
     @ApiOperation({ summary: 'แก้ไขบทความตาม ID' })
     @ApiParam({ name: 'id', description: 'Article id', type: 'number' })
     @ApiBody({ type: UpdateArticleDto })
-    @ApiOkResponse({ type: ArticleResponseDto })
     @ApiResponse({ status: 400, description: 'Bad Request' })
     @ApiResponse({ status: 404, description: 'Article not found' })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
-    async update(
-        @Param('id', ParseIntPipe) id: number,
-        @Body() body: UpdateArticleDto,
-    ) {
+    async update(@Param('id', ParseIntPipe) id: number, @Body() body: UpdateArticleDto,) {
         if (!id) throw new BadRequestException('Invalid article id');
 
         const updated = await this.svc.update(id, body);
@@ -99,9 +95,7 @@ export class ArticlesController {
     @ApiOkResponse({ description: 'Article deleted successfully' })
     @ApiResponse({ status: 404, description: 'Article not found' })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
-    async remove(
-        @Param('id', ParseIntPipe) id: number,
-    ) {
+    async remove(@Param('id', ParseIntPipe) id: number,) {
         const deleted = await this.svc.remove(id);
 
         if (!deleted) {
