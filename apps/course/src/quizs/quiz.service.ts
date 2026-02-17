@@ -257,10 +257,49 @@ export class QuizService {
     return this.quizsRepository.save(quiz);
   }
 
+  // อัปเดต checkpoint ตาม checkpoint ID
+  async updateCheckpoint(
+    checkpointId: number,
+    dto: Partial<CreateCheckpointDto>,
+  ): Promise<QuizsCheckpoint> {
+
+    const checkpoint = await this.checkpointRepository.findOne({
+      where: { checkpointId },
+    });
+
+    if (!checkpoint) {
+      throw new NotFoundException('Checkpoint not found');
+    }
+
+    Object.assign(checkpoint, {
+      checkpointType: dto.checkpoint_type ?? checkpoint.checkpointType,
+      checkpointQuestions: dto.checkpoint_questions ?? checkpoint.checkpointQuestions,
+      checkpointOption: dto.checkpoint_option ?? checkpoint.checkpointOption,
+      checkpointAnswer: dto.checkpoint_answer ?? checkpoint.checkpointAnswer,
+      checkpointExplanation: dto.checkpoint_explanation ?? checkpoint.checkpointExplanation,
+    });
+
+    return this.checkpointRepository.save(checkpoint);
+  }
+
   // ลบ quiz ตาม lesson ID
   async removeQuizs(lessonId: number): Promise<void> {
     const quiz = await this.findOneQuizsByLesson(lessonId);
     await this.quizsRepository.remove(quiz);
+  }
+
+  // ลบ checkpoint ตาม checkpoint ID
+  async removeCheckpoint(checkpointId: number): Promise<void> {
+
+    const checkpoint = await this.checkpointRepository.findOne({
+      where: { checkpointId },
+    });
+
+    if (!checkpoint) {
+      throw new NotFoundException('Checkpoint not found');
+    }
+
+    await this.checkpointRepository.remove(checkpoint);
   }
 
 
@@ -324,36 +363,25 @@ export class QuizService {
     const checkpointIds = checkpoints.map((c) => c.checkpointId);
     const results = checkpointIds.length
       ? await this.resultRepository.find({
-          where: {
-            userId,
-            type: QuizsResultType.CHECKPOINT,
-            checkpointId: In(checkpointIds),
-          },
-        })
+        where: {
+          userId,
+          type: QuizsResultType.CHECKPOINT,
+          checkpointId: In(checkpointIds),
+        },
+      })
       : [];
     const resultByCheckpointId = new Map(results.map((r) => [r.checkpointId, r] as const));
 
-    // NOTE (ความปลอดภัย): เดิมโค้ดจะแสดงคำตอบ (`correct_answer`),
-    // เฉลย (`checkpoint_explanation`) และคะแนนเมื่อ `userXp.checkpointStatus`
-    // เป็น 'COMPLETED' ซึ่งใช้สถานะระดับบท (`chapter`) เป็นตัวตัดสิน
-    // ผลคือถ้า `userXp` ถูกตั้งเป็น COMPLETED จากการทำ checkpoint อื่น
-    // หรือ logic อื่น ๆ ผู้ใช้จะเห็นเฉลยของทุก checkpoint ในบทนั้น —
-    // ซึ่งเป็นการเปิดเผยคำตอบโดยไม่ได้ตั้งใจ.
-    //
-    // แก้ชั่วคราว: ไม่แสดง `correct_answer`/`checkpoint_explanation`/`score`
-    // ในการเรียก GET แบบทั่วไป เพื่อป้องกันการรั่วไหลของเฉลย.
-    // ข้อเสนอการแก้ไขถาวร: สร้างตารางผลลัพธ์ per-checkpoint (เช่น
-    // `checkpoint_results`) เพื่อบันทึกว่า user ใดตอบ checkpoint ใด
-    // สำเร็จ เมื่อมีข้อมูลเฉพาะต่อ checkpoint เราค่อยแสดงเฉลย
-    // เฉพาะกรณีที่ผู้ใช้คนนั้นเป็นผู้ทำ checkpoint นั้นจริง ๆ.
+    // รวมข้อมูล checkpoint กับผลลัพธ์ของผู้ใช้ เพื่อส่งกลับไปให้ frontend
     return checkpoints.map((c) => {
       const r = resultByCheckpointId.get(c.checkpointId) ?? null;
       const attempted = r?.userAnswer != null;
       const isCorrect = attempted ? r?.isCorrect === true : false;
       const isSkipped = r?.status === QuizsStatus.SKIPPED;
       const checkpointStatus = isCorrect ? 'COMPLETED' : isSkipped ? 'SKIPPED' : 'PENDING';
-      // ตาม requirement: เมื่อ "ตอบแล้ว" ให้ดึงเฉลยจาก GET ได้
-      // เพิ่มเติม: ถ้ากดข้าม (SKIPPED) ให้เห็นเฉลยได้เช่นกัน
+
+      // เมื่อ "ตอบแล้ว" ให้ดึงเฉลยจาก GET ได้
+      // ถ้ากดข้าม (SKIPPED) ให้เห็นเฉลยได้เช่นกัน
       const showSolution = attempted || isSkipped;
 
       return {
@@ -391,10 +419,7 @@ export class QuizService {
       throw new NotFoundException('Checkpoint not found');
     }
 
-    // NOTE: There's a legacy unique index on (user_id, lesson_id) in some DBs.
-    // To avoid duplicate-key errors, first try to find any existing result
-    // for this user+lesson (regardless of type/checkpoint). If found,
-    // reuse/update it instead of inserting a new row.
+    // ตรวจสอบว่าเคยทำ checkpoint นี้แล้วหรือไม่ (ทั้งตอบและข้าม)
     const existing = await this.resultRepository.findOne({
       where: {
         userId,
@@ -422,8 +447,7 @@ export class QuizService {
       };
     }
 
-    // Prepare object to save. If an existing row is present (possibly from a
-    // legacy unique index), update it to represent this checkpoint result.
+    // บันทึกผลเป็น SKIPPED (ถ้ายังไม่มีผลลัพธ์ หรือเคยตอบผิดมาก่อน)
     let toSave = existing;
     if (!toSave) {
       toSave = this.resultRepository.create({
@@ -433,9 +457,8 @@ export class QuizService {
         checkpointId,
       });
     } else {
-      // If existing row was for a different type/row, normalize it to be a
-      // checkpoint row so we don't attempt to insert a duplicate (this avoids
-      // conflicts when the DB still has a unique constraint on user+lesson).
+      
+      // อัปเดตเป็น SKIPPED เฉพาะกรณีที่ยังไม่เคยตอบถูกจริง ๆ (มีคำตอบที่บันทึกไว้)
       toSave.type = QuizsResultType.CHECKPOINT;
       toSave.checkpointId = checkpoint.checkpointId;
     }
@@ -458,8 +481,8 @@ export class QuizService {
     };
   }
 
-  // ใช้กรณีเรียกจาก progress: เมื่อบทเรียนเป็น checkpoint แล้วกด skip
-  // ให้ sync สถานะเฉพาะของ checkpoint (อาจมีมากกว่า 1 ข้อต่อ lesson)
+  // ใช้เวลาเรียกจาก progress เมื่อบทเรียนเป็น checkpoint แล้วกด skip
+  // ให้ sync สถานะเฉพาะของ checkpoint เป็น SKIPPED ทั้งหมดในบทเรียน (กรณีมีหลาย checkpoint ในบทเรียนเดียวกัน)
   async skipCheckpointsByLesson(lessonId: number, userId: string) {
     const checkpoints = await this.checkpointRepository.find({
       where: { lessonId },
@@ -534,7 +557,7 @@ export class QuizService {
     toSave.status = isCorrect ? QuizsStatus.COMPLETED : QuizsStatus.PENDING;
     await this.resultRepository.save(toSave);
 
-    // ---- กรณีไม่พบ lesson (แต่ยังคืน status ให้ถูก) ----
+    // กรณีที่ไม่มี lesson (ข้อมูลไม่สมบูรณ์) ให้ส่งผลลัพธ์การทำ quiz ได้ แต่ไม่ต้อง sync progress ก็ได้
     if (!lesson) {
       return {
         checkpoint_id: checkpoint.checkpointId,
@@ -543,7 +566,6 @@ export class QuizService {
         user_answer: answer,
         is_correct: isCorrect,
         score,
-        // ตาม requirement: ถ้าตอบผิดต้องส่งคำตอบที่ถูก + คำอธิบายกลับไปด้วย
         correct_answer: checkpoint.checkpointAnswer,
         checkpoint_explanation: checkpoint.checkpointExplanation ?? null,
         feedback: isCorrect
@@ -555,7 +577,7 @@ export class QuizService {
       };
     }
 
-    // ---- update UserXp ----
+    // ถ้าตอบถูก → sync progress (UserXp)
     const chapterId = lesson.chapter_id;
 
     let userXp = await this.userXpRepository.findOne({
@@ -595,7 +617,6 @@ export class QuizService {
       user_answer: answer,
       is_correct: isCorrect,
       score,
-      // ตาม requirement: ถ้าตอบผิดต้องส่งคำตอบที่ถูก + คำอธิบายกลับไปด้วย
       correct_answer: checkpoint.checkpointAnswer,
       checkpoint_explanation: checkpoint.checkpointExplanation ?? null,
       feedback: isCorrect
@@ -607,6 +628,7 @@ export class QuizService {
 
 }
 
+// ฟังก์ชันช่วยเปรียบเทียบคำตอบแบบ deep equality (รองรับการเปรียบเทียบ array/object โดยไม่สนใจลำดับ)
 function normalize(value: any): any {
   // แปลง "2" -> 2
   if (typeof value === 'string') {
@@ -638,4 +660,3 @@ function normalize(value: any): any {
 function isEqual(a: any, b: any): boolean {
   return JSON.stringify(normalize(a)) === JSON.stringify(normalize(b));
 }
-

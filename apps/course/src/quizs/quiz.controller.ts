@@ -14,6 +14,7 @@ import { CurrentUserId } from '../progress/decorators/current-user-id.decorator'
 export class QuizAdminController {
   constructor(private readonly quizService: QuizService) { }
 
+  // สร้างหรืออัปเดต quiz สำหรับบทเรียน (1 บทเรียน = 1 ควิซ)
   @Post()
   @ApiOperation({ summary: 'สร้างหรืออัปเดต quiz สำหรับบทเรียน (1 บทเรียน = 1 ควิซ)' })
   @ApiBody({
@@ -50,6 +51,37 @@ export class QuizAdminController {
     return this.quizService.createQuizs(dto);
   }
 
+  // อัปเดต quiz ตาม lesson ID
+  @Patch('lesson/:lessonId')
+  @ApiOperation({ summary: 'อัปเดต quiz ตาม lesson ID' })
+  @ApiParam({
+    name: 'lessonId',
+    type: Number,
+    description: 'ID ของบทเรียน',
+  })
+  @ApiResponse({ status: 200, description: 'Quiz updated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  updateQuiz(@Param('lessonId', ParseIntPipe) lessonId: number, @Body() dto: Partial<CreateQuizsDto>) {
+    return this.quizService.updateQuizs(lessonId, dto);
+  }
+
+  // ลบ quiz ตาม lesson ID
+  @Delete('lesson/:lessonId')
+  @ApiOperation({ summary: 'ลบ quiz ตาม lesson ID' })
+  @ApiParam({
+    name: 'lessonId',
+    type: Number,
+    description: 'ID ของบทเรียน (lessons.lesson_id)',
+  })
+  @ApiResponse({ status: 204, description: 'Quiz deleted successfully' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  removeQuiz(@Param('lessonId', ParseIntPipe) lessonId: number) {
+    return this.quizService.removeQuizs(lessonId);
+  }
+
+
+  // อัปเดต quiz ตาม lesson ID
   @Post('checkpoint')
   @ApiOperation({ summary: 'สร้างหรืออัปเดต checkpoint สำหรับบทเรียน (1 บทเรียน = 1 checkpoint)' })
   @ApiBody({
@@ -86,32 +118,41 @@ export class QuizAdminController {
     return this.quizService.createCheckpoint(dto);
   }
 
-  @Patch('lesson/:lessonId')
-  @ApiOperation({ summary: 'อัปเดต quiz ตาม lesson ID' })
+  // อัปเดต checkpoint ตาม checkpoint ID
+  @Patch('checkpoint/:checkpointId')
+  @ApiOperation({ summary: 'อัปเดต checkpoint ตาม checkpoint ID' })
   @ApiParam({
-    name: 'lessonId',
+    name: 'checkpointId',
     type: Number,
-    description: 'ID ของบทเรียน (lessons.lesson_id)',
+    description: 'ID ของ checkpoint',
   })
-  @ApiResponse({ status: 200, description: 'Quiz updated successfully' })
-  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @ApiResponse({ status: 200, description: 'Checkpoint updated successfully' })
+  @ApiResponse({ status: 404, description: 'Checkpoint not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  updateQuiz(@Param('lessonId', ParseIntPipe) lessonId: number, @Body() dto: Partial<CreateQuizsDto>) {
-    return this.quizService.updateQuizs(lessonId, dto);
+  updateCheckpoint(
+    @Param('checkpointId', ParseIntPipe) checkpointId: number,
+    @Body() dto: Partial<CreateCheckpointDto>,
+  ) {
+    return this.quizService.updateCheckpoint(checkpointId, dto);
   }
 
-  @Delete('lesson/:lessonId')
-  @ApiOperation({ summary: 'ลบ quiz ตาม lesson ID' })
+  // ลบ checkpoint ตาม checkpoint ID
+  @Delete('checkpoint/:checkpointId')
+  @ApiOperation({ summary: 'ลบ checkpoint ตาม checkpoint ID' })
   @ApiParam({
-    name: 'lessonId',
+    name: 'checkpointId',
     type: Number,
-    description: 'ID ของบทเรียน (lessons.lesson_id)',
+    description: 'ID ของ checkpoint',
   })
-  @ApiResponse({ status: 204, description: 'Quiz deleted successfully' })
+  @ApiResponse({ status: 204, description: 'Checkpoint deleted successfully' })
+  @ApiResponse({ status: 404, description: 'Checkpoint not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  removeQuiz(@Param('lessonId', ParseIntPipe) lessonId: number) {
-    return this.quizService.removeQuizs(lessonId);
+  removeCheckpoint(
+    @Param('checkpointId', ParseIntPipe) checkpointId: number,
+  ) {
+    return this.quizService.removeCheckpoint(checkpointId);
   }
+
 }
 
 
@@ -137,8 +178,8 @@ export class QuizController {
     type: Number,
     description: 'ID ของบทเรียน',
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Quiz retrieved successfully',
     schema: {
       oneOf: [
@@ -149,8 +190,8 @@ export class QuizController {
             quizs_id: { type: 'number', example: 1 },
             quizs_type: { type: 'string', example: 'multiple_choice' },
             quizs_question: { type: 'string', example: 'TypeScript คืออะไร?' },
-            quizs_option: { 
-              type: 'array', 
+            quizs_option: {
+              type: 'array',
               items: { type: 'string' },
               example: ['Superset ของ JavaScript', 'ชื่อกาแฟ', 'ระบบปฏิบัติการ']
             },
@@ -170,8 +211,8 @@ export class QuizController {
             quizs_id: { type: 'number', example: 1 },
             quizs_type: { type: 'string', example: 'multiple_choice' },
             quizs_question: { type: 'string', example: 'TypeScript คืออะไร?' },
-            quizs_option: { 
-              type: 'array', 
+            quizs_option: {
+              type: 'array',
               items: { type: 'string' },
               example: ['Superset ของ JavaScript', 'ชื่อกาแฟ', 'ระบบปฏิบัติการ']
             },
@@ -202,7 +243,7 @@ export class QuizController {
   @ApiParam({
     name: 'lessonId',
     type: Number,
-    description: 'ID ของบทเรียน (lessons.lesson_id). Use lesson_id when calling this endpoint',
+    description: 'ID ของบทเรียน',
   })
   @ApiResponse({ status: 200, description: 'Checkpoints retrieved successfully' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
@@ -251,7 +292,7 @@ export class QuizController {
   @ApiParam({
     name: 'lessonId',
     type: Number,
-    description: 'ID ของบทเรียน (lessons.lesson_id)',
+    description: 'ID ของบทเรียน',
   })
   @ApiResponse({ status: 200, description: 'Quiz skipped successfully' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
@@ -294,7 +335,7 @@ export class QuizController {
   }
 
   @Post('checkpoint/:checkpointId/skip')
-  @ApiOperation({ summary: 'ข้าม checkpoint (บันทึกสถานะเป็น SKIPPED)' })
+  @ApiOperation({ summary: 'ข้าม checkpoint และบันทึกสถานะเป็น skipped' })
   @ApiParam({
     name: 'checkpointId',
     type: Number,
