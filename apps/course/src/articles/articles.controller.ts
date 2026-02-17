@@ -44,7 +44,7 @@ export class ArticlesController {
 
     @Get()
     @ApiOperation({ summary: 'ดึงบทความทั้งหมดพร้อมตัวกรองที่เลือกได้' })
-    @ApiOkResponse({ type: ArticleResponseDto, isArray: true })
+    @ApiResponse({ status: 200, description: 'Articles retrieved successfully'})
     @ApiResponse({ status: 500, description: 'Internal server error' })
     findAll(): Promise<ArticleResponseDto[]> {
         return this.svc.findAll();
