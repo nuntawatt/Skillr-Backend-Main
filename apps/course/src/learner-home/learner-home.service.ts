@@ -1,5 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { HttpModule } from '@nestjs/axios';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, Not } from 'typeorm';
 import { StreakService } from '../streaks/streak.service';
@@ -53,12 +52,12 @@ export class LearnerHomeService {
   ) {}
   async getHome(userId: string): Promise<LearnerHomeResponseDto> {
     const [profile, streak, totalXp, continueLearning, myCourses, notifications] = await Promise.all([
-      this.getUserProfile(userId),
-      this.getStreak(userId),
-      this.getTotalXp(userId),
-      this.getContinueLearning(userId),
-      this.getMyCourses(userId),
-      this.getNotifications(userId),
+      this.getUserProfile(userId).catch(() => null),
+      this.getStreak(userId).catch(() => ({ currentStreak: 0, longestStreak: 0 })),
+      this.getTotalXp(userId).catch(() => 0),
+      this.getContinueLearning(userId).catch(() => null),
+      this.getMyCourses(userId).catch(() => []),
+      this.getNotifications(userId).catch(() => ({ unreadCount: 0 })),
     ]);
 
     return {

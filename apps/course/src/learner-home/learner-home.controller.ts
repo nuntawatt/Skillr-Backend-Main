@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@auth';
 
@@ -21,7 +21,7 @@ export class LearnerHomeController {
   @Get()
   @ApiOperation({ 
     summary: 'เพย์โหลดหน้าแรกของผู้เรียน',
-    description: 'Get complete learner homepage data including profile, streak, XP, continue learning, my courses, wishlist, and notifications'
+    description: 'Get complete learner homepage data including profile, streak, XP, continue learning, my courses, and notifications'
   })
   @ApiOkResponse({ 
     type: LearnerHomeResponseDto,
@@ -53,18 +53,6 @@ export class LearnerHomeController {
           progressPercent: 45
         }
       ],
-      wishlistOrRecommended: [
-        {
-          courseId: 4,
-          title: 'React Fundamentals',
-          progressPercent: 0
-        },
-        {
-          courseId: 5,
-          title: 'CSS Mastery',
-          progressPercent: 0
-        }
-      ],
       notifications: {
         unreadCount: 3
       }
@@ -73,6 +61,9 @@ export class LearnerHomeController {
   @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing JWT token' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   getHome(@CurrentUserId() userId: string): Promise<LearnerHomeResponseDto> {
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
     return this.learnerHomeService.getHome(userId);
   }
 }

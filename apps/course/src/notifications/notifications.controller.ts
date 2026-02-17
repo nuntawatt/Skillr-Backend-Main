@@ -1,4 +1,13 @@
-import { Controller, Get, UseGuards, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  DefaultValuePipe,
+  Get,
+  ParseIntPipe,
+  Query,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiResponse, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@auth';
 
@@ -50,10 +59,26 @@ export class NotificationsController {
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async getNotifications(
     @CurrentUserId() userId: string,
-    @Query('limit') limit?: number,
-    @Query('offset') offset?: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+    @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
   ): Promise<Notification[]> {
-    return this.notificationsService.getNotifications(userId, limit, offset);
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
+    const rawLimit = typeof limit === 'number' && Number.isFinite(limit) ? limit : 20;
+    const rawOffset = typeof offset === 'number' && Number.isFinite(offset) ? offset : 0;
+
+    if (rawLimit < 1) {
+      throw new BadRequestException('limit must be a positive integer');
+    }
+
+    if (rawOffset < 0) {
+      throw new BadRequestException('offset must be a non-negative integer');
+    }
+
+    const safeLimit = Math.min(rawLimit, 50);
+    return this.notificationsService.getNotifications(userId, safeLimit, rawOffset);
   }
 
   @Get('unread-count')
@@ -68,6 +93,9 @@ export class NotificationsController {
   @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing JWT token' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async getUnreadCount(@CurrentUserId() userId: string): Promise<{ unreadCount: number }> {
+    if (!userId) {
+      throw new UnauthorizedException('User not authenticated');
+    }
     const unreadCount = await this.notificationsService.getUnreadCount(userId);
     return { unreadCount };
   }

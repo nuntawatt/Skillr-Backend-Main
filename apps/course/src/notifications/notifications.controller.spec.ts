@@ -74,7 +74,7 @@ describe('NotificationsController', () => {
 
       const result = await controller.getNotifications(mockUserId);
 
-      expect(service.getNotifications).toHaveBeenCalledWith(mockUserId, undefined, undefined);
+      expect(service.getNotifications).toHaveBeenCalledWith(mockUserId, 20, 0);
       expect(result).toEqual(mockNotifications);
     });
   });
