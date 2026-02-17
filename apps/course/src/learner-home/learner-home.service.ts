@@ -12,7 +12,6 @@ import { Course } from '../courses/entities/course.entity';
 import { Level } from '../levels/entities/level.entity';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
-import { WishlistService } from '../wishlist/wishlist.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
 import { LearnerHomeResponseDto } from './dto/learner-home-response.dto';
@@ -38,7 +37,6 @@ export class LearnerHomeService {
     private readonly configService: ConfigService,
     private readonly streakService: StreakService,
     private readonly progressService: ProgressService,
-    private readonly wishlistService: WishlistService,
     private readonly notificationsService: NotificationsService,
     @InjectRepository(LessonProgress)
     private readonly lessonProgressRepository: Repository<LessonProgress>,
@@ -54,13 +52,12 @@ export class LearnerHomeService {
     private readonly levelRepository: Repository<Level>,
   ) {}
   async getHome(userId: string): Promise<LearnerHomeResponseDto> {
-    const [profile, streak, totalXp, continueLearning, myCourses, wishlist, notifications] = await Promise.all([
+    const [profile, streak, totalXp, continueLearning, myCourses, notifications] = await Promise.all([
       this.getUserProfile(userId),
       this.getStreak(userId),
       this.getTotalXp(userId),
       this.getContinueLearning(userId),
       this.getMyCourses(userId),
-      this.getWishlist(userId),
       this.getNotifications(userId),
     ]);
 
@@ -74,7 +71,6 @@ export class LearnerHomeService {
       },
       continueLearning,
       myCourses,
-      wishlistOrRecommended: wishlist,
       notifications,
     };
   }
@@ -279,19 +275,6 @@ export class LearnerHomeService {
         }
         return a.courseId - b.courseId;
       });
-  }
-
-  private async getWishlist(userId: string) {
-    // Use wishlist service to get user's wishlist with course details
-    const wishlistItems = await this.wishlistService.getWishlistWithCourseDetails(userId);
-    // Filter out null items and map to correct DTO format (exclude addedAt)
-    return wishlistItems
-      .filter(item => item !== null)
-      .map(item => ({
-        courseId: item.courseId,
-        title: item.title,
-        progressPercent: item.progressPercent,
-      }));
   }
 
   private async getNotifications(userId: string) {

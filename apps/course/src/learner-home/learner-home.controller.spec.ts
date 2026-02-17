@@ -67,13 +67,6 @@ describe('LearnerHomeController', () => {
             progressPercent: 60,
           },
         ],
-        wishlistOrRecommended: [
-          {
-            courseId: 3,
-            title: 'Course 3',
-            progressPercent: 0,
-          },
-        ],
         notifications: {
           unreadCount: 2,
         },
@@ -98,7 +91,6 @@ describe('LearnerHomeController', () => {
         },
         continueLearning: null,
         myCourses: [],
-        wishlistOrRecommended: [],
         notifications: {
           unreadCount: 0,
         },

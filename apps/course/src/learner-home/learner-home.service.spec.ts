@@ -6,7 +6,6 @@ import { Repository } from 'typeorm';
 import { LearnerHomeService } from './learner-home.service';
 import { StreakService } from '../streaks/streak.service';
 import { ProgressService } from '../progress/progress.service';
-import { WishlistService } from '../wishlist/wishlist.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { LessonProgress } from '../progress/entities/progress.entity';
 import { UserXp } from '../quizs/entities/user-xp.entity';
@@ -20,7 +19,6 @@ describe('LearnerHomeService', () => {
   let service: LearnerHomeService;
   let streakService: StreakService;
   let progressService: ProgressService;
-  let wishlistService: WishlistService;
   let notificationsService: NotificationsService;
   let lessonProgressRepo: jest.Mocked<Partial<Repository<LessonProgress>>>;
   let userXpRepo: jest.Mocked<Partial<Repository<UserXp>>>;
@@ -48,12 +46,6 @@ describe('LearnerHomeService', () => {
           provide: StreakService,
           useValue: {
             getStreak: jest.fn(),
-          },
-        },
-        {
-          provide: WishlistService,
-          useValue: {
-            getWishlistWithCourseDetails: jest.fn(),
           },
         },
         {
@@ -104,7 +96,6 @@ describe('LearnerHomeService', () => {
     service = module.get<LearnerHomeService>(LearnerHomeService);
     streakService = module.get<StreakService>(StreakService);
     progressService = module.get<ProgressService>(ProgressService);
-    wishlistService = module.get<WishlistService>(WishlistService);
     notificationsService = module.get<NotificationsService>(NotificationsService);
   });
 
@@ -133,12 +124,9 @@ describe('LearnerHomeService', () => {
         lessonTitle: 'Test Lesson',
         progressPercent: 30,
       });
+
       jest.spyOn<any, any>(service as any, 'getMyCourses').mockResolvedValue([
         { courseId: 2, title: 'Course 2', progressPercent: 60 },
-      ]);
-
-      (wishlistService.getWishlistWithCourseDetails as jest.Mock).mockResolvedValue([
-        { courseId: 3, title: 'Course 3', progressPercent: 0, addedAt: new Date().toISOString() },
       ]);
 
       (notificationsService.getUnreadCount as jest.Mock).mockResolvedValue(2);
@@ -163,9 +151,6 @@ describe('LearnerHomeService', () => {
         myCourses: [
           { courseId: 2, title: 'Course 2', progressPercent: 60 },
         ],
-        wishlistOrRecommended: [
-          { courseId: 3, title: 'Course 3', progressPercent: 0 },
-        ],
         notifications: {
           unreadCount: 2,
         },
@@ -185,7 +170,6 @@ describe('LearnerHomeService', () => {
       jest.spyOn<any, any>(service as any, 'getContinueLearning').mockResolvedValue(null);
       jest.spyOn<any, any>(service as any, 'getMyCourses').mockResolvedValue([]);
 
-      (wishlistService.getWishlistWithCourseDetails as jest.Mock).mockResolvedValue([]);
       (notificationsService.getUnreadCount as jest.Mock).mockResolvedValue(0);
 
       const result = await service.getHome(mockUserId);

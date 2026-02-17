@@ -27,7 +27,6 @@ import { ProgressService } from './progress/progress.service';
 import { QuizService } from "./quizs/quiz.service";
 import { StreakService } from './streaks/streak.service';
 import { LearnerHomeModule } from './learner-home/learner-home.module';
-import { WishlistModule } from './wishlist/wishlist.module';
 import { NotificationsModule } from './notifications/notifications.module';
 
 // Entities
@@ -80,7 +79,6 @@ const isTest = process.env.NODE_ENV === 'test';
         MediaImagesModule,
         MediaVideosModule,
         LearnerHomeModule,
-        WishlistModule,
         NotificationsModule
       ]),
   ],

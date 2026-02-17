@@ -18,7 +18,6 @@ import { QuizService } from '../quizs/quiz.service';
 import { Quizs } from '../quizs/entities/quizs.entity';
 import { QuizsCheckpoint } from '../quizs/entities/checkpoint.entity';
 import { QuizsResult } from '../quizs/entities/quizs-result.entity';
-import { WishlistModule } from '../wishlist/wishlist.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
@@ -37,7 +36,6 @@ import { NotificationsModule } from '../notifications/notifications.module';
     ]),
     HttpModule,
     AuthLibModule,
-    WishlistModule,
     NotificationsModule,
   ],
   controllers: [LearnerHomeController],

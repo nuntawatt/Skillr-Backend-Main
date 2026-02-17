@@ -60,9 +60,6 @@ export class LearnerHomeResponseDto {
   @ApiProperty({ type: LearnerHomeCourseCardDto, isArray: true })
   myCourses: LearnerHomeCourseCardDto[];
 
-  @ApiProperty({ type: LearnerHomeCourseCardDto, isArray: true })
-  wishlistOrRecommended: LearnerHomeCourseCardDto[];
-
   @ApiProperty({ type: LearnerHomeNotificationsDto })
   notifications: LearnerHomeNotificationsDto;
 }
