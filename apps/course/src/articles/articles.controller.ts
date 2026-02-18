@@ -9,8 +9,8 @@ import { UserRole } from '@common/enums/user-role.enum';
 
 @ApiTags('Admin | Articles')
 
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN)
+// @UseGuards(JwtAuthGuard, RolesGuard)
+// @Roles(UserRole.ADMIN)
 @Controller('articles')
 export class ArticlesController {
     constructor(private readonly svc: ArticlesService) { }
@@ -48,8 +48,6 @@ export class ArticlesController {
         return this.svc.create(body);
     }
 
-
-
     @Patch(':id')
     @ApiOperation({ summary: 'แก้ไขบทความตาม ID' })
     @ApiParam({ name: 'id', description: 'Article id', type: 'number' })
@@ -85,7 +83,7 @@ export class ArticlesController {
     }
 
     @ApiTags('Student | Articles')
-    @UseGuards(JwtAuthGuard)
+    // @UseGuards(JwtAuthGuard)
     @Get()
     @ApiOperation({ summary: 'ดึงบทความทั้งหมดพร้อมตัวกรองที่เลือกได้' })
     @ApiResponse({ status: 200, description: 'Articles retrieved successfully' })
@@ -95,7 +93,7 @@ export class ArticlesController {
     }
 
     @ApiTags('Student | Articles')
-    @UseGuards(JwtAuthGuard)
+    // @UseGuards(JwtAuthGuard)
     @Get(':id')
     @ApiOperation({ summary: 'ดึงบทความตาม ID' })
     @ApiParam({ name: 'id', description: 'Article id', type: 'number' })
@@ -108,7 +106,7 @@ export class ArticlesController {
     }
 
     @ApiTags('Student | Articles')
-    @UseGuards(JwtAuthGuard)
+    // @UseGuards(JwtAuthGuard)
     @Get('lesson/:id')
     @ApiOperation({ summary: 'ดึงบทความตาม lesson ID' })
     @ApiParam({ name: 'id', description: 'Lesson id', type: 'number' })

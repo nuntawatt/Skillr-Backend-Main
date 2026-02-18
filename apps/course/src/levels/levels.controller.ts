@@ -6,8 +6,8 @@ import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import { UserRole } from '@common/enums/user-role.enum';
 
 @ApiTags('Admin | Levels')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN)
+// @UseGuards(JwtAuthGuard, RolesGuard)
+// @Roles(UserRole.ADMIN)
 @Controller('levels')
 export class LevelsController {
     constructor(private readonly levelsService: LevelsService) { }
@@ -23,7 +23,7 @@ export class LevelsController {
 
 
     @ApiTags('Student | Levels')
-    @UseGuards(JwtAuthGuard)
+    // @UseGuards(JwtAuthGuard)
     @Get()
     @ApiOperation({ summary: 'ดึงระดับทั้งหมดสำหรับคอร์ส' })
     @ApiQuery({ name: 'course_id', required: true, type: Number })
@@ -35,7 +35,7 @@ export class LevelsController {
     }
 
     @ApiTags('Student | Levels')
-    @UseGuards(JwtAuthGuard)
+    // @UseGuards(JwtAuthGuard)
     @Get(':id')
     @ApiOperation({ summary: 'ดึงระดับตาม ID' })
     @ApiParam({ name: 'id', type: Number })

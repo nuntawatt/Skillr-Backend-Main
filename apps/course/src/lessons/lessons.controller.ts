@@ -6,8 +6,8 @@ import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import { UserRole } from '@common/enums/user-role.enum';
 
 @ApiTags('Admin | Lessons')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN)
+// @UseGuards(JwtAuthGuard, RolesGuard)
+// @Roles(UserRole.ADMIN)
 @ApiTags('Lessons')
 @Controller('lessons')
 export class LessonsController {
@@ -81,7 +81,7 @@ export class LessonsController {
 
   
   @ApiTags('Student | Lessons')
-  @UseGuards(JwtAuthGuard)
+  // @UseGuards(JwtAuthGuard)
   @Get()
   @ApiOperation({ summary: 'ดึงบทเรียนทั้งหมดสำหรับบท' })
   @ApiQuery({ name: 'chapterId', required: true, type: Number })
@@ -93,7 +93,7 @@ export class LessonsController {
   }
 
   @ApiTags('Student | Lessons')
-  @UseGuards(JwtAuthGuard)
+  // @UseGuards(JwtAuthGuard)
   @Get(':id')
   @ApiOperation({ summary: 'ดึงบทเรียนตาม ID' })
   @ApiParam({ name: 'id', type: Number })

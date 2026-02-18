@@ -7,8 +7,8 @@ import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import { UserRole } from '@common/enums/user-role.enum';
 
 @ApiTags('Admin | Courses')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN)
+// @UseGuards(JwtAuthGuard, RolesGuard)
+// @Roles(UserRole.ADMIN)
 @Controller('courses')
 export class CoursesController {
   constructor(private readonly coursesService: CoursesService) { }
@@ -33,7 +33,7 @@ export class CoursesController {
   }
 
   @ApiTags('Student | Courses')
-  @UseGuards(JwtAuthGuard)
+  // @UseGuards(JwtAuthGuard)
   @Get(':id')
   @ApiOperation({ summary: 'ดึงข้อมูลคอร์สด้วย ID' })
   @ApiParam({ name: 'id', type: Number })
@@ -46,7 +46,7 @@ export class CoursesController {
   }
 
   @ApiTags('Student | Courses')
-  @UseGuards(JwtAuthGuard)
+  // @UseGuards(JwtAuthGuard)
   @Get(':id/structure')
   @ApiOperation({ summary: 'ดึงโครงสร้างแบบ nested ทั้งหมดของคอร์ส' })
   @ApiParam({ name: 'id', type: Number })
