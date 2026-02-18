@@ -1,29 +1,14 @@
 services:
-  minio:
-    image: quay.io/minio/minio:latest
-    container_name: skillr_minio
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    env_file:
-      - .env.docker
-    environment:
-      MINIO_ROOT_USER: skillr
-      MINIO_ROOT_PASSWORD: moragon2025!
-    volumes:
-      - minio_data:/data
-    command: server --console-address ":9001" /data
-    restart: unless-stopped
   
   postgres:
     image: postgres:16-alpine
-    container_name: skillr_media_postgres
+    container_name: skllr_stock_postgres
     env_file:
       - .env.docker
     ports:
       - "5445:5432"
     volumes:
-      - media_pg_data:/var/lib/postgresql/data
+      - stock_pg_data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U $$POSTGRES_USER"]
@@ -32,15 +17,15 @@ services:
       retries: 5
       
 
-  media:
-    container_name: skillr_media_api
+  stock:
+    container_name: skllr_stock_api
     build:
       context: ../..
-      dockerfile: apps/media/dockerfile.media
+      dockerfile: apps/stock/dockerfile.stock
     env_file:
       - .env.docker
     ports:
-      - "3004:3004"
+      - "3003:3003"
     depends_on:
       postgres: 
         condition: service_healthy
@@ -51,5 +36,5 @@ services:
     cpus: 1.0
 
 volumes:
-  media_pg_data:
+  stock_pg_data:
   minio_data:
