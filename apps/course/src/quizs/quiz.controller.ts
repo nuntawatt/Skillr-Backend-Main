@@ -4,7 +4,7 @@ import { QuizService } from './quiz.service';
 import { CreateQuizsDto, CreateCheckpointDto } from './dto/create-quizs.dto';
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import { UserRole } from '@common/enums';
-import { CurrentUserId } from '../progress/decorators/current-user-id.decorator';
+import { CurrentUserId } from '../notifications/decorators/current-user-id.decorator';
 
 @ApiTags('Admin | Quiz and Checkpoint')
 // @ApiBearerAuth()

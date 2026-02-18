@@ -26,6 +26,8 @@ import { MediaVideosModule } from './media-videos/media-videos.module';
 import { ProgressService } from './progress/progress.service';
 import { QuizService } from "./quizs/quiz.service";
 import { StreakService } from './streaks/streak.service';
+import { LearnerHomeModule } from './learner-home/learner-home.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 // Entities
 import { Course } from './courses/entities/course.entity';
@@ -75,7 +77,9 @@ const isTest = process.env.NODE_ENV === 'test';
         AuthLibModule,
         StorageModule,
         MediaImagesModule,
-        MediaVideosModule
+        MediaVideosModule,
+        LearnerHomeModule,
+        NotificationsModule
       ]),
   ],
 
