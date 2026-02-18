@@ -1,8 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiQuery, ApiResponse, ApiNoContentResponse, ApiBody } from '@nestjs/swagger';
 import { LessonsService } from './lessons.service';
 import { CreateLessonDto, UpdateLessonDto, LessonResponseDto, ReorderLessonsDto } from './dto/lesson';
+import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
+import { UserRole } from '@common/enums/user-role.enum';
 
+@ApiTags('Admin | Lessons')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN)
 @ApiTags('Lessons')
 @Controller('lessons')
 export class LessonsController {
@@ -74,6 +79,9 @@ export class LessonsController {
     return this.lessonsService.create(dto);
   }
 
+  
+  @ApiTags('Student | Lessons')
+  @UseGuards(JwtAuthGuard)
   @Get()
   @ApiOperation({ summary: 'ดึงบทเรียนทั้งหมดสำหรับบท' })
   @ApiQuery({ name: 'chapterId', required: true, type: Number })
@@ -84,6 +92,8 @@ export class LessonsController {
     return this.lessonsService.findByChapter(chapterId);
   }
 
+  @ApiTags('Student | Lessons')
+  @UseGuards(JwtAuthGuard)
   @Get(':id')
   @ApiOperation({ summary: 'ดึงบทเรียนตาม ID' })
   @ApiParam({ name: 'id', type: Number })

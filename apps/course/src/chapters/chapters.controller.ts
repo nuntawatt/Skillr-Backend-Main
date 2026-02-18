@@ -1,9 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiQuery, ApiNoContentResponse, ApiResponse } from '@nestjs/swagger';
 import { ChaptersService } from './chapters.service';
 import { CreateChapterDto, UpdateChapterDto, ChapterResponseDto, ReorderChaptersDto } from './dto';
+import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
+import { UserRole } from '@common/enums/user-role.enum';
 
-@ApiTags('Chapters')
+@ApiTags('Admin | Chapters')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN)
 @Controller('chapters')
 export class ChaptersController {
     constructor(private readonly chaptersService: ChaptersService) { }
@@ -16,6 +20,8 @@ export class ChaptersController {
         return this.chaptersService.create(dto);
     }
 
+    @ApiTags('Student | Chapters')
+    @UseGuards(JwtAuthGuard)
     @Get()
     @ApiOperation({ summary: 'ดึงบททั้งหมดสำหรับระดับ' })
     @ApiQuery({ name: 'level_id', type: Number, required: true, description: 'ID of the level to fetch chapters for' })
@@ -25,6 +31,8 @@ export class ChaptersController {
         return this.chaptersService.findByLevel(levelId);
     }
 
+    @ApiTags('Student | Chapters')
+    @UseGuards(JwtAuthGuard)
     @Get(':id')
     @ApiOperation({ summary: 'ดึงบทตาม ID' })
     @ApiParam({ name: 'id', type: Number })
