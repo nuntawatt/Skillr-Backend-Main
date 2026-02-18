@@ -82,4 +82,34 @@ export class NotificationsService {
       { type: 'streak_milestone', streakDays },
     );
   }
+
+  async updateNotification(notificationId: string, updateData: Partial<{
+    title: string;
+    message: string;
+    type: 'info' | 'success' | 'warning' | 'error';
+    metadata: Record<string, any>;
+  }>): Promise<Notification | null> {
+    await this.notificationRepository.update(notificationId, updateData);
+    
+    return this.notificationRepository.findOne({
+      where: { notificationId }
+    });
+  }
+
+  async deleteNotification(notificationId: string): Promise<boolean> {
+    const result = await this.notificationRepository.delete(notificationId);
+    return (result.affected ?? 0) > 0;
+  }
+
+  async deleteUserNotification(notificationId: string, userId: string): Promise<boolean> {
+    const result = await this.notificationRepository.delete({
+      notificationId,
+      userId
+    });
+    return (result.affected ?? 0) > 0;
+  }
+
+  async deleteAllUserNotifications(userId: string): Promise<void> {
+    await this.notificationRepository.delete({ userId });
+  }
 }
