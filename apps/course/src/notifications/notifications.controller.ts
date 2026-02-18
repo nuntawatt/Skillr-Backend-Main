@@ -11,9 +11,11 @@ import {
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiResponse, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@auth';
 
-import { CurrentUserId } from '../progress/decorators/current-user-id.decorator';
+import { CurrentUserId } from './decorators/current-user-id.decorator';
 import { NotificationsService } from './notifications.service';
 import { Notification } from './entities/notification.entity';
+import { NotificationResponseDto } from './dto/notification-response.dto';
+import { PaginatedNotificationsDto } from './dto/paginated-notifications.dto';
 
 @ApiTags('Notifications')
 @ApiBearerAuth()
@@ -25,35 +27,38 @@ export class NotificationsController {
   @Get()
   @ApiOperation({ 
     summary: 'รับการแจ้งเตือนจากผู้ใช้',
-    description: 'Get paginated list of user notifications'
+    description: 'Get paginated list of user notifications with proper DTO response'
   })
   @ApiQuery({ name: 'limit', type: 'number', required: false, example: 20 })
   @ApiQuery({ name: 'offset', type: 'number', required: false, example: 0 })
   @ApiOkResponse({ 
-    type: [Notification],
-    description: 'List of user notifications',
-    example: [
-      {
-        notificationId: 1,
-        userId: '123e4567-e89b-12d3-a456-426614174000',
-        title: 'Course Completed! 🎉',
-        message: 'Congratulations! You\'ve completed "Basic TypeScript"',
-        type: 'success',
-        readAt: null,
-        metadata: { type: 'course_completed', courseTitle: 'Basic TypeScript' },
-        createdAt: '2025-01-15T10:30:00.000Z'
-      },
-      {
-        notificationId: 2,
-        userId: '123e4567-e89b-12d3-a456-426614174000',
-        title: 'Streak Milestone! 🔥',
-        message: 'Amazing! You\'ve maintained a 7-day learning streak!',
-        type: 'success',
-        readAt: '2025-01-14T15:45:00.000Z',
-        metadata: { type: 'streak_milestone', streakDays: 7 },
-        createdAt: '2025-01-14T10:00:00.000Z'
-      }
-    ]
+    type: PaginatedNotificationsDto,
+    description: 'Paginated list of user notifications',
+    example: {
+      data: [
+        {
+          notificationId: '550e8400-e29b-41d4-a716-446655440000',
+          title: 'Course Completed! 🎉',
+          message: 'Congratulations! You\'ve completed "Basic TypeScript"',
+          type: 'success',
+          readAt: null,
+          metadata: { type: 'course_completed', courseTitle: 'Basic TypeScript' },
+          createdAt: '2025-01-15T10:30:00.000Z'
+        },
+        {
+          notificationId: '660e8400-e29b-41d4-a716-446655440001',
+          title: 'Streak Milestone! 🔥',
+          message: 'Amazing! You\'ve maintained a 7-day learning streak!',
+          type: 'success',
+          readAt: '2025-01-14T15:45:00.000Z',
+          metadata: { type: 'streak_milestone', streakDays: 7 },
+          createdAt: '2025-01-14T10:00:00.000Z'
+        }
+      ],
+      total: 25,
+      page: 1,
+      limit: 20
+    }
   })
   @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing JWT token' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
@@ -61,7 +66,7 @@ export class NotificationsController {
     @CurrentUserId() userId: string,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
     @Query('offset', new DefaultValuePipe(0), ParseIntPipe) offset: number,
-  ): Promise<Notification[]> {
+  ): Promise<PaginatedNotificationsDto> {
     if (!userId) {
       throw new UnauthorizedException('User not authenticated');
     }
@@ -78,7 +83,28 @@ export class NotificationsController {
     }
 
     const safeLimit = Math.min(rawLimit, 50);
-    return this.notificationsService.getNotifications(userId, safeLimit, rawOffset);
+    
+    const [notifications, total] = await Promise.all([
+      this.notificationsService.getNotifications(userId, safeLimit, rawOffset),
+      this.notificationsService.countNotifications(userId),
+    ]);
+
+    const notificationDtos: NotificationResponseDto[] = notifications.map(notification => ({
+      notificationId: notification.notificationId,
+      title: notification.title,
+      message: notification.message,
+      type: notification.type,
+      readAt: notification.readAt?.toISOString() ?? null,
+      metadata: notification.metadata ?? {},
+      createdAt: notification.createdAt.toISOString(),
+    }));
+
+    return {
+      data: notificationDtos,
+      total,
+      page: Math.floor(rawOffset / safeLimit) + 1,
+      limit: safeLimit,
+    };
   }
 
   @Get('unread-count')

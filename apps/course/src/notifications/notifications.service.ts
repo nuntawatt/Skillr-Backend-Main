@@ -42,7 +42,13 @@ export class NotificationsService {
     });
   }
 
-  async markAsRead(notificationId: number, userId: string): Promise<void> {
+  async countNotifications(userId: string): Promise<number> {
+    return this.notificationRepository.count({
+      where: { userId },
+    });
+  }
+
+  async markAsRead(notificationId: string, userId: string): Promise<void> {
     await this.notificationRepository.update(
       { notificationId, userId },
       { readAt: new Date() },

@@ -3,9 +3,10 @@ import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn } from 
 @Entity('notifications')
 @Index('idx_notifications_user_id', ['userId'])
 @Index('idx_notifications_read_at', ['readAt'])
+@Index('idx_notifications_notification_id', ['notificationId'])
 export class Notification {
-  @PrimaryGeneratedColumn({ name: 'notification_id', type: 'int' })
-  notificationId: number;
+  @PrimaryGeneratedColumn({ name: 'notification_id', type: 'uuid' })
+  notificationId: string;
 
   @Column({ name: 'user_id', type: 'uuid' })
   userId: string;
