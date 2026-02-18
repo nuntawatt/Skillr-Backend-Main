@@ -7,7 +7,7 @@ import { UserRole } from '@common/enums';
 import { CurrentUserId } from '../notifications/decorators/current-user-id.decorator';
 
 @ApiTags('Admin | Quiz and Checkpoint')
-// @ApiBearerAuth()
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
 @Controller('admin/quizzes')
