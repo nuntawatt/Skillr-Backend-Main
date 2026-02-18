@@ -4,13 +4,13 @@ import { StreakColor } from './streak-color.dto';
 export class StreakResponseDto {
   @ApiProperty({ 
     example: 7,
-    description: 'จำนวนวันติดต่อกันปัจจุบัน'
+    description: 'จำนวนวันที่ทำสำเร็จสะสม (ไม่ reset เมื่อขาดวัน)'
   })
   currentStreak: number;
 
   @ApiProperty({ 
     example: 30,
-    description: 'สถิติวันติดต่อกันสูงสุดตลอดเวลา'
+    description: 'สถิติสูงสุดตลอดเวลา (เท่ากับ currentStreak)'
   })
   longestStreak: number;
 
@@ -31,7 +31,13 @@ export class StreakResponseDto {
 
   @ApiProperty({ 
     example: true,
-    description: 'มี streak ที่สามารถรับรางวัลได้ (currentStreak > 0)'
+    description: 'ทำสำเร็จวันนี้แล้ว และยังไม่เคยแสดง reward modal วันนี้'
   })
   isReward: boolean;
+
+  @ApiProperty({
+    example: true,
+    description: 'สถานะไฟ streak: true ถ้าทำวันนี้หรือเมื่อวาน (UTC), false ถ้าขาดมากกว่า 1 วัน'
+  })
+  isFlameOn: boolean;
 }

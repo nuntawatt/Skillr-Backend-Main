@@ -15,10 +15,6 @@ function isSameUtcDay(a: Date, b: Date): boolean {
   return startOfUtcDay(a) === startOfUtcDay(b);
 }
 
-function addDaysUtc(date: Date, days: number): Date {
-  return new Date(startOfUtcDay(date) + days * DAY_MS);
-}
-
 function diffDaysUtc(a: Date, b: Date): number {
   return Math.floor((startOfUtcDay(a) - startOfUtcDay(b)) / DAY_MS);
 }
@@ -33,11 +29,15 @@ export class StreakService {
   async bumpStreak(userId: string, now: Date = new Date()): Promise<UserStreak> {
     let streak = await this.ensureStreak(userId);
 
-    // Apply break if missed at least one full day since last completion
     if (streak.lastCompletedAt) {
       const gap = diffDaysUtc(now, streak.lastCompletedAt);
-      if (gap >= 1 && streak.currentStreak !== 0) {
+      // Hybrid rule:
+      // - gap === 1: keep counter (flame off)
+      // - gap >= 2: reset counter
+      if (gap >= 2 && (streak.currentStreak ?? 0) !== 0) {
         streak.currentStreak = 0;
+        streak.longestStreak = 0;
+        streak.rewardShownAt = null;
         streak = await this.streakRepository.save(streak);
       }
     }
@@ -47,38 +47,44 @@ export class StreakService {
       return streak;
     }
 
-    const yesterday = streak.lastCompletedAt ? addDaysUtc(streak.lastCompletedAt, 1) : null;
-    const isConsecutive = yesterday ? isSameUtcDay(now, yesterday) : false;
-
-    const nextCurrent = isConsecutive ? streak.currentStreak + 1 : 1;
+    const nextCurrent = (streak.currentStreak ?? 0) + 1;
     streak.currentStreak = nextCurrent;
-    streak.longestStreak = Math.max(streak.longestStreak ?? 0, nextCurrent);
+    streak.longestStreak = nextCurrent;
     streak.lastCompletedAt = now;
 
     return this.streakRepository.save(streak);
   }
 
-  async getStreak(userId: string): Promise<{ streak: UserStreak; color: ReturnType<typeof getStreakColor>; isReward: boolean; }> {
+  async getStreak(userId: string): Promise<{ streak: UserStreak; color: ReturnType<typeof getStreakColor>; isReward: boolean; isFlameOn: boolean; }> {
     let streak = await this.ensureStreak(userId);
 
-    // If user has been inactive for at least one full day after last completion, reset to 0
+    const now = new Date();
+
     if (streak.lastCompletedAt) {
-      const gap = diffDaysUtc(new Date(), streak.lastCompletedAt);
-      if (gap >= 1 && streak.currentStreak !== 0) {
+      const gap = diffDaysUtc(now, streak.lastCompletedAt);
+      // Hybrid rule:
+      // - gap === 1: keep counter (flame off)
+      // - gap >= 2: reset counter
+      if (gap >= 2 && (streak.currentStreak ?? 0) !== 0) {
         streak.currentStreak = 0;
-        streak.rewardShownAt = null; // Reset reward shown when streak resets
+        streak.longestStreak = 0;
+        streak.rewardShownAt = null;
         streak = await this.streakRepository.save(streak);
       }
     }
 
-    // Calculate isReward: true if currentStreak > 0 AND reward not shown for this streak
-    const isReward = streak.currentStreak > 0 && 
-      (!streak.rewardShownAt || !isSameUtcDay(streak.rewardShownAt, new Date()));
+    const isCompletedToday = !!streak.lastCompletedAt && isSameUtcDay(streak.lastCompletedAt, now);
+    const isReward =
+      isCompletedToday &&
+      (!streak.rewardShownAt || !isSameUtcDay(streak.rewardShownAt, now));
+
+    const isFlameOn = isCompletedToday;
 
     return {
       streak,
       color: getStreakColor(streak.currentStreak),
       isReward,
+      isFlameOn,
     };
   }
 
