@@ -11,58 +11,48 @@ import { StorageProvider } from './storage.interface';
 @Injectable()
 export class AwsS3StorageService implements StorageProvider {
   private readonly logger = new Logger(AwsS3StorageService.name);
-  private s3: S3Client | null = null;
-  private readonly region?: string;
-  private readonly _bucket?: string;
-  private readonly cloudfrontDomain?: string;
+  private readonly s3: S3Client;
+  private readonly region: string;
+  private readonly _bucket: string;
+  private readonly cloudfrontDomain: string;
   private cachedMcEndpoint?: string;
 
   constructor() {
-    // NOTE: อย่า throw ใน constructor เพราะจะทำให้ NestJS boot ไม่ขึ้นใน dev env ที่ยังไม่ set AWS_*.
-    // จะตรวจสอบจริงตอนมีการใช้งาน method (lazy init) แทน
+    // เช็ค environment variables ที่จำเป็นทั้งหมดก่อนเริ่มต้น
+    if (!process.env.AWS_REGION) {
+      throw new Error('AWS_REGION environment variable is required');
+    }
+    if (!process.env.AWS_S3_BUCKET) {
+      throw new Error('AWS_S3_BUCKET environment variable is required');
+    }
+    if (!process.env.AWS_CLOUDFRONT_DOMAIN) {
+      throw new Error('AWS_CLOUDFRONT_DOMAIN environment variable is required');
+    }
+
     this.region = process.env.AWS_REGION;
     this._bucket = process.env.AWS_S3_BUCKET;
     this.cloudfrontDomain = process.env.AWS_CLOUDFRONT_DOMAIN;
 
-    if (!this.region || !this._bucket || !this.cloudfrontDomain) {
-      this.logger.warn(
-        'AWS storage is not configured (missing AWS_REGION / AWS_S3_BUCKET / AWS_CLOUDFRONT_DOMAIN). ' +
-          'Storage features will throw on use.',
-      );
-      return;
-    }
+    // อนุญาตให้ใช้ AWS credentials จาก environment variables หรือจาก IAM role (ถ้าแอปรันบน EC2/Lambda)
+    const credentials =
+      process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+        ? {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        }
+        : undefined;
 
-    this.logger.log(`AWS storage configured → bucket: ${this._bucket}, region: ${this.region}, CDN: ${this.cloudfrontDomain}`);
+    this.s3 = new S3Client({
+      region: this.region,
+      ...(credentials && { credentials }),
+    });
+
+    this.logger.log(`AWS S3 initialized → bucket: ${this._bucket}, region: ${this.region}, CDN: ${this.cloudfrontDomain}`);
   }
 
   // getter เพื่อให้เข้าถึง bucket ได้จากภายนอก
   get bucket(): string {
-    this.ensureConfigured();
-    return this._bucket as string;
-  }
-
-  private ensureConfigured(): void {
-    if (!this.region) throw new Error('AWS_REGION environment variable is required');
-    if (!this._bucket) throw new Error('AWS_S3_BUCKET environment variable is required');
-    if (!this.cloudfrontDomain) throw new Error('AWS_CLOUDFRONT_DOMAIN environment variable is required');
-  }
-
-  private ensureS3Initialized(): void {
-    this.ensureConfigured();
-    if (this.s3) return;
-
-    const credentials =
-      process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
-        ? {
-            accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-          }
-        : undefined;
-
-    this.s3 = new S3Client({
-      region: this.region as string,
-      ...(credentials && { credentials }),
-    });
+    return this._bucket;
   }
 
   // ==================== Upload Methods ====================
@@ -83,23 +73,23 @@ export class AwsS3StorageService implements StorageProvider {
     metadata?: Record<string, string>,
   ): Promise<void> {
     try {
-      this.ensureS3Initialized();
       const contentType = this.detectContentType(key, metadata);
 
       const cmd = new PutObjectCommand({
         Bucket: bucket || this._bucket,
         Key: key,
         Body: body,
-        ...(size && { ContentLength: size }),
-        ...(contentType && { ContentType: contentType }),
-        ...(metadata && { Metadata: metadata }),
+        ContentType: contentType,
+        ContentLength: size,
+        ACL: 'private', // ใช้ private แล้วให้ CloudFront จัดการ caching แทน
+        CacheControl: 'max-age=31536000', // 1 year cache
       });
 
-      await this.s3!.send(cmd);
+      await this.s3.send(cmd);
       this.logger.debug(`Uploaded: s3://${bucket || this._bucket}/${key}`);
-    } catch (err) {
-      this.logger.error(err);
-      throw new InternalServerErrorException('putObject failed');
+    } catch (error) {
+      this.logger.error(`Failed to upload ${key}: ${error.message}`);
+      throw new InternalServerErrorException(`Failed to upload file: ${error.message}`);
     }
   }
 
@@ -110,8 +100,7 @@ export class AwsS3StorageService implements StorageProvider {
     contentType?: string;
     bucket?: string;
   }): Promise<{ key: string; url: string }> {
-    this.ensureS3Initialized();
-    const bucket = params.bucket || this.bucket;
+    const bucket = params.bucket || this._bucket;
     const contentType = params.contentType || this.detectContentType(params.key);
 
     await this.putObject(bucket, params.key, params.body, params.body.length, {
@@ -131,17 +120,16 @@ export class AwsS3StorageService implements StorageProvider {
    */
   async deleteObject(bucket: string, key: string): Promise<void> {
     try {
-      this.ensureS3Initialized();
       const cmd = new DeleteObjectCommand({
         Bucket: bucket || this._bucket,
         Key: key,
       });
 
-      await this.s3!.send(cmd);
+      await this.s3.send(cmd);
       this.logger.debug(`Deleted: s3://${bucket || this._bucket}/${key}`);
-    } catch (err) {
-      this.logger.error(err);
-      throw new InternalServerErrorException('deleteObject failed');
+    } catch (error) {
+      this.logger.error(`Failed to delete ${key}: ${error.message}`);
+      throw new InternalServerErrorException(`Failed to delete file: ${error.message}`);
     }
   }
 
@@ -152,44 +140,34 @@ export class AwsS3StorageService implements StorageProvider {
    * Format: https://cdn.skillacademy.com/{folder}/{filename}
    */
   buildPublicUrl(bucket: string, key: string): string {
-    this.ensureConfigured();
-    if (!key) throw new BadRequestException('key missing');
-
-    const b = bucket || this._bucket;
-    if (!b) throw new BadRequestException('bucket missing');
-
-    // เราใช้ CloudFront เป็น CDN base
-    return `${this.cloudfrontDomain}/${key}`;
+    // ใช้ CloudFront URL แทน S3 URL เพื่อประสิทธิภาพและ caching 
+    return `https://${this.cloudfrontDomain}/${encodeURI(key)}`;
   }
 
   // สำหรับกรณีที่ต้องการ S3 URL ตรงๆ (ไม่แนะนำให้ใช้สำหรับ public access)
   getS3Url(bucket: string, key: string): string {
-    this.ensureConfigured();
-    const b = bucket || (this._bucket as string);
-    return `https://${b}.s3.${this.region as string}.amazonaws.com/${encodeURI(key)}`;
+    return `https://${bucket || this._bucket}.s3.${this.region}.amazonaws.com/${encodeURI(key)}`;
   }
 
   // ==================== Presigned URL Methods ====================
 
   // คืน URL สำหรับให้ client อัพโหลดไฟล์โดยตรงไปยัง S3 โดยไม่ต้องผ่าน backend (เผื่อนำไปต่อยอดทำ Quantity Video Upload ในอนาคต)
-  async presignPut(bucket: string, key: string, contentType: string, expiresIn: number): Promise<string> {
+  async presignPut(
+    bucket: string,
+    key: string,
+    contentType: string,
+    expiresIn: number = 3600,
+  ): Promise<string> {
     try {
-      this.ensureS3Initialized();
-      if (!key) throw new BadRequestException('key missing');
-
-      const b = bucket || this._bucket;
-      if (!b) throw new BadRequestException('bucket missing');
-
       const cmd = new PutObjectCommand({
-        Bucket: b,
+        Bucket: bucket || this._bucket,
         Key: key,
         ContentType: contentType,
         ACL: 'private',
       });
 
-      return await getSignedUrl(this.s3!, cmd, { expiresIn });
+      return await getSignedUrl(this.s3, cmd, { expiresIn });
     } catch (error) {
-      this.logger.error(error);
       this.logger.error(`Failed to generate presigned PUT URL: ${error.message}`);
       throw new InternalServerErrorException('Failed to generate upload URL');
     }
@@ -202,13 +180,12 @@ export class AwsS3StorageService implements StorageProvider {
   // ตรวจสอบว่าไฟล์มีอยู่ใน S3 หรือไม่
   async fileExists(bucket: string, key: string): Promise<boolean> {
     try {
-      this.ensureS3Initialized();
       const cmd = new HeadObjectCommand({
         Bucket: bucket || this._bucket,
         Key: key,
       });
 
-      await this.s3!.send(cmd);
+      await this.s3.send(cmd);
       return true;
     } catch (error) {
       if (error.name === 'NotFound') {

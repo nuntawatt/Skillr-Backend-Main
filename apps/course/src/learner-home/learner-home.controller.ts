@@ -6,11 +6,7 @@ import { CurrentUserId } from '../progress/decorators/current-user-id.decorator'
 import { LearnerHomeService } from './learner-home.service';
 import { LearnerHomeResponseDto } from './dto/learner-home-response.dto';
 
-/**
- * Learner Home Controller
- * 
- * Handles requests related to the learner's home page
- */
+
 @ApiTags('LearnerHome')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
