@@ -8,8 +8,8 @@ import { CurrentUserId } from '../progress/decorators/current-user-id.decorator'
 
 @ApiTags('Admin | Quiz and Checkpoint')
 @ApiBearerAuth()
-// @UseGuards(JwtAuthGuard, RolesGuard)
-// @Roles(UserRole.ADMIN)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN)
 @Controller('admin/quizzes')
 export class QuizAdminController {
   constructor(private readonly quizService: QuizService) { }
