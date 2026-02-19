@@ -6,11 +6,6 @@ import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import { UserRole } from '@common/enums';
 import { CurrentUserId } from '../notifications/decorators/current-user-id.decorator';
 
-function checkpointScoreFromLevel(level?: number | null): number {
-  const scoreByLevel: Record<number, number> = { 1: 5, 2: 10, 3: 15 };
-  return scoreByLevel[level ?? 1] ?? 5;
-}
-
 @ApiTags('Admin | Quiz and Checkpoint')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -111,7 +106,6 @@ export class QuizAdminController {
         value: {
           lesson_id: 1,
           checkpoint_type: 'multiple_choice',
-          checkpoint_level: 1,
           checkpoint_questions: '1 + 1 เท่ากับเท่าไหร่?',
           checkpoint_option: ['1', '2', '3'],
           checkpoint_answer: '2',
@@ -123,7 +117,6 @@ export class QuizAdminController {
         value: {
           lesson_id: 2,
           checkpoint_type: 'true_false',
-          checkpoint_level: 1,
           checkpoint_questions: 'Node.js คือภาษาโปรแกรมใช่หรือไม่?',
           checkpoint_option: ['True', 'False'],
           checkpoint_answer: 'False',
@@ -139,7 +132,7 @@ export class QuizAdminController {
     const checkpoint = await this.quizService.createCheckpoint(dto);
     return {
       ...checkpoint,
-      score: checkpointScoreFromLevel((checkpoint as any).checkpointLevel),
+      score: checkpoint.checkpointScore ?? 5,
     };
   }
 
@@ -152,13 +145,11 @@ export class QuizAdminController {
   })
   @ApiResponse({ status: 200, description: 'Checkpoint retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Checkpoint not found' })
-  findCheckpointByIdAdmin(
+  async findCheckpointByIdAdmin(
     @Param('checkpointId', ParseIntPipe) checkpointId: number,
   ) {
-    return this.quizService.findOneCheckpointById(checkpointId).then((checkpoint) => ({
-      ...checkpoint,
-      score: checkpointScoreFromLevel((checkpoint as any).checkpointLevel),
-    }));
+    const checkpoint = await this.quizService.findOneCheckpointById(checkpointId);
+    return { ...checkpoint, score: checkpoint.checkpointScore ?? 5 };
   }
 
   // อัปเดต checkpoint ตาม checkpoint ID
@@ -172,14 +163,12 @@ export class QuizAdminController {
   @ApiResponse({ status: 200, description: 'Checkpoint updated successfully' })
   @ApiResponse({ status: 404, description: 'Checkpoint not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  updateCheckpoint(
+  async updateCheckpoint(
     @Param('checkpointId', ParseIntPipe) checkpointId: number,
     @Body() dto: Partial<CreateCheckpointDto>,
   ) {
-    return this.quizService.updateCheckpoint(checkpointId, dto).then((checkpoint) => ({
-      ...checkpoint,
-      score: checkpointScoreFromLevel((checkpoint as any).checkpointLevel),
-    }));
+    const checkpoint = await this.quizService.updateCheckpoint(checkpointId, dto);
+    return { ...checkpoint, score: checkpoint.checkpointScore ?? 5 };
   }
 
   // ลบ checkpoint ตาม checkpoint ID

@@ -93,12 +93,15 @@ describe('QuizService (checkpoint)', () => {
     });
 
     it('updates existing checkpoint for lesson', async () => {
-      lessonRepository.findOne!.mockResolvedValue({ lesson_id: 10 } as any);
+      lessonRepository.findOne!.mockResolvedValue({
+        lesson_id: 10,
+        chapter: { level: { level_orderIndex: 0 } },
+      } as any);
 
       const existing = {
         checkpointId: 1,
         lessonId: 10,
-        checkpointLevel: 1,
+        checkpointScore: 5,
         checkpointType: 'true_false',
         checkpointQuestions: 'old',
         checkpointOption: null,
@@ -115,7 +118,7 @@ describe('QuizService (checkpoint)', () => {
       expect(result).toMatchObject({
         checkpointId: 1,
         lessonId: 10,
-        checkpointLevel: 1,
+        checkpointScore: 5,
         checkpointType: baseDto.checkpoint_type,
         checkpointQuestions: baseDto.checkpoint_questions,
         checkpointOption: baseDto.checkpoint_option,
@@ -125,13 +128,16 @@ describe('QuizService (checkpoint)', () => {
     });
 
     it('creates new checkpoint when none exists', async () => {
-      lessonRepository.findOne!.mockResolvedValue({ lesson_id: 10 } as any);
+      lessonRepository.findOne!.mockResolvedValue({
+        lesson_id: 10,
+        chapter: { level: { level_orderIndex: 0 } },
+      } as any);
       checkpointRepository.findOne!.mockResolvedValue(null);
 
       const created = {
         checkpointId: 99,
         lessonId: 10,
-        checkpointLevel: 1,
+        checkpointScore: 5,
       } as any as QuizsCheckpoint;
 
       checkpointRepository.create!.mockReturnValue(created as any);
@@ -141,7 +147,7 @@ describe('QuizService (checkpoint)', () => {
 
       expect(checkpointRepository.create).toHaveBeenCalledWith({
         lessonId: 10,
-        checkpointLevel: 1,
+        checkpointScore: 5,
         checkpointType: baseDto.checkpoint_type,
         checkpointQuestions: baseDto.checkpoint_questions,
         checkpointOption: baseDto.checkpoint_option,
@@ -149,28 +155,6 @@ describe('QuizService (checkpoint)', () => {
         checkpointExplanation: baseDto.checkpoint_explanation,
       });
       expect(result).toBe(created);
-    });
-
-    it('accepts checkpoint_level and persists it', async () => {
-      lessonRepository.findOne!.mockResolvedValue({ lesson_id: 10 } as any);
-      checkpointRepository.findOne!.mockResolvedValue(null);
-
-      const dto = { ...baseDto, checkpoint_level: 2 };
-      const created = {
-        checkpointId: 100,
-        lessonId: 10,
-        checkpointLevel: 2,
-      } as any as QuizsCheckpoint;
-
-      checkpointRepository.create!.mockReturnValue(created as any);
-      checkpointRepository.save!.mockResolvedValue(created);
-
-      const result = await service.createCheckpoint(dto as any);
-
-      expect(checkpointRepository.create).toHaveBeenCalledWith(
-        expect.objectContaining({ checkpointLevel: 2 }),
-      );
-      expect(result.checkpointLevel).toBe(2);
     });
   });
 
@@ -187,7 +171,6 @@ describe('QuizService (checkpoint)', () => {
       const existing = {
         checkpointId: 1,
         lessonId: 10,
-        checkpointLevel: 1,
         checkpointType: 'multiple_choice',
         checkpointQuestions: 'old',
         checkpointOption: ['a'],
@@ -201,13 +184,11 @@ describe('QuizService (checkpoint)', () => {
       const updated = await service.updateCheckpoint(1, {
         checkpoint_questions: 'new',
         checkpoint_explanation: 'why',
-        checkpoint_level: 3,
       } as any);
 
       expect(checkpointRepository.save).toHaveBeenCalledTimes(1);
       expect(updated).toMatchObject({
         checkpointId: 1,
-        checkpointLevel: 3,
         checkpointQuestions: 'new',
         checkpointExplanation: 'why',
       });
@@ -217,12 +198,16 @@ describe('QuizService (checkpoint)', () => {
 
   describe('findCheckpointsByLesson', () => {
     it('returns masked solution when not attempted', async () => {
-      lessonRepository.findOne!.mockResolvedValue({ lesson_id: 10, chapter_id: 7 } as any);
+      lessonRepository.findOne!.mockResolvedValue({
+        lesson_id: 10,
+        chapter_id: 7,
+        chapter: { level: { level_orderIndex: 1 } },
+      } as any);
       checkpointRepository.find!.mockResolvedValue([
         {
           checkpointId: 1,
           lessonId: 10,
-          checkpointLevel: 2,
+          checkpointScore: 10,
           checkpointType: 'multiple_choice',
           checkpointQuestions: 'Q',
           checkpointOption: ['1', '2'],
@@ -251,12 +236,17 @@ describe('QuizService (checkpoint)', () => {
     });
 
     it('returns solution and score when attempted correct (level 2 -> 10)', async () => {
-      lessonRepository.findOne!.mockResolvedValue({ lesson_id: 10, chapter_id: 7 } as any);
+      // derived from lesson.chapter.level.level_orderIndex = 1 -> levelNumber 2 -> score 10
+      lessonRepository.findOne!.mockResolvedValue({
+        lesson_id: 10,
+        chapter_id: 7,
+        chapter: { level: { level_orderIndex: 1 } },
+      } as any);
       checkpointRepository.find!.mockResolvedValue([
         {
           checkpointId: 1,
           lessonId: 10,
-          checkpointLevel: 2,
+          checkpointScore: 10,
           checkpointType: 'multiple_choice',
           checkpointQuestions: 'Q',
           checkpointOption: ['1', '2'],
@@ -283,12 +273,16 @@ describe('QuizService (checkpoint)', () => {
     });
 
     it('returns solution when skipped', async () => {
-      lessonRepository.findOne!.mockResolvedValue({ lesson_id: 10, chapter_id: 7 } as any);
+      lessonRepository.findOne!.mockResolvedValue({
+        lesson_id: 10,
+        chapter_id: 7,
+        chapter: { level: { level_orderIndex: 2 } },
+      } as any);
       checkpointRepository.find!.mockResolvedValue([
         {
           checkpointId: 1,
           lessonId: 10,
-          checkpointLevel: 3,
+          checkpointScore: 15,
           checkpointType: 'multiple_choice',
           checkpointQuestions: 'Q',
           checkpointOption: ['1', '2'],
@@ -408,12 +402,15 @@ describe('QuizService (checkpoint)', () => {
       checkpointRepository.findOne!.mockResolvedValue({
         checkpointId: 1,
         lessonId: 10,
-        checkpointLevel: 1,
+        checkpointScore: 5,
         checkpointAnswer: 2,
         checkpointExplanation: 'ok',
       } as any);
       resultRepository.findOne!.mockResolvedValue(null);
-      lessonRepository.findOne!.mockResolvedValue({ lesson_id: 10, chapter_id: 7 } as any);
+      lessonRepository.findOne!.mockResolvedValue({
+        lesson_id: 10,
+        chapter_id: 7,
+      } as any);
 
       resultRepository.create!.mockImplementation((x) => ({ ...x }));
       resultRepository.save!.mockImplementation(async (x) => x);
@@ -457,18 +454,21 @@ describe('QuizService (checkpoint)', () => {
       });
     });
 
-    it('uses checkpoint_level to determine score and first-time XP (level 2 -> 10)', async () => {
+    it('uses persisted checkpointScore to determine score and first-time XP (score 10)', async () => {
       jest.setSystemTime(new Date('2026-02-19T00:00:00.000Z'));
 
       checkpointRepository.findOne!.mockResolvedValue({
         checkpointId: 1,
         lessonId: 10,
-        checkpointLevel: 2,
+        checkpointScore: 10,
         checkpointAnswer: 'A',
         checkpointExplanation: null,
       } as any);
       resultRepository.findOne!.mockResolvedValue(null);
-      lessonRepository.findOne!.mockResolvedValue({ lesson_id: 10, chapter_id: 7 } as any);
+      lessonRepository.findOne!.mockResolvedValue({
+        lesson_id: 10,
+        chapter_id: 7,
+      } as any);
 
       resultRepository.create!.mockImplementation((x) => ({ ...x }));
       resultRepository.save!.mockImplementation(async (x) => x);
@@ -492,7 +492,7 @@ describe('QuizService (checkpoint)', () => {
       checkpointRepository.findOne!.mockResolvedValue({
         checkpointId: 1,
         lessonId: 10,
-        checkpointLevel: 1,
+        checkpointScore: 5,
         checkpointAnswer: 'A',
         checkpointExplanation: null,
       } as any);
@@ -524,12 +524,15 @@ describe('QuizService (checkpoint)', () => {
       checkpointRepository.findOne!.mockResolvedValue({
         checkpointId: 1,
         lessonId: 10,
-        checkpointLevel: 3,
+        checkpointScore: 15,
         checkpointAnswer: 'A',
         checkpointExplanation: 'why',
       } as any);
       resultRepository.findOne!.mockResolvedValue(null);
-      lessonRepository.findOne!.mockResolvedValue({ lesson_id: 10, chapter_id: 7 } as any);
+      lessonRepository.findOne!.mockResolvedValue({
+        lesson_id: 10,
+        chapter_id: 7,
+      } as any);
 
       resultRepository.create!.mockImplementation((x) => ({ ...x }));
       resultRepository.save!.mockImplementation(async (x) => x);

@@ -10,6 +10,12 @@ import { UserXp } from './entities/user-xp.entity';
 
 @Injectable()
 export class QuizService {
+  private checkpointScoreFromLevelOrderIndex(levelOrderIndex?: number | null): number {
+    const levelNumber = (levelOrderIndex ?? 0) + 1;
+    const scoreByLevel: Record<number, number> = { 1: 5, 2: 10, 3: 15 };
+    return scoreByLevel[levelNumber] ?? 5;
+  }
+
   constructor(
     @InjectRepository(Quizs)
     private readonly quizsRepository: Repository<Quizs>,
@@ -286,8 +292,19 @@ export class QuizService {
       throw new NotFoundException('Checkpoint not found');
     }
 
+    // ผูก checkpointScore กับ Level ของ lesson โดยอัตโนมัติ
+    const lesson = await this.lessonRepository.findOne({
+      where: { lesson_id: checkpoint.lessonId },
+      relations: { chapter: { level: true } },
+    });
+
+    if (lesson?.chapter?.level) {
+      checkpoint.checkpointScore = this.checkpointScoreFromLevelOrderIndex(
+        lesson.chapter.level.level_orderIndex,
+      );
+    }
+
     Object.assign(checkpoint, {
-      checkpointLevel: dto.checkpoint_level ?? checkpoint.checkpointLevel,
       checkpointType: dto.checkpoint_type ?? checkpoint.checkpointType,
       checkpointQuestions: dto.checkpoint_questions ?? checkpoint.checkpointQuestions,
       checkpointOption: dto.checkpoint_option ?? checkpoint.checkpointOption,
@@ -324,10 +341,15 @@ export class QuizService {
   async createCheckpoint(dto: CreateCheckpointDto): Promise<QuizsCheckpoint> {
     const lesson = await this.lessonRepository.findOne({
       where: { lesson_id: dto.lesson_id },
+      relations: { chapter: { level: true } },
     });
     if (!lesson) {
       throw new NotFoundException(`Lesson ${dto.lesson_id} not found`);
     }
+
+    const checkpointScore = lesson?.chapter?.level
+      ? this.checkpointScoreFromLevelOrderIndex(lesson.chapter.level.level_orderIndex)
+      : 5;
 
     // ตรวจสอบว่ามี checkpoint อยู่แล้วหรือไม่
     const existing = await this.checkpointRepository.findOne({
@@ -338,7 +360,7 @@ export class QuizService {
     // เตรียมข้อมูลสำหรับสร้างหรืออัปเดต checkpoint
     const data = {
       lessonId: dto.lesson_id,
-      checkpointLevel: dto.checkpoint_level ?? 1,
+      checkpointScore,
       checkpointType: dto.checkpoint_type,
       checkpointQuestions: dto.checkpoint_questions,
       checkpointOption: dto.checkpoint_option,
@@ -364,6 +386,7 @@ export class QuizService {
   ) {
     const lesson = await this.lessonRepository.findOne({
       where: { lesson_id: lessonId },
+      relations: { chapter: { level: true } },
     });
 
     if (!lesson) {
@@ -397,9 +420,7 @@ export class QuizService {
       const isSkipped = r?.status === QuizsStatus.SKIPPED;
       const checkpointStatus = isCorrect ? 'COMPLETED' : isSkipped ? 'SKIPPED' : 'PENDING';
 
-      const level = c.checkpointLevel ?? 1;
-      const scoreByLevel: Record<number, number> = { 1: 5, 2: 10, 3: 15 };
-      const correctScore = scoreByLevel[level] ?? 5;
+      const correctScore = c.checkpointScore ?? 5;
 
       // เมื่อ "ตอบแล้ว" ให้ดึงเฉลยจาก GET ได้
       // ถ้ากดข้าม (SKIPPED) ให้เห็นเฉลยได้เช่นกัน
@@ -558,13 +579,12 @@ export class QuizService {
       answer,
     );
 
-    const level = checkpoint.checkpointLevel ?? 1;
-    const scoreByLevel: Record<number, number> = { 1: 5, 2: 10, 3: 15 };
-    const score = isCorrect ? (scoreByLevel[level] ?? 5) : 0;
-
     const lesson = await this.lessonRepository.findOne({
       where: { lesson_id: checkpoint.lessonId },
     });
+
+    const correctScore = checkpoint.checkpointScore ?? 5;
+    const score = isCorrect ? correctScore : 0;
 
     // upsert quizs_results (checkpoint)
     const toSave = existing ??
