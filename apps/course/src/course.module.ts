@@ -4,6 +4,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { getDatabaseConfig } from '@config/database.config';
 import { AuthLibModule } from '@auth/auth-lib.module';
 
+// Modules
+import { AnnouncementsModule } from './announcements/announcements.module';
+
 // Controllers
 import { CoursesController } from './courses/courses.controller';
 import { LevelsController } from './levels/levels.controller';
@@ -41,6 +44,7 @@ import { QuizsCheckpoint } from './quizs/entities/checkpoint.entity';
 import { QuizsResult } from './quizs/entities/quizs-result.entity';
 import { UserXp } from './quizs/entities/user-xp.entity';
 import { UserStreak } from './streaks/entities/user-streak.entity';
+import { Announcement } from './announcements/entities/announcement.entity';
 
 const isTest = process.env.NODE_ENV === 'test';
 
@@ -72,14 +76,13 @@ const isTest = process.env.NODE_ENV === 'test';
           Quizs,
           QuizsCheckpoint,
           QuizsResult,
+          Announcement,
         ]),
 
         AuthLibModule,
         StorageModule,
         MediaImagesModule,
-        MediaVideosModule,
-        LearnerHomeModule,
-        NotificationsModule
+        MediaVideosModule
       ]),
   ],
 
