@@ -238,6 +238,7 @@ describe('QuizService (checkpoint)', () => {
       } as any as QuizsCheckpoint;
 
       checkpointRepository.findOne!.mockResolvedValue(existing);
+      lessonRepository.findOne!.mockResolvedValue({ lesson_id: 10, lesson_type: 'checkpoint' } as any);
       checkpointRepository.save!.mockImplementation(async (x) => x);
 
       const updated = await service.updateCheckpointByLessonId(10, {
@@ -264,6 +265,7 @@ describe('QuizService (checkpoint)', () => {
     it('removes checkpoint for lesson', async () => {
       const checkpoint = { checkpointId: 1, lessonId: 10 } as QuizsCheckpoint;
       checkpointRepository.findOne!.mockResolvedValue(checkpoint);
+      lessonRepository.findOne!.mockResolvedValue({ lesson_id: 10, lesson_type: 'checkpoint' } as any);
       checkpointRepository.remove!.mockResolvedValue(checkpoint as any);
 
       await expect(service.removeCheckpointByLessonId(10)).resolves.toBeUndefined();
