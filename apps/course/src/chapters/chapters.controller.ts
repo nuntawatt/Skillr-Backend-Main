@@ -5,7 +5,8 @@ import { CreateChapterDto, UpdateChapterDto, ChapterResponseDto, ReorderChapters
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import { UserRole } from '@common/enums/user-role.enum';
 
-@ApiTags('Admin | Chapters')
+@ApiTags('Chapters')
+// @ApiTags('Admin | Chapters')
 // @UseGuards(JwtAuthGuard, RolesGuard)
 // @Roles(UserRole.ADMIN)
 @Controller('chapters')

@@ -265,6 +265,21 @@ export class QuizService {
     return checkpoint;
   }
 
+  async findOneCheckpointByLessonId(
+    lessonId: number,
+  ): Promise<QuizsCheckpoint> {
+    const checkpoint = await this.checkpointRepository.findOne({
+      where: { lessonId },
+      order: { checkpointId: 'DESC' },
+    });
+
+    if (!checkpoint) {
+      throw new NotFoundException('Checkpoint not found');
+    }
+
+    return checkpoint;
+  }
+
   // อัปเดต quiz ตาม lesson ID
   async updateQuizs(lessonId: number, dto: Partial<CreateQuizsDto>): Promise<Quizs> {
     const quiz = await this.findOneQuizsByLesson(lessonId);
@@ -315,6 +330,15 @@ export class QuizService {
     return this.checkpointRepository.save(checkpoint);
   }
 
+  // อัปเดต checkpoint ตาม lesson ID
+  async updateCheckpointByLessonId(
+    lessonId: number,
+    dto: Partial<CreateCheckpointDto>,
+  ): Promise<QuizsCheckpoint> {
+    const checkpoint = await this.findOneCheckpointByLessonId(lessonId);
+    return this.updateCheckpoint(checkpoint.checkpointId, dto);
+  }
+
   // ลบ quiz ตาม lesson ID
   async removeQuizs(lessonId: number): Promise<void> {
     const quiz = await this.findOneQuizsByLesson(lessonId);
@@ -332,6 +356,12 @@ export class QuizService {
       throw new NotFoundException('Checkpoint not found');
     }
 
+    await this.checkpointRepository.remove(checkpoint);
+  }
+
+  // ลบ checkpoint ตาม lesson ID
+  async removeCheckpointByLessonId(lessonId: number): Promise<void> {
+    const checkpoint = await this.findOneCheckpointByLessonId(lessonId);
     await this.checkpointRepository.remove(checkpoint);
   }
 

@@ -75,6 +75,24 @@ describe('QuizService (checkpoint)', () => {
     });
   });
 
+  describe('findOneCheckpointByLessonId', () => {
+    it('returns checkpoint when found', async () => {
+      const checkpoint = { checkpointId: 999, lessonId: 10 } as QuizsCheckpoint;
+      checkpointRepository.findOne!.mockResolvedValue(checkpoint);
+
+      await expect(service.findOneCheckpointByLessonId(10)).resolves.toBe(checkpoint);
+      expect(checkpointRepository.findOne).toHaveBeenCalledWith({
+        where: { lessonId: 10 },
+        order: { checkpointId: 'DESC' },
+      });
+    });
+
+    it('throws NotFoundException when not found', async () => {
+      checkpointRepository.findOne!.mockResolvedValue(null);
+      await expect(service.findOneCheckpointByLessonId(10)).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
   describe('createCheckpoint', () => {
     const baseDto: CreateCheckpointDto = {
       lesson_id: 10,
@@ -193,6 +211,60 @@ describe('QuizService (checkpoint)', () => {
         checkpointExplanation: 'why',
       });
       expect(updated.checkpointType).toBe('multiple_choice');
+    });
+  });
+
+  describe('updateCheckpointByLessonId', () => {
+    it('throws NotFoundException when checkpoint does not exist for lesson', async () => {
+      checkpointRepository.findOne!.mockResolvedValue(null);
+
+      await expect(service.updateCheckpointByLessonId(10, { checkpoint_questions: 'x' } as any)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
+
+    it('updates checkpoint for lesson and saves', async () => {
+      const existing = {
+        checkpointId: 1,
+        lessonId: 10,
+        checkpointType: 'multiple_choice',
+        checkpointQuestions: 'old',
+        checkpointOption: ['a'],
+        checkpointAnswer: 'a',
+        checkpointExplanation: null,
+      } as any as QuizsCheckpoint;
+
+      checkpointRepository.findOne!.mockResolvedValue(existing);
+      checkpointRepository.save!.mockImplementation(async (x) => x);
+
+      const updated = await service.updateCheckpointByLessonId(10, {
+        checkpoint_questions: 'new',
+        checkpoint_explanation: 'why',
+      } as any);
+
+      expect(checkpointRepository.save).toHaveBeenCalledTimes(1);
+      expect(updated).toMatchObject({
+        checkpointId: 1,
+        lessonId: 10,
+        checkpointQuestions: 'new',
+        checkpointExplanation: 'why',
+      });
+    });
+  });
+
+  describe('removeCheckpointByLessonId', () => {
+    it('throws NotFoundException when checkpoint does not exist for lesson', async () => {
+      checkpointRepository.findOne!.mockResolvedValue(null);
+      await expect(service.removeCheckpointByLessonId(10)).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('removes checkpoint for lesson', async () => {
+      const checkpoint = { checkpointId: 1, lessonId: 10 } as QuizsCheckpoint;
+      checkpointRepository.findOne!.mockResolvedValue(checkpoint);
+      checkpointRepository.remove!.mockResolvedValue(checkpoint as any);
+
+      await expect(service.removeCheckpointByLessonId(10)).resolves.toBeUndefined();
+      expect(checkpointRepository.remove).toHaveBeenCalledWith(checkpoint);
     });
   });
 

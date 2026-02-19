@@ -5,7 +5,8 @@ import { CreateLevelDto, UpdateLevelDto, LevelResponseDto, ReorderLevelsDto } fr
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import { UserRole } from '@common/enums/user-role.enum';
 
-@ApiTags('Admin | Levels')
+@ApiTags('Levels')
+// @ApiTags('Admin | Levels')
 // @UseGuards(JwtAuthGuard, RolesGuard)
 // @Roles(UserRole.ADMIN)
 @Controller('levels')

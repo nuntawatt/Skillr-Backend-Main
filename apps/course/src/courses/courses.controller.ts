@@ -6,7 +6,8 @@ import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiParam, Api
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import { UserRole } from '@common/enums/user-role.enum';
 
-@ApiTags('Admin | Courses')
+@ApiTags('Courses')
+// @ApiTags('Admin | Courses')
 // @UseGuards(JwtAuthGuard, RolesGuard)
 // @Roles(UserRole.ADMIN)
 @Controller('courses')

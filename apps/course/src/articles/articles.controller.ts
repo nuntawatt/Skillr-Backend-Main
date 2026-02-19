@@ -7,7 +7,8 @@ import { UpdateArticleDto } from './dto';
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import { UserRole } from '@common/enums/user-role.enum';
 
-@ApiTags('Admin | Articles')
+@ApiTags('Articles')
+// @ApiTags('Admin | Articles')
 
 // @UseGuards(JwtAuthGuard, RolesGuard)
 // @Roles(UserRole.ADMIN)

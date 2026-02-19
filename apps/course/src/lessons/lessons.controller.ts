@@ -5,7 +5,8 @@ import { CreateLessonDto, UpdateLessonDto, LessonResponseDto, ReorderLessonsDto 
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import { UserRole } from '@common/enums/user-role.enum';
 
-@ApiTags('Admin | Lessons')
+@ApiTags('Lessons')
+// @ApiTags('Admin | Lessons')
 // @UseGuards(JwtAuthGuard, RolesGuard)
 // @Roles(UserRole.ADMIN)
 // @ApiTags('Lessons')

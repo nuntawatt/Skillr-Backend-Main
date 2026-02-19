@@ -67,7 +67,7 @@ export class QuizAdminController {
   }
 
   @Get('lesson/:lessonId')
-  @ApiOperation({ summary: 'Admin: ดึง quiz ตาม lesson ID' })
+  @ApiOperation({ summary: 'ดึง quiz ตาม lesson ID' })
   @ApiParam({
     name: 'lessonId',
     type: Number,
@@ -87,7 +87,6 @@ export class QuizAdminController {
   @ApiParam({
     name: 'lessonId',
     type: Number,
-    description: 'ID ของบทเรียน (lessons.lesson_id)',
   })
   @ApiResponse({ status: 204, description: 'Quiz deleted successfully' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
@@ -136,56 +135,53 @@ export class QuizAdminController {
     };
   }
 
-  @Get('checkpoint/:checkpointId')
-  @ApiOperation({ summary: 'Admin: ดึง checkpoint ตาม checkpoint ID' })
+  @Get('checkpoint/:lessonId')
+  @ApiOperation({ summary: 'ดึง checkpoint ตาม lesson ID' })
   @ApiParam({
-    name: 'checkpointId',
+    name: 'lessonId',
     type: Number,
-    description: 'ID ของ checkpoint',
   })
   @ApiResponse({ status: 200, description: 'Checkpoint retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Checkpoint not found' })
-  async findCheckpointByIdAdmin(
-    @Param('checkpointId', ParseIntPipe) checkpointId: number,
+  async findCheckpointByLessonId(
+    @Param('lessonId', ParseIntPipe) lessonId: number,
   ) {
-    const checkpoint = await this.quizService.findOneCheckpointById(checkpointId);
+    const checkpoint = await this.quizService.findOneCheckpointByLessonId(lessonId);
     return { ...checkpoint, score: checkpoint.checkpointScore ?? 5 };
   }
 
-  // อัปเดต checkpoint ตาม checkpoint ID
-  @Patch('checkpoint/:checkpointId')
-  @ApiOperation({ summary: 'อัปเดต checkpoint ตาม checkpoint ID' })
+  // อัปเดต checkpoint ตาม lesson ID
+  @Patch('checkpoint/:lessonId')
+  @ApiOperation({ summary: 'อัปเดต checkpoint ตาม lesson ID' })
   @ApiParam({
-    name: 'checkpointId',
+    name: 'lessonId',
     type: Number,
-    description: 'ID ของ checkpoint',
   })
   @ApiResponse({ status: 200, description: 'Checkpoint updated successfully' })
   @ApiResponse({ status: 404, description: 'Checkpoint not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async updateCheckpoint(
-    @Param('checkpointId', ParseIntPipe) checkpointId: number,
+    @Param('lessonId', ParseIntPipe) lessonId: number,
     @Body() dto: Partial<CreateCheckpointDto>,
   ) {
-    const checkpoint = await this.quizService.updateCheckpoint(checkpointId, dto);
+    const checkpoint = await this.quizService.updateCheckpointByLessonId(lessonId, dto);
     return { ...checkpoint, score: checkpoint.checkpointScore ?? 5 };
   }
 
-  // ลบ checkpoint ตาม checkpoint ID
-  @Delete('checkpoint/:checkpointId')
-  @ApiOperation({ summary: 'ลบ checkpoint ตาม checkpoint ID' })
+  // ลบ checkpoint ตาม lesson ID
+  @Delete('checkpoint/:lessonId')
+  @ApiOperation({ summary: 'ลบ checkpoint ตาม lesson ID' })
   @ApiParam({
-    name: 'checkpointId',
+    name: 'lessonId',
     type: Number,
-    description: 'ID ของ checkpoint',
   })
   @ApiResponse({ status: 204, description: 'Checkpoint deleted successfully' })
   @ApiResponse({ status: 404, description: 'Checkpoint not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   removeCheckpoint(
-    @Param('checkpointId', ParseIntPipe) checkpointId: number,
+    @Param('lessonId', ParseIntPipe) lessonId: number,
   ) {
-    return this.quizService.removeCheckpoint(checkpointId);
+    return this.quizService.removeCheckpointByLessonId(lessonId);
   }
 
 }
@@ -211,7 +207,6 @@ export class QuizController {
   @ApiParam({
     name: 'lessonId',
     type: Number,
-    description: 'ID ของบทเรียน',
   })
   @ApiResponse({
     status: 200,
