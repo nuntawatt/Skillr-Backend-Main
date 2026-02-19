@@ -23,7 +23,7 @@ export class LessonResponseDto {
   chapter_id: number;
 
   @ApiPropertyOptional({ description: 'Cover image URL (CloudFront CDN)' })
-  lesson_coverImageUrl?: string | null;
+  lesson_ImageUrl?: string | null;
 
   @ApiPropertyOptional({ description: 'Main video URL (CloudFront CDN)' })
   lesson_videoUrl?: string | null;

@@ -35,8 +35,8 @@ export class Lesson {
   orderIndex: number;
 
   // cover image URL (CloudFront CDN)
-  @Column({ name: 'lesson_cover_image_url', type: 'varchar', length: 2048, nullable: true })
-  lesson_coverImageUrl?: string | null;
+  @Column({ name: 'lesson_image_url', type: 'varchar', length: 2048, nullable: true })
+  lesson_ImageUrl?: string | null;
 
   // main video URL (CloudFront CDN)
   @Column({ name: 'lesson_video_url', type: 'varchar', length: 2048, nullable: true })

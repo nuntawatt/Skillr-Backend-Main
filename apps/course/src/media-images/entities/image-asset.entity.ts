@@ -11,9 +11,6 @@ export class ImageAsset {
   @PrimaryGeneratedColumn()
   id: number;
 
-  // @Column({ name: 'owner_user_id', default: 0 })
-  // ownerUserId: number;
-
   @Column({ name: 'original_filename', nullable: true })
   originalFilename?: string;
 

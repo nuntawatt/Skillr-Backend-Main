@@ -40,7 +40,7 @@ export class CreateLessonDto {
   @ApiPropertyOptional({ description: 'Cover image URL (CloudFront CDN)', example: 'https://cdn.skillacademy.com/images/abc123.jpg' })
   @IsOptional()
   @IsString()
-  lesson_coverImageUrl?: string | null;
+  lesson_ImageUrl?: string | null;
 
   @ApiPropertyOptional({ description: 'Main video URL (CloudFront CDN)', example: 'https://cdn.skillacademy.com/videos/abc123.mp4' })
   @IsOptional()

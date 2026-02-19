@@ -4,7 +4,6 @@ import * as multer from 'multer';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiParam, ApiResponse } from '@nestjs/swagger';
 
 import { MediaImagesService } from './media-images.service';
-import { CreateImageUploadDto } from './dto/create-image-upload.dto';
 
 @ApiTags('Media Images')
 @Controller('media/images')
@@ -31,7 +30,7 @@ export class MediaImagesController {
     storage: multer.memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   }))
-  async upload(@UploadedFile() file: Express.Multer.File, @Body() dto: CreateImageUploadDto) {
+  async upload(@UploadedFile() file: Express.Multer.File) {
     if (!file) throw new BadRequestException('file missing');
     // คืนค่าเป็น image_id ให้ frontend เอาไปใส่ใน article_content
     return this.svc.uploadImageFileAndPersist(file);

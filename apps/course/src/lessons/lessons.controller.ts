@@ -9,7 +9,6 @@ import { UserRole } from '@common/enums/user-role.enum';
 // @ApiTags('Admin | Lessons')
 // @UseGuards(JwtAuthGuard, RolesGuard)
 // @Roles(UserRole.ADMIN)
-// @ApiTags('Lessons')
 @Controller('lessons')
 export class LessonsController {
   constructor(private readonly lessonsService: LessonsService) { }
@@ -28,7 +27,7 @@ export class LessonsController {
           lesson_type: 'article',
           ref_id: 1,
           orderIndex: 0,
-          lesson_coverImageUrl: 'https://cdn.skillacademy.com/images/abc123.jpg',
+          lesson_ImageUrl: 'https://cdn.skillacademy.com/images/abc123.jpg',
           lesson_videoUrl: null
         }
       },
@@ -41,7 +40,7 @@ export class LessonsController {
           lesson_type: 'video',
           ref_id: 2,
           orderIndex: 1,
-          lesson_coverImageUrl: 'https://cdn.skillacademy.com/images/def456.jpg',
+          lesson_ImageUrl: 'https://cdn.skillacademy.com/images/def456.jpg',
           lesson_videoUrl: 'https://cdn.skillacademy.com/videos/abc123.mp4'
         }
       },
@@ -54,7 +53,7 @@ export class LessonsController {
           lesson_type: 'quiz',
           ref_id: 3,
           orderIndex: 2,
-          lesson_coverImageUrl: 'https://cdn.skillacademy.com/images/ghi789.jpg',
+          lesson_ImageUrl: 'https://cdn.skillacademy.com/images/ghi789.jpg',
           lesson_videoUrl: null
         }
       },
@@ -67,7 +66,7 @@ export class LessonsController {
           lesson_type: 'checkpoint',
           ref_id: 4,
           orderIndex: 3,
-          lesson_coverImageUrl: 'https://cdn.skillacademy.com/images/jkl012.jpg',
+          lesson_ImageUrl: 'https://cdn.skillacademy.com/images/jkl012.jpg',
           lesson_videoUrl: null
         }
       }

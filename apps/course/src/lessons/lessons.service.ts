@@ -43,7 +43,7 @@ export class LessonsService {
       lesson_type: createLessonDto.lesson_type,
       ref_id: createLessonDto.ref_id,
       orderIndex: orderIndex,
-      lesson_coverImageUrl: createLessonDto.lesson_coverImageUrl,
+      lesson_ImageUrl: createLessonDto.lesson_ImageUrl,
       lesson_videoUrl: createLessonDto.lesson_videoUrl,
     });
 
@@ -100,8 +100,8 @@ export class LessonsService {
       lesson.orderIndex = updateLessonDto.orderIndex;
     }
 
-    if (updateLessonDto.lesson_coverImageUrl !== undefined) {
-      lesson.lesson_coverImageUrl = updateLessonDto.lesson_coverImageUrl;
+    if (updateLessonDto.lesson_ImageUrl !== undefined) {
+      lesson.lesson_ImageUrl = updateLessonDto.lesson_ImageUrl;
     }
 
     if (updateLessonDto.lesson_videoUrl !== undefined) {
@@ -182,7 +182,7 @@ export class LessonsService {
       orderIndex: lesson.orderIndex,
       chapter_id: lesson.chapter_id,
       
-      lesson_coverImageUrl: lesson.lesson_coverImageUrl,
+      lesson_ImageUrl: lesson.lesson_ImageUrl,
       lesson_videoUrl: lesson.lesson_videoUrl,
 
       createdAt: lesson.createdAt,
