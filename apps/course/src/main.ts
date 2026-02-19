@@ -29,6 +29,8 @@ async function bootstrap() {
     }),
   );
 
+  app.setGlobalPrefix('api');
+
 
   const config = new DocumentBuilder()
     .setTitle('Skillr Course Service API')
@@ -47,7 +49,6 @@ async function bootstrap() {
   app.use(cookieParser());
 
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
-  app.setGlobalPrefix('api');
 
   const port = Number(process.env.PORT ?? 3002);
   await app.listen(port);
