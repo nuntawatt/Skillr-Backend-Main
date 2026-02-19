@@ -600,32 +600,19 @@ export class LearnerHomeService {
 
       .getMany();
 
-
-
     return {
-
       courses: recommendedCourses.map(course => ({
-
         course_id: course.course_id,
-
         course_title: course.course_title,
-
         reason: this.getRecommendationReason(course, myCourses),
-
-        thumbnailUrl: course.course_imageUrl || `https://cdn.example.com/courses/course-${course.course_id}.jpg`,
-
+        course_url: course.course_imageUrl || `https://cdn.example.com/courses/course-${course.course_id}.jpg`,
         levelName: 'ระดับพื้นฐาน', // Simplified for now
-
-        totalChapter: 6, // Default value for now
-
+        course_totalChapter: 6, // Default value for now
       }))
-
     };
-
   }
 
-
-
+// ...
 
 
   private getRecommendationReason(course: Course, myCourses: any[]): string {

@@ -122,7 +122,7 @@ export class LearnerHomeRecommendationDto {
 
   @ApiProperty({ example: 'https://cdn.example.com/courses/js-fundamentals.jpg' })
 
-  thumbnailUrl: string;
+  course_url: string;
 
 
 
@@ -134,7 +134,7 @@ export class LearnerHomeRecommendationDto {
 
   @ApiProperty({ example: 6 })
 
-  totalChapter: number;
+  course_totalChapter: number;
 
 }
 

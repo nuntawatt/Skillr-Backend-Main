@@ -118,11 +118,11 @@ export class LearnerHomeController {
 
             reason: 'เหมาะสำหรับผู้เริ่มต้น',
 
-            thumbnailUrl: 'https://cdn.example.com/courses/js-fundamentals.jpg',
+            course_url: 'https://cdn.example.com/courses/js-fundamentals.jpg',
 
             levelName: 'ระดับพื้นฐาน',
 
-            totalChapter: 6
+            course_totalChapter: 6
 
           },
 
@@ -134,11 +134,11 @@ export class LearnerHomeController {
 
             reason: 'เหมาะสำหรับผู้มีพื้นฐาน',
 
-            thumbnailUrl: 'https://cdn.example.com/courses/react-advanced.jpg',
+            course_url: 'https://cdn.example.com/courses/react-advanced.jpg',
 
             levelName: 'ระดับปานกลาง',
 
-            totalChapter: 8
+            course_totalChapter: 8
 
           },
 
@@ -150,11 +150,11 @@ export class LearnerHomeController {
 
             reason: 'คอร์สยอดนิยม',
 
-            thumbnailUrl: 'https://cdn.example.com/courses/nodejs-mastery.jpg',
+            course_url: 'https://cdn.example.com/courses/nodejs-mastery.jpg',
 
             levelName: 'ระดับยาก',
 
-            totalChapter: 10
+            course_totalChapter: 10
 
           }
 
