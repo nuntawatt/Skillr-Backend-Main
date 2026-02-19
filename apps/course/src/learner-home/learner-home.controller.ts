@@ -33,8 +33,8 @@ export class LearnerHomeController {
       continueLearning: {
         courseId: 1,
         courseTitle: 'Basic TypeScript',
-        lessonId: 10,
-        lessonTitle: 'Intro',
+        chapterTitle: 'Introduction to TypeScript',
+        levelName: 'ระดับพื้นฐาน',
         progressPercent: 30
       },
       myCourses: [
@@ -50,7 +50,35 @@ export class LearnerHomeController {
         }
       ],
       notifications: {
-        unreadCount: 3
+        unreadCount: 0
+      },
+      recommendations: {
+        courses: [
+          {
+            courseId: 4,
+            courseTitle: 'JavaScript Fundamentals',
+            reason: 'เหมาะสำหรับผู้เริ่มต้น',
+            thumbnailUrl: 'https://cdn.example.com/courses/js-fundamentals.jpg',
+            levelName: 'ระดับพื้นฐาน',
+            totalChapter: 6
+          },
+          {
+            courseId: 5,
+            courseTitle: 'React Advanced',
+            reason: 'เหมาะสำหรับผู้มีพื้นฐาน',
+            thumbnailUrl: 'https://cdn.example.com/courses/react-advanced.jpg',
+            levelName: 'ระดับปานกลาง',
+            totalChapter: 8
+          },
+          {
+            courseId: 6,
+            courseTitle: 'Node.js Mastery',
+            reason: 'คอร์สยอดนิยม',
+            thumbnailUrl: 'https://cdn.example.com/courses/nodejs-mastery.jpg',
+            levelName: 'ระดับยาก',
+            totalChapter: 10
+          }
+        ]
       }
     }
   })

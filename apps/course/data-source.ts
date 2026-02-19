@@ -13,7 +13,7 @@ export const CourseDataSource = new DataSource({
     path.resolve(process.cwd(), 'apps/course/src/migrations/*{.ts,.js}'),
     path.resolve(process.cwd(), 'apps/course/migrations/*{.ts,.js}'),
   ],
-  synchronize: false,
-  logging: false,
+  synchronize: true, // Temporarily enable for development
+  logging: true,   // Enable logging to see database issues
 });
 
