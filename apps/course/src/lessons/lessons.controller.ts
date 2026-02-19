@@ -8,7 +8,7 @@ import { UserRole } from '@common/enums/user-role.enum';
 @ApiTags('Admin | Lessons')
 // @UseGuards(JwtAuthGuard, RolesGuard)
 // @Roles(UserRole.ADMIN)
-@ApiTags('Lessons')
+// @ApiTags('Lessons')
 @Controller('lessons')
 export class LessonsController {
   constructor(private readonly lessonsService: LessonsService) { }
