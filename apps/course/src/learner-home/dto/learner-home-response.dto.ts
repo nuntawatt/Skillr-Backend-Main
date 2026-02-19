@@ -24,11 +24,11 @@ export class LearnerHomeContinueLearningDto {
   @ApiProperty({ example: 'Basic TypeScript' })
   courseTitle: string;
 
-  @ApiProperty({ example: 10 })
-  lessonId: number;
+  @ApiProperty({ example: 'Introduction to TypeScript' })
+  chapterTitle: string;
 
-  @ApiProperty({ example: 'Intro' })
-  lessonTitle: string;
+  @ApiProperty({ example: 'ระดับพื้นฐาน' })
+  levelName: string;
 
   @ApiProperty({ example: 30 })
   progressPercent: number;
@@ -50,6 +50,31 @@ export class LearnerHomeNotificationsDto {
   unreadCount: number;
 }
 
+export class LearnerHomeRecommendationDto {
+  @ApiProperty({ example: 1 })
+  courseId: number;
+
+  @ApiProperty({ example: 'JavaScript Fundamentals' })
+  courseTitle: string;
+
+  @ApiProperty({ example: 'เหมาะสำหรับผู้เริ่มต้น' })
+  reason: string;
+
+  @ApiProperty({ example: 'https://cdn.example.com/courses/js-fundamentals.jpg' })
+  thumbnailUrl: string;
+
+  @ApiProperty({ example: 'ระดับพื้นฐาน' })
+  levelName: string;
+
+  @ApiProperty({ example: 6 })
+  totalChapter: number;
+}
+
+export class LearnerHomeRecommendationsDto {
+  @ApiProperty({ type: [LearnerHomeRecommendationDto] })
+  courses: LearnerHomeRecommendationDto[];
+}
+
 export class LearnerHomeResponseDto {
   @ApiProperty({ type: LearnerHomeHeaderDto })
   header: LearnerHomeHeaderDto;
@@ -62,4 +87,7 @@ export class LearnerHomeResponseDto {
 
   @ApiProperty({ type: LearnerHomeNotificationsDto })
   notifications: LearnerHomeNotificationsDto;
+
+  @ApiProperty({ type: LearnerHomeRecommendationsDto })
+  recommendations: LearnerHomeRecommendationsDto;
 }

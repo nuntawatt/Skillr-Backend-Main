@@ -51,13 +51,14 @@ export class LearnerHomeService {
     private readonly levelRepository: Repository<Level>,
   ) {}
   async getHome(userId: string): Promise<LearnerHomeResponseDto> {
-    const [profile, streak, totalXp, continueLearning, myCourses, notifications] = await Promise.all([
+    const [profile, streak, totalXp, continueLearning, myCourses, notifications, recommendations] = await Promise.all([
       this.getUserProfile(userId).catch(() => null),
       this.getStreak(userId).catch(() => ({ currentStreak: 0, longestStreak: 0 })),
       this.getTotalXp(userId).catch(() => 0),
       this.getContinueLearning(userId).catch(() => null),
       this.getMyCourses(userId).catch(() => []),
       this.getNotifications(userId).catch(() => ({ unreadCount: 0 })),
+      this.getRecommendations(userId).catch(() => ({ courses: [] })),
     ]);
 
     return {
@@ -71,6 +72,7 @@ export class LearnerHomeService {
       continueLearning,
       myCourses,
       notifications,
+      recommendations,
     };
   }
 
@@ -281,6 +283,76 @@ export class LearnerHomeService {
     return { unreadCount };
   }
 
+  private async getRecommendations(userId: string) {
+    // Get recommendations based on user's current courses and progress
+    const myCourses = await this.getMyCourses(userId);
+    const completedCourseIds = myCourses
+      .filter(course => course.progressPercent >= 100)
+      .map(course => course.courseId);
+
+    // Find courses user hasn't enrolled in (simplified query)
+    const recommendedCourses = await this.courseRepository
+      .createQueryBuilder('course')
+      .where('course.course_id NOT IN (:...completedCourseIds)', { 
+        completedCourseIds: completedCourseIds.length > 0 ? completedCourseIds : [0] 
+      })
+      .andWhere('course.isPublished = :isPublished', { isPublished: true })
+      .orderBy('course.createdAt', 'DESC')
+      .limit(3)
+      .getMany();
+
+    return {
+      courses: recommendedCourses.map(course => ({
+        courseId: course.course_id,
+        courseTitle: course.course_title,
+        reason: this.getRecommendationReason(course, myCourses),
+        thumbnailUrl: course.course_imageUrl || `https://cdn.example.com/courses/course-${course.course_id}.jpg`,
+        levelName: 'ระดับพื้นฐาน', // Simplified for now
+        totalChapter: 6, // Default value for now
+      }))
+    };
+  }
+
+
+  private getRecommendationReason(course: Course, myCourses: any[]): string {
+
+    const hasBasicCourses = myCourses.some(c => 
+
+      c.title.toLowerCase().includes('basic') || 
+
+      c.title.toLowerCase().includes('พื้นฐาน')
+
+    );
+
+    
+
+    const hasIntermediateCourses = myCourses.some(c => 
+
+      c.title.toLowerCase().includes('intermediate') || 
+
+      c.title.toLowerCase().includes('ปานกลาง')
+
+    );
+
+
+
+    if (course.course_title.toLowerCase().includes('basic') || course.course_title.toLowerCase().includes('พื้นฐาน')) {
+
+      return 'เหมาะสำหรับผู้เริ่มต้น';
+
+    } else if (course.course_title.toLowerCase().includes('advanced') || course.course_title.toLowerCase().includes('ยาก')) {
+
+      return hasIntermediateCourses ? 'เหมาะสำหรับผู้มีพื้นฐาน' : 'ท้าทายต่อไป';
+
+    } else {
+
+      return 'คอร์สยอดนิยม';
+
+    }
+
+  }
+
+
   private async buildContinueLearningDto(
     lessonOrResult: Lesson | { lesson: Lesson; progress: LessonProgress | null },
     progress: LessonProgress | null,
@@ -299,8 +371,8 @@ export class LearnerHomeService {
     return {
       courseId: course.course_id,
       courseTitle: course.course_title,
-      lessonId: lesson.lesson_id,
-      lessonTitle: lesson.lesson_title,
+      chapterTitle: chapter.chapter_title,
+      levelName: level?.level_title ?? 'ระดับพื้นฐาน',
       progressPercent: actualProgress?.progressPercent ?? 0,
     };
   }
