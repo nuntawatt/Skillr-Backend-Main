@@ -21,20 +21,16 @@ export class RegisterDto {
   )
   password: string;
 
-   @ApiProperty({
+  @ApiProperty({
     example: 'skllr',
     description: 'First name of the user',
     required: false,
   })
   @IsString()
-  @IsOptional()
-  @Matches(/^[\p{L} '\-]+$/u, {
-    message:
-      "First name may contain letters (all languages), spaces, hyphens and apostrophes only",
-  })
+  @Matches(/^[\p{L} '\-]+$/u, { message: "First name may contain letters (all languages), spaces, hyphens and apostrophes only" })
   @MinLength(1)
   @MaxLength(64)
-  firstName?: string;
+  firstName: string;
 
   @ApiProperty({
     example: 'test',
@@ -42,12 +38,8 @@ export class RegisterDto {
     required: false,
   })
   @IsString()
-  @IsOptional()
-  @Matches(/^[\p{L} '\-]+$/u, {
-    message:
-      "Last name may contain letters (all languages), spaces, hyphens and apostrophes only",
-  })
+  @Matches(/^[\p{L} '\-]+$/u, { message: "Last name may contain letters (all languages), spaces, hyphens and apostrophes only" })
   @MinLength(1)
   @MaxLength(64)
-  lastName?: string;
+  lastName: string;
 }

@@ -49,29 +49,25 @@ export class AuthService {
 
   // Register a new user
   async register(registerDto: RegisterDto): Promise<AuthResponse> {
-    // ตรวจสอบว่ามี email ถูกใช้จาก provider ยัง
-    const existingAccount = await this.usersService.findAuthAccountByProviderAndEmail(
-      AuthProvider.LOCAL,
-      registerDto.email,
-    );
-    if (existingAccount) {
-      throw new ConflictException('Email already exists'); // email ถูกใช้แล้ว
+    const email = registerDto.email.trim().toLowerCase();
+
+    // เช็คว่ามี user ใช้ email นี้หรือยัง
+    const existingUser = await this.usersService.findByEmail(email);
+    if (existingUser) {
+      throw new ConflictException('Email already exists');
     }
 
-    // สร้าง user ใหม่ (ถ้ายังไม่มี) และสร้าง local auth account
-    let user = await this.usersService.findByEmail(registerDto.email);
-    if (!user) {
-      user = await this.usersService.create({
-        firstName: registerDto.firstName,
-        lastName: registerDto.lastName,
-        email: registerDto.email,
-      });
-    }
+    // สร้าง user
+    const user = await this.usersService.create({
+      firstName: registerDto.firstName.trim(),
+      lastName: registerDto.lastName.trim(),
+      email,
+    });
 
     // สร้าง local auth account
     await this.usersService.createEmailAuthAccount(
       user,
-      registerDto.email,
+      email,
       registerDto.password,
     );
 
@@ -118,6 +114,11 @@ export class AuthService {
       );
     }
 
+    // ตรวจสอบว่า email ได้รับการยืนยันแล้วหรือยัง
+    if (!authAccount.user.isVerified) {
+      throw new UnauthorizedException('Please verify your email before logging in');
+    }
+
     // check user status
     if ((authAccount.user.status ?? '').toLowerCase() !== 'active') {
       throw new UnauthorizedException('Account is inactive or suspended');
@@ -136,7 +137,7 @@ export class AuthService {
     firstName?: string;
     lastName?: string;
     avatar?: string;
-  }) : Promise<AuthResponse> {
+  }): Promise<AuthResponse> {
     // ค้นหาหรือสร้าง user จากข้อมูล profile ที่ได้จาก Google
     const user = await this.usersService.findOrCreateFromGoogle(profile);
 
