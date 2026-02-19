@@ -6,6 +6,9 @@ export class QuizsCheckpoint {
   @PrimaryGeneratedColumn({ name: 'checkpoint_id' })
   checkpointId: number;
 
+  @Column({ name: 'checkpoint_level', type: 'int', default: 1 })
+  checkpointLevel: number;
+
   @Column({ name: 'checkpoint_type', type: 'enum', enum: QuizType, default: QuizType.MULTIPLE_CHOICE })
   checkpointType: QuizType;
 

@@ -287,6 +287,7 @@ export class QuizService {
     }
 
     Object.assign(checkpoint, {
+      checkpointLevel: dto.checkpoint_level ?? checkpoint.checkpointLevel,
       checkpointType: dto.checkpoint_type ?? checkpoint.checkpointType,
       checkpointQuestions: dto.checkpoint_questions ?? checkpoint.checkpointQuestions,
       checkpointOption: dto.checkpoint_option ?? checkpoint.checkpointOption,
@@ -337,6 +338,7 @@ export class QuizService {
     // เตรียมข้อมูลสำหรับสร้างหรืออัปเดต checkpoint
     const data = {
       lessonId: dto.lesson_id,
+      checkpointLevel: dto.checkpoint_level ?? 1,
       checkpointType: dto.checkpoint_type,
       checkpointQuestions: dto.checkpoint_questions,
       checkpointOption: dto.checkpoint_option,
@@ -395,6 +397,10 @@ export class QuizService {
       const isSkipped = r?.status === QuizsStatus.SKIPPED;
       const checkpointStatus = isCorrect ? 'COMPLETED' : isSkipped ? 'SKIPPED' : 'PENDING';
 
+      const level = c.checkpointLevel ?? 1;
+      const scoreByLevel: Record<number, number> = { 1: 5, 2: 10, 3: 15 };
+      const correctScore = scoreByLevel[level] ?? 5;
+
       // เมื่อ "ตอบแล้ว" ให้ดึงเฉลยจาก GET ได้
       // ถ้ากดข้าม (SKIPPED) ให้เห็นเฉลยได้เช่นกัน
       const showSolution = attempted || isSkipped;
@@ -419,7 +425,7 @@ export class QuizService {
         },
         checkpoint_explanation: showSolution ? (c.checkpointExplanation ?? null) : null,
         // ตาม requirement: เมื่อ "ตอบแล้ว" ให้ GET คืนคะแนนได้ (ผิด = 0, ถูก = 5)
-        score: attempted ? (isCorrect ? 5 : 0) : isSkipped ? 0 : null,
+        score: attempted ? (isCorrect ? correctScore : 0) : isSkipped ? 0 : null,
       };
     });
   }
@@ -552,7 +558,9 @@ export class QuizService {
       answer,
     );
 
-    const score = isCorrect ? 5 : 0;
+    const level = checkpoint.checkpointLevel ?? 1;
+    const scoreByLevel: Record<number, number> = { 1: 5, 2: 10, 3: 15 };
+    const score = isCorrect ? (scoreByLevel[level] ?? 5) : 0;
 
     const lesson = await this.lessonRepository.findOne({
       where: { lesson_id: checkpoint.lessonId },
@@ -619,7 +627,7 @@ export class QuizService {
 
       // ให้ XP แค่ครั้งแรกของ chapter (ตาม design เดิม)
       if (userXp.xpEarned === 0) {
-        userXp.xpEarned = 5;
+        userXp.xpEarned = score;
       }
     }
 

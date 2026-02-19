@@ -1,4 +1,4 @@
-import { IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, IsArray } from 'class-validator';
+import { IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, IsArray, Max, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { QuizType } from '../entities/quizs.entity';
 import { Transform } from 'class-transformer';
@@ -48,6 +48,20 @@ export class CreateCheckpointDto {
   @ApiProperty({ enum: QuizType, example: QuizType.MULTIPLE_CHOICE })
   @IsEnum(QuizType)
   checkpoint_type: QuizType;
+
+  @ApiPropertyOptional({ example: 1, description: 'Checkpoint level: 1=5 คะแนน, 2=10 คะแนน, 3=15 คะแนน' })
+  @IsOptional()
+  @IsInt()
+  @Transform(({ value }) => {
+    if (value == null) return value;
+    if (typeof value === 'string') {
+      return parseInt(value, 10);
+    }
+    return value;
+  })
+  @Min(1)
+  @Max(3)
+  checkpoint_level?: number;
 
   @ApiProperty({ example: '1 + 1 = ?' })
   @IsString()
