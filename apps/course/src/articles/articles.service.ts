@@ -84,6 +84,11 @@ export class ArticlesService {
     if (!lesson) {
       throw new NotFoundException(`lesson with ID ${lessonId} not found`);
     };
+
+    // A lesson of other types (video/quiz/checkpoint) should not expose article content.
+    if (lesson.lesson_type !== LessonType.ARTICLE) {
+      return [];
+    }
     const articles = await this.articleRepo.find({ where: { lesson: { lesson_id: lessonId } } });
 
     return articles.map((a) => this.toResponseDto(a));

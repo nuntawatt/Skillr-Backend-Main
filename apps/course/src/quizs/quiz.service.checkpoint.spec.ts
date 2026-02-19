@@ -79,6 +79,7 @@ describe('QuizService (checkpoint)', () => {
     it('returns checkpoint when found', async () => {
       const checkpoint = { checkpointId: 999, lessonId: 10 } as QuizsCheckpoint;
       checkpointRepository.findOne!.mockResolvedValue(checkpoint);
+      lessonRepository.findOne!.mockResolvedValue({ lesson_id: 10, lesson_type: 'checkpoint' } as any);
 
       await expect(service.findOneCheckpointByLessonId(10)).resolves.toBe(checkpoint);
       expect(checkpointRepository.findOne).toHaveBeenCalledWith({
@@ -113,6 +114,7 @@ describe('QuizService (checkpoint)', () => {
     it('updates existing checkpoint for lesson', async () => {
       lessonRepository.findOne!.mockResolvedValue({
         lesson_id: 10,
+        lesson_type: 'checkpoint',
         chapter: { level: { level_orderIndex: 0 } },
       } as any);
 
@@ -148,6 +150,7 @@ describe('QuizService (checkpoint)', () => {
     it('creates new checkpoint when none exists', async () => {
       lessonRepository.findOne!.mockResolvedValue({
         lesson_id: 10,
+        lesson_type: 'checkpoint',
         chapter: { level: { level_orderIndex: 0 } },
       } as any);
       checkpointRepository.findOne!.mockResolvedValue(null);
@@ -272,6 +275,7 @@ describe('QuizService (checkpoint)', () => {
     it('returns masked solution when not attempted', async () => {
       lessonRepository.findOne!.mockResolvedValue({
         lesson_id: 10,
+        lesson_type: 'checkpoint',
         chapter_id: 7,
         chapter: { level: { level_orderIndex: 1 } },
       } as any);
@@ -311,6 +315,7 @@ describe('QuizService (checkpoint)', () => {
       // derived from lesson.chapter.level.level_orderIndex = 1 -> levelNumber 2 -> score 10
       lessonRepository.findOne!.mockResolvedValue({
         lesson_id: 10,
+        lesson_type: 'checkpoint',
         chapter_id: 7,
         chapter: { level: { level_orderIndex: 1 } },
       } as any);
@@ -347,6 +352,7 @@ describe('QuizService (checkpoint)', () => {
     it('returns solution when skipped', async () => {
       lessonRepository.findOne!.mockResolvedValue({
         lesson_id: 10,
+        lesson_type: 'checkpoint',
         chapter_id: 7,
         chapter: { level: { level_orderIndex: 2 } },
       } as any);

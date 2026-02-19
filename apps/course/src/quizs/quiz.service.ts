@@ -5,7 +5,7 @@ import { Quizs } from './entities/quizs.entity';
 import { QuizsCheckpoint } from './entities/checkpoint.entity';
 import { QuizsResult, QuizsResultType, QuizsStatus } from './entities/quizs-result.entity';
 import { CreateQuizsDto, CreateCheckpointDto } from './dto/create-quizs.dto';
-import { Lesson } from '../lessons/entities/lesson.entity';
+import { Lesson, LessonType } from '../lessons/entities/lesson.entity';
 import { UserXp } from './entities/user-xp.entity';
 
 @Injectable()
@@ -277,6 +277,11 @@ export class QuizService {
       throw new NotFoundException('Checkpoint not found');
     }
 
+    const lesson = await this.lessonRepository.findOne({ where: { lesson_id: lessonId } });
+    if (!lesson || lesson.lesson_type !== LessonType.CHECKPOINT) {
+      throw new NotFoundException('Checkpoint not found');
+    }
+
     return checkpoint;
   }
 
@@ -377,6 +382,10 @@ export class QuizService {
       throw new NotFoundException(`Lesson ${dto.lesson_id} not found`);
     }
 
+    if (lesson.lesson_type !== LessonType.CHECKPOINT) {
+      throw new BadRequestException('lesson is not type CHECKPOINT');
+    }
+
     const checkpointScore = lesson?.chapter?.level
       ? this.checkpointScoreFromLevelOrderIndex(lesson.chapter.level.level_orderIndex)
       : 5;
@@ -423,6 +432,10 @@ export class QuizService {
       throw new NotFoundException(
         `Lesson with ID ${lessonId} not found`,
       );
+    }
+
+    if (lesson.lesson_type !== LessonType.CHECKPOINT) {
+      return [];
     }
 
     const checkpoints = await this.checkpointRepository.find({
