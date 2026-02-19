@@ -32,7 +32,7 @@ export class CoursesController {
     return this.coursesService.findAll();
   }
 
-  @ApiTags('Student | Courses')
+  // @ApiTags('Student | Courses')
   // @UseGuards(JwtAuthGuard)
   @Get(':id')
   @ApiOperation({ summary: 'ดึงข้อมูลคอร์สด้วย ID' })
@@ -45,7 +45,7 @@ export class CoursesController {
     return this.coursesService.findOne(id);
   }
 
-  @ApiTags('Student | Courses')
+  // @ApiTags('Student | Courses')
   // @UseGuards(JwtAuthGuard)
   @Get(':id/structure')
   @ApiOperation({ summary: 'ดึงโครงสร้างแบบ nested ทั้งหมดของคอร์ส' })

@@ -80,7 +80,7 @@ export class LessonsController {
   }
 
   
-  @ApiTags('Student | Lessons')
+  // @ApiTags('Student | Lessons')
   // @UseGuards(JwtAuthGuard)
   @Get()
   @ApiOperation({ summary: 'ดึงบทเรียนทั้งหมดสำหรับบท' })
@@ -92,7 +92,7 @@ export class LessonsController {
     return this.lessonsService.findByChapter(chapterId);
   }
 
-  @ApiTags('Student | Lessons')
+  // @ApiTags('Student | Lessons')
   // @UseGuards(JwtAuthGuard)
   @Get(':id')
   @ApiOperation({ summary: 'ดึงบทเรียนตาม ID' })

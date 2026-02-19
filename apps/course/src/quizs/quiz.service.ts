@@ -244,6 +244,21 @@ export class QuizService {
     return quiz;
   }
 
+  async findOneCheckpointById(
+    checkpointId: number,
+  ): Promise<QuizsCheckpoint> {
+
+    const checkpoint = await this.checkpointRepository.findOne({
+      where: { checkpointId },
+    });
+
+    if (!checkpoint) {
+      throw new NotFoundException('Checkpoint not found');
+    }
+
+    return checkpoint;
+  }
+
   // อัปเดต quiz ตาม lesson ID
   async updateQuizs(lessonId: number, dto: Partial<CreateQuizsDto>): Promise<Quizs> {
     const quiz = await this.findOneQuizsByLesson(lessonId);
@@ -457,7 +472,7 @@ export class QuizService {
         checkpointId,
       });
     } else {
-      
+
       // อัปเดตเป็น SKIPPED เฉพาะกรณีที่ยังไม่เคยตอบถูกจริง ๆ (มีคำตอบที่บันทึกไว้)
       toSave.type = QuizsResultType.CHECKPOINT;
       toSave.checkpointId = checkpoint.checkpointId;

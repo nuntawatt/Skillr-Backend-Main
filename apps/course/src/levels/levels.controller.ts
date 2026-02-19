@@ -22,7 +22,7 @@ export class LevelsController {
     }
 
 
-    @ApiTags('Student | Levels')
+    // @ApiTags('Student | Levels')
     // @UseGuards(JwtAuthGuard)
     @Get()
     @ApiOperation({ summary: 'ดึงระดับทั้งหมดสำหรับคอร์ส' })
@@ -34,7 +34,7 @@ export class LevelsController {
         return this.levelsService.findByCourse(course_id);
     }
 
-    @ApiTags('Student | Levels')
+    // @ApiTags('Student | Levels')
     // @UseGuards(JwtAuthGuard)
     @Get(':id')
     @ApiOperation({ summary: 'ดึงระดับตาม ID' })

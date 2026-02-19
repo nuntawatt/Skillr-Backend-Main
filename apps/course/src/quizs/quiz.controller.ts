@@ -66,6 +66,21 @@ export class QuizAdminController {
     return this.quizService.updateQuizs(lessonId, dto);
   }
 
+  @Get('lesson/:lessonId')
+  @ApiOperation({ summary: 'Admin: ดึง quiz ตาม lesson ID' })
+  @ApiParam({
+    name: 'lessonId',
+    type: Number,
+    description: 'ID ของบทเรียน',
+  })
+  @ApiResponse({ status: 200, description: 'Quiz retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Quiz not found' })
+  findQuizByLessonAdmin(
+    @Param('lessonId', ParseIntPipe) lessonId: number,
+  ) {
+    return this.quizService.findOneQuizsByLesson(lessonId);
+  }
+
   // ลบ quiz ตาม lesson ID
   @Delete('lesson/:lessonId')
   @ApiOperation({ summary: 'ลบ quiz ตาม lesson ID' })
@@ -79,7 +94,6 @@ export class QuizAdminController {
   removeQuiz(@Param('lessonId', ParseIntPipe) lessonId: number) {
     return this.quizService.removeQuizs(lessonId);
   }
-
 
   // อัปเดต quiz ตาม lesson ID
   @Post('checkpoint')
@@ -116,6 +130,21 @@ export class QuizAdminController {
   @ApiResponse({ status: 500, description: 'Internal server error' })
   createCheckpoint(@Body() dto: CreateCheckpointDto) {
     return this.quizService.createCheckpoint(dto);
+  }
+
+  @Get('checkpoint/:checkpointId')
+  @ApiOperation({ summary: 'Admin: ดึง checkpoint ตาม checkpoint ID' })
+  @ApiParam({
+    name: 'checkpointId',
+    type: Number,
+    description: 'ID ของ checkpoint',
+  })
+  @ApiResponse({ status: 200, description: 'Checkpoint retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Checkpoint not found' })
+  findCheckpointByIdAdmin(
+    @Param('checkpointId', ParseIntPipe) checkpointId: number,
+  ) {
+    return this.quizService.findOneCheckpointById(checkpointId);
   }
 
   // อัปเดต checkpoint ตาม checkpoint ID

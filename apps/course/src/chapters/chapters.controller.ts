@@ -20,7 +20,7 @@ export class ChaptersController {
         return this.chaptersService.create(dto);
     }
 
-    @ApiTags('Student | Chapters')
+    // @ApiTags('Student | Chapters')
     // @UseGuards(JwtAuthGuard)
     @Get()
     @ApiOperation({ summary: 'ดึงบททั้งหมดสำหรับระดับ' })
@@ -31,7 +31,7 @@ export class ChaptersController {
         return this.chaptersService.findByLevel(levelId);
     }
 
-    @ApiTags('Student | Chapters')
+    // @ApiTags('Student | Chapters')
     // @UseGuards(JwtAuthGuard)
     @Get(':id')
     @ApiOperation({ summary: 'ดึงบทตาม ID' })

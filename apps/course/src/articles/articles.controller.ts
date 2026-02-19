@@ -82,7 +82,7 @@ export class ArticlesController {
         };
     }
 
-    @ApiTags('Student | Articles')
+    // @ApiTags('Student | Articles')
     // @UseGuards(JwtAuthGuard)
     @Get()
     @ApiOperation({ summary: 'ดึงบทความทั้งหมดพร้อมตัวกรองที่เลือกได้' })
@@ -92,7 +92,7 @@ export class ArticlesController {
         return this.svc.findAll();
     }
 
-    @ApiTags('Student | Articles')
+    // @ApiTags('Student | Articles')
     // @UseGuards(JwtAuthGuard)
     @Get(':id')
     @ApiOperation({ summary: 'ดึงบทความตาม ID' })
@@ -105,7 +105,7 @@ export class ArticlesController {
         return this.svc.findOne(id);
     }
 
-    @ApiTags('Student | Articles')
+    // @ApiTags('Student | Articles')
     // @UseGuards(JwtAuthGuard)
     @Get('lesson/:id')
     @ApiOperation({ summary: 'ดึงบทความตาม lesson ID' })
