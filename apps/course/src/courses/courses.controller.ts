@@ -23,7 +23,7 @@ export class CoursesController {
   }
 
   // @ApiTags('Student | Courses')
-  @UseGuards(JwtAuthGuard)
+  // @UseGuards(JwtAuthGuard)
   @Get()
   @ApiOperation({ summary: 'ดึงข้อมูลคอร์สทั้งหมดพร้อมตัวกรองที่เลือกได้' })
   @ApiOkResponse({ type: CourseResponseDto, isArray: true })
