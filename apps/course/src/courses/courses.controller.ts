@@ -22,7 +22,7 @@ export class CoursesController {
     return this.coursesService.create(dto);
   }
 
-  @ApiTags('Student | Courses')
+  // @ApiTags('Student | Courses')
   @UseGuards(JwtAuthGuard)
   @Get()
   @ApiOperation({ summary: 'ดึงข้อมูลคอร์สทั้งหมดพร้อมตัวกรองที่เลือกได้' })
