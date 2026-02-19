@@ -1,12 +1,4 @@
-import {
-  IsBoolean,
-  IsDateString,
-  IsInt,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  Min,
-} from 'class-validator';
+import { IsBoolean, IsDateString, IsInt, IsNotEmpty, IsOptional, IsString, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateAnnouncementDto {

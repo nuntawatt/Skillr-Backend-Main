@@ -1,11 +1,4 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  Index,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('announcements')
 @Index('idx_announcements_active_priority', ['activeStatus', 'priority'])

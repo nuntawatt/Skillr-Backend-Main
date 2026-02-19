@@ -1,18 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Param,
-  ParseIntPipe,
-  Patch,
-  Post,
-  UploadedFile,
-  UseGuards,
-  UseInterceptors,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Patch, Post, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -26,9 +12,10 @@ import { AnnouncementResponseDto } from './dto/announcement-response.dto';
 import { AnnouncementsService } from './announcements.service';
 
 @ApiTags('Announcements')
+@ApiBearerAuth()
 @Controller('announcements')
 export class AnnouncementsController {
-  constructor(private readonly announcementsService: AnnouncementsService) {}
+  constructor(private readonly announcementsService: AnnouncementsService) { }
 
   @Get('active')
   @ApiOperation({ summary: 'ดึงป้ายประกาศที่ใช้งานได้', description: 'ดึงป้ายประกาศที่ active และอยู่ในช่วงเวลาที่กำหนด พร้อม placeholder image ถ้าไม่มีรูปภาพ' })
@@ -46,8 +33,8 @@ export class AnnouncementsController {
             properties: {
               announcement_id: { type: 'number', example: 1 },
               title: { type: 'string', example: '🔥 เปิดคอร์สใหม่! React Advanced 2025' },
-              imageUrl: { 
-                type: 'string', 
+              imageUrl: {
+                type: 'string',
                 example: 'https://cdn.example.com/banners/react-course-2025.jpg',
                 nullable: true
               },
@@ -64,6 +51,8 @@ export class AnnouncementsController {
       },
     },
   })
+  
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   async findActive() {
     const data = await this.announcementsService.findActive();
     const placeholderImageUrl = this.announcementsService.getPlaceholderImageUrl();
@@ -77,7 +66,6 @@ export class AnnouncementsController {
     };
   }
 
-  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Post()
@@ -91,7 +79,6 @@ export class AnnouncementsController {
     return this.announcementsService.create(dto);
   }
 
-  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Get()
@@ -104,7 +91,6 @@ export class AnnouncementsController {
     return this.announcementsService.findAll();
   }
 
-  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Get(':id')
@@ -118,7 +104,6 @@ export class AnnouncementsController {
     return this.announcementsService.findOne(id);
   }
 
-  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Patch(':id')
@@ -135,13 +120,12 @@ export class AnnouncementsController {
     return this.announcementsService.update(id, dto);
   }
 
-  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Post(':id/upload-image')
-  @ApiOperation({ 
-    summary: 'อัปโหลดรูปภาพป้ายประกาศ', 
-    description: 'Admin เท่านั้นสามารถอัปโหลดรูปภาพสำหรับป้ายประกาศได้ รองรับไฟล์ jpg/png/webp ขนาดสูงสุด 5MB และจะอัปโหลดไปยัง S3 และอัปเดต URL ให้อัตโนมัติ' 
+  @ApiOperation({
+    summary: 'อัปโหลดรูปภาพป้ายประกาศ',
+    description: 'Admin เท่านั้นสามารถอัปโหลดรูปภาพสำหรับป้ายประกาศได้ รองรับไฟล์ jpg/png/webp ขนาดสูงสุด 5MB และจะอัปโหลดไปยัง S3 และอัปเดต URL ให้อัตโนมัติ'
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -175,7 +159,6 @@ export class AnnouncementsController {
     return this.announcementsService.uploadBannerImage(id, file);
   }
 
-  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Delete(':id')

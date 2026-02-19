@@ -15,6 +15,8 @@ export class AnnouncementsService {
     private readonly announcementRepository: Repository<Announcement>,
   ) {}
 
+
+  // Create a new announcement
   async create(dto: CreateAnnouncementDto): Promise<Announcement> {
     if (dto.deepLink) {
       this.assertValidDeepLink(dto.deepLink);
@@ -39,6 +41,7 @@ export class AnnouncementsService {
     });
   }
 
+  // ดึงป้ายประกาศที่ active และอยู่ในช่วงเวลาที่กำหนด พร้อม placeholder image ถ้าไม่มีรูปภาพ
   async findActive(limit = 3): Promise<Announcement[]> {
     const now = new Date();
 
@@ -74,10 +77,12 @@ export class AnnouncementsService {
     return this.announcementRepository.save(announcement);
   }
 
+  // ดึง URL รูปภาพ placeholder สำหรับประกาศ (ใช้เมื่อประกาศไม่มีรูปภาพ)
   getPlaceholderImageUrl(): string {
-    return String(process.env.ANNOUNCEMENT_BANNER_PLACEHOLDER_URL ?? '');
+    return String('https://cdn.skllracademy.com/images/9f6e04bc-981a-43e2-947d-22f779c09f79.jpg');
   }
 
+  // หา announcement โดยใช้ ID
   async findOne(id: number): Promise<Announcement> {
     const announcement = await this.announcementRepository.findOne({
       where: { announcement_id: id },
