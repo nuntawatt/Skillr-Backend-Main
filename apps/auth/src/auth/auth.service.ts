@@ -114,11 +114,6 @@ export class AuthService {
       );
     }
 
-    // ตรวจสอบว่า email ได้รับการยืนยันแล้วหรือยัง
-    if (!authAccount.user.isVerified) {
-      throw new UnauthorizedException('Please verify your email before logging in');
-    }
-
     // check user status
     if ((authAccount.user.status ?? '').toLowerCase() !== 'active') {
       throw new UnauthorizedException('Account is inactive or suspended');
