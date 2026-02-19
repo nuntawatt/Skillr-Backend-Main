@@ -264,7 +264,7 @@ export class LearnerHomeService {
     // Convert to array and sort by progress (descending), then by courseId
     return Array.from(courseProgressMap.values())
       .map(course => ({
-        courseId: course.courseId,
+        course_Id: course.courseId,
         title: course.courseTitle,
         progressPercent: course.totalLessons > 0 
           ? Math.round((course.completedLessons / course.totalLessons) * 100)
@@ -274,7 +274,7 @@ export class LearnerHomeService {
         if (b.progressPercent !== a.progressPercent) {
           return b.progressPercent - a.progressPercent;
         }
-        return a.courseId - b.courseId;
+        return a.course_Id - b.course_Id;
       });
   }
 
@@ -303,8 +303,8 @@ export class LearnerHomeService {
 
     return {
       courses: recommendedCourses.map(course => ({
-        courseId: course.course_id,
-        courseTitle: course.course_title,
+        course_Id: course.course_id,
+        course_Title: course.course_title,
         reason: this.getRecommendationReason(course, myCourses),
         thumbnailUrl: course.course_imageUrl || `https://cdn.example.com/courses/course-${course.course_id}.jpg`,
         levelName: 'ระดับพื้นฐาน', // Simplified for now
@@ -369,8 +369,8 @@ export class LearnerHomeService {
     if (!course) return null;
 
     return {
-      courseId: course.course_id,
-      courseTitle: course.course_title,
+      course_Id: course.course_id,
+      course_Title: course.course_title,
       chapterTitle: chapter.chapter_title,
       levelName: level?.level_title ?? 'ระดับพื้นฐาน',
       progressPercent: actualProgress?.progressPercent ?? 0,

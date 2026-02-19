@@ -19,10 +19,10 @@ export class LearnerHomeHeaderDto {
 
 export class LearnerHomeContinueLearningDto {
   @ApiProperty({ example: 1 })
-  courseId: number;
+  course_Id: number;
 
   @ApiProperty({ example: 'Basic TypeScript' })
-  courseTitle: string;
+  course_Title: string;
 
   @ApiProperty({ example: 'Introduction to TypeScript' })
   chapterTitle: string;
@@ -36,7 +36,7 @@ export class LearnerHomeContinueLearningDto {
 
 export class LearnerHomeCourseCardDto {
   @ApiProperty({ example: 1 })
-  courseId: number;
+  course_Id: number;
 
   @ApiProperty({ example: 'Basic TypeScript' })
   title: string;
@@ -52,10 +52,10 @@ export class LearnerHomeNotificationsDto {
 
 export class LearnerHomeRecommendationDto {
   @ApiProperty({ example: 1 })
-  courseId: number;
+  course_Id: number;
 
   @ApiProperty({ example: 'JavaScript Fundamentals' })
-  courseTitle: string;
+  course_Title: string;
 
   @ApiProperty({ example: 'เหมาะสำหรับผู้เริ่มต้น' })
   reason: string;

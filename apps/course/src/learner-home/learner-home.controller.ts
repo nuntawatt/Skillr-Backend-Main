@@ -31,20 +31,20 @@ export class LearnerHomeController {
         streakDays: 7
       },
       continueLearning: {
-        courseId: 1,
-        courseTitle: 'Basic TypeScript',
+        course_Id: 1,
+        course_Title: 'Basic TypeScript',
         chapterTitle: 'Introduction to TypeScript',
         levelName: 'ระดับพื้นฐาน',
         progressPercent: 30
       },
       myCourses: [
         {
-          courseId: 2,
+          course_Id: 2,
           title: 'Advanced JavaScript',
           progressPercent: 75
         },
         {
-          courseId: 3,
+          course_Id: 3,
           title: 'Node.js Basics',
           progressPercent: 45
         }
@@ -55,24 +55,24 @@ export class LearnerHomeController {
       recommendations: {
         courses: [
           {
-            courseId: 4,
-            courseTitle: 'JavaScript Fundamentals',
+            course_Id: 4,
+            course_Title: 'JavaScript Fundamentals',
             reason: 'เหมาะสำหรับผู้เริ่มต้น',
             thumbnailUrl: 'https://cdn.example.com/courses/js-fundamentals.jpg',
             levelName: 'ระดับพื้นฐาน',
             totalChapter: 6
           },
           {
-            courseId: 5,
-            courseTitle: 'React Advanced',
+            course_Id: 5,
+            course_Title: 'React Advanced',
             reason: 'เหมาะสำหรับผู้มีพื้นฐาน',
             thumbnailUrl: 'https://cdn.example.com/courses/react-advanced.jpg',
             levelName: 'ระดับปานกลาง',
             totalChapter: 8
           },
           {
-            courseId: 6,
-            courseTitle: 'Node.js Mastery',
+            course_Id: 6,
+            course_Title: 'Node.js Mastery',
             reason: 'คอร์สยอดนิยม',
             thumbnailUrl: 'https://cdn.example.com/courses/nodejs-mastery.jpg',
             levelName: 'ระดับยาก',
