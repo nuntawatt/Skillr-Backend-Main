@@ -2,7 +2,6 @@ import { NestFactory, Reflector } from '@nestjs/core';
 import { ValidationPipe, Logger, ClassSerializerInterceptor } from '@nestjs/common';
 
 // import * as express from 'express';
-import cookieParser from 'cookie-parser';
 import { AppModule } from './course.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
@@ -29,8 +28,6 @@ async function bootstrap() {
     }),
   );
 
-  app.setGlobalPrefix('api');
-
 
   const config = new DocumentBuilder()
     .setTitle('Skillr Course Service API')
@@ -46,9 +43,9 @@ async function bootstrap() {
 
 
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
-  app.use(cookieParser());
 
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
+  app.setGlobalPrefix('api');
 
   const port = Number(process.env.PORT ?? 3002);
   await app.listen(port);
