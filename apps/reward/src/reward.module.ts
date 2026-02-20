@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AuthLibModule } from '@auth/auth-lib.module';
 import { RewardModule } from './reward/reward.module';
 import * as path from 'path';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import * as path from 'path';
         path.resolve(process.cwd(), '.env'),
       ],
     }),
+    TypeOrmModule.forRootAsync({}),
     AuthLibModule,
     RewardModule,
   ],

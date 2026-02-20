@@ -34,7 +34,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "typeorm:reward": "node --require ts-node/register ./node_modules/typeorm/cli.js -d apps/reward/data-source.ts"
   },
   "dependencies": {
     "@aws-sdk/client-mediaconvert": "^3.971.0",
@@ -80,7 +81,6 @@
     "resend": "^6.7.0",
     "rxjs": "^7.8.1",
     "swagger-ui-express": "^5.0.1",
-    "typeorm": "^0.3.28",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
@@ -112,6 +112,8 @@
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "typeorm": "^0.3.28",
+    "typeorm-ts-node-commonjs": "^0.3.20",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0"
   },
