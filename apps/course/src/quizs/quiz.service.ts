@@ -4,7 +4,7 @@ import { In, Repository } from 'typeorm';
 import { Quizs } from './entities/quizs.entity';
 import { QuizsCheckpoint } from './entities/checkpoint.entity';
 import { QuizsResult, QuizsResultType, QuizsStatus } from './entities/quizs-result.entity';
-import { CreateQuizsDto, CreateCheckpointDto } from './dto/create-quizs.dto';
+import { CreateQuizsDto, CreateCheckpointDto, UpdateQuizsDto, UpdateCheckpointDto } from './dto';
 import { Lesson, LessonType } from '../lessons/entities/lesson.entity';
 import { UserXp } from './entities/user-xp.entity';
 
@@ -286,7 +286,7 @@ export class QuizService {
   }
 
   // อัปเดต quiz ตาม lesson ID
-  async updateQuizs(lessonId: number, dto: Partial<CreateQuizsDto>): Promise<Quizs> {
+  async updateQuizs(lessonId: number, dto: Partial<UpdateQuizsDto>): Promise<Quizs> {
     const quiz = await this.findOneQuizsByLesson(lessonId);
     Object.assign(quiz, {
       quizsType: dto.quizs_type ?? quiz.quizsType,
@@ -301,7 +301,7 @@ export class QuizService {
   // อัปเดต checkpoint ตาม checkpoint ID
   async updateCheckpoint(
     checkpointId: number,
-    dto: Partial<CreateCheckpointDto>,
+    dto: Partial<UpdateCheckpointDto>,
   ): Promise<QuizsCheckpoint> {
 
     const checkpoint = await this.checkpointRepository.findOne({
@@ -338,7 +338,7 @@ export class QuizService {
   // อัปเดต checkpoint ตาม lesson ID
   async updateCheckpointByLessonId(
     lessonId: number,
-    dto: Partial<CreateCheckpointDto>,
+    dto: Partial<UpdateCheckpointDto>,
   ): Promise<QuizsCheckpoint> {
     const checkpoint = await this.findOneCheckpointByLessonId(lessonId);
     return this.updateCheckpoint(checkpoint.checkpointId, dto);

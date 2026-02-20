@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, ParseIntPipe } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { QuizService } from './quiz.service';
-import { CreateQuizsDto, CreateCheckpointDto } from './dto/create-quizs.dto';
+import { CreateQuizsDto, CreateCheckpointDto, UpdateQuizsDto, UpdateCheckpointDto } from './dto';
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import { UserRole } from '@common/enums';
 import { CurrentUserId } from '../notifications/decorators/current-user-id.decorator';
@@ -59,10 +59,35 @@ export class QuizAdminController {
     type: Number,
     description: 'ID ของบทเรียน',
   })
+  @ApiBody({
+    type: UpdateQuizsDto,
+    examples: {
+      multiple_choice: {
+        summary: 'ตัวอย่าง: อัปเดต Quiz แบบเลือกตอบ (MC)',
+        value: {
+          quizs_type: 'multiple_choice',
+          quizs_questions: 'TypeScript คืออะไร?',
+          quizs_option: ['Superset ของ JavaScript', 'ชื่อกาแฟ', 'ระบบปฏิบัติการ'],
+          quizs_answer: 'Superset ของ JavaScript',
+          quizs_explanation: 'TypeScript เป็นภาษาที่สร้างครอบ JS เพื่อเพิ่มระบบ Type',
+        },
+      },
+      true_false: {
+        summary: 'ตัวอย่าง: อัปเดต Quiz แบบถูก/ผิด (TF)',
+        value: {
+          quizs_type: 'true_false',
+          quizs_questions: 'Node.js คือภาษาโปรแกรมใช่หรือไม่?',
+          quizs_option: ['True', 'False'],
+          quizs_answer: 'False',
+          quizs_explanation: 'Node.js เป็น Runtime environment สำหรับรัน JS',
+        },
+      },
+    },
+  })
   @ApiResponse({ status: 200, description: 'Quiz updated successfully' })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  updateQuiz(@Param('lessonId', ParseIntPipe) lessonId: number, @Body() dto: Partial<CreateQuizsDto>) {
+  updateQuiz(@Param('lessonId', ParseIntPipe) lessonId: number, @Body() dto: Partial<UpdateQuizsDto>) {
     return this.quizService.updateQuizs(lessonId, dto);
   }
 
@@ -137,15 +162,10 @@ export class QuizAdminController {
 
   @Get('checkpoint/:lessonId')
   @ApiOperation({ summary: 'ดึง checkpoint ตาม lesson ID' })
-  @ApiParam({
-    name: 'lessonId',
-    type: Number,
-  })
+  @ApiParam({ name: 'lessonId', type: Number })
   @ApiResponse({ status: 200, description: 'Checkpoint retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Checkpoint not found' })
-  async findCheckpointByLessonId(
-    @Param('lessonId', ParseIntPipe) lessonId: number,
-  ) {
+  async findCheckpointByLessonId(@Param('lessonId', ParseIntPipe) lessonId: number) {
     const checkpoint = await this.quizService.findOneCheckpointByLessonId(lessonId);
     return { ...checkpoint, score: checkpoint.checkpointScore ?? 5 };
   }
@@ -153,16 +173,38 @@ export class QuizAdminController {
   // อัปเดต checkpoint ตาม lesson ID
   @Patch('checkpoint/:lessonId')
   @ApiOperation({ summary: 'อัปเดต checkpoint ตาม lesson ID' })
-  @ApiParam({
-    name: 'lessonId',
-    type: Number,
+  @ApiParam({ name: 'lessonId', type: Number })
+  @ApiBody({
+    type: UpdateCheckpointDto,
+    examples: {
+      multiple_choice: {
+        summary: 'ตัวอย่าง: อัปเดต Checkpoint แบบเลือกตอบ',
+        value: {
+          checkpoint_type: 'multiple_choice',
+          checkpoint_questions: '1 + 1 เท่ากับเท่าไหร่?',
+          checkpoint_option: ['1', '2', '3'],
+          checkpoint_answer: '2',
+          checkpoint_explanation: '1 + 1 = 2',
+        },
+      },
+      true_false: {
+        summary: 'ตัวอย่าง: อัปเดต Checkpoint แบบถูก/ผิด',
+        value: {
+          checkpoint_type: 'true_false',
+          checkpoint_questions: 'Node.js คือภาษาโปรแกรมใช่หรือไม่?',
+          checkpoint_option: ['True', 'False'],
+          checkpoint_answer: 'False',
+          checkpoint_explanation: 'Node.js เป็น Runtime environment สำหรับรัน JavaScript ไม่ใช่ภาษาโปรแกรม',
+        },
+      },
+    },
   })
   @ApiResponse({ status: 200, description: 'Checkpoint updated successfully' })
   @ApiResponse({ status: 404, description: 'Checkpoint not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async updateCheckpoint(
     @Param('lessonId', ParseIntPipe) lessonId: number,
-    @Body() dto: Partial<CreateCheckpointDto>,
+    @Body() dto: Partial<UpdateCheckpointDto>,
   ) {
     const checkpoint = await this.quizService.updateCheckpointByLessonId(lessonId, dto);
     return { ...checkpoint, score: checkpoint.checkpointScore ?? 5 };
@@ -183,7 +225,6 @@ export class QuizAdminController {
   ) {
     return this.quizService.removeCheckpointByLessonId(lessonId);
   }
-
 }
 
 
