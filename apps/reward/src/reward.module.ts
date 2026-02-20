@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AuthLibModule } from '@auth/auth-lib.module';
-import { StockThaiModule } from './stock-thai/stock-thai.module';
 import { RewardModule } from './reward/reward.module';
 import * as path from 'path';
 
@@ -15,7 +14,6 @@ import * as path from 'path';
       ],
     }),
     AuthLibModule,
-    StockThaiModule,
     RewardModule,
   ],
 })
