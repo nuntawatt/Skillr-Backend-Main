@@ -19,6 +19,9 @@ export class CourseResponseDto {
   @ApiPropertyOptional({ description: 'Course tags', type: [String] })
   course_tags?: string[];
 
+  @ApiProperty({ description: 'Total chapters in this course', example: 12 })
+  course_totalChapter: number;
+
   @ApiProperty({ description: 'Is the course published', example: false })
   isPublished: boolean;
 

@@ -36,6 +36,17 @@ export class CoursesService {
   }): Promise<CourseResponseDto[]> {
     const query = this.courseRepository.createQueryBuilder('course');
 
+    // นับจำนวน Chapter ทั้งหมดในคอร์ส (ผ่าน levels -> chapters)
+    query.addSelect(
+      (subQuery) =>
+        subQuery
+          .select('COUNT(ch.chapter_id)', 'cnt')
+          .from('chapters', 'ch')
+          .innerJoin('levels', 'l', 'l.level_id = ch.level_id')
+          .where('l.course_id = course.course_id'),
+      'course_totalChapter',
+    );
+
     // ถ้ามีการระบุพารามิเตอร์กรอง ให้เพิ่มเงื่อนไขใน query
     if (params?.isPublished !== undefined) {
       query.andWhere('course.isPublished = :isPublished', {
@@ -65,8 +76,12 @@ export class CoursesService {
     // เรียงลำดับตามวันที่สร้างล่าสุด และใช้การแบ่งหน้า
     query.orderBy('course.createdAt', 'DESC').take(limit).skip(offset);
 
-    const courses = await query.getMany();
-    return courses.map((course) => this.toResponseDto(course));
+    const { entities, raw } = await query.getRawAndEntities();
+    return entities.map((course, index) => {
+      const total = Number(raw[index]?.course_totalChapter ?? 0);
+      course.course_totalChapter = Number.isFinite(total) ? total : 0;
+      return this.toResponseDto(course);
+    });
   }
 
   // หา course โดยใช้ ID
@@ -191,6 +206,7 @@ export class CoursesService {
       course_description: course.course_description,
       course_tags: course.course_tags ?? undefined,
       course_imageUrl: course.course_imageUrl ?? undefined,
+      course_totalChapter: course.course_totalChapter ?? 0,
       isPublished: course.isPublished,
       createdAt: course.createdAt,
       updatedAt: course.updatedAt,

@@ -28,6 +28,9 @@ export class Course {
   @Column({ name: 'is_published', default: false })
   isPublished: boolean;
 
+  @Column({ name: 'course_total_chapter', type: 'int', default: 0 })
+  course_totalChapter: number;
+
   @OneToMany(() => Level, (level) => level.course, { cascade: true })
   course_levels: Level[];
 
