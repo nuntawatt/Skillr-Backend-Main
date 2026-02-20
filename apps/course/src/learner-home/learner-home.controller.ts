@@ -41,12 +41,12 @@ export class LearnerHomeController {
       myCourses: [
         {
           course_id: 2,
-          course_title: 'Advanced JavaScript',
+          title: 'Advanced JavaScript',
           progressPercent: 75,
         },
         {
           course_id: 3,
-          course_title: 'Node.js Basics',
+          title: 'Node.js Basics',
           progressPercent: 45,
         },
       ],

@@ -316,7 +316,7 @@ export class LearnerHomeService {
     return Array.from(courseMap.entries()).map(
       ([courseId, data]) => ({
         course_id: courseId,
-        course_title: data.title,
+        title: data.title,
         progressPercent:
           data.total > 0
             ? Math.round((data.completed / data.total) * 100)
