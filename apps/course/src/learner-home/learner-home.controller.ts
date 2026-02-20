@@ -1,4 +1,4 @@
-import { Controller, Get, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Controller, Get, Headers, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 import { JwtAuthGuard } from '@auth';
@@ -87,11 +87,14 @@ export class LearnerHomeController {
   @ApiResponse({ status: 500, description: 'Internal server error' })
 
   // ดึงข้อมูลหน้าแรกของผู้เรียน
-  async getHome(@CurrentUserId() userId: string): Promise<LearnerHomeResponseDto> {
+  async getHome(
+    @CurrentUserId() userId: string,
+    @Headers('authorization') authorization: string | undefined,
+  ): Promise<LearnerHomeResponseDto> {
     if (!userId) {
       throw new UnauthorizedException('User not authenticated');
     }
 
-    return this.learnerHomeService.getHome(userId);
+    return this.learnerHomeService.getHome(userId, authorization);
   }
 }

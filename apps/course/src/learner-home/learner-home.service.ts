@@ -68,7 +68,10 @@ export class LearnerHomeService {
      🔹 Main Entry
   ====================================================== */
 
-  async getHome(userId: string): Promise<LearnerHomeResponseDto> {
+  async getHome(
+    userId: string,
+    authorization?: string,
+  ): Promise<LearnerHomeResponseDto> {
     const [
       profile,
       streak,
@@ -78,7 +81,7 @@ export class LearnerHomeService {
       notifications,
       recommendations,
     ] = await Promise.all([
-      this.getUserProfile(userId).catch(() => null),
+      this.getUserProfile(userId, authorization).catch(() => null),
       this.getStreak(userId).catch(() => ({ currentStreak: 0 })),
       this.getTotalXp(userId).catch(() => 0),
       this.getContinueLearning(userId).catch(() => null),
@@ -108,6 +111,7 @@ export class LearnerHomeService {
 
   private async getUserProfile(
     userId: string,
+    authorization?: string,
   ): Promise<UserProfile | null> {
     try {
       const authBaseUrl = this.configService.get<string>(
@@ -119,24 +123,24 @@ export class LearnerHomeService {
         `${authBaseUrl}/users/profile`,
         {
           headers: {
-            Authorization: `Bearer ${this.configService.get(
-              'JWT_SECRET',
-              'demo-token',
-            )}`,
+            ...(authorization ? { Authorization: authorization } : {}),
           },
         },
       );
 
       const user: UserResponse = response.data;
 
+      const fullName = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim();
+      const displayName =
+        fullName.length > 0
+          ? fullName
+          : user.username?.trim() || userId;
+
       return {
-        displayName:
-          user.firstName && user.lastName
-            ? `${user.firstName} ${user.lastName}`
-            : user.username ?? null,
+        displayName,
         avatarUrl: user.avatar ?? null,
       };
-    } catch {
+    } catch (error) {
       return null;
     }
   }
