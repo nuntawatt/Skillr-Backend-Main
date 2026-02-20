@@ -9,7 +9,7 @@ import * as path from 'path';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: [
-        path.resolve(process.cwd(), 'apps/stock/.env'),
+        path.resolve(process.cwd(), 'apps/reward/.env'),
         path.resolve(process.cwd(), '.env'),
       ],
     }),
@@ -17,4 +17,4 @@ import * as path from 'path';
     RewardModule,
   ],
 })
-export class StockAppModule {}
+export class RewardAppModule {}

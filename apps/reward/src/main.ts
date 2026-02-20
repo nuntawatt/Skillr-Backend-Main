@@ -1,11 +1,11 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { StockAppModule } from './reward.module';
+import { RewardAppModule } from './reward.module';
 
 async function bootstrap() {
-  const logger = new Logger('StockBootstrap');
-  const app = await NestFactory.create(StockAppModule, {
+  const logger = new Logger('RewardBootstrap');
+  const app = await NestFactory.create(RewardAppModule, {
     logger: ['log', 'error', 'warn'],
   });
 
@@ -25,8 +25,8 @@ async function bootstrap() {
   );
 
   const config = new DocumentBuilder()
-    .setTitle('Skillr Stock Service API')
-    .setDescription('API documentation for the Stock (Thai) Service')
+    .setTitle('Skillr Reward Service API')
+    .setDescription('API documentation for the Reward Service')
     .setVersion('1.0.0')
     .addBearerAuth()
     .build();
@@ -39,7 +39,7 @@ async function bootstrap() {
   const port = Number(process.env.PORT ?? 3003);
   await app.listen(port);
 
-  logger.log(`Stock service listening on http://localhost:${port}/api`);
+  logger.log(`Reward service listening on http://localhost:${port}/api`);
   logger.log(`Swagger docs available at http://localhost:${port}/docs`);
 }
 void bootstrap();
