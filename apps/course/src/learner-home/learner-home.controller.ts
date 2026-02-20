@@ -61,7 +61,7 @@ export class LearnerHomeController {
             reason: 'เหมาะสำหรับผู้เริ่มต้น',
             course_imageUrl: 'https://cdn.example.com/courses/js-fundamentals.jpg',
             level_name: 'ระดับพื้นฐาน',
-            courseTotalChapter: 6,
+            course_totalChapter: 6,
           },
           {
             course_id: 5,
@@ -69,7 +69,7 @@ export class LearnerHomeController {
             reason: 'เหมาะสำหรับผู้มีพื้นฐาน',
             course_imageUrl: 'https://cdn.example.com/courses/react-advanced.jpg',
             level_name: 'ระดับปานกลาง',
-            courseTotalChapter: 8,
+            course_totalChapter: 8,
           },
           {
             course_id: 6,
@@ -77,7 +77,7 @@ export class LearnerHomeController {
             reason: 'คอร์สยอดนิยม',
             course_imageUrl: 'https://cdn.example.com/courses/nodejs-mastery.jpg',
             level_name: 'ระดับยาก',
-            courseTotalChapter: 10,
+            course_totalChapter: 10,
           },
         ],
       },

@@ -107,7 +107,7 @@ export class LearnerHomeRecommendationDto {
   level_name: string;
 
   @ApiProperty({ example: 6 })
-  courseTotalChapter: number;
+  course_totalChapter: number;
 }
 
 export class LearnerHomeRecommendationsDto {

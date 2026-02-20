@@ -358,7 +358,7 @@ export class LearnerHomeService {
           course.course_imageUrl ??
           `https://cdn.example.com/courses/course-${course.course_id}.jpg`,
         level_name: 'ระดับพื้นฐาน',
-        courseTotalChapter: 6,
+        course_totalChapter: 6,
       })),
     };
   }
