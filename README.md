@@ -40,9 +40,7 @@ Ports are set per service in `skillr/package.json` scripts (so you can run multi
 |---|---|---:|
 | auth | `pnpm run start:auth` | 3001 |
 | course | `pnpm run start:course` | 3002 |
-| learning | `pnpm run start:learning` | 3003 |
-| media | `pnpm run start:media` | 3004 |
-| payment | `pnpm run start:payment` | 3005 |
+| reward | `pnpm run start:reward` | 3003 |
 
 ## Roles
 

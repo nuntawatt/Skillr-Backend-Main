@@ -17,15 +17,6 @@
         "tsConfigPath": "apps/auth/tsconfig.app.json"
       }
     },
-    "learning": {
-      "type": "application",
-      "root": "apps/learning",
-      "entryFile": "main",
-      "sourceRoot": "apps/learning/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/learning/tsconfig.app.json"
-      }
-    },
     "course": {
       "type": "application",
       "root": "apps/course",
@@ -35,22 +26,13 @@
         "tsConfigPath": "apps/course/tsconfig.app.json"
       }
     },
-    "media": {
+    "reward": {
       "type": "application",
-      "root": "apps/media",
+      "root": "apps/reward",
       "entryFile": "main",
-      "sourceRoot": "apps/media/src",
+      "sourceRoot": "apps/reward/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/media/tsconfig.app.json"
-      }
-    },
-    "quizs": {
-      "type": "application",
-      "root": "apps/quizs",
-      "entryFile": "main",
-      "sourceRoot": "apps/quizs/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/quizs/tsconfig.app.json"
+        "tsConfigPath": "apps/reward/tsconfig.app.json"
       }
     },
     "common": {
