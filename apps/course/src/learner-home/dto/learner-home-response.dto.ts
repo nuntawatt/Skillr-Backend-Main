@@ -66,7 +66,7 @@ export class LearnerHomeCourseCardDto {
   course_id: number;
 
   @ApiProperty({ example: 'Basic TypeScript' })
-  course_title: string;
+  title: string;
 
   @ApiProperty({
     example: 0,
@@ -107,7 +107,7 @@ export class LearnerHomeRecommendationDto {
   level_name: string;
 
   @ApiProperty({ example: 6 })
-  courseTotalChapter: number;
+  course_totalChapter: number;
 }
 
 export class LearnerHomeRecommendationsDto {

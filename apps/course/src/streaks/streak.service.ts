@@ -36,7 +36,9 @@ export class StreakService {
       // - gap >= 2: reset counter
       if (gap >= 2 && (streak.currentStreak ?? 0) !== 0) {
         streak.currentStreak = 0;
-        streak.longestStreak = 0;
+        const oldLongest = streak.longestStreak ?? 0;
+        streak.currentStreak = 0;
+        streak.longestStreak = oldLongest;
         streak.rewardShownAt = null;
         streak = await this.streakRepository.save(streak);
       }
@@ -49,7 +51,7 @@ export class StreakService {
 
     const nextCurrent = (streak.currentStreak ?? 0) + 1;
     streak.currentStreak = nextCurrent;
-    streak.longestStreak = nextCurrent;
+    streak.longestStreak = Math.max(streak.longestStreak ?? 0, nextCurrent);
     streak.lastCompletedAt = now;
 
     return this.streakRepository.save(streak);
@@ -67,7 +69,8 @@ export class StreakService {
       // - gap >= 2: reset counter
       if (gap >= 2 && (streak.currentStreak ?? 0) !== 0) {
         streak.currentStreak = 0;
-        streak.longestStreak = 0;
+        const oldLongest = streak.longestStreak ?? 0;
+        streak.longestStreak = oldLongest;
         streak.rewardShownAt = null;
         streak = await this.streakRepository.save(streak);
       }
