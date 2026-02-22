@@ -118,6 +118,46 @@ export class NotificationsController {
     };
   }
 
+  // Admin endpoints
+  @Get('admin/all')
+  @ApiOperation({ 
+    summary: 'ดูการแจ้งเตือนทั้งหมด (Admin)',
+    description: 'Get all notifications for admin management'
+  })
+  @ApiQuery({ name: 'page', type: 'number', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', type: 'number', required: false, example: 20 })
+  @ApiOkResponse({ 
+    type: PaginatedNotificationsDto,
+    description: 'All notifications for admin'
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing JWT token' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin access required' })
+  async getAllNotifications(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  ): Promise<PaginatedNotificationsDto> {
+    const offset = (page - 1) * limit;
+    
+    const { notifications, total } = await this.notificationsService.getAllNotifications(limit, offset);
+
+    const notificationDtos: NotificationResponseDto[] = notifications.map(notification => ({
+      notificationId: notification.notificationId,
+      title: notification.title,
+      message: notification.message,
+      type: notification.type,
+      readAt: notification.readAt?.toISOString() ?? null,
+      metadata: notification.metadata ?? {},
+      createdAt: notification.createdAt.toISOString(),
+    }));
+
+    return {
+      data: notificationDtos,
+      total,
+      page,
+      limit,
+    };
+  }
+
   @Get('unread-count')
   @ApiOperation({ 
     summary: 'รับจำนวนการแจ้งเตือนที่ยังไม่ได้อ่าน',
@@ -155,27 +195,35 @@ export class NotificationsController {
       createdAt: '2026-02-18T12:30:00.000Z'
     }
   })
-  @ApiResponse({ status: 400, description: 'Bad Request - Invalid input data' })
+  @ApiResponse({ status: 400, description: 'Bad Request - Invalid input data or missing userId' })
   @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing JWT token' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin access required' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async createNotification(@Body() createDto: CreateNotificationDto): Promise<NotificationResponseDto> {
-    const notification = await this.notificationsService.createNotification(
-      createDto.userId,
-      createDto.title,
-      createDto.message,
-      createDto.type,
-      createDto.metadata
-    );
+    if (createDto.userId) {
+      // ส่งให้ user คนเดียว
+      const notification = await this.notificationsService.adminCreateNotification(
+        createDto.userId,
+        createDto.title,
+        createDto.message,
+        createDto.type,
+        createDto.metadata
+      );
 
-    return {
-      notificationId: notification.notificationId,
-      title: notification.title,
-      message: notification.message,
-      type: notification.type,
-      readAt: notification.readAt?.toISOString() ?? null,
-      metadata: notification.metadata ?? {},
-      createdAt: notification.createdAt.toISOString(),
-    };
+      return {
+        notificationId: notification.notificationId,
+        title: notification.title,
+        message: notification.message,
+        type: notification.type,
+        readAt: notification.readAt?.toISOString() ?? null,
+        metadata: notification.metadata ?? {},
+        createdAt: notification.createdAt.toISOString(),
+      };
+    } else {
+      // ส่งให้ทุกคน - system notification
+      // TODO: Implement broadcast notification to all users
+      throw new BadRequestException('Broadcast notifications to all users is not yet implemented');
+    }
   }
 
   @Post(':id/read')

@@ -3,12 +3,13 @@ import { IsString, IsOptional, IsEnum, IsUUID, ValidateNested } from 'class-vali
 import { Type } from 'class-transformer';
 
 export class CreateNotificationDto {
-  @ApiProperty({ 
+  @ApiPropertyOptional({ 
     example: '550e8400-e29b-41d4-a716-446655440000',
-    description: 'User ID to send notification to'
+    description: 'User ID to send notification to (optional for system notifications)'
   })
   @IsUUID()
-  userId: string;
+  @IsOptional()
+  userId?: string;
 
   @ApiProperty({ 
     example: 'Course Completed! 🎉',
