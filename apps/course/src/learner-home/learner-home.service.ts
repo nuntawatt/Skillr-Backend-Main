@@ -86,7 +86,7 @@ export class LearnerHomeService {
     if (!authorization) return null;
 
     try {
-      const authBaseUrl = 'https://api.skillracademy.com/s1';
+      const authBaseUrl = 'https://api.skillracademy.com/s1/api';
 
       const response = await this.httpService.axiosRef.get(
         `${authBaseUrl}/users/profile`,
