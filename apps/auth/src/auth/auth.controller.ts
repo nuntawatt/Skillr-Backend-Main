@@ -25,7 +25,6 @@ export class AuthController {
   @ApiResponse({ status: 409, description: 'Email already exists.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async register(@Body() registerDto: RegisterDto) {
-    console.log('in register controller');
     return this.authService.register(registerDto);
   }
 
@@ -81,7 +80,6 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Bad Request.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async refresh(@Body() dto: RefreshTokenDto) {
-    // บังคับให้ client ต้องส่ง refreshToken มา
     if (!dto.refreshToken || typeof dto.refreshToken !== 'string') {
       throw new BadRequestException('refreshToken is required');
     }
