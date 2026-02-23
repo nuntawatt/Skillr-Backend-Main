@@ -8,7 +8,7 @@ export class Chapter {
   @PrimaryGeneratedColumn()
   chapter_id: number;
 
-  @Column()
+  @Column({ type: 'varchar', length: 150 })
   chapter_title: string;
 
   @Column({ name: 'chapter_name', type: 'varchar', length: 100 })

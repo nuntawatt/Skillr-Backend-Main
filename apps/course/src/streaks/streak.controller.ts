@@ -1,5 +1,5 @@
 import { Controller, Get, Post, UseGuards, Body } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiOkResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiOkResponse, ApiBearerAuth, ApiParam, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@auth';
 import { CurrentUserId } from './decorators/current-user-id.decorator';
 import { StreakService } from './streak.service';
@@ -15,10 +15,7 @@ export class StreakController {
   constructor(private readonly streakService: StreakService) { }
 
   @Get()
-  @ApiOperation({
-    summary: 'ดึงข้อมูล streak ปัจจุบันของผู้ใช้',
-    description: 'คืนข้อมูลวันติดต่อกันปัจจุบัน สถิติสูงสุด และสีตามช่วงวัน\n\n**Authentication:** ต้องมี JWT token ใน header\n**User ID:** ดึงจาก JWT token (sub หรือ userId field)\n**Testing:** ใช้ test UUID: `123e4567-e89b-12d3-a456-426614174000`'
-  })
+  @ApiOperation({ summary: 'ดึงข้อมูล streak ปัจจุบันของผู้ใช้' })
   @ApiResponse({
     status: 200,
     description: 'ดึงข้อมูล streak สำเร็จ',
@@ -152,169 +149,58 @@ export class StreakController {
     return { message: 'Reward modal marked as shown' };
   }
 
-  // DEV ONLY: Test endpoints
-  @Post('test/bump')
-  @ApiOperation({
-    summary: '[DEV] Test bump streak with custom date',
-    description: 'ทดสอบการ bump streak โดยระบุวันที่เอง (สำหรับ development เท่านั้น)'
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Bump streak สำเร็จ',
-    examples: {
-      'first_day': {
-        summary: 'วันแรกของ streak',
-        value: {
-          currentStreak: 1,
-          longestStreak: 1,
-          lastCompletedAt: '2025-01-01T10:00:00.000Z',
-          color: null,
-          isReward: true,
-          isFlameOn: true
-        }
-      },
-      'consecutive_day': {
-        summary: 'วันติดต่อกัน',
-        value: {
-          currentStreak: 3,
-          longestStreak: 3,
-          lastCompletedAt: '2025-01-03T10:00:00.000Z',
-          color: 'yellow',
-          isReward: true,
-          isFlameOn: true
-        }
-      },
-      'after_gap': {
-        summary: 'ขาดวัน (ไฟดับ) แต่เลขสะสมเพิ่มต่อเมื่อกลับมาทำ',
-        value: {
-          currentStreak: 11,
-          longestStreak: 11,
-          lastCompletedAt: '2025-01-20T10:00:00.000Z',
-          color: 'orange',
-          isReward: true,
-          isFlameOn: false
-        }
-      }
-    }
-  })
-  async testBumpStreak(
-    @CurrentUserId() userId: string,
-    @Body() body: TestBumpDto
-  ): Promise<StreakResponseDto> {
-    const testDate = new Date(body.date);
-    if (isNaN(testDate.getTime())) {
-      throw new Error('Invalid date format. Use ISO format: YYYY-MM-DDTHH:mm:ss.sssZ');
-    }
-    
-    const streak = await this.streakService.bumpStreak(userId, testDate);
-    const color = getStreakColor(streak.currentStreak);
-    const { isReward, isFlameOn } = await this.streakService.getStreak(userId);
-    
-    return {
-      currentStreak: streak.currentStreak,
-      longestStreak: streak.longestStreak,
-      lastCompletedAt: streak.lastCompletedAt,
-      color,
-      isReward,
-      isFlameOn,
-    };
-  }
+  // @Post('debug/bump')
+  // @ApiOperation({ summary: '[DEBUG] Bump streak with detailed log' })
+  // @ApiBody({ schema: { type: 'object', properties: { date: { type: 'string', example: '2025-01-01T16:50:00.000Z' } } } })
+  // async debugBump(
+  //   @CurrentUserId() userId: string,
+  //   @Body() body: { date: string },
+  // ) {
+  //   const testDate = new Date(body.date);
 
-  @Post('test/reset')
-  @ApiOperation({
-    summary: '[DEV] Reset user streak',
-    description: 'รีเซ็ต streak ของผู้ใช้ (สำหรับ development เท่านั้น)'
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Reset streak สำเร็จ',
-    examples: {
-      'success': {
-        summary: 'รีเซ็ตสำเร็จ',
-        value: {
-          message: 'Streak reset successfully'
-        }
-      }
-    }
-  })
-  async testResetStreak(@CurrentUserId() userId: string): Promise<{ message: string }> {
-    await this.streakService.resetStreak(userId);
-    return { message: 'Streak reset successfully' };
-  }
+  //   if (isNaN(testDate.getTime())) {
+  //     throw new Error('Invalid ISO date format. Example: 2025-01-01T16:50:00.000Z');
+  //   }
 
-  @Get('test/status')
-  @ApiOperation({
-    summary: '[DEV] Get detailed streak status for testing',
-    description: 'ดึงข้อมูลละเอียดสำหรับทดสอบ (สำหรับ development เท่านั้น)'
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'ดึงข้อมูลสำเร็จ',
-    examples: {
-      'active_streak': {
-        summary: 'มี streak ที่กำลังทำอยู่',
-        value: {
-          userId: '123e4567-e89b-12d3-a456-426614174000',
-          currentStreak: 5,
-          longestStreak: 5,
-          lastCompletedAt: '2025-01-05T10:00:00.000Z',
-          color: 'yellow',
-          isReward: true,
-          isFlameOn: true,
-          serverTime: '2025-01-05T15:30:00.000Z',
-          serverTimeUTC: 'Mon, 05 Jan 2025 15:30:00 GMT',
-          lastCompletedDays: 0
-        }
-      },
-      'broken_streak': {
-        summary: 'ขาดวัน (ไฟดับ) แต่เลขสะสมยังอยู่',
-        value: {
-          userId: '123e4567-e89b-12d3-a456-426614174000',
-          currentStreak: 12,
-          longestStreak: 12,
-          lastCompletedAt: '2025-01-03T10:00:00.000Z',
-          color: 'orange',
-          isReward: false,
-          isFlameOn: false,
-          serverTime: '2025-01-05T15:30:00.000Z',
-          serverTimeUTC: 'Mon, 05 Jan 2025 15:30:00 GMT',
-          lastCompletedDays: 2
-        }
-      },
-      'new_user': {
-        summary: 'ผู้ใช้ใหม่ (ยังไม่เคยทำ)',
-        value: {
-          userId: '123e4567-e89b-12d3-a456-426614174000',
-          currentStreak: 0,
-          longestStreak: 0,
-          lastCompletedAt: null,
-          color: null,
-          isReward: false,
-          isFlameOn: false,
-          serverTime: '2025-01-05T15:30:00.000Z',
-          serverTimeUTC: 'Mon, 05 Jan 2025 15:30:00 GMT',
-          lastCompletedDays: null
-        }
-      }
-    }
-  })
-  async testGetStatus(@CurrentUserId() userId: string): Promise<any> {
-    const { streak, color, isReward, isFlameOn } = await this.streakService.getStreak(userId);
-    const now = new Date();
+  //   const result = await this.streakService.bumpStreak(userId, testDate);
 
-    return {
-      userId,
-      currentStreak: streak.currentStreak,
-      longestStreak: streak.longestStreak,
-      lastCompletedAt: streak.lastCompletedAt,
-      color,
-      isReward,
-      isFlameOn,
-      serverTime: now.toISOString(),
-      serverTimeUTC: now.toUTCString(),
-      lastCompletedDays: streak.lastCompletedAt ?
-        Math.floor((Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) -
-          Date.UTC(streak.lastCompletedAt.getUTCFullYear(), streak.lastCompletedAt.getUTCMonth(), streak.lastCompletedAt.getUTCDate())) / (24 * 60 * 60 * 1000)) : null
-    };
-  }
+  //   return {
+  //     inputUTC: testDate.toISOString(),
+  //     currentStreak: result.currentStreak,
+  //     longestStreak: result.longestStreak,
+  //     lastCompletedAt: result.lastCompletedAt,
+  //   };
+
+  // }
+
+  // @Post('test/reset')
+  // @ApiOperation({
+  //   summary: '[TEST] Reset streak for current user',
+  // })
+  // // @ApiBody({ schema: { type: 'object', properties: { date: { type: 'string', example: '2025-01-01T16:50:00.000Z' } } } })
+  // async testResetStreak(
+  //   @CurrentUserId() userId: string,
+  // ) {
+  //   console.log('==========================');
+  //   console.log('RESET DEBUG');
+  //   console.log('User:', userId);
+
+  //   const streak = await this.streakService.resetStreak(userId);
+
+  //   console.log('After reset:', {
+  //     currentStreak: streak.currentStreak,
+  //     longestStreak: streak.longestStreak,
+  //     lastCompletedAt: streak.lastCompletedAt,
+  //     rewardShownAt: streak.rewardShownAt,
+  //   });
+
+  //   console.log('==========================');
+
+  //   return {
+  //     message: 'Streak reset successfully',
+  //     currentStreak: streak.currentStreak,
+  //     longestStreak: streak.longestStreak,
+  //     lastCompletedAt: streak.lastCompletedAt,
+  //   };
+  // }
 }

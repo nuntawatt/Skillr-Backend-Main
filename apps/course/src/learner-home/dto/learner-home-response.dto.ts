@@ -11,11 +11,11 @@ export class LearnerHomeHeaderDto {
   })
   userId: string;
 
-  @ApiProperty({
-    example: 'John Doe',
-    nullable: true,
-  })
-  displayName: string | null;
+  // @ApiProperty({
+  //   example: 'John Doe',
+  //   nullable: true,
+  // })
+  // displayName: string | null;
 
   @ApiProperty({
     example: 'https://cdn.example.com/avatar.png',

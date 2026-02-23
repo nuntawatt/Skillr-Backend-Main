@@ -112,4 +112,35 @@ export class NotificationsService {
   async deleteAllUserNotifications(userId: string): Promise<void> {
     await this.notificationRepository.delete({ userId });
   }
+
+  // Admin methods
+  async getAllNotifications(limit = 20, offset = 0) {
+    const [notifications, total] = await Promise.all([
+      this.notificationRepository.find({
+        order: { createdAt: 'DESC' },
+        take: limit,
+        skip: offset,
+      }),
+      this.notificationRepository.count(),
+    ]);
+
+    return { notifications, total };
+  }
+
+  async adminCreateNotification(
+    userId: string,
+    title: string,
+    message: string,
+    type: 'info' | 'success' | 'warning' | 'error' = 'info',
+    metadata?: Record<string, any>,
+  ): Promise<Notification> {
+    const notification = this.notificationRepository.create({
+      userId,
+      title,
+      message,
+      type,
+      metadata,
+    });
+    return this.notificationRepository.save(notification);
+  }
 }

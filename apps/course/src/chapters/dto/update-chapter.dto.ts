@@ -4,6 +4,7 @@ import { IsString, IsNumber, IsOptional, MaxLength, Min, Max } from 'class-valid
 export class UpdateChapterDto {
     @IsString()
     @IsOptional()
+    @MaxLength(150)
     chapter_title?: string;
 
     @IsString()
