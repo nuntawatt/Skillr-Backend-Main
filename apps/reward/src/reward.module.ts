@@ -18,10 +18,6 @@ import { UserXp } from 'apps/course/src/quizs/entities/user-xp.entity';
       ],
     }),
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: getDatabaseConfig,
-      inject: [ConfigService],
-    }),
       name: 'reward',
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
