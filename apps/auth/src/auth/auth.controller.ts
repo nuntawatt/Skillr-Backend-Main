@@ -25,6 +25,7 @@ export class AuthController {
   @ApiResponse({ status: 409, description: 'Email already exists.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async register(@Body() registerDto: RegisterDto) {
+    console.log('in register controller');
     return this.authService.register(registerDto);
   }
 

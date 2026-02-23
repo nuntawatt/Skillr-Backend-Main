@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { HttpService } from '@nestjs/axios';
+import { ConfigService } from '@nestjs/config';
 
 import { StreakService } from '../streaks/streak.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -21,6 +22,7 @@ interface UserProfile {
 export class LearnerHomeService {
   constructor(
     private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
     private readonly streakService: StreakService,
     private readonly notificationsService: NotificationsService,
 
@@ -86,7 +88,10 @@ export class LearnerHomeService {
     if (!authorization) return null;
 
     try {
-      const authBaseUrl = 'https://api.skillracademy.com/s1/api';
+      const authBaseUrl = this.configService.get<string>(
+        'AUTH_BASE_URL',
+        'http://localhost:3001/api',
+      );
 
       const response = await this.httpService.axiosRef.get(
         `${authBaseUrl}/users/profile`,

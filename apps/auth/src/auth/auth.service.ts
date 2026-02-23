@@ -49,6 +49,7 @@ export class AuthService {
 
   // Register a new user
   async register(registerDto: RegisterDto): Promise<AuthResponse> {
+    console.log('in register service : ', registerDto.email);
     const email = registerDto.email.trim().toLowerCase();
 
     // เช็คว่ามี user ใช้ email นี้หรือยัง
