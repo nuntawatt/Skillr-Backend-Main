@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   OneToMany,
   Index,
+  DeleteDateColumn,
 } from 'typeorm';
 import { RewardRedemption } from './reward-redemption';
 
@@ -51,20 +52,13 @@ export class Reward {
   @Column({ type: 'timestamp' , nullable: false})
   redeem_end_date: Date;
 
-  @Column({
-    type: 'enum',
-    enum: RedemptionType,
-    nullable: false,
-  })
-  redemption_type: RedemptionType;
-
   @Column({ nullable: true })
   expire_after_days: number;
 
   @Column({ nullable: true })
   limit_per_user: number;
 
-  @Column({ nullable: true })
+  @Column({ nullable: false })
   total_limit: number;
 
   @Column({ nullable: true })
@@ -78,6 +72,9 @@ export class Reward {
 
   @UpdateDateColumn()
   updated_at: Date;
+
+  @DeleteDateColumn()
+  delete_at: Date
 
   @OneToMany(
     () => RewardRedemption,
