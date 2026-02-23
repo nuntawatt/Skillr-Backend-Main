@@ -8,6 +8,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Min,
 } from 'class-validator';
 import { RedemptionType } from '../../reward/entities/rewards.entity';
 
@@ -22,19 +23,10 @@ export class CreateRewardAdminDto {
   @IsNotEmpty()
   description: string;
 
-  @ApiProperty({ example: 100 })
-  @Type(() => Number)
-  @IsNumber()
-  remain: number;
-
-  @ApiProperty({ example: 'https://example.com/image.png' })
-  @IsString()
-  @IsNotEmpty()
-  image_url: string;
-
   @ApiProperty({ example: 500 })
   @Type(() => Number)
   @IsNumber()
+  @Min(1)
   required_points: number;
 
   @ApiProperty({ example: '2026-01-01T00:00:00Z' })
@@ -45,34 +37,36 @@ export class CreateRewardAdminDto {
   @IsDateString()
   redeem_end_date: Date;
 
-  @ApiProperty({ enum: RedemptionType })
-  @IsEnum(RedemptionType)
-  redemption_type: RedemptionType;
-
   @ApiProperty({ example: 30 })
   @Type(() => Number)
+  @IsOptional()
   @IsNumber()
-  expire_after_days: number;
+  @Min(1)
+  expire_after_days: number | undefined;
 
   @ApiProperty({ example: 1 })
   @Type(() => Number)
-  @IsNumber()
   @IsOptional()
+  @IsNumber()
+  @Min(1)
   limit_per_user?: number;
 
   @ApiProperty({ example: 1000 })
   @Type(() => Number)
   @IsNumber()
   @IsOptional()
+  @Min(1)
   total_limit?: number;
 
   @ApiProperty({ example: 10 })
   @Type(() => Number)
   @IsNumber()
   @IsOptional()
-  show_remaining_threshold?: number;
+  @Min(1)
+  show_remaining_threshold?: number | undefined;
 
   @ApiProperty({ example: true })
+  @Type(() => Boolean)
   @IsBoolean()
   is_active: boolean;
 }

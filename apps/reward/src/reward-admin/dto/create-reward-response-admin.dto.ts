@@ -26,9 +26,6 @@ export class CreateRewardAdminResponseDto {
   @ApiProperty()
   redeem_end_date: Date;
 
-  @ApiProperty({ enum: RedemptionType })
-  redemption_type: RedemptionType;
-
   @ApiProperty()
   expire_after_days: number;
 
