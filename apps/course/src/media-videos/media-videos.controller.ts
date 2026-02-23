@@ -17,7 +17,7 @@ export class MediaVideosController {
 
   // อัพโหลดวิดีโอผ่าน form-data (สำหรับไฟล์ขนาดเล็ก - สูงสุด 500MB)
   @Post('upload')
-  @ApiOperation({ summary: 'Upload video via server-side form-data' })
+  @ApiOperation({ summary: 'อัปโหลดวิดีโอผ่านฟอร์มดาต้าฝั่งเซิร์ฟเวอร์' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -41,7 +41,7 @@ export class MediaVideosController {
 
   // สร้าง presigned URL สำหรับอัพโหลดวิดีโอ (สำหรับไฟล์ขนาดใหญ่ - สูงสุด 2GB)
   @Post('presign')
-  @ApiOperation({ summary: 'Create presigned URL for video upload (for large files)' })
+  @ApiOperation({ summary: 'สร้าง URL ที่ลงชื่อล่วงหน้าสำหรับการอัปโหลดวิดีโอ (สำหรับไฟล์ขนาดใหญ่)' })
   @ApiCreatedResponse({ description: 'Presigned URL created' })
   async presign(@Body() dto: CreateVideoUploadDto, @Req() req: RequestWithUser) {
     return this.svc.createPresignedUpload(dto, req.user);
@@ -49,7 +49,7 @@ export class MediaVideosController {
 
   // เรียกดู URL สำหรับดูวิดีโอโดยใช้ ID
   @Get(':id')
-  @ApiOperation({ summary: 'Get public URL to view video by ID' })
+  @ApiOperation({ summary: 'รับ URL สาธารณะเพื่อดูวิดีโอตาม ID' })
   @ApiResponse({ status: 200, description: 'Public URL for viewing' })
   @ApiResponse({ status: 404, description: 'Video not found' })
   async getViewUrl(@Param('id') id: string) {
@@ -58,7 +58,7 @@ export class MediaVideosController {
 
   // Delete video by ID
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete video by ID' })
+  @ApiOperation({ summary: 'ลบวิดีโอตาม ID' })
   @ApiResponse({ status: 200, description: 'Video deleted' })
   @ApiResponse({ status: 404, description: 'Video not found' })
   async deleteVideo(@Param('id') id: string) {
