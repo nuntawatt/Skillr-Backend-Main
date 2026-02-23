@@ -12,7 +12,6 @@ import { AnnouncementResponseDto } from './dto/announcement-response.dto';
 import { AnnouncementsService } from './announcements.service';
 
 @ApiTags('Announcements')
-@ApiBearerAuth()
 @Controller('announcements')
 export class AnnouncementsController {
   constructor(private readonly announcementsService: AnnouncementsService) { }
@@ -66,6 +65,7 @@ export class AnnouncementsController {
     };
   }
 
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Post()
@@ -79,6 +79,7 @@ export class AnnouncementsController {
     return this.announcementsService.create(dto);
   }
 
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Get()
@@ -91,6 +92,7 @@ export class AnnouncementsController {
     return this.announcementsService.findAll();
   }
 
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Get(':id')
@@ -104,6 +106,7 @@ export class AnnouncementsController {
     return this.announcementsService.findOne(id);
   }
 
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Patch(':id')
@@ -120,6 +123,7 @@ export class AnnouncementsController {
     return this.announcementsService.update(id, dto);
   }
 
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Post(':id/upload-image')
@@ -159,6 +163,7 @@ export class AnnouncementsController {
     return this.announcementsService.uploadBannerImage(id, file);
   }
 
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Delete(':id')
