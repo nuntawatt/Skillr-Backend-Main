@@ -4,6 +4,8 @@ import { AuthLibModule } from '@auth/auth-lib.module';
 import { RewardModule } from './reward/reward.module';
 import * as path from 'path';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { getDatabaseConfig } from '@config/database.config';
+import { AdminModule } from './reward-admin/reward-admin.module';
 import { UserXp } from 'apps/course/src/quizs/entities/user-xp.entity';
 
 @Module({
@@ -16,6 +18,10 @@ import { UserXp } from 'apps/course/src/quizs/entities/user-xp.entity';
       ],
     }),
     TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: getDatabaseConfig,
+      inject: [ConfigService],
+    }),
       name: 'reward',
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
@@ -38,6 +44,7 @@ import { UserXp } from 'apps/course/src/quizs/entities/user-xp.entity';
 
     AuthLibModule,
     RewardModule,
+    AdminModule,
   ],
 })
 export class RewardAppModule {}
