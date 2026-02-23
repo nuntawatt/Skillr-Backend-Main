@@ -6,7 +6,7 @@ import { Reward } from '../reward/entities/rewards.entity';
 import { StorageModule } from 'apps/course/src/storage/storage.module';
 
 @Module({
-  imports:[TypeOrmModule.forFeature([Reward]), StorageModule],
+  imports:[TypeOrmModule.forFeature([Reward], 'reward'), StorageModule],
   controllers: [AdminController],
   providers: [AdminService],
 })

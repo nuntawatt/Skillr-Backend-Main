@@ -15,7 +15,7 @@ import { StorageFactory } from 'apps/course/src/storage/storage.factory';
 export class AdminService {
   constructor(
     private readonly storageFactory: StorageFactory,
-    @InjectRepository(Reward)
+    @InjectRepository(Reward, 'reward')
     private rewardRepo: Repository<Reward>,
   ) {}
 
