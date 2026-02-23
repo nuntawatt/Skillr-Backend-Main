@@ -13,7 +13,7 @@ import { Course } from '../courses/entities/course.entity';
 import { LearnerHomeResponseDto } from './dto/learner-home-response.dto';
 
 interface UserProfile {
-  displayName: string | null;
+  // displayName: string | null;
   avatarUrl: string | null;
 }
 
@@ -63,7 +63,7 @@ export class LearnerHomeService {
     return {
       header: {
         userId,
-        displayName: profile?.displayName ?? null,
+        // displayName: profile?.displayName ?? null,
         avatarUrl: profile?.avatarUrl ?? null,
         xp: totalXp,
         streakDays: streak.currentStreak,
@@ -102,10 +102,10 @@ export class LearnerHomeService {
       const fullName = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim();
 
       return {
-        displayName:
-          fullName.length > 0
-            ? fullName
-            : user.username?.trim() || userId,
+        // displayName:
+        //   fullName.length > 0
+        //     ? fullName
+        //     : user.username?.trim() || userId,
         avatarUrl: user.avatar ?? null,
       };
     } catch {

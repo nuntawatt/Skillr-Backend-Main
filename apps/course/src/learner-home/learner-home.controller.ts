@@ -26,7 +26,7 @@ export class LearnerHomeController {
     example: {
       header: {
         userId: '123e4567-e89b-12d3-a456-426614174000',
-        displayName: 'John Doe',
+        // displayName: 'John Doe',
         avatarUrl: 'https://cdn.example.com/avatar.png',
         xp: 120,
         streakDays: 7,
