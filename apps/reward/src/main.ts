@@ -29,6 +29,7 @@ async function bootstrap() {
     .setDescription('API documentation for the Reward Service')
     .setVersion('1.0.0')
     .addBearerAuth()
+    .addServer('/api')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
