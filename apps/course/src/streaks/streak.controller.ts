@@ -145,6 +145,7 @@ export class StreakController {
     description: 'ไม่ได้รับอนุญาต (ไม่มี JWT token)'
   })
   async markRewardShown(@CurrentUserId() userId: string): Promise<{ message: string }> {
+    
     await this.streakService.markRewardShown(userId);
     return { message: 'Reward modal marked as shown' };
   }
