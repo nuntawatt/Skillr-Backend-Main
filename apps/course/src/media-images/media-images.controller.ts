@@ -12,7 +12,7 @@ export class MediaImagesController {
 
   // ===== Upload image =====
   @Post('upload')
-  @ApiOperation({ summary: 'Upload image' })
+  @ApiOperation({ summary: 'อัพโหลดภาพ' })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -38,7 +38,7 @@ export class MediaImagesController {
 
   // ===== Get public URL by image id =====
   @Get(':id')
-  @ApiOperation({ summary: 'Get public URL by image id' })
+  @ApiOperation({ summary: 'รับ URL สาธารณะโดยใช้รหัสรูปภาพ' })
   @ApiParam({ name: 'id', description: 'Image asset id', type: 'number' })
   @ApiResponse({ status: 200, description: 'Public URL retrieved' })
   @ApiResponse({ status: 404, description: 'Image not found' })
@@ -49,7 +49,7 @@ export class MediaImagesController {
 
   // ===== Delete image by id =====
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete image by ID' })
+  @ApiOperation({ summary: 'ลบรูปภาพตาม ID' })
   @ApiParam({ name: 'id', description: 'Image asset id', type: 'number' })
   @ApiResponse({ status: 200, description: 'Image deleted successfully' })
   @ApiResponse({ status: 404, description: 'Image not found' })
