@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   OneToMany,
   Index,
+  DeleteDateColumn,
 } from 'typeorm';
 import { RewardRedemption } from './reward-redemption';
 
@@ -57,7 +58,7 @@ export class Reward {
   @Column({ nullable: true })
   limit_per_user: number;
 
-  @Column({ nullable: true })
+  @Column({ nullable: false })
   total_limit: number;
 
   @Column({ nullable: true })
@@ -71,6 +72,9 @@ export class Reward {
 
   @UpdateDateColumn()
   updated_at: Date;
+
+  @DeleteDateColumn()
+  delete_at: Date
 
   @OneToMany(
     () => RewardRedemption,

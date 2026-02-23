@@ -1,34 +1,40 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, ParseIntPipe } from '@nestjs/common';
 import { RewardService } from './reward.service';
 import { CreateRewardDto } from './dto/create-reward.dto';
 import { UpdateRewardDto } from './dto/update-reward.dto';
+import { AuthGuard } from '@nestjs/passport';
+import { CurrentUserId, JwtAuthGuard, Roles, RolesGuard } from '@auth';
+import { ApiBearerAuth, ApiOperation, ApiParam } from '@nestjs/swagger';
+import { UserRole } from '@common/enums';
 
-@Controller('reward')
+@Controller('rewards')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard , RolesGuard)
+@Roles(UserRole.STUDENT)
 export class RewardController {
   constructor(private readonly rewardService: RewardService) {}
 
-  @Post()
-  create(@Body() createRewardDto: CreateRewardDto) {
-    return this.rewardService.create(createRewardDto);
+  
+  @Get('getAllRewards')
+  GetAllReward() {
+    return this.rewardService.getAllReward();
   }
 
-  @Get()
-  findAll() {
-    return this.rewardService.findAll();
+  @Post(':reward_id/redeem')
+  @ApiOperation({ summary: 'แลก reward โดยใช้แต้มของ user' })
+  @ApiParam({
+      name: 'reward_id',
+      type: Number,
+    })
+  redeemReward(@CurrentUserId() userId: string ,  @Param('reward_id', ParseIntPipe) reward_id : number){
+    console.log('userId : '+ userId)
+    console.log('userId:', userId, typeof userId);
+    return this.rewardService.redeemReward(userId, reward_id);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.rewardService.findOne(+id);
+  @Get('getReedeem')
+  getReedeem(@CurrentUserId() userId: string){
+    return this.rewardService.getRedeem(userId)
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateRewardDto: UpdateRewardDto) {
-    return this.rewardService.update(+id, updateRewardDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.rewardService.remove(+id);
-  }
 }
