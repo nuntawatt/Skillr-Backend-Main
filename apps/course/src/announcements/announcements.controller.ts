@@ -12,16 +12,18 @@ import { AnnouncementResponseDto } from './dto/announcement-response.dto';
 import { AnnouncementsService } from './announcements.service';
 
 @ApiTags('Announcements')
-@ApiBearerAuth()
 @Controller('announcements')
 export class AnnouncementsController {
   constructor(private readonly announcementsService: AnnouncementsService) { }
 
   @Get('active')
-  @ApiOperation({ summary: 'ดึงป้ายประกาศที่ใช้งานได้', description: 'ดึงป้ายประกาศที่ active และอยู่ในช่วงเวลาที่กำหนด พร้อม placeholder image ถ้าไม่มีรูปภาพ' })
+  @ApiOperation({ 
+    summary: 'ดึงป้ายประกาศที่ใช้งานได้ (Public)', 
+    description: '**Public Endpoint - ไม่ต้อง Login**\n\nดึงป้ายประกาศที่ active และอยู่ในช่วงเวลาที่กำหนด พร้อม placeholder image ถ้าไม่มีรูปภาพ\n\n🔓 **ไม่ต้อง Authentication** - ทุกคนสามารถเรียกได้\n📱 **ใช้สำหรับ** - Frontend แสดงป้ายประกาศในหน้าแรก' 
+  })
   @ApiResponse({
     status: 200,
-    description: 'ดึงป้ายประกาศที่ใช้งานได้ (มี placeholder image ถ้าไม่มีรูป)',
+    description: '**ดึงป้ายประกาศสำเร็จ (Public)**\n\n✅ สำเร็จ - คืนข้อมูลป้ายประกาศที่ active ทั้งหมด\n🖼️ มี placeholder image ถ้าป้ายไม่มีรูปภาพจริง\n🔓 ไม่ต้อง Authentication',
     schema: {
       type: 'object',
       properties: {
@@ -66,10 +68,14 @@ export class AnnouncementsController {
     };
   }
 
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Post()
-  @ApiOperation({ summary: 'สร้างป้ายประกาศใหม่', description: 'Admin เท่านั้นสามารถสร้างป้ายประกาศใหม่ได้ สามารถกำหนดรูปภาพ ลิงก์ และช่วงเวลาที่แสดงได้' })
+  @ApiOperation({ 
+    summary: 'สร้างป้ายประกาศใหม่ (Admin Only)', 
+    description: '**Admin Only - ต้อง Login + Admin Role**\n\nAdmin เท่านั้นสามารถสร้างป้ายประกาศใหม่ได้ สามารถกำหนดรูปภาพ ลิงก์ และช่วงเวลาที่แสดงได้\n\n🔐 **ต้อง Authentication** - JWT Token + Admin Role\n📝 **สร้างป้าย** - สามารถกำหนด deepLink, date range, priority' 
+  })
   @ApiResponse({
     status: 201,
     description: 'สร้างป้ายประกาศใหม่ (Admin เท่านั้น)',
@@ -79,6 +85,7 @@ export class AnnouncementsController {
     return this.announcementsService.create(dto);
   }
 
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Get()
@@ -91,6 +98,7 @@ export class AnnouncementsController {
     return this.announcementsService.findAll();
   }
 
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Get(':id')
@@ -104,6 +112,7 @@ export class AnnouncementsController {
     return this.announcementsService.findOne(id);
   }
 
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Patch(':id')
@@ -120,6 +129,7 @@ export class AnnouncementsController {
     return this.announcementsService.update(id, dto);
   }
 
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Post(':id/upload-image')
@@ -159,6 +169,7 @@ export class AnnouncementsController {
     return this.announcementsService.uploadBannerImage(id, file);
   }
 
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Delete(':id')

@@ -229,7 +229,7 @@ export class QuizAdminController {
 
 
 @ApiTags('Student | Quiz and Checkpoint')
-// @ApiBearerAuth()
+@ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('quizzes')
 export class QuizController {

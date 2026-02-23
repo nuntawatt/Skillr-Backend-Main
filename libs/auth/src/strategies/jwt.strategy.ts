@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { UserRole } from '@common/enums';
 import type { AuthUser } from '../types/auth-user.type';
+import { validate as uuidValidate } from 'uuid';
 
 interface JwtPayload {
   sub: string;
@@ -32,6 +33,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   validate(payload: JwtPayload): AuthUser {
     if (!payload.sub || !payload.email) {
       throw new UnauthorizedException('Invalid token payload');
+    }
+
+    // ตรวจสอบว่า sub เป็น UUID หรือไม่ เพื่อป้องกันการโจมตีแบบ token forgery
+    if (!uuidValidate(String(payload.sub))) {
+      throw new UnauthorizedException('Invalid token subject');
     }
 
     const role =

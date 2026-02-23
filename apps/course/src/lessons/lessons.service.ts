@@ -12,11 +12,11 @@ export class LessonsService {
     private readonly lessonRepository: Repository<Lesson>,
     @InjectRepository(Chapter)
     private readonly chapterRepository: Repository<Chapter>,
-  ) {}
+  ) { }
 
   // Create a new lesson
   async create(createLessonDto: CreateLessonDto): Promise<LessonResponseDto> {
-    // อนุมัติ chapter มีอยู่จริง
+    // ตรวจสอบว่า chapter มีอยู่จริง
     const chapter = await this.chapterRepository.findOne({
       where: { chapter_id: createLessonDto.chapter_id },
     });
@@ -25,15 +25,41 @@ export class LessonsService {
       throw new NotFoundException(`Chapter with ID ${createLessonDto.chapter_id} not found`);
     }
 
-    // สร้าง orderIndex อัตโนมัติถ้าไม่ได้ระบุ
-    let orderIndex = createLessonDto.orderIndex;
-    if (orderIndex === undefined) {
-      const maxOrderResult = await this.lessonRepository
-        .createQueryBuilder('lesson')
-        .where('lesson.chapter_id = :chapterId', { chapterId: createLessonDto.chapter_id })
-        .select('MAX(lesson.order_index)', 'maxOrder')
-        .getRawOne();
-      orderIndex = (maxOrderResult?.maxOrder ?? -1) + 1;
+    // ดึง lessons ทั้งหมดใน chapter เรียงตามลำดับ
+    const lessons = await this.lessonRepository.find({
+      where: { chapter_id: createLessonDto.chapter_id },
+      order: { orderIndex: 'ASC' },
+    });
+
+    let orderIndex: number;
+
+    // หา checkpoint เดิม (ถ้ามี)
+    const existingCheckpoint = lessons.find(
+      (l) => l.lesson_type === LessonType.CHECKPOINT,
+    );
+
+    if (createLessonDto.lesson_type === LessonType.CHECKPOINT) {
+      // ถ้ามี checkpoint เดิม → ลบทิ้งก่อน
+      if (existingCheckpoint) {
+        await this.lessonRepository.remove(existingCheckpoint);
+        orderIndex = lessons.length - 1; // checkpoint ใหม่จะอยู่ท้ายสุดเสมอ
+      } else {
+        orderIndex = lessons.length; // checkpoint ใหม่จะอยู่ท้ายสุดเสมอ
+      }
+    } else {
+      // ถ้าเป็น lesson ปกติ → แทรกก่อน checkpoint เสมอ (ถ้ามี)
+
+      if (existingCheckpoint) {
+        // แทรกก่อน checkpoint เสมอ
+        orderIndex = existingCheckpoint.orderIndex;
+
+        // ขยับ checkpoint ลงไป 1 ตำแหน่ง
+        existingCheckpoint.orderIndex += 1;
+        await this.lessonRepository.save(existingCheckpoint);
+      } else {
+        // ไม่มี checkpoint → ต่อท้ายปกติ
+        orderIndex = lessons.length;
+      }
     }
 
     const lesson = this.lessonRepository.create({
@@ -48,6 +74,7 @@ export class LessonsService {
     });
 
     const saved = await this.lessonRepository.save(lesson);
+
     return this.toResponseDto(saved);
   }
 
@@ -80,6 +107,10 @@ export class LessonsService {
       throw new NotFoundException(`Lesson with ID ${id} not found`);
     }
 
+    const originalType = lesson.lesson_type;
+
+    // อัปเดตฟิลด์ที่ระบุใน DTO
+    // ---------------- Basic Field Updates ----------------
     if (updateLessonDto.lesson_title !== undefined) {
       lesson.lesson_title = updateLessonDto.lesson_title;
     }
@@ -88,16 +119,8 @@ export class LessonsService {
       lesson.lesson_description = updateLessonDto.lesson_description;
     }
 
-    if (updateLessonDto.lesson_type !== undefined) {
-      lesson.lesson_type = updateLessonDto.lesson_type;
-    }
-
     if (updateLessonDto.ref_id !== undefined) {
       lesson.ref_id = updateLessonDto.ref_id;
-    }
-
-    if (updateLessonDto.orderIndex !== undefined) {
-      lesson.orderIndex = updateLessonDto.orderIndex;
     }
 
     if (updateLessonDto.lesson_ImageUrl !== undefined) {
@@ -108,7 +131,46 @@ export class LessonsService {
       lesson.lesson_videoUrl = updateLessonDto.lesson_videoUrl;
     }
 
+    // ---------------- Type Change Logic ----------------
+    if (
+      updateLessonDto.lesson_type !== undefined &&
+      updateLessonDto.lesson_type !== originalType
+    ) {
+      const lessons = await this.lessonRepository.find({
+        where: { chapter_id: lesson.chapter_id },
+        order: { orderIndex: 'ASC' },
+      });
+
+      const existingCheckpoint = lessons.find(
+        (l) =>
+          l.lesson_type === LessonType.CHECKPOINT &&
+          l.lesson_id !== lesson.lesson_id,
+      );
+
+      if (updateLessonDto.lesson_type === LessonType.CHECKPOINT) {
+        // ถ้าจะเปลี่ยนเป็น checkpoint
+
+        if (existingCheckpoint) {
+          await this.lessonRepository.remove(existingCheckpoint);
+        }
+
+        // ย้าย lesson นี้ไปท้ายสุดเสมอ
+        lesson.orderIndex = lessons.length - 1;
+      }
+
+      lesson.lesson_type = updateLessonDto.lesson_type;
+    }
+
+    // ---------------- Manual Order Change ----------------
+    if (
+      updateLessonDto.orderIndex !== undefined &&
+      lesson.lesson_type !== LessonType.CHECKPOINT
+    ) {
+      lesson.orderIndex = updateLessonDto.orderIndex;
+    }
+
     const saved = await this.lessonRepository.save(lesson);
+
     return this.toResponseDto(saved);
   }
 
@@ -151,22 +213,34 @@ export class LessonsService {
       }
     }
 
-    const provided = new Set(lessonIds);
-    for (const lesson of lessons) {
-      if (!provided.has(lesson.lesson_id)) {
+    // กัน checkpoint ไม่ให้ไปอยู่กลาง chapter
+    const checkpoint = lessons.find(
+      (l) => l.lesson_type === LessonType.CHECKPOINT,
+    );
+
+    if (checkpoint) {
+      const lastId = lessonIds[lessonIds.length - 1];
+
+      if (checkpoint.lesson_id !== lastId) {
         throw new BadRequestException(
-          `lessonIds must include all lessons in the chapter; missing ${lesson.lesson_id}`,
+          'Checkpoint must always be the last lesson in the chapter',
         );
       }
     }
+
+    // อัปเดต orderIndex ตามลำดับใหม่
+    const updatedLessons: Lesson[] = [];
 
     for (let i = 0; i < lessonIds.length; i++) {
       const lesson = lessonMap.get(lessonIds[i]);
       if (lesson) {
         lesson.orderIndex = i;
-        await this.lessonRepository.save(lesson);
+        updatedLessons.push(lesson);
       }
     }
+
+    // save ทีเดียว (ดีกว่า await ใน loop)
+    await this.lessonRepository.save(updatedLessons);
 
     return this.findByChapter(chapterId);
   }
@@ -181,7 +255,7 @@ export class LessonsService {
       ref_id: lesson.ref_id,
       orderIndex: lesson.orderIndex,
       chapter_id: lesson.chapter_id,
-      
+
       lesson_ImageUrl: lesson.lesson_ImageUrl,
       lesson_videoUrl: lesson.lesson_videoUrl,
 

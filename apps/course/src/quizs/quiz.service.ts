@@ -126,6 +126,7 @@ export class QuizService {
     const quiz = await this.quizsRepository.findOne({
       where: { lessonId },
     });
+    
     if (!quiz) {
       throw new NotFoundException('Quiz not found');
     }
@@ -425,48 +426,54 @@ export class QuizService {
   ) {
     const lesson = await this.lessonRepository.findOne({
       where: { lesson_id: lessonId },
-      relations: { chapter: { level: true } },
+      // relations: { chapter: { level: true } },
     });
 
     if (!lesson) {
-      throw new NotFoundException(
-        `Lesson with ID ${lessonId} not found`,
-      );
+      throw new NotFoundException(`Lesson with ID ${lessonId} not found`);
     }
 
     if (lesson.lesson_type !== LessonType.CHECKPOINT) {
       return [];
     }
 
+    // โหลดข้อมูล checkpoint ทั้งหมดของบทเรียนนี้
     const checkpoints = await this.checkpointRepository.find({
       where: { lessonId },
     });
 
+    if (!checkpoints.length) {
+      return [];
+    }
+
+
     // โหลดผลลัพธ์ของผู้ใช้รายคน (per-checkpoint)
     const checkpointIds = checkpoints.map((c) => c.checkpointId);
-    const results = checkpointIds.length
-      ? await this.resultRepository.find({
-        where: {
-          userId,
-          type: QuizsResultType.CHECKPOINT,
-          checkpointId: In(checkpointIds),
-        },
-      })
-      : [];
-    const resultByCheckpointId = new Map(results.map((r) => [r.checkpointId, r] as const));
+
+    const results = await this.resultRepository.find({
+      where: {
+        userId,
+        type: QuizsResultType.CHECKPOINT,
+        checkpointId: In(checkpointIds),
+      },
+    })
+
+    const resultByCheckpointId = new Map(
+      results.map((r) => [r.checkpointId, r] as const)
+    );
 
     // รวมข้อมูล checkpoint กับผลลัพธ์ของผู้ใช้ เพื่อส่งกลับไปให้ frontend
     return checkpoints.map((c) => {
       const r = resultByCheckpointId.get(c.checkpointId) ?? null;
+
       const attempted = r?.userAnswer != null;
       const isCorrect = attempted ? r?.isCorrect === true : false;
       const isSkipped = r?.status === QuizsStatus.SKIPPED;
+
       const checkpointStatus = isCorrect ? 'COMPLETED' : isSkipped ? 'SKIPPED' : 'PENDING';
 
+      // ถ้ายังไม่เคยตอบ → ไม่ต้องแสดงคำตอบที่ถูกต้องและเฉลย (ตาม requirement)
       const correctScore = c.checkpointScore ?? 5;
-
-      // เมื่อ "ตอบแล้ว" ให้ดึงเฉลยจาก GET ได้
-      // ถ้ากดข้าม (SKIPPED) ให้เห็นเฉลยได้เช่นกัน
       const showSolution = attempted || isSkipped;
 
       return {
@@ -476,19 +483,18 @@ export class QuizService {
         type: c.checkpointType,
         question: c.checkpointQuestions,
         options: c.checkpointOption ?? null,
+
+        // ข้อมูลสถานะการทำ checkpoint ของผู้ใช้รายคน
         student_progress: {
-          // ตาม requirement: เมื่อ "ตอบแล้ว" ให้ดึงเฉลยจาก GET ได้
-          // (เริ่มต้นยังไม่ตอบ ต้องเป็น null)
           correct_answer: showSolution ? c.checkpointAnswer : null,
-          // แสดงคำตอบที่ผู้ใช้ตอบล่าสุด (เพื่อกลับเข้าหน้าเดิมแล้วเห็นคำตอบที่เคยเลือก)
           user_answer: r?.userAnswer ?? null,
-          // ถ้ายังไม่เคยตอบ ให้เป็น null (ไม่ใช่ true/false)
           is_correct: attempted ? (r?.isCorrect ?? null) : null,
           feedback: isSkipped ? 'ข้ามแล้ว' : attempted ? (isCorrect ? 'ผ่านแล้ว' : 'เกือบถูกแล้ว !') : null,
           checkpoint_status: checkpointStatus,
         },
+
+        // ข้อมูลสำหรับแสดงเฉลย (ถ้ายังไม่เคยตอบ จะไม่แสดงเฉลย)
         checkpoint_explanation: showSolution ? (c.checkpointExplanation ?? null) : null,
-        // ตาม requirement: เมื่อ "ตอบแล้ว" ให้ GET คืนคะแนนได้ (ผิด = 0, ถูก = 5)
         score: attempted ? (isCorrect ? correctScore : 0) : isSkipped ? 0 : null,
       };
     });
@@ -508,7 +514,8 @@ export class QuizService {
     const existing = await this.resultRepository.findOne({
       where: {
         userId,
-        lessonId: checkpoint.lessonId,
+        type: QuizsResultType.CHECKPOINT,
+        checkpointId,
       },
     });
 
@@ -566,6 +573,66 @@ export class QuizService {
     };
   }
 
+  private async syncUserXp(
+    userId: string,
+    chapterId: number,
+    lessonId: number,
+  ) {
+    // โหลด checkpoint ทั้งหมดของ lesson
+    const checkpoints = await this.checkpointRepository.find({
+      where: { lessonId },
+    });
+
+    const totalXp = checkpoints.reduce(
+      (sum, c) => sum + (c.checkpointScore ?? 5),
+      0,
+    );
+
+    // โหลด result ทั้งหมดของ user ใน lesson นี้
+    const results = await this.resultRepository.find({
+      where: {
+        userId,
+        type: QuizsResultType.CHECKPOINT,
+        lessonId,
+      },
+    });
+
+    const earnedXp = results.reduce((sum, r) => {
+      if (r.isCorrect) {
+        const cp = checkpoints.find(c => c.checkpointId === r.checkpointId);
+        return sum + (cp?.checkpointScore ?? 5);
+      }
+      return sum;
+    }, 0);
+
+    let userXp = await this.userXpRepository.findOne({
+      where: { userId, chapterId },
+    });
+
+    if (!userXp) {
+      userXp = this.userXpRepository.create({
+        userId,
+        chapterId,
+        xpEarned: earnedXp,
+        xpTotal: totalXp,
+        checkpointStatus: earnedXp === totalXp ? 'COMPLETED' : 'PENDING',
+        completedAt: earnedXp === totalXp ? new Date() : null,
+        lastAttemptAt: new Date(),
+      });
+    } else {
+      userXp.xpEarned = earnedXp;
+      userXp.xpTotal = totalXp;
+      userXp.lastAttemptAt = new Date();
+
+      if (earnedXp === totalXp && totalXp > 0) {
+        userXp.checkpointStatus = 'COMPLETED';
+        userXp.completedAt = new Date();
+      }
+    }
+
+    await this.userXpRepository.save(userXp);
+  }
+
   // ใช้เวลาเรียกจาก progress เมื่อบทเรียนเป็น checkpoint แล้วกด skip
   // ให้ sync สถานะเฉพาะของ checkpoint เป็น SKIPPED ทั้งหมดในบทเรียน (กรณีมีหลาย checkpoint ในบทเรียนเดียวกัน)
   async skipCheckpointsByLesson(lessonId: number, userId: string) {
@@ -589,6 +656,7 @@ export class QuizService {
     userId: string,
     answer: any,
   ) {
+    // 1. หา checkpoint
     const checkpoint = await this.checkpointRepository.findOne({
       where: { checkpointId },
     });
@@ -597,7 +665,7 @@ export class QuizService {
       throw new NotFoundException('Checkpoint not found');
     }
 
-    // ตรวจสอบว่าเคยทำ checkpoint นี้แล้วหรือไม่
+    // 2. ตรวจสอบ result เดิม
     const existing = await this.resultRepository.findOne({
       where: {
         userId,
@@ -606,31 +674,28 @@ export class QuizService {
       },
     });
 
+    // ถ้าข้ามแล้ว ห้ามตอบ
     if (existing?.status === QuizsStatus.SKIPPED) {
-      throw new ConflictException('This checkpoint has been skipped and cannot be answered.');
+      throw new ConflictException(
+        'This checkpoint has been skipped and cannot be answered.',
+      );
     }
 
-    // ล็อกการทำซ้ำ "เฉพาะ" กรณีที่เคยตอบถูกจริง ๆ (มีคำตอบที่บันทึกไว้)
-    // กันเคสข้อมูล legacy ที่อาจมี isCorrect=true แต่ userAnswer=null ทำให้ตอบไม่ได้ทั้งที่ยังไม่เคยตอบจริง
+    // ถ้าตอบถูกแล้ว ห้ามตอบซ้ำ
     if (existing?.isCorrect === true && existing.userAnswer != null) {
-      throw new ConflictException('This checkpoint has already been completed and cannot be answered again.');
+      throw new ConflictException(
+        'This checkpoint has already been completed.',
+      );
     }
 
-    // เทียบคำตอบแบบถูกต้องจริง
-    const isCorrect = isEqual(
-      checkpoint.checkpointAnswer,
-      answer,
-    );
-
-    const lesson = await this.lessonRepository.findOne({
-      where: { lesson_id: checkpoint.lessonId },
-    });
-
+    // 3. ตรวจคำตอบ
+    const isCorrect = isEqual(checkpoint.checkpointAnswer, answer);
     const correctScore = checkpoint.checkpointScore ?? 5;
     const score = isCorrect ? correctScore : 0;
 
-    // upsert quizs_results (checkpoint)
-    const toSave = existing ??
+    // 4. upsert result
+    const toSave =
+      existing ??
       this.resultRepository.create({
         userId,
         lessonId: checkpoint.lessonId,
@@ -640,78 +705,44 @@ export class QuizService {
 
     toSave.userAnswer = answer;
     toSave.isCorrect = isCorrect;
-    toSave.status = isCorrect ? QuizsStatus.COMPLETED : QuizsStatus.PENDING;
+    toSave.status = isCorrect
+      ? QuizsStatus.COMPLETED
+      : QuizsStatus.PENDING;
+
     await this.resultRepository.save(toSave);
 
-    // กรณีที่ไม่มี lesson (ข้อมูลไม่สมบูรณ์) ให้ส่งผลลัพธ์การทำ quiz ได้ แต่ไม่ต้อง sync progress ก็ได้
-    if (!lesson) {
-      return {
-        checkpoint_id: checkpoint.checkpointId,
-        lesson_id: checkpoint.lessonId,
-        chapter_id: null,
-        user_answer: answer,
-        is_correct: isCorrect,
-        score,
-        correct_answer: checkpoint.checkpointAnswer,
-        checkpoint_explanation: checkpoint.checkpointExplanation ?? null,
-        feedback: isCorrect
-          ? 'ผ่านแล้ว แต่ไม่สามารถให้ XP ได้'
-          : 'เกือบถูกแล้ว !',
-        checkpoint_status: isCorrect
-          ? 'COMPLETED'
-          : 'PENDING',
-      };
-    }
-
-    // ถ้าตอบถูก → sync progress (UserXp)
-    const chapterId = lesson.chapter_id;
-
-    let userXp = await this.userXpRepository.findOne({
-      where: { userId, chapterId },
+    // 5. หา lesson เพื่อ sync XP
+    const lesson = await this.lessonRepository.findOne({
+      where: { lesson_id: checkpoint.lessonId },
     });
 
-    if (!userXp) {
-      userXp = this.userXpRepository.create({
+    if (lesson) {
+      await this.syncUserXp(
         userId,
-        chapterId,
-        xpEarned: 0,
-        checkpointStatus: 'PENDING',
-        completedAt: null,
-        lastAttemptAt: null,
-      });
+        lesson.chapter_id,
+        checkpoint.lessonId,
+      );
     }
 
-    userXp.lastAttemptAt = new Date();
-
-    // update UserXp เฉพาะตอนตอบถูก
-    if (isCorrect) {
-      userXp.checkpointStatus = 'COMPLETED';
-      userXp.completedAt = new Date();
-
-      // ให้ XP แค่ครั้งแรกของ chapter (ตาม design เดิม)
-      if (userXp.xpEarned === 0) {
-        userXp.xpEarned = score;
-      }
-    }
-
-    userXp = await this.userXpRepository.save(userXp);
-
+    // 6. ส่ง response กลับ
     return {
       checkpoint_id: checkpoint.checkpointId,
       lesson_id: checkpoint.lessonId,
-      chapter_id: chapterId,
+      chapter_id: lesson?.chapter_id ?? null,
       user_answer: answer,
       is_correct: isCorrect,
       score,
       correct_answer: checkpoint.checkpointAnswer,
-      checkpoint_explanation: checkpoint.checkpointExplanation ?? null,
+      checkpoint_explanation:
+        checkpoint.checkpointExplanation ?? null,
       feedback: isCorrect
         ? 'ยอดเยี่ยมมาก !'
         : 'เกือบถูกแล้ว !',
-      checkpoint_status: isCorrect ? 'COMPLETED' : 'PENDING',
+      checkpoint_status: isCorrect
+        ? 'COMPLETED'
+        : 'PENDING',
     };
   }
-
 }
 
 // ฟังก์ชันช่วยเปรียบเทียบคำตอบแบบ deep equality (รองรับการเปรียบเทียบ array/object โดยไม่สนใจลำดับ)

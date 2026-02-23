@@ -7,6 +7,19 @@ import { RewardRedemption } from './entities/reward-redemption';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Reward, RewardRedemption])],
+import { User } from 'apps/auth/src/users/entities';
+import { UserXp } from 'apps/course/src/quizs/entities/user-xp.entity';
+
+@Module({
+  imports: [
+    TypeOrmModule.forFeature([
+      Reward,
+      RewardRedemption,
+    ] , 'reward'),
+    TypeOrmModule.forFeature([
+      UserXp,
+    ] , 'course'),
+  ],
   controllers: [RewardController],
   providers: [RewardService],
 })

@@ -58,7 +58,7 @@ export class Reward {
   @Column({ nullable: true })
   limit_per_user: number;
 
-  @Column({ nullable: true })
+  @Column({ nullable: false })
   total_limit: number;
 
   @Column({ nullable: true })
