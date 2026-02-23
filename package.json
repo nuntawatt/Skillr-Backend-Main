@@ -15,6 +15,7 @@
     "build:learning": "nest build learning",
     "build:payment": "nest build payment",
     "build:stock": "nest build stock",
+    "build:reward": "nest build reward",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\" \"test/**/*.ts\"",
     "start": "cross-env PORT=3001 nest start course",
     "start:dev": "cross-env PORT=3001 nest start course --watch",
