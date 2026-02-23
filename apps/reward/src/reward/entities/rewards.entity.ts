@@ -51,13 +51,6 @@ export class Reward {
   @Column({ type: 'timestamp' , nullable: false})
   redeem_end_date: Date;
 
-  @Column({
-    type: 'enum',
-    enum: RedemptionType,
-    nullable: false,
-  })
-  redemption_type: RedemptionType;
-
   @Column({ nullable: true })
   expire_after_days: number;
 

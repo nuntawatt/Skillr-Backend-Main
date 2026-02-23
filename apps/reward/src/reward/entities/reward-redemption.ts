@@ -19,18 +19,16 @@ export enum RedemptionStatus {
 }
 
 @Entity('reward_redemptions')
-@Index('idx_redemption_user', ['userId'])
+@Index('idx_redemption_user', ['user_id'])
 @Index('idx_redemption_reward', ['reward'])
-@Index('idx_redemption_status', ['status'])
-@Index('idx_redemption_user_reward', ['userId', 'reward'])
-@Index('idx_redemption_user_status', ['userId', 'status'])
-@Index('idx_redemption_redeemed_at', ['redeemedAt'])
+@Index('idx_redemption_user_reward', ['user_id', 'reward'])
+@Index('idx_redemption_redeemed_at', ['redeemed_at'])
 export class RewardRedemption {
   @PrimaryGeneratedColumn()
   id: number;
 
   @Column({ nullable: false})
-  userId: number;
+  user_id: number;
 
   @ManyToOne(() => Reward, (reward) => reward.redemptions, {
     onDelete: 'CASCADE',
@@ -38,18 +36,21 @@ export class RewardRedemption {
   reward: Reward;
 
   @Column()
-  usedPoints: number;
-
-  @Column({
-    type: 'enum',
-    enum: RedemptionStatus,
-    default: RedemptionStatus.PENDING,
-  })
-  status: RedemptionStatus;
+  used_points: number;
 
   @Column({ type: 'timestamp', nullable: true })
-  expireAt: Date;
+  expire_at: Date;
 
   @CreateDateColumn()
-  redeemedAt: Date;
+  redeemed_at: Date;
+
+  @CreateDateColumn()
+  created_at: Date;
+
+  @CreateDateColumn()
+  updated_at: Date;
+
+  @CreateDateColumn()
+  delete_at: Date;
+
 }
