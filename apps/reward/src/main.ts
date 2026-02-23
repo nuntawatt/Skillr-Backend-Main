@@ -29,6 +29,7 @@ async function bootstrap() {
     .setDescription('API documentation for the Reward Service')
     .setVersion('1.0.0')
     .addBearerAuth()
+    .addServer('https://api.skllracademy.com/s3/api')
     .addServer('/api')
     .build();
 
