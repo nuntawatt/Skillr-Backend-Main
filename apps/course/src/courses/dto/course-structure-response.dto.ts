@@ -10,6 +10,9 @@ export class LessonStructureDto {
   @ApiProperty({ description: 'Lesson type' })
   lesson_type: string;
 
+  @ApiProperty({ description: 'Lesson description', required: false })
+  lesson_description?: string;
+
   @ApiProperty({ description: 'Reference ID (article/video/quiz/etc)' })
   ref_id: number;
 

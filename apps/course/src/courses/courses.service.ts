@@ -134,6 +134,7 @@ export class CoursesService {
           lesson_id: lesson.lesson_id,
           lesson_title: lesson.lesson_title,
           lesson_type: lesson.lesson_type,
+          lesson_description: lesson.lesson_description,
           ref_id: lesson.ref_id,
           orderIndex: lesson.orderIndex,
         }));
