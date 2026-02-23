@@ -19,9 +19,6 @@ export class UserXp {
     @Column({ name: 'xp_total', type: 'int', default:0 })
     xpTotal: number
 
-    @Column({ name: 'xp_total', type: 'int', default: 0 })
-    xpTotal: number;
-
     @Column({
         name: 'checkpoint_status',
         type: 'varchar',
