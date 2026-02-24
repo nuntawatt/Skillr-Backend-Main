@@ -71,4 +71,6 @@ export class RewardController {
   getTotalXp(@CurrentUserId() userId: string) {
     return this.rewardService.getUserTotalXp(userId);
   }
+
+  
 }
