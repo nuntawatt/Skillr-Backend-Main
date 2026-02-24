@@ -19,9 +19,9 @@ export class RewardService {
     @InjectRepository(Reward , 'reward')
     private readonly rewardRepository: Repository<Reward>,
     @InjectRepository(RewardRedemption , 'reward')
-    private readonly redeemRepostory: Repository<RewardRedemption>,
+    private readonly redeemRepository: Repository<RewardRedemption>,
     @InjectRepository(UserXp, 'course')
-    private readonly userxpRepositoyry: Repository<UserXp>
+    private readonly userxpRepository: Repository<UserXp>
   ){}
 
 
@@ -30,7 +30,7 @@ export class RewardService {
   }
 
   async getRedeem(userId: string) {
-    const redeem = await this.redeemRepostory.find({
+    const redeem = await this.redeemRepository.find({
       where: {
         userId: userId,
       },
@@ -80,12 +80,6 @@ export class RewardService {
           where: { userId:  userId},
           lock: { mode: 'pessimistic_write' },
         });
-        console.log( 'user in service : '+user?.xpTotal )
-
-        const userTmp = await this.userxpRepositoyry.findOne({
-          where: { userId: userId }
-        })
-        console.log('user in UserXp : '+userTmp)
 
 
         if (!user) {

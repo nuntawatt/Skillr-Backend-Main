@@ -36,8 +36,6 @@ export class RewardController {
     @CurrentUserId() userId: string,
     @Param('reward_id', ParseIntPipe) reward_id: number,
   ) {
-    console.log('userId : ' + userId);
-    console.log('userId:', userId, typeof userId);
     return this.rewardService.redeemReward(userId, reward_id);
   }
 
