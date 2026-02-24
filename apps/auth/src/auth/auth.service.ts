@@ -57,12 +57,13 @@ export class AuthService {
       throw new ConflictException('Email already exists');
     }
 
-    // สร้าง user
+    // สร้าง user (ตั้ง verified ทันทีสำหรับการลงทะเบียนผ่านฟอร์ม)
     const user = await this.usersService.create({
       firstName: registerDto.firstName.trim(),
       lastName: registerDto.lastName.trim(),
       email,
-    });
+      isVerified: true,
+    } as any);
 
     // สร้าง local auth account
     await this.usersService.createEmailAuthAccount(
