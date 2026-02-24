@@ -185,21 +185,29 @@ export class QuizService {
           },
         });
 
+        // คำนวณ xp ทั้งหมดของบท (รวมทุก checkpoint ใน chapter นี้)
+        const lessonsInChapter = await this.lessonRepository.find({ where: { chapter_id: lesson.chapter_id } });
+        const lessonIds = lessonsInChapter.map((l) => l.lesson_id);
+        const checkpointsInChapter = await this.checkpointRepository.find({ where: { lessonId: In(lessonIds) } });
+        const chapterTotalXp = checkpointsInChapter.reduce((s, c) => s + (c.checkpointScore ?? 5), 0);
+
         // ถ้ายังไม่มี progress → สร้างใหม่
         if (!userXp) {
           userXp = this.userXpRepository.create({
             userId,
             chapterId: lesson.chapter_id,
             xpEarned: 0, // quiz ไม่ให้ XP (ตาม design ปัจจุบัน)
+            xpTotal: chapterTotalXp, // คำนวณ xp ทั้งหมดของบท (รวมทุก checkpoint ใน chapter นี้)
             checkpointStatus: 'COMPLETED',
             completedAt: new Date(),
             lastAttemptAt: new Date(),
           });
         } else {
-          // ถ้ามีอยู่แล้ว → อัปเดตสถานะ
+          // ถ้ามีอยู่แล้ว → อัปเดตสถานะ และอัปเดต xpTotal ให้ตรงกับ chapter
           userXp.checkpointStatus = 'COMPLETED';
           userXp.completedAt = new Date();
           userXp.lastAttemptAt = new Date();
+          userXp.xpTotal = chapterTotalXp; // อัปเดต xpTotal ให้ตรงกับ chapter
         }
 
         await this.userXpRepository.save(userXp);
@@ -578,28 +586,35 @@ export class QuizService {
     chapterId: number,
     lessonId: number,
   ) {
-    // โหลด checkpoint ทั้งหมดของ lesson
-    const checkpoints = await this.checkpointRepository.find({
-      where: { lessonId },
+    // Aggregate checkpoints across the whole chapter (all lessons under chapter)
+    const lessonsInChapter = await this.lessonRepository.find({
+      where: { chapter_id: chapterId },
     });
 
-    const totalXp = checkpoints.reduce(
-      (sum, c) => sum + (c.checkpointScore ?? 5),
-      0,
-    );
+    const lessonIds = lessonsInChapter.map((l) => l.lesson_id);
 
-    // โหลด result ทั้งหมดของ user ใน lesson นี้
-    const results = await this.resultRepository.find({
-      where: {
-        userId,
-        type: QuizsResultType.CHECKPOINT,
-        lessonId,
-      },
-    });
+    const checkpoints = lessonIds.length
+      ? await this.checkpointRepository.find({ where: { lessonId: In(lessonIds) } })
+      : [];
+
+    const totalXp = checkpoints.reduce((sum, c) => sum + (c.checkpointScore ?? 5), 0);
+
+    // Load user results for all checkpoints in this chapter
+    const checkpointIds = checkpoints.map((c) => c.checkpointId);
+
+    const results = checkpointIds.length
+      ? await this.resultRepository.find({
+          where: {
+            userId,
+            type: QuizsResultType.CHECKPOINT,
+            checkpointId: In(checkpointIds),
+          },
+        })
+      : [];
 
     const earnedXp = results.reduce((sum, r) => {
       if (r.isCorrect) {
-        const cp = checkpoints.find(c => c.checkpointId === r.checkpointId);
+        const cp = checkpoints.find((c) => c.checkpointId === r.checkpointId);
         return sum + (cp?.checkpointScore ?? 5);
       }
       return sum;
