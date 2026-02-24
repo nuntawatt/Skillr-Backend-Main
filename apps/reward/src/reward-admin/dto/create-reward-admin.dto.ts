@@ -48,7 +48,7 @@ export class CreateRewardAdminDto {
   @Type(() => Number)
   @IsNumber()
   @IsOptional()
-  @Min(0)
+  @Min(1)
   total_limit: number;
 
   @ApiProperty({ example: true })
