@@ -13,7 +13,7 @@ import {
   UseInterceptors,
   ParseIntPipe,
 } from '@nestjs/common';
-import { AdminService } from './reward-admin.service';
+import { RewardAdminService } from './reward-admin.service';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -35,7 +35,12 @@ import { UpdateRewardAdminDto } from './dto/update-reward-admin.dto';
 @Roles(UserRole.ADMIN)
 @Controller('admin')
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(private readonly RewardAdminService: RewardAdminService) {}
+
+  @Get('/reward/getAllAdminReward')
+    GetAllReward() {
+    return this.RewardAdminService.getAllReward();
+  }
 
   @Post('/reward/create')
   @HttpCode(HttpStatus.CREATED)
@@ -51,7 +56,6 @@ export class AdminController {
         'redeem_start_date',
         'redeem_end_date',
         'is_active',
-        'total_limit'
       ],
       properties: {
         name: { type: 'string' },
@@ -59,10 +63,8 @@ export class AdminController {
         required_points: { type: 'number' },
         redeem_start_date: { type: 'string', format: 'date-time' },
         redeem_end_date: { type: 'string', format: 'date-time' },
-        expire_after_days: { type: 'number' },
         limit_per_user: { type: 'number' },
         total_limit: { type: 'number' },
-        show_remaining_threshold: { type: 'number' },
         is_active: { type: 'boolean' },
         image: {
           type: 'string',
@@ -82,9 +84,9 @@ export class AdminController {
     @UploadedFile() file: Express.Multer.File,
     @Body() createRewardDto: CreateRewardAdminDto,
   ) {
-    const imgUrl = await this.adminService.uploadRewardImage(file);
+    const imgUrl = await this.RewardAdminService.uploadRewardImage(file);
 
-    const rewardCreated = await this.adminService.createReward(
+    const rewardCreated = await this.RewardAdminService.createReward(
       createRewardDto,
       imgUrl,
     );
@@ -109,10 +111,10 @@ export class AdminController {
     let imageUrl: string | undefined;
 
     if (file) {
-      imageUrl = await this.adminService.uploadRewardImage(file);
+      imageUrl = await this.RewardAdminService.uploadRewardImage(file);
     }
 
-    const updatedReward = this.adminService.updateReward(id, dto, imageUrl);
+    const updatedReward = this.RewardAdminService.updateReward(id, dto, imageUrl);
 
     return {
       message: "Update reward success"
@@ -121,7 +123,7 @@ export class AdminController {
   
   @Delete('reward/delete/:id')
   async deleteReward(@Param('id', ParseIntPipe) id: number){
-    const removeReward = await this.adminService.removeRewardById(id);
+    const removeReward = await this.RewardAdminService.removeRewardById(id);
 
     return {
       message: "Remove reward success"
@@ -132,26 +134,26 @@ export class AdminController {
 
   // @Post()
   // create(@Body() createAdminDto: CreateAdminDto) {
-  //   return this.adminService.create(createAdminDto);
+  //   return this.RewardAdminService.create(createAdminDto);
   // }
 
   // @Get()
   // findAll() {
-  //   return this.adminService.findAll();
+  //   return this.RewardAdminService.findAll();
   // }
 
   // @Get(':id')
   // findOne(@Param('id') id: string) {
-  //   return this.adminService.findOne(+id);
+  //   return this.RewardAdminService.findOne(+id);
   // }
 
   // @Patch(':id')
   // update(@Param('id') id: string, @Body() updateAdminDto: UpdateAdminDto) {
-  //   return this.adminService.update(+id, updateAdminDto);
+  //   return this.RewardAdminService.update(+id, updateAdminDto);
   // }
 
   // @Delete(':id')
   // remove(@Param('id') id: string) {
-  //   return this.adminService.remove(+id);
+  //   return this.RewardAdminService.remove(+id);
   // }
 }
