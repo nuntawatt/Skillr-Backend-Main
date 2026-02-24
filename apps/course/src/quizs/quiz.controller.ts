@@ -116,6 +116,7 @@ export class QuizAdminController {
   @ApiResponse({ status: 204, description: 'Quiz deleted successfully' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   removeQuiz(@Param('lessonId', ParseIntPipe) lessonId: number) {
+
     return this.quizService.removeQuizs(lessonId);
   }
 
