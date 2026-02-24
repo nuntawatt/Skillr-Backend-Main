@@ -376,24 +376,28 @@ export class QuizService {
     return { message: msg };
   }
 
-  // ลบ checkpoint ตาม checkpoint ID
-  async removeCheckpoint(checkpointId: number): Promise<void> {
-
-    const checkpoint = await this.checkpointRepository.findOne({
-      where: { checkpointId },
-    });
-
-    if (!checkpoint) {
-      throw new NotFoundException('Checkpoint not found');
-    }
-
-    await this.checkpointRepository.remove(checkpoint);
-  }
 
   // ลบ checkpoint ตาม lesson ID
-  async removeCheckpointByLessonId(lessonId: number): Promise<void> {
+  async removeCheckpointByLessonId(lessonId: number): Promise<{ message: string }> {
     const checkpoint = await this.findOneCheckpointByLessonId(lessonId);
     await this.checkpointRepository.remove(checkpoint);
+
+    // ลบค่า lesson_description ของ lesson ที่ผูกกับ checkpoint
+    const lesson = await this.lessonRepository.findOne({ where: { lesson_id: lessonId } });
+    let descCleared = false;
+    if (lesson) {
+      if (lesson.lesson_description !== null && lesson.lesson_description !== undefined) {
+        lesson.lesson_description = null;
+        await this.lessonRepository.save(lesson);
+        descCleared = true;
+      }
+    }
+
+    const msg = descCleared
+      ? `Checkpoint ${lessonId} deleted and lesson_description cleared.`
+      : `Checkpoint ${lessonId} deleted.`;
+
+    return { message: msg };
   }
 
 
