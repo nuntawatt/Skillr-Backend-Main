@@ -21,7 +21,7 @@ import { UserRole } from '@common/enums';
 export class RewardController {
   constructor(private readonly rewardService: RewardService) {}
 
-  @Get('getAllRewards')
+  @Get('getAllStudentRewards')
   GetAllReward() {
     return this.rewardService.getAllReward();
   }

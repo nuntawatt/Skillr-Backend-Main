@@ -37,33 +37,19 @@ export class CreateRewardAdminDto {
   @IsDateString()
   redeem_end_date: Date;
 
-  @ApiProperty({ example: 30 })
-  @Type(() => Number)
-  @IsOptional()
-  @IsNumber()
-  @Min(1)
-  expire_after_days: number | undefined;
-
   @ApiProperty({ example: 1 })
   @Type(() => Number)
   @IsOptional()
   @IsNumber()
   @Min(1)
-  limit_per_user?: number;
+  limit_per_user: number;
 
   @ApiProperty({ example: 1000 })
   @Type(() => Number)
   @IsNumber()
   @IsOptional()
-  @Min(1)
-  total_limit?: number;
-
-  @ApiProperty({ example: 10 })
-  @Type(() => Number)
-  @IsNumber()
-  @IsOptional()
-  @Min(1)
-  show_remaining_threshold?: number | undefined;
+  @Min(0)
+  total_limit: number;
 
   @ApiProperty({ example: true })
   @Type(() => Boolean)
