@@ -21,7 +21,7 @@ import { UserRole } from '@common/enums';
 export class RewardController {
   constructor(private readonly rewardService: RewardService) {}
 
-  @Get('getAllRewards')
+  @Get('getAllStudentRewards')
   @ApiOperation({ summary: 'ดึงข้อมูล reward ทั้งหมด' })
   @ApiResponse({ status: 200, description: 'List of rewards' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
