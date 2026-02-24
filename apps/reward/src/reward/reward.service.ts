@@ -155,4 +155,15 @@ export class RewardService {
     }
   }
 
+ // สำหรับดึง total XP ของ user (ใช้ในหน้า reward เพื่อแสดง XP ปัจจุบันของ user)
+  async getUserTotalXp(userId: string): Promise<number> {
+    const raw = await this.userxpRepositoyry
+      .createQueryBuilder('ux')
+      .select('COALESCE(SUM(ux.xpTotal), 0)', 'total')
+      .where('ux.userId = :userId', { userId })
+      .getRawOne<{ total: string }>();
+
+    return Number(raw?.total ?? 0);
+  }
+
 }

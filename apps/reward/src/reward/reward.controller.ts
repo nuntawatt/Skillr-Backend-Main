@@ -12,7 +12,7 @@ import {
 import { RewardService } from './reward.service';
 import { UpdateRewardDto } from './dto/update-reward.dto';
 import { CurrentUserId, JwtAuthGuard, Roles, RolesGuard } from '@auth';
-import { ApiBearerAuth, ApiOperation, ApiParam } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
 import { UserRole } from '@common/enums';
 @Controller('rewards')
 @ApiBearerAuth()
@@ -22,12 +22,22 @@ export class RewardController {
   constructor(private readonly rewardService: RewardService) {}
 
   @Get('getAllRewards')
+  @ApiOperation({ summary: 'ดึงข้อมูล reward ทั้งหมด' })
+  @ApiResponse({ status: 200, description: 'List of rewards' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   GetAllReward() {
     return this.rewardService.getAllReward();
   }
 
   @Post(':reward_id/redeem')
   @ApiOperation({ summary: 'แลก reward โดยใช้แต้มของ user' })
+  @ApiResponse({ status: 200, description: 'Reward redeemed successfully' })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   @ApiParam({
     name: 'reward_id',
     type: Number,
@@ -42,7 +52,23 @@ export class RewardController {
   }
 
   @Get('getReedeem')
+  @ApiOperation({ summary: 'ดึงข้อมูล reward ที่ user แลกไปแล้ว' })
+  @ApiResponse({ status: 200, description: 'List of redeemed rewards' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   getReedeem(@CurrentUserId() userId: string) {
     return this.rewardService.getRedeem(userId);
+  }
+
+  @Get('userxp')
+  @ApiOperation({ summary: 'Get current user XP' })
+  @ApiResponse({ status: 200, description: 'Current user XP' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
+  @ApiOperation({ summary: 'Get total XP for current user' })
+  getTotalXp(@CurrentUserId() userId: string) {
+    return this.rewardService.getUserTotalXp(userId);
   }
 }
