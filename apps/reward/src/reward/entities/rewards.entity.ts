@@ -52,17 +52,17 @@ export class Reward {
   @Column({ type: 'timestamp' , nullable: false})
   redeem_end_date: Date;
 
-  @Column({ nullable: true })
-  expire_after_days: number;
+  // @Column({ nullable: true })
+  // expire_after_days: number;
 
   @Column({ nullable: true })
   limit_per_user: number;
 
-  @Column({ nullable: false })
+  @Column({ nullable: true })
   total_limit: number;
 
-  @Column({ nullable: true })
-  show_remaining_threshold: number;
+  // @Column({ nullable: true })
+  // show_remaining_threshold: number;
 
   @Column({ default: true })
   is_active: boolean;

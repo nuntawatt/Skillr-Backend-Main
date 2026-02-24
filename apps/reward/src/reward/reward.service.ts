@@ -116,20 +116,13 @@ export class RewardService {
 
       reward.remain -= 1;
       await rewardQueryRunner.manager.save(reward);
-
-      let expireAt: Date | null = null;
-      if (reward.expire_after_days) {
-        expireAt = new Date();
-        expireAt.setDate(expireAt.getDate() + reward.expire_after_days);
-      }
-
       const token = randomUUID();
 
       const redemption = rewardQueryRunner.manager.create(RewardRedemption, {
         userId,
         reward,
         used_points: Number(reward.required_points),
-        expire_at: expireAt,
+        expire_at: reward.redeem_end_date,
         redeem_token: token,
       });
 
