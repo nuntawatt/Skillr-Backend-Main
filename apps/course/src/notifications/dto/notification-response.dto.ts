@@ -2,10 +2,10 @@ import { ApiProperty } from '@nestjs/swagger';
 
 export class NotificationResponseDto {
   @ApiProperty({ 
-    example: '550e8400-e29b-41d4-a716-446655440000',
+    example: '8a06f4c0-7e22-4c32-9834-0847014d97cd',
     description: 'Unique identifier for the notification (UUID)'
   })
-  notificationId: string;
+  id: string;
 
   @ApiProperty({ example: 'Course Completed! 🎉' })
   title: string;

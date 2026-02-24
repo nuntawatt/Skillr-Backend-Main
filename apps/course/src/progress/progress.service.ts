@@ -51,9 +51,10 @@ export class ProgressService {
 
     // ดึงบทที่เกี่ยวข้องกับบทเรียนเหล่านั้น
     const chapterIds = Array.from(new Set(lessons.map((l) => l.chapter_id)));
-    const chapters = chapterIds.length ? await this.chapterRepository.find({
-      where: { chapter_id: In(chapterIds) },
-    })
+    const chapters = chapterIds.length
+      ? await this.chapterRepository.find({
+          where: { chapter_id: In(chapterIds) },
+        })
       : [];
     const levelIdByChapterId = new Map(
       chapters.map((c) => [c.chapter_id, c.levelId] as const),
@@ -201,7 +202,7 @@ export class ProgressService {
     const nextLesson = await this.lessonRepository.findOne({
       where: {
         chapter_id: lesson.chapter_id,
-        orderIndex: lesson.orderIndex + 1,
+        orderIndex: MoreThan(lesson.orderIndex),
       },
       order: { orderIndex: 'ASC' },
     });
@@ -370,7 +371,7 @@ export class ProgressService {
     const nextLesson = await this.lessonRepository.findOne({
       where: {
         chapter_id: currentLesson.chapter_id,
-        orderIndex: currentLesson.orderIndex + 1,
+        orderIndex: MoreThan(currentLesson.orderIndex),
       },
       order: { orderIndex: 'ASC' },
     });

@@ -19,9 +19,9 @@ export class RewardService {
     @InjectRepository(Reward , 'reward')
     private readonly rewardRepository: Repository<Reward>,
     @InjectRepository(RewardRedemption , 'reward')
-    private readonly redeemRepostory: Repository<RewardRedemption>,
+    private readonly redeemRepository: Repository<RewardRedemption>,
     @InjectRepository(UserXp, 'course')
-    private readonly userxpRepositoyry: Repository<UserXp>
+    private readonly userxpRepository: Repository<UserXp>
   ){}
 
 
@@ -30,7 +30,7 @@ export class RewardService {
   }
 
   async getRedeem(userId: string) {
-    const redeem = await this.redeemRepostory.find({
+    const redeem = await this.redeemRepository.find({
       where: {
         userId: userId,
       },
@@ -80,12 +80,6 @@ export class RewardService {
           where: { userId:  userId},
           lock: { mode: 'pessimistic_write' },
         });
-        console.log( 'user in service : '+user?.xpTotal )
-
-        const userTmp = await this.userxpRepositoyry.findOne({
-          where: { userId: userId }
-        })
-        console.log('user in UserXp : '+userTmp)
 
 
         if (!user) {
@@ -122,20 +116,13 @@ export class RewardService {
 
       reward.remain -= 1;
       await rewardQueryRunner.manager.save(reward);
-
-      let expireAt: Date | null = null;
-      if (reward.expire_after_days) {
-        expireAt = new Date();
-        expireAt.setDate(expireAt.getDate() + reward.expire_after_days);
-      }
-
       const token = randomUUID();
 
       const redemption = rewardQueryRunner.manager.create(RewardRedemption, {
         userId,
         reward,
         used_points: Number(reward.required_points),
-        expire_at: expireAt,
+        expire_at: reward.redeem_end_date,
         redeem_token: token,
       });
 
@@ -153,6 +140,17 @@ export class RewardService {
     } finally {
       await rewardQueryRunner.release();
     }
+  }
+
+ // สำหรับดึง total XP ของ user (ใช้ในหน้า reward เพื่อแสดง XP ปัจจุบันของ user)
+  async getUserTotalXp(userId: string): Promise<number> {
+    const raw = await this.userxpRepository
+      .createQueryBuilder('ux')
+      .select('COALESCE(SUM(ux.xpTotal), 0)', 'total')
+      .where('ux.userId = :userId', { userId })
+      .getRawOne<{ total: string }>();
+
+    return Number(raw?.total ?? 0);
   }
 
 }

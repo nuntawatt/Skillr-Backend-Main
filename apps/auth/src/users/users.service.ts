@@ -44,7 +44,7 @@ export class UsersService {
     // const user = this.userRepo.create(dto);
     const user = this.userRepo.create({
       ...dto,
-      isVerified: false,
+      isVerified: (dto as any).isVerified ?? false,
     });
 
     return this.userRepo.save(user);

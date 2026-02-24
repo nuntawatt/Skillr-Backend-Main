@@ -48,7 +48,7 @@ export class NotificationsController {
     example: {
       data: [
         {
-          notificationId: '550e8400-e29b-41d4-a716-446655440000',
+          id: '550e8400-e29b-41d4-a716-446655440000',
           title: 'Course Completed! 🎉',
           message: 'Congratulations! You\'ve completed "Basic TypeScript"',
           type: 'success',
@@ -57,7 +57,7 @@ export class NotificationsController {
           createdAt: '2025-01-15T10:30:00.000Z'
         },
         {
-          notificationId: '660e8400-e29b-41d4-a716-446655440001',
+          id: '660e8400-e29b-41d4-a716-446655440001',
           title: 'Streak Milestone! 🔥',
           message: 'Amazing! You\'ve maintained a 7-day learning streak!',
           type: 'success',
@@ -101,7 +101,7 @@ export class NotificationsController {
     ]);
 
     const notificationDtos: NotificationResponseDto[] = notifications.map(notification => ({
-      notificationId: notification.notificationId,
+      id: notification.notificationId,
       title: notification.title,
       message: notification.message,
       type: notification.type,
@@ -141,7 +141,7 @@ export class NotificationsController {
     const { notifications, total } = await this.notificationsService.getAllNotifications(limit, offset);
 
     const notificationDtos: NotificationResponseDto[] = notifications.map(notification => ({
-      notificationId: notification.notificationId,
+      id: notification.notificationId,
       title: notification.title,
       message: notification.message,
       type: notification.type,
@@ -186,7 +186,7 @@ export class NotificationsController {
     description: 'Notification created successfully',
     type: NotificationResponseDto,
     example: {
-      notificationId: '550e8400-e29b-41d4-a716-446655440000',
+      id: '550e8400-e29b-41d4-a716-446655440000',
       title: 'Course Completed! 🎉',
       message: 'Congratulations! You completed "TypeScript Basics"',
       type: 'success',
@@ -211,7 +211,7 @@ export class NotificationsController {
       );
 
       return {
-        notificationId: notification.notificationId,
+        id: notification.notificationId,
         title: notification.title,
         message: notification.message,
         type: notification.type,
@@ -288,7 +288,7 @@ export class NotificationsController {
     description: 'Notification updated successfully',
     type: NotificationResponseDto,
     example: {
-      notificationId: '550e8400-e29b-41d4-a716-446655440000',
+      id: '550e8400-e29b-41d4-a716-446655440000',
       title: 'Updated: Course Completed! 🎉',
       message: 'Congratulations! You successfully completed "Advanced TypeScript"',
       type: 'success',
@@ -315,7 +315,7 @@ export class NotificationsController {
     }
 
     return {
-      notificationId: notification.notificationId,
+      id: notification.notificationId,
       title: notification.title,
       message: notification.message,
       type: notification.type,
