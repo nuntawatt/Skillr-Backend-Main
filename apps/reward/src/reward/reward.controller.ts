@@ -62,7 +62,7 @@ export class RewardController {
   }
 
   @Get('userxp')
-  @ApiOperation({ summary: 'Get current user XP' })
+  @ApiOperation({ summary: 'ดึง XP ทั้งหมดของผู้ใช้' })
   @ApiResponse({ status: 200, description: 'Current user XP' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
