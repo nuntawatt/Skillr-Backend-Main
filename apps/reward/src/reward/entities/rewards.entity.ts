@@ -37,7 +37,7 @@ export class Reward {
   @Column({ type: 'text', nullable: false })
   description: string;
 
-  @Column({ type: 'decimal',  precision: 6 , nullable: false })
+  @Column({ type: 'decimal',  precision: 6 , nullable: true })
   remain: number;
 
   @Column({ nullable: false })
