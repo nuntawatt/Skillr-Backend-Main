@@ -250,7 +250,7 @@ export class LessonsService {
     return {
       lesson_id: lesson.lesson_id,
       lesson_title: lesson.lesson_title,
-      lesson_description: lesson.lesson_description,
+      lesson_description: lesson.lesson_description ?? undefined,
       lesson_type: lesson.lesson_type,
       ref_id: lesson.ref_id,
       orderIndex: lesson.orderIndex,

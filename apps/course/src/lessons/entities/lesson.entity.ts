@@ -19,7 +19,7 @@ export class Lesson {
   lesson_title: string;
 
   @Column({ name: 'lesson_description', type: 'text', nullable: true })
-  lesson_description?: string;
+  lesson_description?: string | null;
 
   @Column({
     type: 'enum',

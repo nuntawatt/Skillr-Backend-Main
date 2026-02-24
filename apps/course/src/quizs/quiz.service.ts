@@ -356,21 +356,22 @@ export class QuizService {
   // ลบ quiz ตาม lesson ID
   async removeQuizs(lessonId: number): Promise<{ message: string }> {
     const quiz = await this.findOneQuizsByLesson(lessonId);
-
-    // ลบ quiz ก่อน
     await this.quizsRepository.remove(quiz);
 
-    // พยายามลบ lesson ที่เกี่ยวข้อง
+    // ลบค่า lesson_description ของ lesson ที่ผูกกับ quiz (ถ้ามี)
     const lesson = await this.lessonRepository.findOne({ where: { lesson_id: lessonId } });
-    let lessonRemoved = false;
+    let descCleared = false;
     if (lesson) {
-      await this.lessonRepository.remove(lesson);
-      lessonRemoved = true;
+      if (lesson.lesson_description !== null && lesson.lesson_description !== undefined) {
+        lesson.lesson_description = null;
+        await this.lessonRepository.save(lesson);
+        descCleared = true;
+      }
     }
 
-    const msg = lessonRemoved
-      ? `Quiz ${lessonId} and its lesson were removed successfully.`
-      : `Quiz ${lessonId} removed successfully. No lesson found to remove.`;
+    const msg = descCleared
+      ? `Quiz ${lessonId} deleted and lesson_description cleared.`
+      : `Quiz ${lessonId} deleted.`;
 
     return { message: msg };
   }
