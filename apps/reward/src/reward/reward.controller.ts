@@ -26,6 +26,7 @@ export class RewardController {
   @ApiResponse({ status: 200, description: 'List of rewards' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Rewards not found' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
   GetAllReward() {
     return this.rewardService.getAllReward();
@@ -37,6 +38,7 @@ export class RewardController {
   @ApiResponse({ status: 400, description: 'Bad Request' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Reward not found' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
   @ApiParam({
     name: 'reward_id',
@@ -54,6 +56,7 @@ export class RewardController {
   @ApiResponse({ status: 200, description: 'List of redeemed rewards' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Redemption not found' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
   getReedeem(@CurrentUserId() userId: string) {
     return this.rewardService.getRedeem(userId);
@@ -64,6 +67,7 @@ export class RewardController {
   @ApiResponse({ status: 200, description: 'Current user XP' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'User not found' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
   @ApiOperation({ summary: 'Get total XP for current user' })
   getTotalXp(@CurrentUserId() userId: string) {
