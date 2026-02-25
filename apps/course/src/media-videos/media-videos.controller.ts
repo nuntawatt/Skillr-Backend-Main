@@ -17,33 +17,33 @@ export class MediaVideosController {
   constructor(private readonly svc: MediaVideosService) { }
 
   // อัพโหลดวิดีโอผ่าน form-data (สำหรับไฟล์ขนาดเล็ก - สูงสุด 1GB)
-  @Post('upload')
-  @ApiOperation({ summary: 'อัปโหลดวิดีโอผ่านฟอร์มดาต้าฝั่งเซิร์ฟเวอร์' })
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        file: { type: 'string', format: 'binary', description: 'Video file' },
-      },
-      required: ['file'],
-    },
-  })
-  @ApiCreatedResponse({ description: 'Video uploaded successfully' })
-  @ApiResponse({ status: 400, description: 'Invalid file or file size exceeds limit' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: multer.memoryStorage(),
-      limits: { fileSize: 1 * 1024 * 1024 * 1024 }, // 1GB limit for form upload
-    }),
-  )
-  async uploadVideo(@UploadedFile() file: Express.Multer.File, @Body() body: Record<string, any>) {
-    return this.svc.uploadVideoFileAndPersist(file);
-  }
+  // @Post('upload')
+  // @ApiOperation({ summary: 'อัปโหลดวิดีโอผ่านฟอร์มดาต้าฝั่งเซิร์ฟเวอร์' })
+  // @ApiConsumes('multipart/form-data')
+  // @ApiBody({
+  //   schema: {
+  //     type: 'object',
+  //     properties: {
+  //       file: { type: 'string', format: 'binary', description: 'Video file' },
+  //     },
+  //     required: ['file'],
+  //   },
+  // })
+  // @ApiCreatedResponse({ description: 'Video uploaded successfully' })
+  // @ApiResponse({ status: 400, description: 'Invalid file or file size exceeds limit' })
+  // @ApiResponse({ status: 500, description: 'Internal server error' })
+  // @UseInterceptors(
+  //   FileInterceptor('file', {
+  //     storage: multer.memoryStorage(),
+  //     limits: { fileSize: 1 * 1024 * 1024 * 1024 }, // 1GB limit for form upload
+  //   }),
+  // )
+  // async uploadVideo(@UploadedFile() file: Express.Multer.File, @Body() body: Record<string, any>) {
+  //   return this.svc.uploadVideoFileAndPersist(file);
+  // }
 
   // สร้าง presigned URL สำหรับอัพโหลดวิดีโอ (สำหรับไฟล์ขนาดใหญ่ - สูงสุด 2GB)
-  @Post('presign')
+  @Post()
   @ApiOperation({ summary: 'สร้าง URL ที่ลงชื่อล่วงหน้าสำหรับการอัปโหลดวิดีโอ (สำหรับไฟล์ขนาดใหญ่)' })
   @ApiBody({ type: CreateVideoPresignDto })
   @ApiCreatedResponse({ description: 'Presigned URL created' })

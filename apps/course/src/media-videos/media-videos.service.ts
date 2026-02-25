@@ -28,43 +28,43 @@ export class MediaVideosService {
   }
 
   // อัพโหลดไฟล์วิดีโอผ่าน form-data (สำหรับไฟล์ขนาดเล็ก - สูงสุด 1GB)
-  async uploadVideoFileAndPersist(file: Express.Multer.File) {
-    if (!file) throw new BadRequestException('file missing');
-    this.validateVideoMime(file.mimetype ?? '');
+  // async uploadVideoFileAndPersist(file: Express.Multer.File) {
+  //   if (!file) throw new BadRequestException('file missing');
+  //   this.validateVideoMime(file.mimetype ?? '');
 
-    const maxSize = 1 * 1024 * 1024 * 1024; // 1GB for form upload
-    if (file.size > maxSize) throw new BadRequestException('file size exceeds limit');
+  //   const maxSize = 1 * 1024 * 1024 * 1024; // 1GB for form upload
+  //   if (file.size > maxSize) throw new BadRequestException('file size exceeds limit');
 
-    const storage = this.storageFactory.video();
-    const bucket = storage.bucket;
-    const videoId = randomUUID();
-    // const ext = this.getFileExtension(file.originalname) || 'mp4';
-    const key = `videos/${videoId}`;
+  //   const storage = this.storageFactory.video();
+  //   const bucket = storage.bucket;
+  //   const videoId = randomUUID();
+  //   // const ext = this.getFileExtension(file.originalname) || 'mp4';
+  //   const key = `videos/${videoId}`;
 
-    // Upload to storage
-    await storage.putObject(bucket, key, file.buffer, file.size, { 'Content-Type': file.mimetype });
+  //   // Upload to storage
+  //   await storage.putObject(bucket, key, file.buffer, file.size, { 'Content-Type': file.mimetype });
 
-    const publicUrl = typeof storage.buildPublicUrl === 'function' ? storage.buildPublicUrl(bucket, key) : undefined;
+  //   const publicUrl = typeof storage.buildPublicUrl === 'function' ? storage.buildPublicUrl(bucket, key) : undefined;
 
-    const saved = await this.repo.save(
-      this.repo.create({
-        originalFilename: file.originalname,
-        mimeType: file.mimetype,
-        sizeBytes: String(file.size),
-        storageProvider: 's3',
-        storageBucket: bucket,
-        storageKey: key,
-        publicUrl,
-        status: VideoAssetStatus.READY,
-      }),
-    );
+  //   const saved = await this.repo.save(
+  //     this.repo.create({
+  //       originalFilename: file.originalname,
+  //       mimeType: file.mimetype,
+  //       sizeBytes: String(file.size),
+  //       storageProvider: 's3',
+  //       storageBucket: bucket,
+  //       storageKey: key,
+  //       publicUrl,
+  //       status: VideoAssetStatus.READY,
+  //     }),
+  //   );
 
-    return {
-      video_id: saved.id,
-      url: saved.publicUrl,
-      status: saved.status,
-    };
-  }
+  //   return {
+  //     video_id: saved.id,
+  //     url: saved.publicUrl,
+  //     status: saved.status,
+  //   };
+  // }
 
   // 1. สร้าง presigned upload URL สำหรับอัพโหลดวิดีโอ (สำหรับไฟล์ขนาดใหญ่ - สูงสุด 2GB)
   async createPresignedUpload(dto: CreateVideoPresignDto) {
