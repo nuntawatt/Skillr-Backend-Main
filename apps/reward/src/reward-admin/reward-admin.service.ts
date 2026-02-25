@@ -12,12 +12,26 @@ import { randomUUID } from 'crypto';
 import { StorageFactory } from 'apps/course/src/storage/storage.factory';
 
 @Injectable()
-export class AdminService {
+export class RewardAdminService {
   constructor(
     private readonly storageFactory: StorageFactory,
     @InjectRepository(Reward, 'reward')
     private rewardRepo: Repository<Reward>,
   ) {}
+
+  getAllReward() {
+    return this.rewardRepo.find();
+  }
+
+  async getRewardDetail(id: number) {
+    const reward = await this.rewardRepo.findOne({ where: { id } });
+
+    if (!reward) {
+      throw new NotFoundException('Reward not found');
+    }
+
+    return reward;
+  }
 
   async createReward(createRewardDto: CreateRewardAdminDto, imageUrl: string) {
     const { redeem_start_date, redeem_end_date } = createRewardDto;
@@ -73,7 +87,6 @@ export class AdminService {
     const reward = await this.rewardRepo.findOne({ where: { id } });
 
     console.log(reward);
-    
 
     if (reward === null || reward === undefined) {
       throw new NotFoundException('Reward not found');

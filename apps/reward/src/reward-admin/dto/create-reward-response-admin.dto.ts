@@ -27,16 +27,10 @@ export class CreateRewardAdminResponseDto {
   redeem_end_date: Date;
 
   @ApiProperty()
-  expire_after_days: number;
-
-  @ApiProperty()
   limit_per_user: number;
 
   @ApiProperty()
   total_limit: number;
-
-  @ApiProperty()
-  show_remaining_threshold: number;
 
   @ApiProperty()
   is_active: boolean;

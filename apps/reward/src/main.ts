@@ -30,7 +30,7 @@ async function bootstrap() {
     .setVersion('1.0.0')
     .addBearerAuth()
     .addServer('https://api.skllracademy.com/s3/api')
-    .addServer('/api')
+    .addServer('http://localhost:3003/api')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

@@ -12,8 +12,9 @@ import {
 import { RewardService } from './reward.service';
 import { UpdateRewardDto } from './dto/update-reward.dto';
 import { CurrentUserId, JwtAuthGuard, Roles, RolesGuard } from '@auth';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
+import { ApiBadRequestResponse, ApiBearerAuth, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
 import { UserRole } from '@common/enums';
+import { Reward } from './entities/rewards.entity';
 @Controller('rewards')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -21,7 +22,7 @@ import { UserRole } from '@common/enums';
 export class RewardController {
   constructor(private readonly rewardService: RewardService) {}
 
-  @Get('getAllRewards')
+  @Get('getAllStudentRewards')
   @ApiOperation({ summary: 'ดึงข้อมูล reward ทั้งหมด' })
   @ApiResponse({ status: 200, description: 'List of rewards' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -31,6 +32,35 @@ export class RewardController {
   GetAllReward() {
     return this.rewardService.getAllReward();
   }
+
+  
+  @Get(':reward_id/rewardDetail')
+  @ApiOperation({
+    summary: 'Get reward detail by id',
+    description: 'Retrieve reward information by reward id',
+  })
+  @ApiParam({
+    name: 'reward_id',
+    type: Number,
+    description: 'Reward ID',
+    example: 1,
+  })
+  @ApiOkResponse({
+    description: 'Reward detail retrieved successfully',
+    type: Reward,
+  })
+  @ApiBadRequestResponse({
+    description: 'Invalid reward id',
+  })
+  @ApiNotFoundResponse({
+    description: 'Reward not found',
+  })
+  getDetailReward(
+    @Param('reward_id', ParseIntPipe) reward_id: number,
+  ) {
+    return this.rewardService.getDetailReward(reward_id);
+  }
+
 
   @Post(':reward_id/redeem')
   @ApiOperation({ summary: 'แลก reward โดยใช้แต้มของ user' })
