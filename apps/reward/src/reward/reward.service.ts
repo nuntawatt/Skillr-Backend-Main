@@ -8,6 +8,7 @@ import { RewardRedemption } from './entities/reward-redemption';
 import { User } from 'apps/auth/src/users/entities';
 import { UserXp } from 'apps/course/src/quizs/entities/user-xp.entity';
 import { randomUUID } from 'crypto';
+import { log } from 'console';
 
 @Injectable()
 export class RewardService {
@@ -180,11 +181,19 @@ export class RewardService {
     userId: string,
     reward: Reward,
   ) {
-    if (!reward.limit_per_user) return;
+    if (reward.limit_per_user == null || reward.limit_per_user == 0) {
+      console.log('limit null')
+      return;
+    }
 
     const count = await runner.manager.count(RewardRedemption, {
-      where: { userId, reward },
+      where: {
+        userId,
+        reward: { id: reward.id },
+      },
     });
+
+    console.log('count : '+count + ' userId : '+userId+ ' rewardId : '+reward.id)
 
     if (count >= reward.limit_per_user) {
       throw new BadRequestException('Redeem limit exceeded');
