@@ -36,6 +36,9 @@ export class RewardRedemption {
   @Column({ unique: true })
   redeem_token: string;
 
+  @Column({ default: false })
+  isUsed: boolean;
+
   @CreateDateColumn()
   redeemed_at: Date;
 
