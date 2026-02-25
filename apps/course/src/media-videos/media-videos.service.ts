@@ -26,19 +26,19 @@ export class MediaVideosService {
     return match ? match[1].toLowerCase() : null;
   }
 
-  // อัพโหลดไฟล์วิดีโอผ่าน form-data (สำหรับไฟล์ขนาดเล็ก - สูงสุด 500MB)
+  // อัพโหลดไฟล์วิดีโอผ่าน form-data (สำหรับไฟล์ขนาดเล็ก - สูงสุด 1GB)
   async uploadVideoFileAndPersist(file: Express.Multer.File) {
     if (!file) throw new BadRequestException('file missing');
     this.validateVideoMime(file.mimetype ?? '');
 
-    const maxSize = Number(process.env.VIDEO_MAX_SIZE_BYTES ?? String(500 * 1024 * 1024)); // 500MB for form upload
+    const maxSize = 1024 * 1024 * 1024; // 1GB for form upload
     if (file.size > maxSize) throw new BadRequestException('file size exceeds limit');
 
     const storage = this.storageFactory.video();
     const bucket = storage.bucket;
     const videoId = randomUUID();
-    const ext = this.getFileExtension(file.originalname) || 'mp4';
-    const key = `videos/${videoId}.${ext}`;
+    // const ext = this.getFileExtension(file.originalname) || 'mp4';
+    const key = `videos/${videoId}`;
 
     // Upload to storage
     await storage.putObject(bucket, key, file.buffer, file.size, { 'Content-Type': file.mimetype });
@@ -77,8 +77,8 @@ export class MediaVideosService {
 
     const storage = this.storageFactory.video();
     const videoId = randomUUID();
-    const ext = this.getFileExtension(dto.original_filename) || 'mp4';
-    const key = `videos/${videoId}.${ext}`;
+    // const ext = this.getFileExtension(dto.original_filename) || 'mp4';
+    const key = `videos/${videoId}`;
 
     // สร้าง presigned PUT URL (client จะ PUT ไฟล์ไปยัง key นี้)
     const uploadUrl = await storage.presignPut!(
@@ -90,7 +90,7 @@ export class MediaVideosService {
 
     // บันทึก metadata ลง DB ในสถานะ "uploading" (เราจะอัพเดตเป็น "ready" ผ่าน Lambda หรือกระบวนการอื่นเมื่อไฟล์ถูกอัพโหลดสำเร็จ)
     const asset = this.repo.create({
-      originalFilename: dto.original_filename ?? `${videoId}.${ext}`,
+      originalFilename: `${videoId}`,
       mimeType: dto.mime_type,
       sizeBytes: String(dto.size_bytes),
       storageProvider: 's3',
@@ -103,11 +103,7 @@ export class MediaVideosService {
 
     return {
       video_id: saved.id,
-      // filename: saved.originalFilename,
-      // upload_url: uploadUrl,
       url: storage.buildPublicUrl(storage.bucket, key),
-      // storage_key: key,
-      expires_in: 900,
     };
   }
 
@@ -124,7 +120,6 @@ export class MediaVideosService {
 
     return {
       video_id: asset.id,
-      // original_filename: asset.originalFilename,
       url,
       mime_type: asset.mimeType,
     };

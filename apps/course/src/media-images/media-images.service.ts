@@ -42,7 +42,8 @@ export class MediaImagesService {
 
     // สร้าง storage key แบบ unique (คุณสามารถเปลี่ยน structure ได้)
     const uuid = randomUUID();
-    const storageKey = `images/${uuid}${(file.originalname?.match(/\.[^.]+$/) ?? [''])[0]}`;
+    const storageKey = `images/${uuid}`;
+    // const storageKey = `images/${uuid}${(file.originalname?.match(/\.[^.]+$/) ?? [''])[0]}`;
 
     // อัพโหลดไฟล์ไปยัง storage provider s3 หรือตามที่คุณตั้งค่าไว้
     await storage.putObject(
@@ -91,7 +92,6 @@ export class MediaImagesService {
       mime_type: asset.mimeType,
     };
   }
-
 
   // Delete image by ID (ลบทั้ง metadata ใน DB และไฟล์ใน storage)
   async deleteImageById(id: number) {
