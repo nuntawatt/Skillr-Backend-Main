@@ -19,6 +19,8 @@ import {
   ApiBody,
   ApiConsumes,
   ApiCreatedResponse,
+  ApiOperation,
+  ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
 import { CreateRewardAdminResponseDto } from './dto/create-reward-response-admin.dto';
@@ -38,11 +40,26 @@ export class AdminController {
   constructor(private readonly RewardAdminService: RewardAdminService) {}
 
   @Get('/reward/getAllAdminReward')
-    GetAllReward() {
+  @ApiOperation({ summary: 'Get reward admin ทั้งหมด' })
+  GetAllReward() {
     return this.RewardAdminService.getAllReward();
   }
 
+  @Get('/reward/:reward_id/adminRewardDetail')
+  @ApiOperation({ summary: 'Get admin reward detail by reward_id' })
+  @ApiParam({
+    name: 'reward_id',
+    type: Number,
+    required: true,
+    description: 'Reward ID',
+    example: 1,
+  })
+  getRewardDetail(@Param('reward_id', ParseIntPipe) reward_id: number) {
+    return this.RewardAdminService.getRewardDetail(reward_id);
+  }
+
   @Post('/reward/create')
+  @ApiOperation({ summary: 'สร้าง reward โดยต้องกรอกข้อมูลให้ครบ (ไม่รับ 0 บาง field)' })
   @HttpCode(HttpStatus.CREATED)
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -96,6 +113,7 @@ export class AdminController {
   }
 
   @Patch('reward/update/:id')
+  @ApiOperation({ summary: 'แก้ไขข้อมูลของ reward' })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
     FileInterceptor('image', {
@@ -114,23 +132,26 @@ export class AdminController {
       imageUrl = await this.RewardAdminService.uploadRewardImage(file);
     }
 
-    const updatedReward = this.RewardAdminService.updateReward(id, dto, imageUrl);
+    const updatedReward = this.RewardAdminService.updateReward(
+      id,
+      dto,
+      imageUrl,
+    );
 
     return {
-      message: "Update reward success"
+      message: 'Update reward success',
     };
   }
-  
+
   @Delete('reward/delete/:id')
-  async deleteReward(@Param('id', ParseIntPipe) id: number){
+  @ApiOperation({ summary: 'Delete reward by reward_id (Soft delete)' })
+  async deleteReward(@Param('id', ParseIntPipe) id: number) {
     const removeReward = await this.RewardAdminService.removeRewardById(id);
 
     return {
-      message: "Remove reward success"
-    }
+      message: 'Remove reward success',
+    };
   }
-
-
 
   // @Post()
   // create(@Body() createAdminDto: CreateAdminDto) {
