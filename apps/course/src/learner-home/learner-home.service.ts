@@ -43,7 +43,11 @@ export class LearnerHomeService {
   async getHome(
     userId: string,
     authorization?: string,
+    internalCall?: string,
   ): Promise<LearnerHomeResponseDto> {
+    // ถ้าเป็น internal call ให้ข้าม getUserProfile เพื่อหลีกเลี่ยง infinite loop
+    const shouldSkipProfile = internalCall === 'true';
+    
     const [
       profile,
       streak,
@@ -52,21 +56,23 @@ export class LearnerHomeService {
       myCourses,
       notifications,
       recommendations,
+      userProfile,
     ] = await Promise.all([
-      this.getUserProfile(userId, authorization).catch(() => null),
+      shouldSkipProfile ? null : this.getUserProfile(userId, authorization).catch(() => null),
       this.getStreak(userId).catch(() => ({ currentStreak: 0 })),
       this.getTotalXp(userId).catch(() => 0),
       this.getContinueLearning(userId).catch(() => null),
       this.getMyCourses(userId).catch(() => []),
       this.getNotifications(userId).catch(() => ({ unreadCount: 0 })),
       this.getRecommendations().catch(() => ({ courses: [] })),
+      !shouldSkipProfile ? this.getUserProfileFromAuth(userId, authorization).catch(() => null) : null,
     ]);
 
     return {
       header: {
         userId,
         // displayName: profile?.displayName ?? null,
-        avatarUrl: profile?.avatarUrl ?? null,
+        avatarUrl: userProfile?.avatar || null,
         xp: totalXp,
         streakDays: streak.currentStreak,
       },
@@ -118,6 +124,35 @@ export class LearnerHomeService {
     }
   }
 
+  // Method ใหม่สำหรับดึงข้อมูลผู้ใช้จาก auth service โดยตรง (สำหรับ internal call)
+  private async getUserProfileFromAuth(
+    userId: string,
+    authorization?: string,
+  ): Promise<any | null> {
+    if (!authorization) return null;
+
+    try {
+      const authBaseUrl = this.configService.get<string>(
+        'AUTH_BASE_URL',
+        'http://localhost:3001/api',
+      );
+
+      const response = await this.httpService.axiosRef.get(
+        `${authBaseUrl}/users/profile`,
+        {
+          headers: {
+            Authorization: authorization,
+            'X-Internal-Call': 'true', // ส่ง header เพื่อบอกว่าเป็น internal call
+          },
+        },
+      );
+
+      return response.data;
+    } catch {
+      return null;
+    }
+  }
+
   /* ======================================================
      STREAK + XP
   ====================================================== */
@@ -134,7 +169,10 @@ export class LearnerHomeService {
       .where('ux.userId = :userId', { userId })
       .getRawOne<{ total: string }>();
 
-    return Number(result?.total ?? 0);
+    const totalXp = Number(result?.total ?? 0);
+    console.log(`Total XP for user ${userId}: ${totalXp} (raw: ${result?.total})`);
+    
+    return totalXp;
   }
 
   /* ======================================================

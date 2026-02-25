@@ -125,22 +125,31 @@
       "json",
       "ts"
     ],
-    "rootDir": "apps/course/src",
+    "rootDir": ".",
+    "roots": [
+      "<rootDir>/apps/auth/src",
+      "<rootDir>/apps/course/src",
+      "<rootDir>/apps/reward/src",
+      "<rootDir>/test"
+    ],
     "moduleNameMapper": {
-      "^@common/(.*)$": "<rootDir>/../../../libs/common/src/$1",
-      "^@config/(.*)$": "<rootDir>/../../../libs/config/src/$1",
-      "^@shared/(.*)$": "<rootDir>/../../../libs/shared/src/$1",
-      "^@auth$": "<rootDir>/../../../libs/auth/src",
-      "^@auth/(.*)$": "<rootDir>/../../../libs/auth/src/$1"
+      "^@common/(.*)$": "<rootDir>/libs/common/src/$1",
+      "^@config/(.*)$": "<rootDir>/libs/config/src/$1",
+      "^@shared/(.*)$": "<rootDir>/libs/shared/src/$1",
+      "^@auth$": "<rootDir>/libs/auth/src",
+      "^@auth/(.*)$": "<rootDir>/libs/auth/src/$1"
     },
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "transformIgnorePatterns": [
+      "node_modules/(?!(uuid|@nestjs/axios|axios))"
+    ],
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],
-    "coverageDirectory": "../coverage",
+    "coverageDirectory": "./coverage",
     "testEnvironment": "node"
   }
 }
