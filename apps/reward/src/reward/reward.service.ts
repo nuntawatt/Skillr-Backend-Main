@@ -53,10 +53,8 @@ export class RewardService {
       where: {userId,
         reward: { id: reward.id }}
     })
-    console.log(count)
     let status = true
     if (reward.limit_per_user !== null && count >= reward.limit_per_user) {
-      console.log(count + '  '+reward.limit_per_user )
       status =  false
     }
 
