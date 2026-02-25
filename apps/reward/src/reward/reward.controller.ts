@@ -33,7 +33,7 @@ export class RewardController {
     return this.rewardService.getAllReward();
   }
 
-  
+    
   @Get(':reward_id/rewardDetail')
   @ApiOperation({
     summary: 'Get reward detail by id',
@@ -57,8 +57,9 @@ export class RewardController {
   })
   getDetailReward(
     @Param('reward_id', ParseIntPipe) reward_id: number,
+    @CurrentUserId() userId: string,
   ) {
-    return this.rewardService.getDetailReward(reward_id);
+    return this.rewardService.getDetailReward(userId , reward_id);
   }
 
 
@@ -103,4 +104,7 @@ export class RewardController {
   getTotalXp(@CurrentUserId() userId: string) {
     return this.rewardService.getUserTotalXp(userId);
   }
+
+
+
 }

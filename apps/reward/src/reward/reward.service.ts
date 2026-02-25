@@ -9,6 +9,8 @@ import { User } from 'apps/auth/src/users/entities';
 import { UserXp } from 'apps/course/src/quizs/entities/user-xp.entity';
 import { randomUUID } from 'crypto';
 import { log } from 'console';
+import { escape } from 'querystring';
+import { stat } from 'fs';
 
 @Injectable()
 export class RewardService {
@@ -33,7 +35,8 @@ export class RewardService {
     return this.rewardRepository.find();
   }
 
-  async getDetailReward(rewardId: number): Promise<Reward> {
+  async getDetailReward(userId : string ,rewardId: number) {
+    const rewardRunner = this.rewardDataSource.createQueryRunner();
     if (!rewardId || rewardId <= 0) {
       throw new BadRequestException('Invalid reward id');
     }
@@ -46,7 +49,18 @@ export class RewardService {
       throw new NotFoundException(`Reward with id ${rewardId} not found`);
     }
 
-    return reward;
+    const count = await this.redeemRepository.count({
+      where: {userId,
+        reward: { id: reward.id }}
+    })
+    console.log(count)
+    let status = true
+    if (count >= reward.limit_per_user) {
+      console.log(count + '  '+reward.limit_per_user )
+      status =  false
+    }
+
+    return { reward: reward , isCanRedeem: status  };
   }
 
   async getRedeem(userId: string) {
@@ -97,7 +111,11 @@ export class RewardService {
       await this.validateUserLimit(rewardRunner, userId, reward);
       userXp.xpTotal -= reward.required_points;
       await courseRunner.manager.save(userXp);
-      reward.remain -= 1;
+
+      if(reward.total_limit != null && reward.remain != null){
+        reward.remain -= 1;
+      }
+      
       await rewardRunner.manager.save(reward);
       const redemption = rewardRunner.manager.create(
         RewardRedemption,
@@ -147,11 +165,9 @@ export class RewardService {
     ) {
       throw new BadRequestException('Reward not in redeem period');
     }
-
-    if (reward.remain <= 0) {
+    if (reward.remain <= 0 && reward.remain != null) {
       throw new BadRequestException('Reward out of stock');
     }
-
     return reward;
   }
 
@@ -182,7 +198,6 @@ export class RewardService {
     reward: Reward,
   ) {
     if (reward.limit_per_user == null || reward.limit_per_user == 0) {
-      console.log('limit null')
       return;
     }
 
@@ -193,10 +208,9 @@ export class RewardService {
       },
     });
 
-    console.log('count : '+count + ' userId : '+userId+ ' rewardId : '+reward.id)
-
     if (count >= reward.limit_per_user) {
       throw new BadRequestException('Redeem limit exceeded');
     }
   }
+
 }
