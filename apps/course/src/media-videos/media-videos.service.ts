@@ -78,6 +78,7 @@ export class MediaVideosService {
 
     const bucket = process.env.AWS_S3_BUCKET!;
     const videoId = randomUUID();
+    // const ext = this.getFileExtension(dto.original_filename) || 'mp4';
     const key = `videos/${videoId}`;
 
     // generate presigned PUT URL (15 minutes)
@@ -115,7 +116,7 @@ export class MediaVideosService {
     if (!exists) throw new BadRequestException('file not uploaded yet');
 
     asset.status = VideoAssetStatus.READY;
-    asset.publicUrl = this.aws.getS3Url(bucket, key);
+    asset.publicUrl = this.aws.buildPublicUrl(bucket, key);
     await this.repo.save(asset);
 
     return { success: true };
