@@ -99,7 +99,7 @@ export class MediaVideosService {
     return {
       video_id: saved.id,
       upload_url: uploadUrl,
-      public_url: this.aws.getS3Url(bucket, key),
+      public_url: this.aws.buildPublicUrl(bucket, key),
     };
   }
 
