@@ -6,6 +6,7 @@ import { randomUUID } from 'crypto';
 import { StorageFactory } from '../storage/storage.factory';
 import { VideoAsset, VideoAssetStatus } from './entities/video-asset.entity';
 import { CreateVideoUploadDto } from './dto/create-video-upload.dto';
+import { CreateVideoPresignDto } from './dto/create-video-presign.dto';
 import { AwsS3StorageService } from '../storage/aws.service';
 
 @Injectable()
@@ -31,7 +32,7 @@ export class MediaVideosService {
     if (!file) throw new BadRequestException('file missing');
     this.validateVideoMime(file.mimetype ?? '');
 
-    const maxSize = 1024 * 1024 * 1024; // 1GB for form upload
+    const maxSize = 1 * 1024 * 1024 * 1024; // 1GB for form upload
     if (file.size > maxSize) throw new BadRequestException('file size exceeds limit');
 
     const storage = this.storageFactory.video();
@@ -66,35 +67,29 @@ export class MediaVideosService {
   }
 
   // 1. สร้าง presigned upload URL สำหรับอัพโหลดวิดีโอ (สำหรับไฟล์ขนาดใหญ่ - สูงสุด 2GB)
-  async createPresignedUpload(dto: CreateVideoUploadDto, user?: { userId?: string }) {
+  async createPresignedUpload(dto: CreateVideoPresignDto) {
     this.validateVideoMime(dto.mime_type);
 
-    const maxSize = Number(process.env.VIDEO_MAX_SIZE_BYTES ?? 2 * 1024 * 1024 * 1024); // 2GB
+    const maxSize = Number(process.env.VIDEO_MAX_SIZE_BYTES) || 2 * 1024 * 1024 * 1024; // 2GB
 
     if (dto.size_bytes > maxSize) {
       throw new BadRequestException('file size exceeds limit');
     }
 
-    const storage = this.storageFactory.video();
+    const bucket = process.env.AWS_S3_BUCKET!;
     const videoId = randomUUID();
-    // const ext = this.getFileExtension(dto.original_filename) || 'mp4';
     const key = `videos/${videoId}`;
 
-    // สร้าง presigned PUT URL (client จะ PUT ไฟล์ไปยัง key นี้)
-    const uploadUrl = await storage.presignPut!(
-      storage.bucket,
-      key,
-      dto.mime_type,
-      60 * 15, // 15 minutes
-    );
+    // generate presigned PUT URL (15 minutes)
+    const uploadUrl = await this.aws.presignPut(bucket, key, dto.mime_type, 60 * 15);
 
-    // บันทึก metadata ลง DB ในสถานะ "uploading" (เราจะอัพเดตเป็น "ready" ผ่าน Lambda หรือกระบวนการอื่นเมื่อไฟล์ถูกอัพโหลดสำเร็จ)
+    // save metadata with UPLOADING status
     const asset = this.repo.create({
-      originalFilename: `${videoId}`,
+      originalFilename: dto.original_filename ?? `${videoId}`,
       mimeType: dto.mime_type,
       sizeBytes: String(dto.size_bytes),
       storageProvider: 's3',
-      storageBucket: storage.bucket,
+      storageBucket: bucket,
       storageKey: key,
       status: VideoAssetStatus.UPLOADING,
     });
@@ -103,8 +98,27 @@ export class MediaVideosService {
 
     return {
       video_id: saved.id,
-      url: storage.buildPublicUrl(storage.bucket, key),
+      upload_url: uploadUrl,
+      public_url: this.aws.getS3Url(bucket, key),
     };
+  }
+
+  // Confirm uploaded file exists in S3 and update status to READY
+  async confirmUpload(id: number) {
+    const asset = await this.repo.findOne({ where: { id } });
+    if (!asset) throw new NotFoundException('video asset not found');
+
+    const bucket = asset.storageBucket!;
+    const key = asset.storageKey!;
+
+    const exists = await this.aws.fileExists(bucket, key);
+    if (!exists) throw new BadRequestException('file not uploaded yet');
+
+    asset.status = VideoAssetStatus.READY;
+    asset.publicUrl = this.aws.getS3Url(bucket, key);
+    await this.repo.save(asset);
+
+    return { success: true };
   }
 
   // 2. Get public view URL
