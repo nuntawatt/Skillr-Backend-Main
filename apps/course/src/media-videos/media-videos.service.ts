@@ -78,8 +78,8 @@ export class MediaVideosService {
 
     const bucket = process.env.AWS_S3_BUCKET!;
     const videoId = randomUUID();
-    // const ext = this.getFileExtension(dto.original_filename) || 'mp4';
-    const key = `videos/${videoId}`;
+    const ext = this.getFileExtension(dto.original_filename) || 'mp4';
+    const key = `videos/${videoId}.${ext}`;
 
     // generate presigned PUT URL (15 minutes)
     const uploadUrl = await this.aws.presignPut(bucket, key, dto.mime_type, 60 * 15);
