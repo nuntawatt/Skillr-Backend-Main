@@ -124,8 +124,8 @@ export class MediaVideosService {
       success: true,
       video_id: asset.id,
       public_url: publicUrl,
-      publicUrl: publicUrl,
-      url: publicUrl,
+      // publicUrl: publicUrl,
+      // url: publicUrl,
     };
   }
 
