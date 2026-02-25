@@ -116,10 +116,17 @@ export class MediaVideosService {
     if (!exists) throw new BadRequestException('file not uploaded yet');
 
     asset.status = VideoAssetStatus.READY;
-    asset.publicUrl = this.aws.buildPublicUrl(bucket, key);
+    const publicUrl = this.aws.buildPublicUrl(bucket, key);
+    asset.publicUrl = publicUrl;
     await this.repo.save(asset);
 
-    return { success: true };
+    return {
+      success: true,
+      video_id: asset.id,
+      public_url: publicUrl,
+      publicUrl: publicUrl,
+      url: publicUrl,
+    };
   }
 
   // 2. Get public view URL
@@ -136,6 +143,8 @@ export class MediaVideosService {
     return {
       video_id: asset.id,
       url,
+      public_url: url,
+      publicUrl: url,
       mime_type: asset.mimeType,
     };
   }
