@@ -19,8 +19,18 @@ export class RewardAdminService {
     private rewardRepo: Repository<Reward>,
   ) {}
 
-  getAllReward(){
-    return this.rewardRepo.find()
+  getAllReward() {
+    return this.rewardRepo.find();
+  }
+
+  async getRewardDetail(id: number) {
+    const reward = await this.rewardRepo.findOne({ where: { id } });
+
+    if (!reward) {
+      throw new NotFoundException('Reward not found');
+    }
+
+    return reward;
   }
 
   async createReward(createRewardDto: CreateRewardAdminDto, imageUrl: string) {
@@ -77,7 +87,6 @@ export class RewardAdminService {
     const reward = await this.rewardRepo.findOne({ where: { id } });
 
     console.log(reward);
-    
 
     if (reward === null || reward === undefined) {
       throw new NotFoundException('Reward not found');
