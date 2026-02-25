@@ -144,8 +144,8 @@ export class MediaVideosService {
       video_id: asset.id,
       url,
       public_url: url,
-      publicUrl: url,
-      mime_type: asset.mimeType,
+      // publicUrl: url,
+      // mime_type: asset.mimeType,
     };
   }
 
