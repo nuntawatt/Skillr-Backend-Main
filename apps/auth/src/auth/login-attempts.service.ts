@@ -15,7 +15,7 @@ export class LoginAttemptsService {
   private static readonly LOCK_DURATION_MS = 60 * 1000; // 1 minute
 
   constructor(
-    @InjectRepository(LoginAttempt)
+    @InjectRepository(LoginAttempt, 'auth')
     private readonly loginAttemptRepository: Repository<LoginAttempt>,
   ) { }
 

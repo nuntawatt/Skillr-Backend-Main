@@ -90,11 +90,12 @@ export class LearnerHomeController {
   async getHome(
     @CurrentUserId() userId: string,
     @Headers('authorization') authorization: string | undefined,
+    @Headers('x-internal-call') internalCall?: string,
   ): Promise<LearnerHomeResponseDto> {
     if (!userId) {
       throw new UnauthorizedException('User not authenticated');
     }
 
-    return this.learnerHomeService.getHome(userId, authorization);
+    return this.learnerHomeService.getHome(userId, authorization, internalCall);
   }
 }

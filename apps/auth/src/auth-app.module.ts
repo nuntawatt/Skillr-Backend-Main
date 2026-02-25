@@ -3,11 +3,11 @@ import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { getDatabaseConfig } from '@config/database.config';
 import * as path from 'path';
 
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { UserXp } from 'apps/course/src/quizs/entities/user-xp.entity';
 
 @Module({
   imports: [
@@ -18,6 +18,27 @@ import { UsersModule } from './users/users.module';
         path.resolve(process.cwd(), '.env'),
       ],
     }),
+    TypeOrmModule.forRootAsync({
+      name: 'auth',
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'postgres',
+        url: config.get<string>('DATABASE_URL'),
+        autoLoadEntities: true,
+        synchronize: false,
+      }),
+    }),
+    TypeOrmModule.forRootAsync({
+      name: 'course',
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'postgres',
+        url: config.get<string>('COURSE_DATABASE_URL'),
+        entities: [UserXp],
+        synchronize: false,
+      }),
+    }),
+
     ThrottlerModule.forRoot([
       {
         name: 'global',
@@ -25,11 +46,6 @@ import { UsersModule } from './users/users.module';
         limit: 100,
       },
     ]),
-    TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: getDatabaseConfig,
-      inject: [ConfigService],
-    }),
     AuthModule,
     UsersModule,
   ],
@@ -40,4 +56,4 @@ import { UsersModule } from './users/users.module';
     },
   ],
 })
-export class AuthAppModule {}
+export class AuthAppModule { }
