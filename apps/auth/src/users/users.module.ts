@@ -8,10 +8,12 @@ import { User } from './entities/user.entity';
 import { AuthAccount } from './entities/auth-account.entity';
 import { AuthModule } from '../auth/auth.module';
 import { UsersAdminController } from './users-admin.controller';
+import { Course } from 'apps/course/src/courses/entities/course.entity';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, AuthAccount], 'auth'),
+    TypeOrmModule.forFeature([Course], 'course'),
     HttpModule,
     ConfigModule,
     forwardRef(() => AuthModule),

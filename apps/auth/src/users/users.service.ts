@@ -11,6 +11,7 @@ import { User } from './entities/user.entity';
 import { AuthAccount } from './entities/auth-account.entity';
 import { CreateUserDto, UpdateUserDto, UpdateRoleDto } from './dto';
 import { AuthProvider } from '@common/enums';
+import { Course } from 'apps/course/src/courses/entities/course.entity';
 
 @Injectable()
 export class UsersService {
@@ -22,6 +23,9 @@ export class UsersService {
 
     @InjectRepository(AuthAccount, 'auth')
     private readonly authRepo: Repository<AuthAccount>,
+
+    @InjectRepository(Course, 'course')
+    private readonly courseRepo: Repository<Course>,
 
     private readonly config: ConfigService,
   ) {
@@ -224,6 +228,17 @@ export class UsersService {
     user.avatar = await this.getAvatarPresignedUrl(mediaId);
 
     return this.userRepo.save(user);
+  }
+
+  async getStudentProfile(userId: string){
+    const user = await this.findById(userId);
+    // const xp = await this.courseRepo.
+
+    let xp: number | null = null;
+    let streakDays: number | null = null;
+    let completedCourses: any[] = [];
+
+    return user;
   }
 
   // ดึง URL สำหรับดาวน์โหลด avatar ของผู้ใช้ (ใช้เมื่อแอปต้องการแสดงรูปโปรไฟล์)
