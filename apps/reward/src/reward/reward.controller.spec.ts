@@ -1,4 +1,3 @@
-
 import { Test, TestingModule } from '@nestjs/testing';
 import { RewardController } from './reward.controller';
 import { RewardService } from './reward.service';
@@ -32,7 +31,10 @@ describe('RewardController', () => {
 
     const result = await controller.redeemReward('uuid-1', 1);
 
-    expect(result).toEqual({ success: true });
+    expect(result).toEqual({
+        message: 'Redeem success',
+        data: {},
+    });
     expect(service.redeemReward).toHaveBeenCalledWith('uuid-1', 1);
   });
 });
