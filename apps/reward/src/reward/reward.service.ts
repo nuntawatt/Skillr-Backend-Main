@@ -176,8 +176,12 @@ export class RewardService {
   ): Promise<UserXp> {
     const user = await runner.manager.findOne(UserXp, {
       where: { userId },
+      order: { createdAt: 'DESC' },
       lock: { mode: 'pessimistic_write' },
     });
+
+    console.log(user);
+    
 
     if (!user) {
       throw new BadRequestException('User not found');
