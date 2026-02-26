@@ -13,7 +13,7 @@ export class AnnouncementsService {
     private readonly mediaImagesService: MediaImagesService,
     @InjectRepository(Announcement)
     private readonly announcementRepository: Repository<Announcement>,
-  ) {}
+  ) { }
 
 
   // Create a new announcement
@@ -45,27 +45,25 @@ export class AnnouncementsService {
   async findActive(limit = 3): Promise<Announcement[]> {
     const now = new Date();
 
+    console.log(`${now.toISOString()} - Fetching active announcements with limit ${limit}`);
+
     return this.announcementRepository
       .createQueryBuilder('a')
       .where('a.active_status = :active', { active: true })
-      .andWhere(
-        new Brackets((qb) => {
-          qb.where('a.start_date IS NULL').orWhere('a.start_date <= :now', {
-            now,
-          });
-        }),
+      .andWhere(new Brackets((qb) => {
+        qb.where('a.start_date IS NULL').orWhere('a.start_date <= :now', { now });
+      }),
       )
       .andWhere(
         new Brackets((qb) => {
-          qb.where('a.end_date IS NULL').orWhere('a.end_date >= :now', {
-            now,
-          });
+          qb.where('a.end_date IS NULL').orWhere('a.end_date >= :now', { now });
         }),
       )
       .orderBy('a.priority', 'DESC')
       .addOrderBy('a.created_at', 'DESC')
       .limit(limit)
       .getMany();
+
   }
 
   async uploadBannerImage(id: number, file: Express.Multer.File): Promise<Announcement> {

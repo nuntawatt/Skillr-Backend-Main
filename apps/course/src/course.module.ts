@@ -46,6 +46,7 @@ import { QuizsResult } from './quizs/entities/quizs-result.entity';
 import { UserXp } from './quizs/entities/user-xp.entity';
 import { UserStreak } from './streaks/entities/user-streak.entity';
 import { Announcement } from './announcements/entities/announcement.entity';
+import { VideoAsset } from './media-videos/entities/video-asset.entity';
 
 const isTest = process.env.NODE_ENV === 'test';
 
@@ -78,6 +79,7 @@ const isTest = process.env.NODE_ENV === 'test';
           QuizsCheckpoint,
           QuizsResult,
           Announcement,
+          VideoAsset,
         ]),
 
         AuthLibModule,
