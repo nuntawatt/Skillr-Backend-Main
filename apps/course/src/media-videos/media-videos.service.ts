@@ -66,11 +66,11 @@ export class MediaVideosService {
   //   };
   // }
 
-  // 1. สร้าง presigned upload URL สำหรับอัพโหลดวิดีโอ (สำหรับไฟล์ขนาดใหญ่ - สูงสุด 2GB)
+  // 1. สร้าง presigned upload URL สำหรับอัพโหลดวิดีโอ (สำหรับไฟล์ขนาดใหญ่ - สูงสุด 1GB)
   async createPresignedUpload(dto: CreateVideoPresignDto) {
     this.validateVideoMime(dto.mime_type);
 
-    const maxSize = Number(process.env.VIDEO_MAX_SIZE_BYTES) || 2 * 1024 * 1024 * 1024; // 2GB
+    const maxSize = Number(process.env.VIDEO_MAX_SIZE_BYTES) || 1 * 1024 * 1024 * 1024; // 1GB
 
     if (dto.size_bytes > maxSize) {
       throw new BadRequestException('file size exceeds limit');
