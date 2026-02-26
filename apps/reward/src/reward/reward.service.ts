@@ -75,9 +75,19 @@ export class RewardService {
   }
 
   async getUserTotalXp(userId: string): Promise<number> {
+    // Return latest cumulative xpTotal if available, otherwise sum xpEarned as fallback
+    const latest = await this.userxpRepository.findOne({
+      where: { userId },
+      order: { updatedAt: 'DESC' },
+    });
+
+    if (latest && typeof latest.xpTotal === 'number') {
+      return latest.xpTotal;
+    }
+
     const raw = await this.userxpRepository
       .createQueryBuilder('ux')
-      .select('COALESCE(SUM(ux.xpTotal), 0)', 'total')
+      .select('COALESCE(SUM(ux.xpEarned), 0)', 'total')
       .where('ux.userId = :userId', { userId })
       .getRawOne<{ total: string }>();
 
@@ -174,8 +184,10 @@ export class RewardService {
     userId: string,
     requiredPoints: number,
   ): Promise<UserXp> {
+    // Lock the latest UserXp row for this user (we store cumulative xpTotal there)
     const user = await runner.manager.findOne(UserXp, {
       where: { userId },
+      order: { updatedAt: 'DESC' },
       lock: { mode: 'pessimistic_write' },
     });
 
