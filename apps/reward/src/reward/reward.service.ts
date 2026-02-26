@@ -191,6 +191,9 @@ export class RewardService {
       lock: { mode: 'pessimistic_write' },
     });
 
+    console.log(user);
+    
+
     if (!user) {
       throw new BadRequestException('User not found');
     }
