@@ -1,9 +1,18 @@
-import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as argon2 from 'argon2';
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 
@@ -11,7 +20,9 @@ import { User } from './entities/user.entity';
 import { AuthAccount } from './entities/auth-account.entity';
 import { CreateUserDto, UpdateUserDto, UpdateRoleDto } from './dto';
 import { AuthProvider } from '@common/enums';
-import { Course } from 'apps/course/src/courses/entities/course.entity';
+import { UserXp } from 'apps/course/src/quizs/entities/user-xp.entity';
+import { UserStreak } from 'apps/course/src/streaks/entities/user-streak.entity';
+import { LessonProgress } from 'apps/course/src/progress/entities/progress.entity';
 
 @Injectable()
 export class UsersService {
@@ -24,8 +35,14 @@ export class UsersService {
     @InjectRepository(AuthAccount, 'auth')
     private readonly authRepo: Repository<AuthAccount>,
 
-    @InjectRepository(Course, 'course')
-    private readonly courseRepo: Repository<Course>,
+    @InjectRepository(UserXp, 'course')
+    private readonly userXpRepo: Repository<UserXp>,
+
+    @InjectRepository(UserStreak, 'course')
+    private readonly userStreakRepo: Repository<UserStreak>,
+
+    @InjectRepository(LessonProgress, 'course')
+    private readonly completeCourseRepo: Repository<LessonProgress>,
 
     private readonly config: ConfigService,
   ) {
@@ -143,11 +160,10 @@ export class UsersService {
     lastName?: string;
     avatar?: string;
   }): Promise<User> {
-    const existingGoogle =
-      await this.findAuthAccountByProviderUserId(
-        AuthProvider.GOOGLE,
-        profile.googleId,
-      );
+    const existingGoogle = await this.findAuthAccountByProviderUserId(
+      AuthProvider.GOOGLE,
+      profile.googleId,
+    );
 
     if (existingGoogle?.user) {
       return existingGoogle.user;
@@ -202,10 +218,7 @@ export class UsersService {
   // =====================================================
 
   // อัปโหลดหรืออัปเดต avatar ของผู้ใช้ (ใช้เมื่อผู้ใช้อัปโหลดรูปโปรไฟล์ใหม่)
-  async uploadAvatar(
-    id: string,
-    file: Express.Multer.File,
-  ): Promise<User> {
+  async uploadAvatar(id: string, file: Express.Multer.File): Promise<User> {
     const user = await this.findById(id);
 
     if (!file?.buffer) {
@@ -230,15 +243,36 @@ export class UsersService {
     return this.userRepo.save(user);
   }
 
-  async getStudentProfile(userId: string){
+  async getStudentProfile(userId: string) {
     const user = await this.findById(userId);
-    // const xp = await this.courseRepo.
 
-    let xp: number | null = null;
-    let streakDays: number | null = null;
-    let completedCourses: any[] = [];
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
 
-    return user;
+    const userXp = await this.userXpRepo.findOne({
+      where: { userId },
+      order: { updatedAt: 'DESC' },
+    });
+
+    const streak = await this.userStreakRepo.findOne({
+      where: { userId: userId},
+    });
+
+    const completeCourse = await this.completeCourseRepo.count({
+      where: { userId: userId, progressPercent: 100 },
+    });
+
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName || null,
+      lastName: user.lastName || null,
+      avatarUrl: user.avatar || null,
+      xp: userXp?.xpTotal || 0,
+      streak: streak?.currentStreak || 0,
+      completeCourse: completeCourse || 0,
+    };
   }
 
   // ดึง URL สำหรับดาวน์โหลด avatar ของผู้ใช้ (ใช้เมื่อแอปต้องการแสดงรูปโปรไฟล์)
@@ -271,8 +305,7 @@ export class UsersService {
   private createS3Client(): S3Client {
     const region = this.config.get<string>('AWS_REGION');
     const accessKeyId = this.config.get<string>('AWS_ACCESS_KEY_ID');
-    const secretAccessKey =
-      this.config.get<string>('AWS_SECRET_ACCESS_KEY');
+    const secretAccessKey = this.config.get<string>('AWS_SECRET_ACCESS_KEY');
 
     if (!region || !accessKeyId || !secretAccessKey) {
       throw new Error('Missing AWS configuration');

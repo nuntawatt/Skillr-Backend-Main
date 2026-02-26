@@ -7,7 +7,6 @@ import * as path from 'path';
 
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
-import { UserXp } from 'apps/course/src/quizs/entities/user-xp.entity';
 
 @Module({
   imports: [
@@ -34,7 +33,7 @@ import { UserXp } from 'apps/course/src/quizs/entities/user-xp.entity';
       useFactory: (config: ConfigService) => ({
         type: 'postgres',
         url: config.get<string>('COURSE_DATABASE_URL'),
-        entities: [UserXp],
+        autoLoadEntities: true,
         synchronize: false,
       }),
     }),
@@ -56,4 +55,4 @@ import { UserXp } from 'apps/course/src/quizs/entities/user-xp.entity';
     },
   ],
 })
-export class AuthAppModule { }
+export class AuthAppModule {}
