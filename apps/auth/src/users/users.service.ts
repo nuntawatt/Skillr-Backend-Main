@@ -17,10 +17,10 @@ export class UsersService {
   private readonly s3Client: S3Client;
 
   constructor(
-    @InjectRepository(User)
+    @InjectRepository(User, 'auth')
     private readonly userRepo: Repository<User>,
 
-    @InjectRepository(AuthAccount)
+    @InjectRepository(AuthAccount, 'auth')
     private readonly authRepo: Repository<AuthAccount>,
 
     private readonly config: ConfigService,

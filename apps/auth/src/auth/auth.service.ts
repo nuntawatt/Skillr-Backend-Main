@@ -39,9 +39,9 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
-    @InjectRepository(Session)
+    @InjectRepository(Session, 'auth')
     private readonly sessionRepository: Repository<Session>,
-    @InjectRepository(PasswordResetToken)
+    @InjectRepository(PasswordResetToken, 'auth')
     private readonly passwordResetTokenRepository: Repository<PasswordResetToken>,
     private readonly loginAttemptsService: LoginAttemptsService,
     private readonly emailService: EmailService,
