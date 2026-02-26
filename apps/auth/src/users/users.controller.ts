@@ -35,80 +35,11 @@ export class UsersController {
     @CurrentUserId() userId: string,
     @Headers('authorization') authorization: string
   ) {
-    console.log('User ID from JWT:', userId);
+    // console.log('User ID from JWT:', userId);
     
-    const user = await this.usersService.findById(userId);
-    
-    // ดึงข้อมูลจาก course service (เหมือน /learner/home)
-    const courseBaseUrl = this.configService.get<string>(
-      'COURSE_BASE_URL',
-      'http://localhost:3002/api',
-    );
+    const user = await this.usersService.getStudentProfile(userId);
 
-    let avatarUrl: string | null = null;
-    let xp: number | null = null;
-    let streakDays: number | null = null;
-    let completedCourses: any[] = [];
-
-    // ใช้ avatar จาก user entity โดยตรง (ไม่ต้องเรียน course service)
-    avatarUrl = user.avatar || null;
-
-    try {
-      // เรียก /learner/home เพื่อดึงข้อมูล xp, streakDays, completedCourses เท่านั้น
-      const response = await this.httpService.axiosRef.get(
-        `${courseBaseUrl}/learner/home`,
-        {
-          headers: {
-            Authorization: authorization,
-            'X-Internal-Call': 'true', // บอกว่านี่คือ internal call
-          },
-          timeout: 5000, // 5 seconds timeout
-        }
-      );
-
-      const learnerHomeData = response.data;
-      if (learnerHomeData?.header) {
-        xp = learnerHomeData.header.xp || null;
-        streakDays = learnerHomeData.header.streakDays || null;
-      }
-      
-      // ดึง completed courses จาก myCourses ที่มี progressPercent = 100
-      if (learnerHomeData?.myCourses) {
-        completedCourses = learnerHomeData.myCourses
-          .filter((course: any) => course.progressPercent === 100)
-          .map((course: any) => ({
-            course_id: course.course_id,
-            title: course.title,
-            completed: true, // เปลี่ยนจาก progressPercent เป็น completed
-          }));
-      }
-    } catch (error) {
-      // ถ้าเรียกไม่ได้ ใช้ค่า default
-      console.log('Failed to fetch from course service, using defaults');
-      console.log('Error:', error.message);
-      
-      // ถ้าเป็น timeout หรือ infinite loop ให้หยุดการเรียกซ้ำ
-      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
-        console.log('Request timeout - possible infinite loop detected');
-      }
-    }
-
-    return {
-      id: user.id,
-      email: user.email || '',
-      username: user.username || null, // เพิ่มกลับมา
-      firstName: user.firstName || '',
-      lastName: user.lastName || '',
-      role: user.role,
-      isVerified: user.isVerified || false, // เพิ่มกลับมา
-      status: user.status,
-      avatarUrl,
-      xp,
-      streakDays,
-      completedCourses, // เพิ่ม completed courses
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    };
+    return user;
   }
 
   @Patch('profile')
