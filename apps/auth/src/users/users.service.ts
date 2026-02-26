@@ -343,6 +343,8 @@ export class UsersService {
   //   throw new NotFoundException('Complete course not found');
   // }
   // console.log('course pass',);
+
+  // 
     const completeCourse = await this.completeCourseRepo.find({
       where: { userId: userId, progressPercent: 100 },
       relations: {
