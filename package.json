@@ -125,9 +125,14 @@
       "json",
       "ts"
     ],
-    "rootDir": "./",
+    "rootDir": ".",
+    "roots": [
+      "<rootDir>/apps/auth/src",
+      "<rootDir>/apps/course/src",
+      "<rootDir>/apps/reward/src",
+      "<rootDir>/test"
+    ],
     "moduleNameMapper": {
-      "^apps/(.*)$": "<rootDir>/apps/$1",
       "^@common/(.*)$": "<rootDir>/libs/common/src/$1",
       "^@config/(.*)$": "<rootDir>/libs/config/src/$1",
       "^@shared/(.*)$": "<rootDir>/libs/shared/src/$1",
@@ -138,10 +143,13 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "transformIgnorePatterns": [
+      "node_modules/(?!(uuid|@nestjs/axios|axios))"
+    ],
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],
-    "coverageDirectory": "../coverage",
+    "coverageDirectory": "./coverage",
     "testEnvironment": "node"
   }
 }
