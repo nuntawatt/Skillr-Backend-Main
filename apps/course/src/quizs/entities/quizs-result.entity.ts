@@ -29,7 +29,7 @@ export class QuizsResult {
   })
   type: QuizsResultType;
 
-  @Column({ name: 'lesson_id' })
+  @Column({ name: 'lesson_id', type: 'integer' })
   lessonId: number;
 
   // ใช้เมื่อ type = CHECKPOINT

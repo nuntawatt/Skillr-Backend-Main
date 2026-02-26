@@ -24,7 +24,7 @@ export class QuizsCheckpoint {
   @Column({ name: 'checkpoint_explanation', type: 'text', nullable: true })
   checkpointExplanation?: string | null;
 
-  @Column({ name: 'lesson_id' })
+  @Column({ name: 'lesson_id', type: 'integer' })
   lessonId: number;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
