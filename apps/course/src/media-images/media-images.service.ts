@@ -26,13 +26,13 @@ export class MediaImagesService {
     throw new BadRequestException('invalid image mime type');
   }
 
-  // อัพโหลดไฟล์ภาพผ่าน form-data (รองรับขนาดสูงสุด 5MB) และบันทึก metadata ลง DB
+  // อัพโหลดไฟล์ภาพผ่าน form-data (รองรับขนาดสูงสุด 30MB) และบันทึก metadata ลง DB
   async uploadImageFileAndPersist(file: Express.Multer.File, ownerUserId?: number) {
     if (!file) throw new BadRequestException('file missing');
 
     this.validateImageMime(file.mimetype, file.originalname);
 
-    const maxSize = Number(process.env.IMAGE_MAX_SIZE_BYTES ?? 5 * 1024 * 1024);
+    const maxSize = Number(process.env.IMAGE_MAX_SIZE_BYTES ?? 30 * 1024 * 1024); // 30MB by default
     if (file.size > maxSize) {
       throw new BadRequestException('file too large');
     }

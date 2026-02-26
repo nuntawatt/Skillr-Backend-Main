@@ -28,7 +28,7 @@ export class MediaImagesController {
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
   @UseInterceptors(FileInterceptor('file', {
     storage: multer.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    limits: { fileSize: 30 * 1024 * 1024 }, // 30MB
   }))
   async upload(@UploadedFile() file: Express.Multer.File) {
     if (!file) throw new BadRequestException('file missing');
