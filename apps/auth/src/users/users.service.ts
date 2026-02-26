@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import * as argon2 from 'argon2';
 import {
   S3Client,
@@ -26,6 +26,7 @@ import { LessonProgress } from 'apps/course/src/progress/entities/progress.entit
 import { Course } from 'apps/course/src/courses/entities/course.entity';
 import { Chapter } from 'apps/course/src/chapters/entities/chapter.entity';
 import { Level } from 'apps/course/src/levels/entities/level.entity';
+import { count } from 'console';
 
 @Injectable()
 export class UsersService {
@@ -57,6 +58,7 @@ export class UsersService {
     private readonly levelRepo: Repository<Level>,
 
     private readonly config: ConfigService,
+
   ) {
     this.s3Client = this.createS3Client();
   }
@@ -289,6 +291,58 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
+  //   const relation = await this.completeCourseRepo.find({
+  //     where: { userId: userId, progressPercent: 100 },
+  //   });
+
+  //   if(!relation){
+  //     throw new NotFoundException('Complete course not found');
+  //   }
+  //   console.log('relation pass');
+
+  //   const lesson = await this.completeCourseRepo.find({
+  //     where: { userId: userId, progressPercent: 100 },
+  //     relations: {
+  //       lesson: {},
+  //     },
+  //   });
+    
+  //   if(!lesson){
+  //     throw new NotFoundException('Complete lesson not found');
+  //   }
+  //   console.log('lesson pass',);
+
+  // const chapterIds = lesson.map((l) => l.lesson.chapter_id);
+
+  // const chapter = await this.chapterRepo.find({
+  //   where: {
+  //     levelId: In(chapterIds),
+  //   },
+  // });
+  // if(!chapter){
+  //   throw new NotFoundException('Complete chapter not found');
+  // }
+  // console.log('chapter pass',);
+  // const levelIds = chapter.map((c) => c.levelId);
+  // const level = await this.levelRepo.find({
+  //   where: {
+  //     course_id: In(levelIds),
+  //   }
+  // });
+  // if(!level){
+  //   throw new NotFoundException('Complete level not found');
+  // }
+  // console.log('level pass',);
+  // const courseIds = level.map((l) => l.course_id);
+  // const course = await this.courseRepo.find({
+  //   where: {
+  //     course_id: In(courseIds),
+  //   }
+  // });
+  // if(!course){
+  //   throw new NotFoundException('Complete course not found');
+  // }
+  // console.log('course pass',);
     const completeCourse = await this.completeCourseRepo.find({
       where: { userId: userId, progressPercent: 100 },
       relations: {
@@ -301,18 +355,20 @@ export class UsersService {
         },
       },
     });
+    
 
     return {
       completeCourse:
-        completeCourse?.map((course) => ({
-          lesson_progress_id: course.lessonProgressId,
-          lessong_id: course.lessonId,
-          course_image: course.lesson.chapter.level.course.course_imageUrl,
-          lesson: course.lesson.lesson_title,
-          lesson_description: course.lesson.lesson_description,
-          lesson_type: course.lesson.lesson_type,
-          status: course.status,
-          progress_percent: course.progressPercent,
+        completeCourse?.map((item) => ({
+          lesson_progress_id: item.lessonProgressId,
+          lessong_id: item.lessonId,
+          course_image:
+            item.lesson?.chapter?.level?.course?.course_imageUrl ?? null,
+          lesson: item.lesson?.lesson_title ?? null,
+          lesson_description: item.lesson?.lesson_description ?? null,
+          lesson_type: item.lesson?.lesson_type ?? null,
+          status: item.status,
+          progress_percent: item.progressPercent,
         })) ?? [],
     };
   }
