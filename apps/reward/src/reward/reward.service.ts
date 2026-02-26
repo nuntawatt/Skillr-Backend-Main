@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { CreateRewardDto } from './dto/create-reward.dto';
 import { UpdateRewardDto } from './dto/update-reward.dto';
 import { Reward } from './entities/rewards.entity';
-import { Any, DataSource, QueryRunner, Repository } from 'typeorm';
+import { Any, DataSource, LessThan, MoreThan, QueryRunner, Repository } from 'typeorm';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { RewardRedemption } from './entities/reward-redemption';
 import { User } from 'apps/auth/src/users/entities';
@@ -59,6 +59,14 @@ export class RewardService {
     }
 
     return { reward: reward , isCanRedeem: status  };
+  }
+
+  async getRedeemCount(userId: string){
+    const count = await this.redeemRepository.count({
+      where: {userId: userId, isUsed: false, expire_at: MoreThan(new Date())}
+    })
+    
+    return { countUserRedeem : count };
   }
 
   async getRedeem(userId: string) {

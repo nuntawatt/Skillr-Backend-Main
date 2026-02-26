@@ -12,7 +12,15 @@ import {
 import { RewardService } from './reward.service';
 import { UpdateRewardDto } from './dto/update-reward.dto';
 import { CurrentUserId, JwtAuthGuard, Roles, RolesGuard } from '@auth';
-import { ApiBadRequestResponse, ApiBearerAuth, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBadRequestResponse,
+  ApiBearerAuth,
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { UserRole } from '@common/enums';
 import { Reward } from './entities/rewards.entity';
 @Controller('rewards')
@@ -33,7 +41,6 @@ export class RewardController {
     return this.rewardService.getAllReward();
   }
 
-    
   @Get(':reward_id/rewardDetail')
   @ApiOperation({
     summary: 'Get reward detail by id',
@@ -59,9 +66,8 @@ export class RewardController {
     @Param('reward_id', ParseIntPipe) reward_id: number,
     @CurrentUserId() userId: string,
   ) {
-    return this.rewardService.getDetailReward(userId , reward_id);
+    return this.rewardService.getDetailReward(userId, reward_id);
   }
-
 
   @Post(':reward_id/redeem')
   @ApiOperation({ summary: 'แลก reward โดยใช้แต้มของ user' })
@@ -105,6 +111,9 @@ export class RewardController {
     return this.rewardService.getUserTotalXp(userId);
   }
 
-
-
+  @ApiOperation({ summary: 'ดึงจำนวน cupon ทั้งหมดที่ user ยังไม่ได้ใช้' })
+  @Get('countCupon')
+  getCountCupon(@CurrentUserId() userId: string) {
+    return this.rewardService.getRedeemCount(userId);
+  }
 }

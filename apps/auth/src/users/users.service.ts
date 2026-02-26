@@ -23,6 +23,9 @@ import { AuthProvider } from '@common/enums';
 import { UserXp } from 'apps/course/src/quizs/entities/user-xp.entity';
 import { UserStreak } from 'apps/course/src/streaks/entities/user-streak.entity';
 import { LessonProgress } from 'apps/course/src/progress/entities/progress.entity';
+import { Course } from 'apps/course/src/courses/entities/course.entity';
+import { Chapter } from 'apps/course/src/chapters/entities/chapter.entity';
+import { Level } from 'apps/course/src/levels/entities/level.entity';
 
 @Injectable()
 export class UsersService {
@@ -35,6 +38,9 @@ export class UsersService {
     @InjectRepository(AuthAccount, 'auth')
     private readonly authRepo: Repository<AuthAccount>,
 
+    @InjectRepository(Course, 'course')
+    private readonly courseRepo: Repository<Course>,
+
     @InjectRepository(UserXp, 'course')
     private readonly userXpRepo: Repository<UserXp>,
 
@@ -43,6 +49,12 @@ export class UsersService {
 
     @InjectRepository(LessonProgress, 'course')
     private readonly completeCourseRepo: Repository<LessonProgress>,
+
+    @InjectRepository(Chapter, 'course')
+    private readonly chapterRepo: Repository<Chapter>,
+
+    @InjectRepository(Level, 'course')
+    private readonly levelRepo: Repository<Level>,
 
     private readonly config: ConfigService,
   ) {
@@ -256,11 +268,7 @@ export class UsersService {
     });
 
     const streak = await this.userStreakRepo.findOne({
-      where: { userId: userId},
-    });
-
-    const completeCourse = await this.completeCourseRepo.count({
-      where: { userId: userId, progressPercent: 100 },
+      where: { userId: userId },
     });
 
     return {
@@ -271,7 +279,41 @@ export class UsersService {
       avatarUrl: user.avatar || null,
       xp: userXp?.xpTotal || 0,
       streak: streak?.currentStreak || 0,
-      completeCourse: completeCourse || 0,
+    };
+  }
+
+  async getAllCompleteCourse(userId: string) {
+    const user = await this.findById(userId);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const completeCourse = await this.completeCourseRepo.find({
+      where: { userId: userId, progressPercent: 100 },
+      relations: {
+        lesson: {
+          chapter: {
+            level: {
+              course: true,
+            },
+          },
+        },
+      },
+    });
+
+    return {
+      completeCourse:
+        completeCourse?.map((course) => ({
+          lesson_progress_id: course.lessonProgressId,
+          lessong_id: course.lessonId,
+          course_image: course.lesson.chapter.level.course.course_imageUrl,
+          lesson: course.lesson.lesson_title,
+          lesson_description: course.lesson.lesson_description,
+          lesson_type: course.lesson.lesson_type,
+          status: course.status,
+          progress_percent: course.progressPercent,
+        })) ?? [],
     };
   }
 
