@@ -193,21 +193,43 @@ export class QuizService {
 
         // ถ้ายังไม่มี progress → สร้างใหม่
         if (!userXp) {
+          // คำนวณ cumulative xp_total: ผลรวม xpEarned ของบทอื่น ๆ + xpEarned ของบทนี้ (quiz ให้ 0)
+          const otherRaw = await this.userXpRepository
+            .createQueryBuilder('ux')
+            .select('COALESCE(SUM(ux.xpEarned), 0)', 'sum')
+            .where('ux.userId = :userId', { userId })
+            .andWhere('ux.chapterId != :chapterId', { chapterId: lesson.chapter_id })
+            .getRawOne<{ sum: string }>();
+
+          const sumOther = Number(otherRaw?.sum ?? 0);
+          const cumulative = sumOther + 0; // quiz ไม่ให้ XP
+
           userXp = this.userXpRepository.create({
             userId,
             chapterId: lesson.chapter_id,
             xpEarned: 0, // quiz ไม่ให้ XP (ตาม design ปัจจุบัน)
-            xpTotal: chapterTotalXp, // คำนวณ xp ทั้งหมดของบท (รวมทุก checkpoint ใน chapter นี้)
+            xpTotal: cumulative,
             checkpointStatus: 'COMPLETED',
             completedAt: new Date(),
             lastAttemptAt: new Date(),
           });
         } else {
-          // ถ้ามีอยู่แล้ว → อัปเดตสถานะ และอัปเดต xpTotal ให้ตรงกับ chapter
+          // ถ้ามีอยู่แล้ว → อัปเดตสถานะ และอัปเดต xpEarned/xpTotal ให้เป็น cumulative
+          // คำนวณยอดของบทอื่น ๆ
+          const otherRaw = await this.userXpRepository
+            .createQueryBuilder('ux')
+            .select('COALESCE(SUM(ux.xpEarned), 0)', 'sum')
+            .where('ux.userId = :userId', { userId })
+            .andWhere('ux.chapterId != :chapterId', { chapterId: lesson.chapter_id })
+            .getRawOne<{ sum: string }>();
+
+          const sumOther = Number(otherRaw?.sum ?? 0);
+          const cumulative = sumOther + 0; // quiz ไม่ให้ XP
+
           userXp.checkpointStatus = 'COMPLETED';
           userXp.completedAt = new Date();
           userXp.lastAttemptAt = new Date();
-          userXp.xpTotal = chapterTotalXp; // อัปเดต xpTotal ให้ตรงกับ chapter
+          userXp.xpTotal = cumulative;
         }
 
         await this.userXpRepository.save(userXp);
@@ -645,19 +667,30 @@ export class QuizService {
       where: { userId, chapterId },
     });
 
+    // คำนวณ cumulative xpTotal = sum(xpEarned ของบทอื่น ๆ) + earnedXp ของบทนี้
+    const otherRaw = await this.userXpRepository
+      .createQueryBuilder('ux')
+      .select('COALESCE(SUM(ux.xpEarned), 0)', 'sum')
+      .where('ux.userId = :userId', { userId })
+      .andWhere('ux.chapterId != :chapterId', { chapterId })
+      .getRawOne<{ sum: string }>();
+
+    const sumOther = Number(otherRaw?.sum ?? 0);
+    const cumulativeTotal = sumOther + earnedXp;
+
     if (!userXp) {
       userXp = this.userXpRepository.create({
         userId,
         chapterId,
         xpEarned: earnedXp,
-        xpTotal: totalXp,
+        xpTotal: cumulativeTotal,
         checkpointStatus: earnedXp === totalXp ? 'COMPLETED' : 'PENDING',
         completedAt: earnedXp === totalXp ? new Date() : null,
         lastAttemptAt: new Date(),
       });
     } else {
       userXp.xpEarned = earnedXp;
-      userXp.xpTotal = totalXp;
+      userXp.xpTotal = cumulativeTotal;
       userXp.lastAttemptAt = new Date();
 
       if (earnedXp === totalXp && totalXp > 0) {
