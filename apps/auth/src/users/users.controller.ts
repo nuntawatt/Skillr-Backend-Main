@@ -1,15 +1,4 @@
-import {
-  Controller,
-  Get,
-  Patch,
-  Body,
-  UseGuards,
-  UseInterceptors,
-  UploadedFile,
-  BadRequestException,
-  Param,
-  Headers,
-} from '@nestjs/common';
+import { Controller, Get, Patch, Body, UseGuards, UseInterceptors, UploadedFile, BadRequestException, Param, Headers } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
 import { HttpService } from '@nestjs/axios';
@@ -19,14 +8,7 @@ import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto';
 import { JwtAuthGuard, CurrentUserId } from '@auth';
 
-import {
-  ApiTags,
-  ApiBearerAuth,
-  ApiConsumes,
-  ApiBody,
-  ApiOperation,
-  ApiResponse,
-} from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiConsumes, ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags('User')
 @ApiBearerAuth('access-token')
@@ -37,7 +19,7 @@ export class UsersController {
     private readonly usersService: UsersService,
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   // =========================
   // Profile
@@ -46,15 +28,25 @@ export class UsersController {
   @Get('profile')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get current user profile' })
-  @ApiResponse({
-    status: 200,
-    description: 'User profile retrieved successfully.',
-  })
+  @ApiResponse({ status: 200, description: 'User profile retrieved successfully.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
-  async getProfile(@CurrentUserId() userId: string) {
+  async getProfile(
+    @CurrentUserId() userId: string,
+    @Headers('authorization') authorization: string
+  ) {
+    // console.log('User ID from JWT:', userId);
+    
     const user = await this.usersService.getStudentProfile(userId);
 
+    return user;
+  }
+
+  @Get('student/completeCourse')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Get all completed courses for a student' })
+  async getAllStudentCompleteCourse(@CurrentUserId() userId: string) {
+    const user = await this.usersService.getAllCompleteCourse(userId);
     return user;
   }
 
@@ -62,10 +54,7 @@ export class UsersController {
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Update current user profile' })
   @ApiBody({ type: UpdateUserDto })
-  @ApiResponse({
-    status: 200,
-    description: 'User profile updated successfully.',
-  })
+  @ApiResponse({ status: 200, description: 'User profile updated successfully.' })
   @ApiResponse({ status: 400, description: 'Bad Request.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
@@ -119,12 +108,10 @@ export class UsersController {
     return this.usersService.uploadAvatar(userId, file);
   }
 
+  
   @Get('avatar/:id')
   @ApiOperation({ summary: 'Get user avatar by ID' })
-  @ApiResponse({
-    status: 200,
-    description: 'User avatar retrieved successfully.',
-  })
+  @ApiResponse({ status: 200, description: 'User avatar retrieved successfully.' })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 404, description: 'User not found.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
