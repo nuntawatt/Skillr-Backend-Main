@@ -190,7 +190,7 @@ export class CoursesService {
             return {
               lesson_id: lesson.lesson_id,
               lesson_title: lesson.lesson_title,
-              lesson_type: lesson.lesson_type,
+              lesson_type: lesson.lesson_type, 
               lesson_description: lesson.lesson_description ?? undefined,
               ref_id: lesson.ref_id,
               orderIndex: lesson.orderIndex,
