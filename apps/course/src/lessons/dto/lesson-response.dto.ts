@@ -19,6 +19,9 @@ export class LessonResponseDto {
   @ApiProperty({ description: 'Order index within the chapter', example: 0 })
   orderIndex: number;
 
+  @ApiProperty({ description: 'Whether the lesson is published (visible to students)', example: true })
+  isPublished: boolean;
+
   @ApiProperty({ description: 'Chapter ID this lesson belongs to', example: 1 })
   chapter_id: number;
 
@@ -30,4 +33,17 @@ export class LessonResponseDto {
 
   @ApiProperty({ description: 'Creation timestamp' })
   createdAt: Date;
+
+  // @ApiPropertyOptional({ description: 'Checkpoint data when lesson_type is checkpoint' })
+  // checkpoint?: {
+  //   checkpoint_id: number;
+  //   checkpoint_score: number;
+  //   checkpoint_type: string;
+  //   checkpoint_questions: string;
+  //   checkpoint_option?: any;
+  //   checkpoint_answer?: any;
+  //   checkpoint_explanation?: string | null;
+  //   createdAt: Date;
+  //   updatedAt: Date;
+  // };
 }

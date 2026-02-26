@@ -131,7 +131,6 @@ export class ProgressController {
               }
             ],
             nextAvailableLessonId: 2,
-            hasCheckpoint: false,
             checkpointUnlocked: null,
             streakStatus: 'COMPLETE',
             isReward: true
@@ -157,7 +156,6 @@ export class ProgressController {
               }
             ],
             nextAvailableLessonId: null,
-            hasCheckpoint: false,
             checkpointUnlocked: null,
             streakStatus: 'IN_PROGRESS',
             isReward: false

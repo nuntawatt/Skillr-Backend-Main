@@ -16,6 +16,7 @@ import { ArticlesController } from './articles/articles.controller';
 import { ProgressController } from './progress/progress.controller';
 import { QuizAdminController, QuizController } from './quizs/quiz.controller';
 import { StreakController } from './streaks/streak.controller';
+import { AdminCoursesController } from './courses/admin-courses.controller';
 
 // Services
 import { CoursesService } from './courses/courses.service';
@@ -100,6 +101,7 @@ const isTest = process.env.NODE_ENV === 'test';
     StreakController,
     QuizController,
     QuizAdminController,
+    AdminCoursesController,
   ],
 
   providers: [

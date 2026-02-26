@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Lesson, LessonType } from './entities/lesson.entity';
+import { QuizsCheckpoint } from '../quizs/entities/checkpoint.entity';
 import { Chapter } from '../chapters/entities/chapter.entity';
 import { CreateLessonDto, UpdateLessonDto, LessonResponseDto } from './dto/lesson';
 
@@ -12,6 +13,8 @@ export class LessonsService {
     private readonly lessonRepository: Repository<Lesson>,
     @InjectRepository(Chapter)
     private readonly chapterRepository: Repository<Chapter>,
+    @InjectRepository(QuizsCheckpoint)
+    private readonly checkpointRepository: Repository<QuizsCheckpoint>,
   ) { }
 
   // Create a new lesson
@@ -71,6 +74,7 @@ export class LessonsService {
       orderIndex: orderIndex,
       lesson_ImageUrl: createLessonDto.lesson_ImageUrl,
       lesson_videoUrl: createLessonDto.lesson_videoUrl,
+      isPublished: createLessonDto.isPublished ?? false,
     });
 
     const saved = await this.lessonRepository.save(lesson);
@@ -85,7 +89,7 @@ export class LessonsService {
       order: { orderIndex: 'ASC' },
     });
 
-    return lessons.map((l) => this.toResponseDto(l));
+    return Promise.all(lessons.map((l) => this.toResponseDto(l)));
   }
 
   // Find a lesson by ID
@@ -96,7 +100,7 @@ export class LessonsService {
       throw new NotFoundException(`Lesson with ID ${id} not found`);
     }
 
-    return this.toResponseDto(lesson);
+    return await this.toResponseDto(lesson);
   }
 
   // Update a lesson
@@ -159,6 +163,11 @@ export class LessonsService {
       }
 
       lesson.lesson_type = updateLessonDto.lesson_type;
+    }
+
+    // ---------------- Publish Flag ----------------
+    if (updateLessonDto.isPublished !== undefined) {
+      lesson.isPublished = updateLessonDto.isPublished;
     }
 
     // ---------------- Manual Order Change ----------------
@@ -242,12 +251,12 @@ export class LessonsService {
     // save ทีเดียว (ดีกว่า await ใน loop)
     await this.lessonRepository.save(updatedLessons);
 
-    return this.findByChapter(chapterId);
+    return await this.findByChapter(chapterId);
   }
 
   // Convert Lesson entity to LessonResponseDto
-  private toResponseDto(lesson: Lesson): LessonResponseDto {
-    return {
+  private async toResponseDto(lesson: Lesson): Promise<LessonResponseDto> {
+    const base: any = {
       lesson_id: lesson.lesson_id,
       lesson_title: lesson.lesson_title,
       lesson_description: lesson.lesson_description ?? undefined,
@@ -259,7 +268,33 @@ export class LessonsService {
       lesson_ImageUrl: lesson.lesson_ImageUrl,
       lesson_videoUrl: lesson.lesson_videoUrl,
 
+      isPublished: lesson.isPublished,
+      // hasCheckpoint: false,
       createdAt: lesson.createdAt,
     };
+
+    if (lesson.lesson_type === LessonType.CHECKPOINT) {
+      try {
+        const chk = await this.checkpointRepository.findOne({ where: { lessonId: lesson.lesson_id } });
+        if (chk) {
+          // attach checkpoint object only (do not expose hasCheckpoint boolean)
+          base.checkpoint = {
+            checkpoint_id: chk.checkpointId,
+            checkpoint_score: chk.checkpointScore,
+            checkpoint_type: chk.checkpointType,
+            checkpoint_questions: chk.checkpointQuestions,
+            checkpoint_option: chk.checkpointOption,
+            // do not include checkpoint_answer here for student-facing responses
+            checkpoint_explanation: chk.checkpointExplanation ?? null,
+            createdAt: chk.createdAt,
+            updatedAt: chk.updatedAt,
+          };
+        }
+      } catch (err) {
+        // ignore checkpoint errors and return base
+      }
+    }
+
+    return base as LessonResponseDto;
   }
 }

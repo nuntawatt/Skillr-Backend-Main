@@ -34,7 +34,7 @@ async function bootstrap() {
     .setDescription('API documentation for the Course Service')
     .setVersion('1.0.0')
     .addServer('https://api.skllracademy.com/s2/api')
-    .addServer('/api')
+    .addServer('http://localhost:3002/api')
     .addBearerAuth()
     .build();
 

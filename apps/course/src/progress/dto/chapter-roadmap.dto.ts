@@ -47,9 +47,6 @@ export class ChapterRoadmapDto {
   @ApiProperty({ required: false, nullable: true })
   nextAvailableLessonId?: number | null;
 
-  // เก็บ Boolean ว่าบทนี้มี Checkpoint หรือไม่
-  @ApiProperty({ required: false, nullable: true })
-  hasCheckpoint?: boolean;
 
   // เก็บสถานะของ Checkpoint ว่าถูกปลดล็อคหรือไม่
   @ApiProperty({ required: false, nullable: true })

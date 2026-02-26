@@ -18,6 +18,12 @@ export class LessonStructureDto {
 
   @ApiProperty({ description: 'Order index in chapter' })
   orderIndex: number;
+  
+  @ApiProperty({ description: 'Whether the lesson is published', required: false })
+  isPublished?: boolean;
+
+  @ApiProperty({ description: 'Checkpoint data when present', required: false })
+  checkpoint?: any;
 }
 
 export class ChapterStructureDto {

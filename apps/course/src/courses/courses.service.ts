@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Course } from './entities/course.entity';
 import { CreateCourseDto, UpdateCourseDto, CourseResponseDto, CourseStructureResponseDto, LevelStructureDto, ChapterStructureDto, LessonStructureDto } from './dto';
+import { LessonType } from '../lessons/entities/lesson.entity';
 
 @Injectable()
 export class CoursesService {
@@ -155,13 +156,154 @@ export class CoursesService {
       };
     });
 
+    // ดึง lesson_id ทั้งหมดที่อยู่ในคอร์สนี้ (ผ่าน levels -> chapters -> lessons) เพื่อ query ตาราง checkpoint ในภายหลัง
+    const lessonIds: number[] = [];
+    for (const lvl of sortedLevels) {
+      for (const ch of lvl.level_chapters || []) {
+        for (const l of ch.lessons || []) {
+          if (l && typeof l.lesson_id === 'number') lessonIds.push(l.lesson_id);
+        }
+      }
+    }
+
+    // ดึงข้อมูล checkpoint ของบทเรียนทั้งหมดในคอร์สนี้มาเก็บไว้ใน Map เพื่อให้เข้าถึงได้ง่ายในภายหลัง
+    const checkpointMap = new Map<number, any>();
+    if (lessonIds.length) {
+      const rows: Array<any> = await this.courseRepository.query(
+        `SELECT lesson_id, checkpoint_id, checkpoint_score, checkpoint_type, checkpoint_questions, checkpoint_option, checkpoint_answer, checkpoint_explanation, created_at, updated_at FROM quizs_checkpoint WHERE lesson_id = ANY($1)`,
+        [lessonIds],
+      );
+      rows.forEach((r) => checkpointMap.set(Number(r.lesson_id), r));
+    }
+
+    // สร้างโครงสร้างสุดท้ายโดยผนวกข้อมูล checkpoint เข้าไปในบทเรียนที่เป็นประเภท checkpoint
+    const finalLevels: LevelStructureDto[] = sortedLevels.map((level) => {
+      const chapters: ChapterStructureDto[] = (level.level_chapters || []).map((chapter) => {
+        const lessons: LessonStructureDto[] = (chapter.lessons || [])
+          .filter((lesson) => {
+            if (!lesson.isPublished) return false;
+            if (lesson.lesson_type === LessonType.CHECKPOINT && !checkpointMap.has(lesson.lesson_id)) return false;
+            return true;
+          })
+          .sort((a, b) => a.orderIndex - b.orderIndex)
+          .map((lesson) => {
+            const cp = checkpointMap.get(lesson.lesson_id);
+            return {
+              lesson_id: lesson.lesson_id,
+              lesson_title: lesson.lesson_title,
+              lesson_type: lesson.lesson_type,
+              lesson_description: lesson.lesson_description ?? undefined,
+              ref_id: lesson.ref_id,
+              orderIndex: lesson.orderIndex,
+              isPublished: lesson.isPublished,
+            } as LessonStructureDto;
+          });
+
+        // ตัวอย่างโครงสร้างของบทเรียนที่มี checkpoint
+        return {
+          chapter_id: chapter.chapter_id,
+          chapter_title: chapter.chapter_title,
+          orderIndex: chapter.chapter_orderIndex,
+          lessons,
+        };
+      });
+
+      // สร้างโครงสร้างสุดท้ายโดยผนวกข้อมูล checkpoint เข้าไปในบทเรียนที่เป็นประเภท checkpoint
+      return {
+        level_id: level.level_id,
+        level_title: level.level_title,
+        orderIndex: level.level_orderIndex,
+        chapters,
+      };
+    });
+
     return {
       course_id: course.course_id,
       course_title: course.course_title,
       course_description: course.course_description,
       isPublished: course.isPublished,
       course_tags: course.course_tags ?? undefined,
-      course_levels: levels,
+      course_levels: finalLevels,
+    };
+  }
+
+  // Admin variant: include unpublished lessons and full checkpoint data (including answers)
+  async getStructureAdmin(id: number): Promise<CourseStructureResponseDto> {
+    const course = await this.courseRepository.findOne({
+      where: { course_id: id },
+      relations: [
+        'course_levels',
+        'course_levels.level_chapters',
+        'course_levels.level_chapters.lessons',
+      ],
+    });
+
+    if (!course) {
+      throw new NotFoundException(`Course with ID ${id} not found`);
+    }
+
+    const sortedLevels = (course.course_levels || []).sort(
+      (a, b) => a.level_orderIndex - b.level_orderIndex,
+    );
+
+    const lessonIds: number[] = [];
+    for (const lvl of sortedLevels) {
+      for (const ch of lvl.level_chapters || []) {
+        for (const l of ch.lessons || []) {
+          if (l && typeof l.lesson_id === 'number') lessonIds.push(l.lesson_id);
+        }
+      }
+    }
+
+    const checkpointMap = new Map<number, any>();
+    if (lessonIds.length) {
+      const rows: Array<any> = await this.courseRepository.query(
+        `SELECT lesson_id, checkpoint_id, checkpoint_score, checkpoint_type, checkpoint_questions, checkpoint_option, checkpoint_answer, checkpoint_explanation, created_at, updated_at FROM quizs_checkpoint WHERE lesson_id = ANY($1)`,
+        [lessonIds],
+      );
+      rows.forEach((r) => checkpointMap.set(Number(r.lesson_id), r));
+    }
+
+    const finalLevels: LevelStructureDto[] = sortedLevels.map((level) => {
+      const chapters: ChapterStructureDto[] = (level.level_chapters || []).map((chapter) => {
+        const lessons: LessonStructureDto[] = (chapter.lessons || [])
+          .sort((a, b) => a.orderIndex - b.orderIndex)
+          .map((lesson) => {
+            const cp = checkpointMap.get(lesson.lesson_id);
+            return {
+              lesson_id: lesson.lesson_id,
+              lesson_title: lesson.lesson_title,
+              lesson_type: lesson.lesson_type,
+              lesson_description: lesson.lesson_description ?? undefined,
+              ref_id: lesson.ref_id,
+              orderIndex: lesson.orderIndex,
+              isPublished: lesson.isPublished,
+            } as LessonStructureDto;
+          });
+
+        return {
+          chapter_id: chapter.chapter_id,
+          chapter_title: chapter.chapter_title,
+          orderIndex: chapter.chapter_orderIndex,
+          lessons,
+        };
+      });
+
+      return {
+        level_id: level.level_id,
+        level_title: level.level_title,
+        orderIndex: level.level_orderIndex,
+        chapters,
+      };
+    });
+
+    return {
+      course_id: course.course_id,
+      course_title: course.course_title,
+      course_description: course.course_description,
+      isPublished: course.isPublished,
+      course_tags: course.course_tags ?? undefined,
+      course_levels: finalLevels,
     };
   }
 

@@ -34,11 +34,12 @@ export class Lesson {
   @Column({ name: 'order_index', type: 'int', default: 0 })
   orderIndex: number;
 
-  // cover image URL (CloudFront CDN)
+  @Column({ name: 'is_published', type: 'boolean', default: false })
+  isPublished: boolean;
+
   @Column({ name: 'lesson_image_url', type: 'varchar', length: 2048, nullable: true })
   lesson_ImageUrl?: string | null;
 
-  // main video URL (CloudFront CDN)
   @Column({ name: 'lesson_video_url', type: 'varchar', length: 2048, nullable: true })
   lesson_videoUrl?: string | null;
 

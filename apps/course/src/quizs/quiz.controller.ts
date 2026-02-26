@@ -231,7 +231,8 @@ export class QuizAdminController {
 
 @ApiTags('Student | Quiz and Checkpoint')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.STUDENT)
 @Controller('quizzes')
 export class QuizController {
   constructor(private readonly quizService: QuizService) { }

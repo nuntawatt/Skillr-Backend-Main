@@ -44,4 +44,8 @@ export class UpdateLessonDto {
   @IsOptional()
   @IsString()
   lesson_videoUrl?: string | null;
+
+  @ApiPropertyOptional({ description: 'Whether the lesson is published (visible to students)', example: false })
+  @IsOptional()
+  isPublished?: boolean;
 }
