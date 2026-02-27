@@ -28,8 +28,8 @@ export class CreateAnnouncementDto {
 
   @ApiPropertyOptional({
     description: 'สถานะการแสดงผล',
-    example: true,
-    default: true,
+    example: false,
+    default: false,
   })
   @IsBoolean()
   @IsOptional()

@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, Repository } from 'typeorm';
 
@@ -26,13 +27,59 @@ export class AnnouncementsService {
       title: dto.title,
       imageUrl: dto.imageUrl ?? null,
       deepLink: dto.deepLink ?? null,
-      activeStatus: dto.activeStatus ?? true,
+      activeStatus: dto.activeStatus ?? false,
       priority: dto.priority ?? 0,
       startDate: dto.startDate ? new Date(dto.startDate) : null,
       endDate: dto.endDate ? new Date(dto.endDate) : null,
     });
 
     return this.announcementRepository.save(announcement);
+  }
+
+  @Cron(CronExpression.EVERY_MINUTE)
+  async syncAnnouncementStatusByDate(): Promise<void> {
+    const now = new Date();
+    console.log(`🔄 [${now.toISOString()}] Starting announcement status sync...`);
+
+    const activatedResult = await this.announcementRepository
+      .createQueryBuilder()
+      .update(Announcement)
+      .set({ activeStatus: true })
+      .where('active_status = :active', { active: false })
+      .andWhere('start_date IS NOT NULL')
+      .andWhere('start_date <= :now', { now })
+      .andWhere(
+        new Brackets((qb) => {
+          qb.where('end_date IS NULL').orWhere('end_date >= :now', { now });
+        }),
+      )
+      .execute();
+
+    if (activatedResult.affected && activatedResult.affected > 0) {
+      console.log(`✅ Activated ${activatedResult.affected} announcement(s)`);
+    }
+
+    const deactivatedResult = await this.announcementRepository
+      .createQueryBuilder()
+      .update(Announcement)
+      .set({ activeStatus: false })
+      .where('active_status = :active', { active: true })
+      .andWhere(
+        new Brackets((qb) => {
+          qb.where('start_date IS NOT NULL AND start_date > :now', { now })
+            .orWhere('end_date IS NOT NULL AND end_date < :now', { now });
+        }),
+      )
+      .execute();
+
+    if (deactivatedResult.affected && deactivatedResult.affected > 0) {
+      console.log(`❌ Deactivated ${deactivatedResult.affected} announcement(s)`);
+    }
+
+    if ((!activatedResult.affected || activatedResult.affected === 0) && 
+        (!deactivatedResult.affected || deactivatedResult.affected === 0)) {
+      console.log(`ℹ️ No status changes needed`);
+    }
   }
 
   async findAll(): Promise<Announcement[]> {
