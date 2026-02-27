@@ -2,8 +2,11 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Lesson, LessonType } from './entities/lesson.entity';
-import { QuizsCheckpoint } from '../quizs/entities/checkpoint.entity';
 import { Chapter } from '../chapters/entities/chapter.entity';
+import { Article } from '../articles/entities/article.entity';
+import { Quizs } from '../quizs/entities/quizs.entity';
+import { QuizsCheckpoint } from '../quizs/entities/checkpoint.entity';
+import { VideoAsset } from '../media-videos/entities/video-asset.entity';
 import { CreateLessonDto, UpdateLessonDto, LessonResponseDto } from './dto/lesson';
 
 @Injectable()
@@ -15,10 +18,25 @@ export class LessonsService {
     private readonly chapterRepository: Repository<Chapter>,
     @InjectRepository(QuizsCheckpoint)
     private readonly checkpointRepository: Repository<QuizsCheckpoint>,
+    @InjectRepository(Article)
+    private readonly articleRepo: Repository<Article>,
+    @InjectRepository(Quizs)
+    private readonly quizRepo: Repository<Quizs>,
+    @InjectRepository(QuizsCheckpoint)
+    private readonly checkpointRepo: Repository<QuizsCheckpoint>,
+    @InjectRepository(VideoAsset)
+    private readonly videoRepo: Repository<VideoAsset>,
   ) { }
 
   // Create a new lesson
   async create(createLessonDto: CreateLessonDto): Promise<LessonResponseDto> {
+        // ต้องมี title และ description (หรือเนื้อหาสำคัญอื่นๆ)
+        if (!createLessonDto.lesson_title || createLessonDto.lesson_title.trim() === '') {
+          throw new BadRequestException('Lesson title is required');
+        }
+        if (!createLessonDto.lesson_description || createLessonDto.lesson_description.trim() === '') {
+          throw new BadRequestException('Lesson description is required');
+        }
     // ตรวจสอบว่า chapter มีอยู่จริง
     const chapter = await this.chapterRepository.findOne({
       where: { chapter_id: createLessonDto.chapter_id },
@@ -74,7 +92,7 @@ export class LessonsService {
       orderIndex: orderIndex,
       lesson_ImageUrl: createLessonDto.lesson_ImageUrl,
       lesson_videoUrl: createLessonDto.lesson_videoUrl,
-      isPublished: createLessonDto.isPublished ?? false,
+      isPublished: createLessonDto.isPublished ?? false, // เริ่มต้นเป็น unpublished ถ้าไม่ระบุมา
     });
 
     const saved = await this.lessonRepository.save(lesson);
@@ -98,6 +116,42 @@ export class LessonsService {
 
     if (!lesson) {
       throw new NotFoundException(`Lesson with ID ${id} not found`);
+    }
+
+    // ถ้า lesson ยังไม่ publish ให้เช็คเนื้อหาตามประเภท
+    if (!lesson.isPublished) {
+      // บทความ
+      if (lesson.lesson_type === 'article' && Number.isInteger(lesson.ref_id) && lesson.ref_id > 0) {
+        const article = await this.articleRepo.findOne({ where: { article_id: lesson.ref_id } });
+        if (article && Array.isArray(article.article_content) && article.article_content.length > 0) {
+          lesson.isPublished = true;
+          await this.lessonRepository.save(lesson);
+        }
+      }
+      // วิดีโอ
+      if (lesson.lesson_type === 'video' && Number.isInteger(lesson.ref_id) && lesson.ref_id > 0) {
+        const video = await this.videoRepo.findOne({ where: { id: lesson.ref_id } });
+        if (video && video.publicUrl) {
+          lesson.isPublished = true;
+          await this.lessonRepository.save(lesson);
+        }
+      }
+      // quiz
+      if (lesson.lesson_type === 'quiz' && Number.isInteger(lesson.ref_id) && lesson.ref_id > 0) {
+        const quiz = await this.quizRepo.findOne({ where: { quizsId: lesson.ref_id } });
+        if (quiz && quiz.quizsQuestions && quiz.quizsQuestions.length > 0) {
+          lesson.isPublished = true;
+          await this.lessonRepository.save(lesson);
+        }
+      }
+      // checkpoint
+      if (lesson.lesson_type === 'checkpoint' && Number.isInteger(lesson.ref_id) && lesson.ref_id > 0) {
+        const checkpoint = await this.checkpointRepo.findOne({ where: { checkpointId: lesson.ref_id } });
+        if (checkpoint && checkpoint.checkpointQuestions) {
+          lesson.isPublished = true;
+          await this.lessonRepository.save(lesson);
+        }
+      }
     }
 
     return await this.toResponseDto(lesson);
@@ -134,6 +188,9 @@ export class LessonsService {
     if (updateLessonDto.lesson_videoUrl !== undefined) {
       lesson.lesson_videoUrl = updateLessonDto.lesson_videoUrl;
     }
+
+    // บังคับ publish ทุกครั้งที่ update
+    lesson.isPublished = true;
 
     // ---------------- Type Change Logic ----------------
     if (

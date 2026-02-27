@@ -181,17 +181,16 @@ export class CoursesService {
       const chapters: ChapterStructureDto[] = (level.level_chapters || []).map((chapter) => {
         const lessons: LessonStructureDto[] = (chapter.lessons || [])
           .filter((lesson) => {
+            // ดง กรองไม่ให้แสlesson ที่ isPublished: false เท่านั้น
             if (!lesson.isPublished) return false;
-            if (lesson.lesson_type === LessonType.CHECKPOINT && !checkpointMap.has(lesson.lesson_id)) return false;
             return true;
           })
           .sort((a, b) => a.orderIndex - b.orderIndex)
           .map((lesson) => {
-            const cp = checkpointMap.get(lesson.lesson_id);
             return {
               lesson_id: lesson.lesson_id,
               lesson_title: lesson.lesson_title,
-              lesson_type: lesson.lesson_type,
+              lesson_type: lesson.lesson_type, 
               lesson_description: lesson.lesson_description ?? undefined,
               ref_id: lesson.ref_id,
               orderIndex: lesson.orderIndex,
@@ -199,7 +198,6 @@ export class CoursesService {
             } as LessonStructureDto;
           });
 
-        // ตัวอย่างโครงสร้างของบทเรียนที่มี checkpoint
         return {
           chapter_id: chapter.chapter_id,
           chapter_title: chapter.chapter_title,
@@ -208,7 +206,6 @@ export class CoursesService {
         };
       });
 
-      // สร้างโครงสร้างสุดท้ายโดยผนวกข้อมูล checkpoint เข้าไปในบทเรียนที่เป็นประเภท checkpoint
       return {
         level_id: level.level_id,
         level_title: level.level_title,

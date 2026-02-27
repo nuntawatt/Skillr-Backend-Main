@@ -2,7 +2,7 @@ import { CoursesService } from './courses.service';
 import { Controller, Get, Post, Body, Patch, Param, Delete, ParseIntPipe, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
 import { CreateCourseDto, UpdateCourseDto, CourseResponseDto, CourseStructureResponseDto } from './dto';
 
-import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiResponse, ApiNoContentResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiResponse, ApiNoContentResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import { UserRole } from '@common/enums/user-role.enum';
 
@@ -23,8 +23,6 @@ export class CoursesController {
     return this.coursesService.create(dto);
   }
 
-  // @ApiTags('Student | Courses')
-  // @UseGuards(JwtAuthGuard)
   @Get()
   @ApiOperation({ summary: 'ดึงข้อมูลคอร์สทั้งหมดพร้อมตัวกรองที่เลือกได้' })
   @ApiOkResponse({ type: CourseResponseDto, isArray: true })
@@ -33,8 +31,6 @@ export class CoursesController {
     return this.coursesService.findAll();
   }
 
-  // @ApiTags('Student | Courses')
-  // @UseGuards(JwtAuthGuard)
   @Get(':id')
   @ApiOperation({ summary: 'ดึงข้อมูลคอร์สด้วย ID' })
   @ApiParam({ name: 'id', type: Number })
@@ -46,8 +42,6 @@ export class CoursesController {
     return this.coursesService.findOne(id);
   }
 
-  // @ApiTags('Student | Courses')
-  // @UseGuards(JwtAuthGuard)
   @Get(':id/structure')
   @ApiOperation({ summary: 'ดึงโครงสร้างแบบ nested ทั้งหมดของคอร์ส' })
   @ApiParam({ name: 'id', type: Number })
@@ -81,4 +75,5 @@ export class CoursesController {
   remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
     return this.coursesService.remove(id);
   }
+  
 }

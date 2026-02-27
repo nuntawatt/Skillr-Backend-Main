@@ -372,7 +372,10 @@ export class QuizService {
     dto: Partial<UpdateCheckpointDto>,
   ): Promise<QuizsCheckpoint> {
     const checkpoint = await this.findOneCheckpointByLessonId(lessonId);
-    return this.updateCheckpoint(checkpoint.checkpointId, dto);
+    const updatedCheckpoint = await this.updateCheckpoint(checkpoint.checkpointId, dto);
+    // อัปเดต lesson ให้ isPublished = true
+    await this.lessonRepository.update(lessonId, { isPublished: true });
+    return updatedCheckpoint;
   }
 
   // ลบ quiz ตาม lesson ID
@@ -462,12 +465,18 @@ export class QuizService {
     // ถ้ามีอยู่แล้วให้ Update
     if (existing) {
       Object.assign(existing, data);
-      return this.checkpointRepository.save(existing);
+      const saved = await this.checkpointRepository.save(existing);
+      // อัปเดต lesson ให้ isPublished = true
+      await this.lessonRepository.update(dto.lesson_id, { isPublished: true });
+      return saved;
     }
 
     // ถ้าไม่มีให้สร้างใหม่
     const checkpoint = this.checkpointRepository.create(data);
-    return this.checkpointRepository.save(checkpoint);
+    const saved = await this.checkpointRepository.save(checkpoint);
+    // อัปเดต lesson ให้ isPublished = true
+    await this.lessonRepository.update(dto.lesson_id, { isPublished: true });
+    return saved;
   }
 
   // หา checkpoints ตาม lesson ID
