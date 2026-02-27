@@ -181,7 +181,6 @@ export class CoursesService {
       const chapters: ChapterStructureDto[] = (level.level_chapters || []).map((chapter) => {
         const lessons: LessonStructureDto[] = (chapter.lessons || [])
           .filter((lesson) => {
-            // ดง กรองไม่ให้แสlesson ที่ isPublished: false เท่านั้น
             if (!lesson.isPublished) return false;
             return true;
           })
@@ -224,7 +223,7 @@ export class CoursesService {
     };
   }
 
-  // Admin variant: include unpublished lessons and full checkpoint data (including answers)
+  // 
   async getStructureAdmin(id: number): Promise<CourseStructureResponseDto> {
     const course = await this.courseRepository.findOne({
       where: { course_id: id },
