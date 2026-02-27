@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { getDatabaseConfig } from '@config/database.config';
 import { AuthLibModule } from '@auth/auth-lib.module';
@@ -56,6 +57,7 @@ const isTest = process.env.NODE_ENV === 'test';
       isGlobal: true,
       envFilePath: ['apps/course/.env', '.env'],
     }),
+    ScheduleModule.forRoot(),
 
     ...(isTest
       ? []

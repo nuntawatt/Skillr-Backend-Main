@@ -172,6 +172,36 @@ export class AnnouncementsController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
+  @Post('sync-active')
+  @ApiOperation({ 
+    summary: 'บังคับประกาศสถานะการทำงาน (สำหรับผู้ดูแลระบบเท่านั้น)', 
+    description: '**Admin Only - ต้อง Login + Admin Role**\n\nบังคับให้รันการ sync สถานะป้ายประกาศตามวันที่ทันที โดยไม่ต้องรอ cron ทำงาน 1 นาที\n\n🔐 **ต้อง Authentication** - JWT Token + Admin Role\n⚡ **Force Sync** - ทำงานทันที ไม่ต้องรอ cron\n🔧 **ใช้สำหรับ** - ทดสอบ หรือเปิด/ปิดป้ายฉุกเฉิน' 
+  })
+  @ApiResponse({
+    status: 200,
+    description: '**Force sync สำเร็จ (Admin เท่านั้น)**\n\n✅ สำเร็จ - sync สถานะป้ายประกาศตาม startDate/endDate เรียบร้อย\n📊 จะอัปเดต activeStatus ของป้ายที่ถึงเวลาแล้วทั้งหมด',
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        message: { type: 'string', example: 'Sync completed' },
+        timestamp: { type: 'string', example: '2026-02-27T11:47:00.000Z' }
+      },
+    },
+  })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
+  async forceSyncActiveStatus() {
+    await this.announcementsService.syncAnnouncementStatusByDate();
+    return {
+      success: true,
+      message: 'Sync completed',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'ลบป้ายประกาศ', description: 'Admin เท่านั้นสามารถลบป้ายประกาศตาม ID ที่ระบุได้ การลบจะถาวรและไม่สามารถกู้คืนได้' })
