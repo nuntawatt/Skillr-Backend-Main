@@ -11,5 +11,6 @@ import { AnnouncementsService } from './announcements.service';
   imports: [TypeOrmModule.forFeature([Announcement]), MediaImagesModule],
   controllers: [AnnouncementsController],
   providers: [AnnouncementsService],
+  exports: [AnnouncementsService],
 })
 export class AnnouncementsModule {}
