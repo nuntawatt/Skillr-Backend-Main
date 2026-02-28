@@ -30,13 +30,13 @@ export class LessonsService {
 
   // Create a new lesson
   async create(createLessonDto: CreateLessonDto): Promise<LessonResponseDto> {
-        // ต้องมี title และ description (หรือเนื้อหาสำคัญอื่นๆ)
-        if (!createLessonDto.lesson_title || createLessonDto.lesson_title.trim() === '') {
-          throw new BadRequestException('Lesson title is required');
-        }
-        if (!createLessonDto.lesson_description || createLessonDto.lesson_description.trim() === '') {
-          throw new BadRequestException('Lesson description is required');
-        }
+    // ต้องมี title และ description (หรือเนื้อหาสำคัญอื่นๆ)
+    // if (!createLessonDto.lesson_title || createLessonDto.lesson_title.trim() === '') {
+    //   throw new BadRequestException('Lesson title is required');
+    // }
+    // if (!createLessonDto.lesson_description || createLessonDto.lesson_description.trim() === '') {
+    //   throw new BadRequestException('Lesson description is required');
+    // }
     // ตรวจสอบว่า chapter มีอยู่จริง
     const chapter = await this.chapterRepository.findOne({
       where: { chapter_id: createLessonDto.chapter_id },
@@ -68,17 +68,16 @@ export class LessonsService {
         orderIndex = lessons.length; // checkpoint ใหม่จะอยู่ท้ายสุดเสมอ
       }
     } else {
-      // ถ้าเป็น lesson ปกติ → แทรกก่อน checkpoint เสมอ (ถ้ามี)
+      // ถ้าไม่ใช่ checkpoint
 
+      // ถ้ามี checkpoint อยู่แล้ว → แทรกก่อน checkpoint
       if (existingCheckpoint) {
-        // แทรกก่อน checkpoint เสมอ
         orderIndex = existingCheckpoint.orderIndex;
 
         // ขยับ checkpoint ลงไป 1 ตำแหน่ง
         existingCheckpoint.orderIndex += 1;
         await this.lessonRepository.save(existingCheckpoint);
       } else {
-        // ไม่มี checkpoint → ต่อท้ายปกติ
         orderIndex = lessons.length;
       }
     }
