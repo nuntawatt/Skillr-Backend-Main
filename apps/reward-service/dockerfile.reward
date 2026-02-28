@@ -11,7 +11,7 @@ COPY libs ./libs
 
 RUN pnpm install --frozen-lockfile
 
-RUN pnpm exec nest build reward
+RUN pnpm exec nest build reward-service
 RUN pnpm prune --prod
 
 # Runtime stage
@@ -26,4 +26,4 @@ COPY --from=builder /app/package.json ./package.json
 
 EXPOSE 3003
 
-CMD ["node", "dist/apps/reward/src/main.js"]
+CMD ["node", "dist/apps/reward-service/src/main.js"]

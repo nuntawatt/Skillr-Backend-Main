@@ -1,18 +1,9 @@
-import {
-  Injectable,
-  ConflictException,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import * as argon2 from 'argon2';
-import {
-  S3Client,
-  PutObjectCommand,
-  GetObjectCommand,
-} from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 
@@ -20,12 +11,12 @@ import { User } from './entities/user.entity';
 import { AuthAccount } from './entities/auth-account.entity';
 import { CreateUserDto, UpdateUserDto, UpdateRoleDto } from './dto';
 import { AuthProvider } from '@common/enums';
-import { UserXp } from 'apps/course/src/quizs/entities/user-xp.entity';
-import { UserStreak } from 'apps/course/src/streaks/entities/user-streak.entity';
-import { LessonProgress } from 'apps/course/src/progress/entities/progress.entity';
-import { Course } from 'apps/course/src/courses/entities/course.entity';
-import { Chapter } from 'apps/course/src/chapters/entities/chapter.entity';
-import { Level } from 'apps/course/src/levels/entities/level.entity';
+import { UserXp } from 'apps/course-service/src/quizs/entities/user-xp.entity';
+import { UserStreak } from 'apps/course-service/src/streaks/entities/user-streak.entity';
+import { LessonProgress } from 'apps/course-service/src/progress/entities/progress.entity';
+import { Course } from 'apps/course-service/src/courses/entities/course.entity';
+import { Chapter } from 'apps/course-service/src/chapters/entities/chapter.entity';
+import { Level } from 'apps/course-service/src/levels/entities/level.entity';
 import { count } from 'console';
 
 @Injectable()
@@ -291,58 +282,58 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-  //   const relation = await this.completeCourseRepo.find({
-  //     where: { userId: userId, progressPercent: 100 },
-  //   });
+    //   const relation = await this.completeCourseRepo.find({
+    //     where: { userId: userId, progressPercent: 100 },
+    //   });
 
-  //   if(!relation){
-  //     throw new NotFoundException('Complete course not found');
-  //   }
-  //   console.log('relation pass');
+    //   if(!relation){
+    //     throw new NotFoundException('Complete course not found');
+    //   }
+    //   console.log('relation pass');
 
-  //   const lesson = await this.completeCourseRepo.find({
-  //     where: { userId: userId, progressPercent: 100 },
-  //     relations: {
-  //       lesson: {},
-  //     },
-  //   });
-    
-  //   if(!lesson){
-  //     throw new NotFoundException('Complete lesson not found');
-  //   }
-  //   console.log('lesson pass',);
+    //   const lesson = await this.completeCourseRepo.find({
+    //     where: { userId: userId, progressPercent: 100 },
+    //     relations: {
+    //       lesson: {},
+    //     },
+    //   });
 
-  // const chapterIds = lesson.map((l) => l.lesson.chapter_id);
+    //   if(!lesson){
+    //     throw new NotFoundException('Complete lesson not found');
+    //   }
+    //   console.log('lesson pass',);
 
-  // const chapter = await this.chapterRepo.find({
-  //   where: {
-  //     levelId: In(chapterIds),
-  //   },
-  // });
-  // if(!chapter){
-  //   throw new NotFoundException('Complete chapter not found');
-  // }
-  // console.log('chapter pass',);
-  // const levelIds = chapter.map((c) => c.levelId);
-  // const level = await this.levelRepo.find({
-  //   where: {
-  //     course_id: In(levelIds),
-  //   }
-  // });
-  // if(!level){
-  //   throw new NotFoundException('Complete level not found');
-  // }
-  // console.log('level pass',);
-  // const courseIds = level.map((l) => l.course_id);
-  // const course = await this.courseRepo.find({
-  //   where: {
-  //     course_id: In(courseIds),
-  //   }
-  // });
-  // if(!course){
-  //   throw new NotFoundException('Complete course not found');
-  // }
-  // console.log('course pass',);
+    // const chapterIds = lesson.map((l) => l.lesson.chapter_id);
+
+    // const chapter = await this.chapterRepo.find({
+    //   where: {
+    //     levelId: In(chapterIds),
+    //   },
+    // });
+    // if(!chapter){
+    //   throw new NotFoundException('Complete chapter not found');
+    // }
+    // console.log('chapter pass',);
+    // const levelIds = chapter.map((c) => c.levelId);
+    // const level = await this.levelRepo.find({
+    //   where: {
+    //     course_id: In(levelIds),
+    //   }
+    // });
+    // if(!level){
+    //   throw new NotFoundException('Complete level not found');
+    // }
+    // console.log('level pass',);
+    // const courseIds = level.map((l) => l.course_id);
+    // const course = await this.courseRepo.find({
+    //   where: {
+    //     course_id: In(courseIds),
+    //   }
+    // });
+    // if(!course){
+    //   throw new NotFoundException('Complete course not found');
+    // }
+    // console.log('course pass',);
     const completeCourse = await this.completeCourseRepo.find({
       where: { userId: userId, progressPercent: 100 },
       relations: {
@@ -355,7 +346,7 @@ export class UsersService {
         },
       },
     });
-    
+
 
     return {
       completeCourse:

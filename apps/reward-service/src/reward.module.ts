@@ -6,14 +6,14 @@ import * as path from 'path';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { getDatabaseConfig } from '@config/database.config';
 import { AdminModule } from './reward-admin/reward-admin.module';
-import { UserXp } from 'apps/course/src/quizs/entities/user-xp.entity';
+import { UserXp } from 'apps/course-service/src/quizs/entities/user-xp.entity';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: [
-        path.resolve(process.cwd(), 'apps/reward/.env'),
+        path.resolve(process.cwd(), 'apps/reward-service/.env'),
         path.resolve(process.cwd(), '.env'),
       ],
     }),

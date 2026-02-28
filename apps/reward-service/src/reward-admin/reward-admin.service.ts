@@ -9,7 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Reward } from '../reward/entities/rewards.entity';
 import { randomUUID } from 'crypto';
-import { StorageFactory } from 'apps/course/src/storage/storage.factory';
+import { StorageFactory } from 'apps/course-service/src/storage/storage.factory';
 
 @Injectable()
 export class RewardAdminService {

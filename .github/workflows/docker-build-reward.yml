@@ -28,7 +28,7 @@ jobs:
         
       - name: Build Docker image
         run: |
-          docker build -f apps/reward/dockerfile.reward -t ghcr.io/${{ env.REPO_LC }}-reward:latest .
+          docker build -f apps/reward-service/dockerfile.reward -t ghcr.io/${{ env.REPO_LC }}-reward:latest .
 
       - name: Push Docker image
         run: |

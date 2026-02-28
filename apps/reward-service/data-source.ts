@@ -6,7 +6,7 @@ import { RewardRedemption } from './src/reward/entities/reward-redemption';
 
 
 dotenv.config({
-  path: path.resolve(process.cwd(), 'apps/reward/.env'),
+  path: path.resolve(process.cwd(), 'apps/reward-service/.env'),
 });
 
 export const RewardDataSource = new DataSource({
@@ -15,7 +15,7 @@ export const RewardDataSource = new DataSource({
     url: process.env.DATABASE_URL,
 
    entities: [Reward, RewardRedemption],
-  migrations: ['apps/reward/migrations/*.ts'],
+  migrations: ['apps/reward-service/migrations/*.ts'],
 
   synchronize: false,
   logging: true,

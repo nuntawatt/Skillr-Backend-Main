@@ -9,10 +9,9 @@
   "scripts": {
     "build": "nest build course",
     "build:all": "nest build",
-    "build:auth": "nest build auth",
-    "build:course": "nest build course",
-    "build:stock": "nest build stock",
-    "build:reward": "nest build reward",
+    "build:auth": "nest build auth-service",
+    "build:course": "nest build course-service",
+    "build:reward": "nest build reward-service",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\" \"test/**/*.ts\"",
     "start": "cross-env PORT=3001 nest start course",
     "start:dev": "cross-env PORT=3001 nest start course --watch",
@@ -21,18 +20,16 @@
     "start:auth": "cross-env PORT=3001 nest start auth --watch",
     "start:course": "cross-env PORT=3002 nest start course --watch",
     "start:reward": "cross-env PORT=3003 nest start reward --watch",
-    "start:stock": "cross-env PORT=3006 nest start stock --watch",
-    "migration:run:auth": "node -r ts-node/register -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d apps/auth/data-source.ts",
-    "migration:run:course": "node -r ts-node/register -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d apps/course/data-source.ts",
-    "migration:generate:course": "npx typeorm-ts-node-commonjs migration:generate apps/course/src/migrations/ArticleCardsUpdate -d apps/course/data-source.ts",
-    "migration:revert:learning": "npx typeorm-ts-node-commonjs migration:revert -d apps/learning/data-source.ts",
+    "migration:run:auth": "node -r ts-node/register -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d apps/auth-service/data-source.ts",
+    "migration:run:course": "node -r ts-node/register -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d apps/course-service/data-source.ts",
+    "migration:generate:course": "npx typeorm-ts-node-commonjs migration:generate apps/course-service/src/migrations/ArticleCardsUpdate -d apps/course-service/data-source.ts",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "typeorm:reward": "node --require ts-node/register ./node_modules/typeorm/cli.js -d apps/reward/data-source.ts"
+    "typeorm:reward": "node --require ts-node/register ./node_modules/typeorm/cli.js -d apps/reward-service/data-source.ts"
   },
   "dependencies": {
     "@aws-sdk/client-mediaconvert": "^3.971.0",
@@ -123,9 +120,9 @@
     ],
     "rootDir": ".",
     "roots": [
-      "<rootDir>/apps/auth/src",
-      "<rootDir>/apps/course/src",
-      "<rootDir>/apps/reward/src",
+      "<rootDir>/apps/auth-service/src",
+      "<rootDir>/apps/course-service/src",
+      "<rootDir>/apps/reward-service/src",
       "<rootDir>/test"
     ],
     "moduleNameMapper": {

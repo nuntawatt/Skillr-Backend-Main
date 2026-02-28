@@ -2,7 +2,7 @@ import { QueryRunner, Repository } from "typeorm";
 import { RewardService } from "./reward.service";
 import { Reward } from "./entities/rewards.entity";
 import { RewardRedemption } from "./entities/reward-redemption";
-import { UserXp } from "apps/course/src/quizs/entities/user-xp.entity";
+import { UserXp } from "apps/course-service/src/quizs/entities/user-xp.entity";
 import { Test, TestingModule } from "@nestjs/testing";
 import { getDataSourceToken, getRepositoryToken } from "@nestjs/typeorm";
 import { BadRequestException, NotFoundException } from "@nestjs/common";

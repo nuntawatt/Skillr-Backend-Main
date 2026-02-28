@@ -28,7 +28,7 @@ jobs:
         
       - name: Build Docker image
         run: |
-          docker build -f apps/course/dockerfile.course -t ghcr.io/${{ env.REPO_LC }}-course:latest .
+          docker build -f apps/course-service/dockerfile.course -t ghcr.io/${{ env.REPO_LC }}-course:latest .
 
       - name: Push Docker image
         run: |

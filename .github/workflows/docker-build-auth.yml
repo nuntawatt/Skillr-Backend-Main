@@ -28,7 +28,7 @@ jobs:
         
       - name: Build Docker image
         run: |
-          docker build -f apps/auth/dockerfile.auth -t ghcr.io/${{ env.REPO_LC }}-auth:latest .
+          docker build -f apps/auth-service/dockerfile.auth -t ghcr.io/${{ env.REPO_LC }}-auth:latest .
 
       - name: Push Docker image
         run: |

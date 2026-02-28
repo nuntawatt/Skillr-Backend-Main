@@ -55,7 +55,7 @@ const isTest = process.env.NODE_ENV === 'test';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['apps/course/.env', '.env'],
+      envFilePath: ['apps/course-service/.env', '.env'],
     }),
     ScheduleModule.forRoot(),
 

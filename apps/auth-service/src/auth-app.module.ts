@@ -13,7 +13,7 @@ import { UsersModule } from './users/users.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: [
-        path.resolve(process.cwd(), 'apps/auth/.env'),
+        path.resolve(process.cwd(), 'apps/auth-service/.env'),
         path.resolve(process.cwd(), '.env'),
       ],
     }),
