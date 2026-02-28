@@ -7,6 +7,19 @@ import * as path from 'path';
 
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { WebsocketModule } from './gateway/websocket.module';
+
+// Import course entities
+import { Course } from 'apps/course-service/src/courses/entities/course.entity';
+import { Level } from 'apps/course-service/src/levels/entities/level.entity';
+import { Chapter } from 'apps/course-service/src/chapters/entities/chapter.entity';
+import { Lesson } from 'apps/course-service/src/lessons/entities/lesson.entity';
+import { Article } from 'apps/course-service/src/articles/entities/article.entity';
+import { LessonProgress } from 'apps/course-service/src/progress/entities/progress.entity';
+import { UserStreak } from 'apps/course-service/src/streaks/entities/user-streak.entity';
+import { UserXp } from 'apps/course-service/src/quizs/entities/user-xp.entity';
+import { Quizs } from 'apps/course-service/src/quizs/entities/quizs.entity';
+import { QuizsCheckpoint } from 'apps/course-service/src/quizs/entities/checkpoint.entity';
 
 @Module({
   imports: [
@@ -33,7 +46,7 @@ import { UsersModule } from './users/users.module';
       useFactory: (config: ConfigService) => ({
         type: 'postgres',
         url: config.get<string>('COURSE_DATABASE_URL'),
-        autoLoadEntities: true,
+        entities: [Course, Level, Chapter, Lesson, Article, LessonProgress, UserStreak, UserXp, Quizs, QuizsCheckpoint],
         synchronize: false,
       }),
     }),
@@ -47,6 +60,7 @@ import { UsersModule } from './users/users.module';
     ]),
     AuthModule,
     UsersModule,
+    WebsocketModule,
   ],
   providers: [
     {
@@ -55,4 +69,4 @@ import { UsersModule } from './users/users.module';
     },
   ],
 })
-export class AuthAppModule {}
+export class AuthAppModule { }
