@@ -26,10 +26,6 @@ export class CreateLessonDto {
   @IsEnum(LessonType)
   lesson_type: LessonType;
 
-  @ApiProperty({ description: 'Reference ID pointing to the content', example: 1 })
-  @IsNumber()
-  @Min(1)
-  ref_id: number;
 
   @ApiPropertyOptional({ description: 'Order index within the chapter', example: 0, default: 0 })
   @IsOptional()

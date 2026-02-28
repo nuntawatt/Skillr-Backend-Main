@@ -23,12 +23,6 @@ export class UpdateLessonDto {
   @IsEnum(LessonType)
   lesson_type?: LessonType;
 
-  @ApiPropertyOptional({ description: 'Reference ID pointing to the content', example: 1 })
-  @IsOptional()
-  @IsNumber()
-  @Min(1)
-  ref_id?: number;
-
   @ApiPropertyOptional({ description: 'Order index within the chapter', example: 0 })
   @IsOptional()
   @IsNumber()

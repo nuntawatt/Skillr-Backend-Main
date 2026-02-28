@@ -88,7 +88,6 @@ export class LessonsService {
       lesson_description: createLessonDto.lesson_description,
       chapter_id: createLessonDto.chapter_id,
       lesson_type: createLessonDto.lesson_type,
-      ref_id: createLessonDto.ref_id,
       orderIndex: orderIndex,
       lesson_ImageUrl: createLessonDto.lesson_ImageUrl,
       lesson_videoUrl: createLessonDto.lesson_videoUrl,
@@ -120,40 +119,8 @@ export class LessonsService {
 
     // ถ้า lesson ยังไม่ publish ให้เช็คเนื้อหาตามประเภท
     if (!lesson.isPublished) {
-      // บทความ
-      if (lesson.lesson_type === 'article' && Number.isInteger(lesson.ref_id) && lesson.ref_id > 0) {
-        const article = await this.articleRepo.findOne({ where: { article_id: lesson.ref_id } });
-        if (article && Array.isArray(article.article_content) && article.article_content.length > 0) {
-          lesson.isPublished = true;
-          await this.lessonRepository.save(lesson);
-        }
-      }
-      // วิดีโอ
-      if (lesson.lesson_type === 'video' && Number.isInteger(lesson.ref_id) && lesson.ref_id > 0) {
-        const video = await this.videoRepo.findOne({ where: { id: lesson.ref_id } });
-        if (video && video.publicUrl) {
-          lesson.isPublished = true;
-          await this.lessonRepository.save(lesson);
-        }
-      }
-      // quiz
-      if (lesson.lesson_type === 'quiz' && Number.isInteger(lesson.ref_id) && lesson.ref_id > 0) {
-        const quiz = await this.quizRepo.findOne({ where: { quizsId: lesson.ref_id } });
-        if (quiz && quiz.quizsQuestions && quiz.quizsQuestions.length > 0) {
-          lesson.isPublished = true;
-          await this.lessonRepository.save(lesson);
-        }
-      }
-      // checkpoint
-      if (lesson.lesson_type === 'checkpoint' && Number.isInteger(lesson.ref_id) && lesson.ref_id > 0) {
-        const checkpoint = await this.checkpointRepo.findOne({ where: { checkpointId: lesson.ref_id } });
-        if (checkpoint && checkpoint.checkpointQuestions) {
-          lesson.isPublished = true;
-          await this.lessonRepository.save(lesson);
-        }
-      }
+      // ...existing code...
     }
-
     return await this.toResponseDto(lesson);
   }
 
@@ -176,10 +143,7 @@ export class LessonsService {
     if (updateLessonDto.lesson_description !== undefined) {
       lesson.lesson_description = updateLessonDto.lesson_description;
     }
-
-    if (updateLessonDto.ref_id !== undefined) {
-      lesson.ref_id = updateLessonDto.ref_id;
-    }
+    // ...existing code...
 
     if (updateLessonDto.lesson_ImageUrl !== undefined) {
       lesson.lesson_ImageUrl = updateLessonDto.lesson_ImageUrl;
@@ -318,7 +282,6 @@ export class LessonsService {
       lesson_title: lesson.lesson_title,
       lesson_description: lesson.lesson_description ?? undefined,
       lesson_type: lesson.lesson_type,
-      ref_id: lesson.ref_id,
       orderIndex: lesson.orderIndex,
       chapter_id: lesson.chapter_id,
 

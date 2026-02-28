@@ -38,10 +38,6 @@ export class ArticlesService {
 
     const saved = await this.articleRepo.save(article);
 
-    // update lesson.ref_id (ชี้ article ล่าสุด) - ปรับได้ตามต้องการ
-    lesson.ref_id = saved.article_id;
-    await this.lessonRepo.save(lesson);
-
     return this.toResponseDto(saved);
   }
 

@@ -25,7 +25,6 @@ export class LessonsController {
           lesson_description: 'Learn about variable types and declarations',
           chapter_id: 1,
           lesson_type: 'article',
-          ref_id: 1,
           orderIndex: 0,
           lesson_ImageUrl: 'https://cdn.skillacademy.com/images/abc123.jpg',
           lesson_videoUrl: null
@@ -38,7 +37,6 @@ export class LessonsController {
           lesson_description: 'Watch how variables work in practice',
           chapter_id: 1,
           lesson_type: 'video',
-          ref_id: 2,
           orderIndex: 1,
           lesson_ImageUrl: 'https://cdn.skillacademy.com/images/def456.jpg',
           lesson_videoUrl: 'https://cdn.skillacademy.com/videos/abc123.mp4'
@@ -51,7 +49,6 @@ export class LessonsController {
           lesson_description: 'Test your knowledge about variables',
           chapter_id: 1,
           lesson_type: 'quiz',
-          ref_id: 3,
           orderIndex: 2,
           lesson_ImageUrl: 'https://cdn.skillacademy.com/images/ghi789.jpg',
           lesson_videoUrl: null
@@ -64,7 +61,6 @@ export class LessonsController {
           lesson_description: 'Quick check on variable concepts',
           chapter_id: 1,
           lesson_type: 'checkpoint',
-          ref_id: 4,
           orderIndex: 3,
           lesson_ImageUrl: 'https://cdn.skillacademy.com/images/jkl012.jpg',
           lesson_videoUrl: null

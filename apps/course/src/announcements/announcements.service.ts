@@ -39,7 +39,7 @@ export class AnnouncementsService {
   @Cron(CronExpression.EVERY_MINUTE)
   async syncAnnouncementStatusByDate(): Promise<void> {
     const now = new Date();
-    console.log(`🔄 [${now.toISOString()}] Starting announcement status sync...`);
+    // console.log(`🔄 [${now.toISOString()}] Starting announcement status sync...`);
 
     const activatedResult = await this.announcementRepository
       .createQueryBuilder()
@@ -56,7 +56,7 @@ export class AnnouncementsService {
       .execute();
 
     if (activatedResult.affected && activatedResult.affected > 0) {
-      console.log(`✅ Activated ${activatedResult.affected} announcement(s)`);
+      // console.log(`✅ Activated ${activatedResult.affected} announcement(s)`);
     }
 
     const deactivatedResult = await this.announcementRepository
@@ -73,12 +73,12 @@ export class AnnouncementsService {
       .execute();
 
     if (deactivatedResult.affected && deactivatedResult.affected > 0) {
-      console.log(`❌ Deactivated ${deactivatedResult.affected} announcement(s)`);
+      // console.log(`❌ Deactivated ${deactivatedResult.affected} announcement(s)`);
     }
 
     if ((!activatedResult.affected || activatedResult.affected === 0) && 
         (!deactivatedResult.affected || deactivatedResult.affected === 0)) {
-      console.log(`ℹ️ No status changes needed`);
+      // console.log(`ℹ️ No status changes needed`);
     }
   }
 
@@ -92,7 +92,7 @@ export class AnnouncementsService {
   async findActive(limit = 3): Promise<Announcement[]> {
     const now = new Date();
 
-    console.log(`${now.toISOString()} - Fetching active announcements with limit ${limit}`);
+    // console.log(`${now.toISOString()} - Fetching active announcements with limit ${limit}`);
 
     return this.announcementRepository
       .createQueryBuilder('a')

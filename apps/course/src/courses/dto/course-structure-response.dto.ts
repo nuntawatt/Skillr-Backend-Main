@@ -13,8 +13,6 @@ export class LessonStructureDto {
   @ApiProperty({ description: 'Lesson description', required: false })
   lesson_description?: string;
 
-  @ApiProperty({ description: 'Reference ID (article/video/quiz/etc)' })
-  ref_id: number;
 
   @ApiProperty({ description: 'Order index in chapter' })
   orderIndex: number;

@@ -13,9 +13,6 @@ export class LessonResponseDto {
   @ApiProperty({ description: 'Lesson type', example: 'article' })
   lesson_type: string;
 
-  @ApiProperty({ description: 'Reference ID', example: 1 })
-  ref_id: number;
-
   @ApiProperty({ description: 'Order index within the chapter', example: 0 })
   orderIndex: number;
 

@@ -28,9 +28,6 @@ export class Lesson {
   })
   lesson_type: LessonType;
 
-  @Column({ name: 'ref_id', type: 'int' })
-  ref_id: number;
-
   @Column({ name: 'order_index', type: 'int', default: 0 })
   orderIndex: number;
 
