@@ -111,7 +111,7 @@ export class ChaptersService {
   }
 
   // ลบบทโดยใช้ ID
-  async remove(id: number): Promise<void> {
+  async remove(id: number): Promise<{ message: string }> {
     const chapter = await this.chapterRepository.findOne({
       where: { chapter_id: id },
     });
@@ -121,6 +121,7 @@ export class ChaptersService {
     }
 
     await this.chapterRepository.remove(chapter);
+    return { message: `Chapter with ID ${id} deleted successfully` };
   }
 
   // จัดลำดับบทภายใน Level

@@ -66,13 +66,12 @@ export class CoursesController {
   }
 
   @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'ลบคอร์สด้วย ID' })
   @ApiParam({ name: 'id', type: Number })
-  @ApiNoContentResponse({ description: 'Course deleted successfully' })
+  @ApiResponse({ status: 200, description: 'Course deleted successfully' })
   @ApiResponse({ status: 404, description: 'Course not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
+  remove(@Param('id', ParseIntPipe) id: number): Promise<{ message: string }> {
     return this.coursesService.remove(id);
   }
   

@@ -1,4 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
+import { Lesson } from '../../lessons/entities/lesson.entity';
+import { QuizsCheckpoint } from './checkpoint.entity';
 
 export enum QuizsResultType {
   QUIZ = 'QUIZ',
@@ -32,9 +34,18 @@ export class QuizsResult {
   @Column({ name: 'lesson_id', type: 'integer' })
   lessonId: number;
 
-  // ใช้เมื่อ type = CHECKPOINT
+  // ใช้เมื่อ type = QUIZ
+  @ManyToOne(() => Lesson, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'lesson_id', referencedColumnName: 'lesson_id' })
+  lesson: Lesson;
+
   @Column({ name: 'checkpoint_id', type: 'integer', nullable: true })
   checkpointId: number | null;
+
+  // ใช้เมื่อ type = CHECKPOINT
+  @ManyToOne(() => QuizsCheckpoint, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'checkpoint_id', referencedColumnName: 'checkpointId' })
+  checkpoint: QuizsCheckpoint | null;
 
   @Column({ name: 'user_answer', type: 'jsonb', nullable: true })
   userAnswer: any;

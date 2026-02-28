@@ -1,6 +1,8 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, OneToMany, CreateDateColumn, Index, JoinColumn } from 'typeorm';
 import { Chapter } from '../../chapters/entities/chapter.entity';
 import { Article } from '../../articles/entities/article.entity';
+import { Quizs } from '../../quizs/entities/quizs.entity';
+import { QuizsCheckpoint } from '../../quizs/entities/checkpoint.entity';
 
 export enum LessonType {
   ARTICLE = 'article',
@@ -47,8 +49,16 @@ export class Lesson {
   chapter_id: number;
 
   // ความสัมพันธ์กับบทความ (ถ้า lesson_type เป็น ARTICLE)
-  @OneToMany(() => Article, (a) => a.lesson)
+  @OneToMany(() => Article, (a) => a.lesson, { cascade: true })
   lesson_articles: Article[];
+
+  // ความสัมพันธ์กับ Quizs
+  @OneToMany(() => Quizs, (quiz) => quiz.lesson, { cascade: true })
+  lesson_quizs: Quizs[];
+
+  // ความสัมพันธ์กับ QuizsCheckpoint
+  @OneToMany(() => QuizsCheckpoint, (checkpoint) => checkpoint.lesson, { cascade: true })
+  lesson_checkpoints: QuizsCheckpoint[];
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

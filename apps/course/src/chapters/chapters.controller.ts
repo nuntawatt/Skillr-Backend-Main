@@ -55,13 +55,12 @@ export class ChaptersController {
     }
 
     @Delete(':id')
-    @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: 'ลบบทตาม ID' })
     @ApiParam({ name: 'id', type: Number })
-    @ApiNoContentResponse({ description: 'Chapter deleted successfully' })
+    @ApiResponse({ status: 200, description: 'Chapter deleted successfully' })
     @ApiResponse({ status: 404, description: 'Chapter not found' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
-    remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
+    remove(@Param('id', ParseIntPipe) id: number): Promise<{ message: string }> {
         return this.chaptersService.remove(id);
     }
 

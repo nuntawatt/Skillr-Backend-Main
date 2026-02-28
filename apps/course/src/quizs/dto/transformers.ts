@@ -7,7 +7,7 @@ export const toInt = ({ value }: TransformFnParams) => {
   return isNaN(parsed) ? value : parsed;
 };
 
-// รองรับ:
+// รองรับ
 // - array จริง
 // - JSON string e.g. '["a","b"]'
 // - comma separated e.g. "a,b,c"

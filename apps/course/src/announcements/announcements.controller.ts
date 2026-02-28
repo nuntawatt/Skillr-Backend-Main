@@ -203,13 +203,12 @@ export class AnnouncementsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'ลบป้ายประกาศ', description: 'Admin เท่านั้นสามารถลบป้ายประกาศตาม ID ที่ระบุได้ การลบจะถาวรและไม่สามารถกู้คืนได้' })
   @ApiResponse({
-    status: 204,
+    status: 200,
     description: 'ลบป้ายประกาศ (Admin เท่านั้น)',
   })
-  async remove(@Param('id', ParseIntPipe) id: number) {
-    await this.announcementsService.remove(id);
+  async remove(@Param('id', ParseIntPipe) id: number): Promise<{ message: string }> {
+    return await this.announcementsService.remove(id);
   }
 }

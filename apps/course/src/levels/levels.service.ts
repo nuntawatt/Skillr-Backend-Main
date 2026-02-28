@@ -88,7 +88,7 @@ export class LevelsService {
   }
 
   // Delete a level
-  async remove(id: number): Promise<void> {
+  async remove(id: number): Promise<{ message: string }> {
     const level = await this.levelRepository.findOne({ where: { level_id: id } });
 
     if (!level) {
@@ -96,6 +96,7 @@ export class LevelsService {
     }
 
     await this.levelRepository.remove(level);
+    return { message: `Level with ID ${id} deleted successfully` };
   }
 
   // Reorder levels within a course

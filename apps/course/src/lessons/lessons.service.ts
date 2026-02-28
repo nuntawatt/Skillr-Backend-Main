@@ -204,7 +204,7 @@ export class LessonsService {
   }
 
   // Delete a lesson
-  async remove(id: number): Promise<void> {
+  async remove(id: number): Promise<{ message: string }> {
     const lesson = await this.lessonRepository.findOne({ where: { lesson_id: id } });
 
     if (!lesson) {
@@ -212,6 +212,7 @@ export class LessonsService {
     }
 
     await this.lessonRepository.remove(lesson);
+    return { message: `Lesson with ID ${id} deleted successfully` };
   }
 
   // Reorder lessons within a chapter

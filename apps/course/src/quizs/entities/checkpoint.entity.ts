@@ -1,5 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { QuizType } from './quizs.entity';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Lesson } from '../../lessons/entities/lesson.entity';
 
 @Entity('quizs_checkpoint')
 export class QuizsCheckpoint {
@@ -9,8 +9,8 @@ export class QuizsCheckpoint {
   @Column({ name: 'checkpoint_score', type: 'int', default: 5 })
   checkpointScore: number;
 
-  @Column({ name: 'checkpoint_type', type: 'enum', enum: QuizType, default: QuizType.MULTIPLE_CHOICE })
-  checkpointType: QuizType;
+  @Column({ name: 'checkpoint_type', type: 'enum', enum: ['multiple_choice', 'true_false'], default: 'multiple_choice' })
+  checkpointType: string;
 
   @Column({ name: 'checkpoint_questions', type: 'text' })
   checkpointQuestions: string;
@@ -26,6 +26,10 @@ export class QuizsCheckpoint {
 
   @Column({ name: 'lesson_id', type: 'integer' })
   lessonId: number;
+
+  @ManyToOne(() => Lesson, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'lesson_id', referencedColumnName: 'lesson_id' })
+  lesson: Lesson;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

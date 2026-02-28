@@ -323,7 +323,7 @@ export class CoursesService {
   }
 
   // ลบคอร์สและเอนทิตีที่ซ้อนกันทั้งหมด (cascade)
-  async remove(id: number): Promise<void> {
+  async remove(id: number): Promise<{ message: string }> {
     const course = await this.courseRepository.findOne({ where: { course_id: id } });
 
     if (!course) {
@@ -331,6 +331,7 @@ export class CoursesService {
     }
 
     await this.courseRepository.remove(course);
+    return { message: `Course with ID ${id} deleted successfully` };
   }
 
   // แปลง Course entity เป็น CourseResponseDto

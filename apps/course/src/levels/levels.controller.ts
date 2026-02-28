@@ -58,13 +58,12 @@ export class LevelsController {
     }
 
     @Delete(':id')
-    @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: 'ลบระดับตาม ID' })
     @ApiParam({ name: 'id', type: Number })
-    @ApiNoContentResponse({ description: 'Level deleted successfully' })
+    @ApiResponse({ status: 200, description: 'Level deleted successfully' })
     @ApiResponse({ status: 404, description: 'Level not found' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
-    remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
+    remove(@Param('id', ParseIntPipe) id: number): Promise<{ message: string }> {
         return this.levelsService.remove(id);
     }
 

@@ -178,9 +178,10 @@ export class AnnouncementsService {
     return this.announcementRepository.save(announcement);
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: number): Promise<{ message: string }> {
     const announcement = await this.findOne(id);
     await this.announcementRepository.remove(announcement);
+    return { message: `Announcement with ID ${id} deleted successfully` };
   }
 
   private assertValidDeepLink(value: string): void {
