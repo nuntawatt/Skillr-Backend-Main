@@ -11,12 +11,6 @@ export class LearnerHomeHeaderDto {
   })
   userId: string;
 
-  // @ApiProperty({
-  //   example: 'John Doe',
-  //   nullable: true,
-  // })
-  // displayName: string | null;
-
   @ApiProperty({
     example: 'https://cdn.example.com/avatar.png',
     nullable: true,
@@ -100,8 +94,9 @@ export class LearnerHomeRecommendationDto {
 
   @ApiProperty({
     example: 'https://cdn.example.com/courses/js-fundamentals.jpg',
+    nullable: true,
   })
-  course_imageUrl: string;
+  course_imageUrl: string | null;
 
   @ApiProperty({ example: 'ระดับพื้นฐาน' })
   level_name: string;

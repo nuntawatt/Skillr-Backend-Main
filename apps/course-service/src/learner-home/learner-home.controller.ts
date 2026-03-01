@@ -1,4 +1,4 @@
-import { Controller, Get, Headers, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Controller, Get, Headers, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 import { JwtAuthGuard } from '@auth';
@@ -16,17 +16,13 @@ export class LearnerHomeController {
   ) { }
 
   @Get()
-  @ApiOperation({
-    summary: 'เพย์โหลดหน้าแรกของผู้เรียน',
-    description: 'Get complete learner homepage data including profile, streak, XP, continue learning, my courses, and notifications'
-  })
+  @ApiOperation({ summary: 'payload หน้าแรกของผู้เรียน', description: 'ดึงข้อมูลหน้าแรกของผู้เรียน ประกอบด้วย header, continue learning, my courses, notifications และ recommendations' })
   @ApiOkResponse({
     type: LearnerHomeResponseDto,
     description: 'Learner homepage data successfully retrieved',
     example: {
       header: {
         userId: '123e4567-e89b-12d3-a456-426614174000',
-        // displayName: 'John Doe',
         avatarUrl: 'https://cdn.example.com/avatar.png',
         xp: 120,
         streakDays: 7,
@@ -83,19 +79,14 @@ export class LearnerHomeController {
       },
     },
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing JWT token' })
+  @ApiResponse({ status: 200, description: 'Learner homepage data successfully retrieved', type: LearnerHomeResponseDto })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-
-  // ดึงข้อมูลหน้าแรกของผู้เรียน
   async getHome(
     @CurrentUserId() userId: string,
     @Headers('authorization') authorization: string | undefined,
     @Headers('x-internal-call') internalCall?: string,
   ): Promise<LearnerHomeResponseDto> {
-    if (!userId) {
-      throw new UnauthorizedException('User not authenticated');
-    }
-
     return this.learnerHomeService.getHome(userId, authorization, internalCall);
   }
 }

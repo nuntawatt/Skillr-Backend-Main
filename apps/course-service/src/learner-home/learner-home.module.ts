@@ -41,4 +41,4 @@ import { NotificationsModule } from '../notifications/notifications.module';
   controllers: [LearnerHomeController],
   providers: [LearnerHomeService, StreakService, ProgressService, QuizService],
 })
-export class LearnerHomeModule {}
+export class LearnerHomeModule { }
