@@ -111,8 +111,13 @@ export class RewardController {
     return this.rewardService.getUserTotalXp(userId);
   }
 
-  @ApiOperation({ summary: 'ดึงจำนวน cupon ทั้งหมดที่ user ยังไม่ได้ใช้' })
   @Get('countCupon')
+  @ApiOperation({ summary: 'ดึงจำนวน cupon ทั้งหมดที่ user ยังไม่ได้ใช้' })
+  @ApiResponse({ status: 200, description: 'Current user cupon count' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   getCountCupon(@CurrentUserId() userId: string) {
     return this.rewardService.getRedeemCount(userId);
   }

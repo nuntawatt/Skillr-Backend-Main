@@ -21,6 +21,7 @@ import {
   ApiCreatedResponse,
   ApiOperation,
   ApiParam,
+  ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { CreateRewardAdminResponseDto } from './dto/create-reward-response-admin.dto';
@@ -41,6 +42,11 @@ export class AdminController {
 
   @Get('/reward/getAllAdminReward')
   @ApiOperation({ summary: 'Get reward admin ทั้งหมด' })
+  @ApiResponse({ status: 200, description: 'List of rewards' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Rewards not found' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   GetAllReward() {
     return this.RewardAdminService.getAllReward();
   }
@@ -54,6 +60,12 @@ export class AdminController {
     description: 'Reward ID',
     example: 1,
   })
+  @ApiResponse({ status: 200, description: 'Reward detail retrieved successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid reward id' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Reward not found' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   getRewardDetail(@Param('reward_id', ParseIntPipe) reward_id: number) {
     return this.RewardAdminService.getRewardDetail(reward_id);
   }
@@ -97,6 +109,11 @@ export class AdminController {
     }),
   )
   @ApiCreatedResponse({ type: CreateRewardAdminResponseDto })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Reward not found' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   async createReward(
     @UploadedFile() file: Express.Multer.File,
     @Body() createRewardDto: CreateRewardAdminDto,
@@ -115,6 +132,12 @@ export class AdminController {
   @Patch('reward/update/:id')
   @ApiOperation({ summary: 'แก้ไขข้อมูลของ reward' })
   @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 204, description: 'Reward updated successfully' })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Reward not found' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   @UseInterceptors(
     FileInterceptor('image', {
       storage: multer.memoryStorage(),
@@ -145,6 +168,11 @@ export class AdminController {
 
   @Delete('reward/delete/:id')
   @ApiOperation({ summary: 'Delete reward by reward_id (Soft delete)' })
+  @ApiResponse({ status: 204, description: 'Reward deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Reward not found' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   async deleteReward(@Param('id', ParseIntPipe) id: number) {
     const removeReward = await this.RewardAdminService.removeRewardById(id);
 
@@ -152,29 +180,4 @@ export class AdminController {
       message: 'Remove reward success',
     };
   }
-
-  // @Post()
-  // create(@Body() createAdminDto: CreateAdminDto) {
-  //   return this.RewardAdminService.create(createAdminDto);
-  // }
-
-  // @Get()
-  // findAll() {
-  //   return this.RewardAdminService.findAll();
-  // }
-
-  // @Get(':id')
-  // findOne(@Param('id') id: string) {
-  //   return this.RewardAdminService.findOne(+id);
-  // }
-
-  // @Patch(':id')
-  // update(@Param('id') id: string, @Body() updateAdminDto: UpdateAdminDto) {
-  //   return this.RewardAdminService.update(+id, updateAdminDto);
-  // }
-
-  // @Delete(':id')
-  // remove(@Param('id') id: string) {
-  //   return this.RewardAdminService.remove(+id);
-  // }
 }

@@ -53,6 +53,9 @@ export class AnnouncementsController {
       },
     },
   })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'No active announcements found' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
   async findActive() {
     const data = await this.announcementsService.findActive();
@@ -77,6 +80,7 @@ export class AnnouncementsController {
   })
   @ApiResponse({ status: 201, description: 'สร้างป้ายประกาศใหม่ (Admin เท่านั้น)', type: AnnouncementResponseDto })
   @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
   async create(@Body() dto: CreateAnnouncementDto) {
     return this.announcementsService.create(dto);
@@ -87,18 +91,11 @@ export class AnnouncementsController {
   @Roles(UserRole.ADMIN)
   @Get()
   @ApiOperation({ summary: 'ดึงป้ายประกาศทั้งหมด', description: 'Admin เท่านั้นสามารถดึงป้ายประกาศทั้งหมดได้ รวมทั้งที่ไม่ active' })
-  @ApiResponse({
-    status: 200,
-    description: 'ดึงป้ายประกาศทั้งหมด (Admin เท่านั้น)',
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Bad Request'
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'Internal Server Error'
-  })
+  @ApiResponse({ status: 200, description: 'ดึงป้ายประกาศทั้งหมด (Admin เท่านั้น)', type: AnnouncementResponseDto, isArray: true })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'No announcements found' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   async findAll() {
     return this.announcementsService.findAll();
   }
@@ -108,19 +105,9 @@ export class AnnouncementsController {
   @Roles(UserRole.ADMIN)
   @Get(':id')
   @ApiOperation({ summary: 'ดึงป้ายประกาศตาม ID', description: 'Admin เท่านั้นสามารถดึงรายละเอียดป้ายประกาศตาม ID ที่ระบุได้' })
-  @ApiResponse({
-    status: 200,
-    description: 'ดึงป้ายประกาศตาม ID (Admin เท่านั้น)',
-    type: AnnouncementResponseDto,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Bad Request'
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'Internal Server Error'
-  })
+  @ApiResponse({ status: 200, description: 'ดึงป้ายประกาศตาม ID (Admin เท่านั้น)', type: AnnouncementResponseDto, })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return this.announcementsService.findOne(id);
   }
@@ -130,19 +117,9 @@ export class AnnouncementsController {
   @Roles(UserRole.ADMIN)
   @Patch(':id')
   @ApiOperation({ summary: 'อัปเดตป้ายประกาศ', description: 'Admin เท่านั้นสามารถแก้ไขข้อมูลป้ายประกาศได้ เช่น หัวข้อ รูปภาพ ลิงก์ หรือสถานะ' })
-  @ApiResponse({
-    status: 200,
-    description: 'อัปเดตป้ายประกาศ (Admin เท่านั้น)',
-    type: AnnouncementResponseDto,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Bad Request'
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'Internal Server Error'
-  })
+  @ApiResponse({ status: 200, description: 'อัปเดตป้ายประกาศ (Admin เท่านั้น)', type: AnnouncementResponseDto })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateAnnouncementDto,
@@ -172,20 +149,12 @@ export class AnnouncementsController {
       required: ['file'],
     },
   })
-  @ApiResponse({
-    status: 200,
-    description: 'อัปโหลดรูปภาพป้ายประกาศ (Admin เท่านั้น)',
-    type: AnnouncementResponseDto,
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Bad Request - Invalid file type or size'
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'Internal Server Error'
-  })
-  
+  @ApiResponse({ status: 201, description: 'อัปโหลดรูปภาพสำเร็จและอัปเดต URL (Admin เท่านั้น)', type: AnnouncementResponseDto })
+  @ApiResponse({ status: 400, description: 'Bad Request - Invalid file type or size' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Announcement not found' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
+
   @UseInterceptors(
     FileInterceptor('file', {
       storage: multer.memoryStorage(),
@@ -219,6 +188,9 @@ export class AnnouncementsController {
       },
     },
   })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'No announcements found to sync' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
   async forceSyncActiveStatus() {
     await this.announcementsService.syncAnnouncementStatusByDate();
@@ -234,10 +206,11 @@ export class AnnouncementsController {
   @Roles(UserRole.ADMIN)
   @Delete(':id')
   @ApiOperation({ summary: 'ลบป้ายประกาศ', description: 'Admin เท่านั้นสามารถลบป้ายประกาศตาม ID ที่ระบุได้ การลบจะถาวรและไม่สามารถกู้คืนได้' })
-  @ApiResponse({
-    status: 200,
-    description: 'ลบป้ายประกาศ (Admin เท่านั้น)',
-  })
+  @ApiResponse({ status: 200, description: 'ลบป้ายประกาศ (Admin เท่านั้น)' })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Announcement not found' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   async remove(@Param('id', ParseIntPipe) id: number): Promise<{ message: string }> {
     return await this.announcementsService.remove(id);
   }

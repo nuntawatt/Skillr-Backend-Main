@@ -78,6 +78,8 @@ export class AuthController {
   @ApiBody({ type: RefreshTokenDto })
   @ApiResponse({ status: 200, description: 'Token refreshed successfully.' })
   @ApiResponse({ status: 400, description: 'Bad Request.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized (invalid or expired refresh token)' })
+  @ApiResponse({ status: 403, description: 'Forbidden (refresh token revoked)' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async refresh(@Body() dto: RefreshTokenDto) {
     if (!dto.refreshToken || typeof dto.refreshToken !== 'string') {
@@ -96,6 +98,8 @@ export class AuthController {
   @ApiBody({ type: RefreshTokenDto })
   @ApiResponse({ status: 200, description: 'Logged out successfully.' })
   @ApiResponse({ status: 400, description: 'Bad Request.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized (invalid access token)' })
+  @ApiResponse({ status: 403, description: 'Forbidden (refresh token already revoked)' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async logout(@Body() body: { refreshToken?: string }) {
     if (!body.refreshToken || typeof body.refreshToken !== 'string') {
@@ -112,6 +116,9 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('access-token')
   @ApiResponse({ status: 200, description: 'Logged out from all devices successfully.' })
+  @ApiResponse({ status: 400, description: 'Bad Request.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized (invalid access token)' })
+  @ApiResponse({ status: 403, description: 'Forbidden (refresh tokens already revoked)' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   @ApiOperation({ summary: 'Logout from all devices' })
   async logoutAll(@CurrentUser('userId') userId: string) {
@@ -125,8 +132,8 @@ export class AuthController {
   @ApiOperation({ summary: 'Request password reset' })
   @ApiResponse({ status: 200, description: 'If the email is registered, a password reset link has been sent.' })
   @ApiResponse({ status: 400, description: 'Bad Request.' })
+  @ApiResponse({ status: 404, description: 'Email not found.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
-
   @Throttle({ short: { ttl: 60, limit: 2 } })
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.authService.forgotPassword(dto.email);
@@ -137,6 +144,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Verify OTP for password reset' })
   @ApiResponse({ status: 200, description: 'OTP verified successfully.' })
   @ApiResponse({ status: 400, description: 'Bad Request.' })
+  @ApiResponse({ status: 404, description: 'Email not found or OTP expired.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async verifyOtp(@Body() dto: VerifyOtpDto) {
     return this.authService.verifyOtp(dto.email, dto.otp);
@@ -147,6 +155,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Reset password using reset token' })
   @ApiResponse({ status: 200, description: 'Password reset successfully.' })
   @ApiResponse({ status: 400, description: 'Bad Request.' })
+  @ApiResponse({ status: 404, description: 'Reset token not found or expired.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto.resetToken, dto.newPassword);
