@@ -9,7 +9,6 @@ import { UserRole } from '@common/enums/user-role.enum';
 
 @ApiTags('Articles')
 // @ApiTags('Admin | Articles')
-
 // @UseGuards(JwtAuthGuard, RolesGuard)
 // @Roles(UserRole.ADMIN)
 @Controller('articles')
@@ -43,6 +42,7 @@ export class ArticlesController {
     })
     @ApiCreatedResponse({ type: ArticleResponseDto, description: 'Article created successfully' })
     @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 404, description: 'Lesson not found' })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     async create(@Body() body: CreateArticleDto) {
         if (!body?.lesson_id) throw new BadRequestException('lesson_id is required');
@@ -59,24 +59,18 @@ export class ArticlesController {
     async update(@Param('id', ParseIntPipe) id: number, @Body() body: UpdateArticleDto,) {
         if (!id) throw new BadRequestException('Invalid article id');
 
-        const updated = await this.svc.update(id, body);
-        if (!updated) throw new NotFoundException('Article not found');
-
-        return updated;
+        return this.svc.update(id, body);
     }
 
     @Delete(':id')
     @ApiOperation({ summary: 'ลบบทความตาม ID' })
     @ApiParam({ name: 'id', description: 'Article id', type: 'number' })
     @ApiOkResponse({ description: 'Article deleted successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
     @ApiResponse({ status: 404, description: 'Article not found' })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     async remove(@Param('id', ParseIntPipe) id: number,) {
-        const deleted = await this.svc.remove(id);
-
-        if (!deleted) {
-            throw new NotFoundException('Article not found');
-        }
+        await this.svc.remove(id);
 
         return {
             message: 'Article deleted successfully',
@@ -88,6 +82,7 @@ export class ArticlesController {
     @Get()
     @ApiOperation({ summary: 'ดึงบทความทั้งหมดพร้อมตัวกรองที่เลือกได้' })
     @ApiResponse({ status: 200, description: 'Articles retrieved successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     findAll(): Promise<ArticleResponseDto[]> {
         return this.svc.findAll();
@@ -99,6 +94,7 @@ export class ArticlesController {
     @ApiOperation({ summary: 'ดึงบทความตาม ID' })
     @ApiParam({ name: 'id', description: 'Article id', type: 'number' })
     @ApiResponse({ status: 200, description: 'Article retrieved successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
     @ApiResponse({ status: 404, description: 'Article not found' })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     @ApiOkResponse({ type: ArticleResponseDto })
@@ -112,7 +108,8 @@ export class ArticlesController {
     @ApiOperation({ summary: 'ดึงบทความตาม lesson ID' })
     @ApiParam({ name: 'id', description: 'Lesson id', type: 'number' })
     @ApiResponse({ status: 200, description: 'Articles retrieved successfully' })
-    @ApiResponse({ status: 404, description: 'Articles not found' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 404, description: 'Lesson not found' })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     @ApiOkResponse({ type: ArticleResponseDto, isArray: true })
     async findByLesson(@Param('id', ParseIntPipe) lessonId: number) {

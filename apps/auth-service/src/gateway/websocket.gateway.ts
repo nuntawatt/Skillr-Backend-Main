@@ -12,7 +12,14 @@ import { Injectable, Logger } from '@nestjs/common';
 @WebSocketGateway({
     path: '/socket.io',
     cors: {
-        origin: ['https://skllracademy.com', 'http://localhost:3000', 'http://localhost:3001'],
+        origin:
+            [
+                'https://skllracademy.com',
+                'http://localhost:3000',
+                'http://localhost:3001',
+                'http://127.0.0.1:5500',
+                'http://localhost:5500'
+            ],
         credentials: true,
     },
 })

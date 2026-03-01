@@ -36,11 +36,12 @@ export class AnnouncementsService {
     return this.announcementRepository.save(announcement);
   }
 
+  // function ตรวจสอบและอัปเดตสถานะของป้ายประกาศตามวันที่และเวลาปัจจุบัน
   @Cron(CronExpression.EVERY_MINUTE)
   async syncAnnouncementStatusByDate(): Promise<void> {
     const now = new Date();
-    // console.log(`🔄 [${now.toISOString()}] Starting announcement status sync...`);
 
+    // เปิดประกาศที่ถึงเวลาเปิดและยังไม่หมดอายุ
     const activatedResult = await this.announcementRepository
       .createQueryBuilder()
       .update(Announcement)
@@ -55,10 +56,12 @@ export class AnnouncementsService {
       )
       .execute();
 
+    // ถ้ามีการเปลี่ยนแปลงสถานะ (เปิดหรือปิด) อย่างน้อยหนึ่งป้ายประกาศ ให้ return ออกจากฟังก์ชันเพื่อหยุดการตรวจสอบเพิ่มเติม
     if (activatedResult.affected && activatedResult.affected > 0) {
-      // console.log(`✅ Activated ${activatedResult.affected} announcement(s)`);
+      return;
     }
 
+    // ปิดประกาศที่หมดอายุหรือยังไม่ถึงเวลาเปิด
     const deactivatedResult = await this.announcementRepository
       .createQueryBuilder()
       .update(Announcement)
@@ -72,13 +75,15 @@ export class AnnouncementsService {
       )
       .execute();
 
+    // ถ้ามีการเปลี่ยนแปลงสถานะ (เปิดหรือปิด) อย่างน้อยหนึ่งป้ายประกาศ ให้ return ออกจากฟังก์ชันเพื่อหยุดการตรวจสอบเพิ่มเติม
     if (deactivatedResult.affected && deactivatedResult.affected > 0) {
-      // console.log(`❌ Deactivated ${deactivatedResult.affected} announcement(s)`);
+      return;
     }
 
-    if ((!activatedResult.affected || activatedResult.affected === 0) && 
-        (!deactivatedResult.affected || deactivatedResult.affected === 0)) {
-      // console.log(`ℹ️ No status changes needed`);
+    // ถ้าไม่มีการเปลี่ยนแปลงสถานะของป้ายประกาศใดๆ ให้ return ออกจากฟังก์ชัน
+    if ((!activatedResult.affected || activatedResult.affected === 0) &&
+      (!deactivatedResult.affected || deactivatedResult.affected === 0)) {
+      return;
     }
   }
 
@@ -91,8 +96,6 @@ export class AnnouncementsService {
   // ดึงป้ายประกาศที่ active และอยู่ในช่วงเวลาที่กำหนด พร้อม placeholder image ถ้าไม่มีรูปภาพ
   async findActive(limit = 3): Promise<Announcement[]> {
     const now = new Date();
-
-    // console.log(`${now.toISOString()} - Fetching active announcements with limit ${limit}`);
 
     return this.announcementRepository
       .createQueryBuilder('a')
@@ -110,9 +113,9 @@ export class AnnouncementsService {
       .addOrderBy('a.created_at', 'DESC')
       .limit(limit)
       .getMany();
-
   }
 
+  // อัปโหลดรูปภาพสำหรับป้ายประกาศและอัปเดต URL ในฐานข้อมูล
   async uploadBannerImage(id: number, file: Express.Multer.File): Promise<Announcement> {
     const announcement = await this.findOne(id);
 
@@ -140,6 +143,7 @@ export class AnnouncementsService {
     return announcement;
   }
 
+  // อัปเดตข้อมูลป้ายประกาศ
   async update(id: number, dto: UpdateAnnouncementDto): Promise<Announcement> {
     const announcement = await this.findOne(id);
 
@@ -178,20 +182,21 @@ export class AnnouncementsService {
     return this.announcementRepository.save(announcement);
   }
 
+  // ลบป้ายประกาศ
   async remove(id: number): Promise<{ message: string }> {
     const announcement = await this.findOne(id);
     await this.announcementRepository.remove(announcement);
     return { message: `Announcement with ID ${id} deleted successfully` };
   }
 
+  // ฟังก์ชันตรวจสอบความถูกต้องของ deepLink (ต้องเป็น relative path หรือ absolute URL)
   private assertValidDeepLink(value: string): void {
     try {
       if (value.startsWith('/')) {
         return;
       }
 
-      // Allow absolute URL deep link
-      // eslint-disable-next-line no-new
+      // ถ้าไม่ใช่ relative path ให้ตรวจสอบว่าเป็น absolute URL ที่ถูกต้องหรือไม่
       new URL(value);
     } catch {
       throw new BadRequestException('Invalid deepLink');

@@ -17,9 +17,9 @@ export class AnnouncementsController {
   constructor(private readonly announcementsService: AnnouncementsService) { }
 
   @Get('active')
-  @ApiOperation({ 
-    summary: 'ดึงป้ายประกาศที่ใช้งานได้ (Public)', 
-    description: '**Public Endpoint - ไม่ต้อง Login**\n\nดึงป้ายประกาศที่ active และอยู่ในช่วงเวลาที่กำหนด พร้อม placeholder image ถ้าไม่มีรูปภาพ\n\n🔓 **ไม่ต้อง Authentication** - ทุกคนสามารถเรียกได้\n📱 **ใช้สำหรับ** - Frontend แสดงป้ายประกาศในหน้าแรก' 
+  @ApiOperation({
+    summary: 'ดึงป้ายประกาศที่ใช้งานได้ (Public)',
+    description: '**Public Endpoint - ไม่ต้อง Login**\n\nดึงป้ายประกาศที่ active และอยู่ในช่วงเวลาที่กำหนด พร้อม placeholder image ถ้าไม่มีรูปภาพ\n\n🔓 **ไม่ต้อง Authentication** - ทุกคนสามารถเรียกได้\n📱 **ใช้สำหรับ** - Frontend แสดงป้ายประกาศในหน้าแรก'
   })
   @ApiResponse({
     status: 200,
@@ -53,7 +53,6 @@ export class AnnouncementsController {
       },
     },
   })
-  
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
   async findActive() {
     const data = await this.announcementsService.findActive();
@@ -72,15 +71,13 @@ export class AnnouncementsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Post()
-  @ApiOperation({ 
-    summary: 'สร้างป้ายประกาศใหม่ (Admin Only)', 
-    description: '**Admin Only - ต้อง Login + Admin Role**\n\nAdmin เท่านั้นสามารถสร้างป้ายประกาศใหม่ได้ สามารถกำหนดรูปภาพ ลิงก์ และช่วงเวลาที่แสดงได้\n\n🔐 **ต้อง Authentication** - JWT Token + Admin Role\n📝 **สร้างป้าย** - สามารถกำหนด deepLink, date range, priority' 
+  @ApiOperation({
+    summary: 'สร้างป้ายประกาศใหม่ (Admin Only)',
+    description: '**Admin Only - ต้อง Login + Admin Role**\n\nAdmin เท่านั้นสามารถสร้างป้ายประกาศใหม่ได้ สามารถกำหนดรูปภาพ ลิงก์ และช่วงเวลาที่แสดงได้\n\n🔐 **ต้อง Authentication** - JWT Token + Admin Role\n📝 **สร้างป้าย** - สามารถกำหนด deepLink, date range, priority'
   })
-  @ApiResponse({
-    status: 201,
-    description: 'สร้างป้ายประกาศใหม่ (Admin เท่านั้น)',
-    type: AnnouncementResponseDto,
-  })
+  @ApiResponse({ status: 201, description: 'สร้างป้ายประกาศใหม่ (Admin เท่านั้น)', type: AnnouncementResponseDto })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
   async create(@Body() dto: CreateAnnouncementDto) {
     return this.announcementsService.create(dto);
   }
@@ -93,6 +90,14 @@ export class AnnouncementsController {
   @ApiResponse({
     status: 200,
     description: 'ดึงป้ายประกาศทั้งหมด (Admin เท่านั้น)',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request'
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal Server Error'
   })
   async findAll() {
     return this.announcementsService.findAll();
@@ -108,6 +113,14 @@ export class AnnouncementsController {
     description: 'ดึงป้ายประกาศตาม ID (Admin เท่านั้น)',
     type: AnnouncementResponseDto,
   })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request'
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal Server Error'
+  })
   async findOne(@Param('id', ParseIntPipe) id: number) {
     return this.announcementsService.findOne(id);
   }
@@ -121,6 +134,14 @@ export class AnnouncementsController {
     status: 200,
     description: 'อัปเดตป้ายประกาศ (Admin เท่านั้น)',
     type: AnnouncementResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request'
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal Server Error'
   })
   async update(
     @Param('id', ParseIntPipe) id: number,
@@ -156,6 +177,15 @@ export class AnnouncementsController {
     description: 'อัปโหลดรูปภาพป้ายประกาศ (Admin เท่านั้น)',
     type: AnnouncementResponseDto,
   })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request - Invalid file type or size'
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal Server Error'
+  })
+  
   @UseInterceptors(
     FileInterceptor('file', {
       storage: multer.memoryStorage(),
@@ -173,9 +203,9 @@ export class AnnouncementsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Post('sync-active')
-  @ApiOperation({ 
-    summary: 'บังคับประกาศสถานะการทำงาน (สำหรับผู้ดูแลระบบเท่านั้น)', 
-    description: '**Admin Only - ต้อง Login + Admin Role**\n\nบังคับให้รันการ sync สถานะป้ายประกาศตามวันที่ทันที โดยไม่ต้องรอ cron ทำงาน 1 นาที\n\n🔐 **ต้อง Authentication** - JWT Token + Admin Role\n⚡ **Force Sync** - ทำงานทันที ไม่ต้องรอ cron\n🔧 **ใช้สำหรับ** - ทดสอบ หรือเปิด/ปิดป้ายฉุกเฉิน' 
+  @ApiOperation({
+    summary: 'บังคับประกาศสถานะการทำงาน (สำหรับผู้ดูแลระบบเท่านั้น)',
+    description: '**Admin Only - ต้อง Login + Admin Role**\n\nบังคับให้รันการ sync สถานะป้ายประกาศตามวันที่ทันที โดยไม่ต้องรอ cron ทำงาน 1 นาที\n\n🔐 **ต้อง Authentication** - JWT Token + Admin Role\n⚡ **Force Sync** - ทำงานทันที ไม่ต้องรอ cron\n🔧 **ใช้สำหรับ** - ทดสอบ หรือเปิด/ปิดป้ายฉุกเฉิน'
   })
   @ApiResponse({
     status: 200,

@@ -13,7 +13,7 @@ export class Article {
   @RelationId((article: Article) => article.lesson)
   lesson_id: number;
 
-  // เก็บ article content เป็น jsonb โดยมีค่าเป็น array ของ blocks
+  // เก็บ article content เป็น jsonb โดยมีค่าเป็น array 
   @Column({ type: 'jsonb', default: () => "'[]'" })
   article_content: any[];
 
