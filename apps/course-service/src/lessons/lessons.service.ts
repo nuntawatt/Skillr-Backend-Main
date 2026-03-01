@@ -16,28 +16,17 @@ export class LessonsService {
     private readonly lessonRepository: Repository<Lesson>,
     @InjectRepository(Chapter)
     private readonly chapterRepository: Repository<Chapter>,
-    @InjectRepository(QuizsCheckpoint)
-    private readonly checkpointRepository: Repository<QuizsCheckpoint>,
     @InjectRepository(Article)
     private readonly articleRepo: Repository<Article>,
     @InjectRepository(Quizs)
     private readonly quizRepo: Repository<Quizs>,
     @InjectRepository(QuizsCheckpoint)
-    private readonly checkpointRepo: Repository<QuizsCheckpoint>,
+    private readonly checkpointRepository: Repository<QuizsCheckpoint>,
     @InjectRepository(VideoAsset)
     private readonly videoRepo: Repository<VideoAsset>,
   ) { }
 
-  // Create a new lesson
   async create(createLessonDto: CreateLessonDto): Promise<LessonResponseDto> {
-    // ต้องมี title และ description (หรือเนื้อหาสำคัญอื่นๆ)
-    // if (!createLessonDto.lesson_title || createLessonDto.lesson_title.trim() === '') {
-    //   throw new BadRequestException('Lesson title is required');
-    // }
-    // if (!createLessonDto.lesson_description || createLessonDto.lesson_description.trim() === '') {
-    //   throw new BadRequestException('Lesson description is required');
-    // }
-    // ตรวจสอบว่า chapter มีอยู่จริง
     const chapter = await this.chapterRepository.findOne({
       where: { chapter_id: createLessonDto.chapter_id },
     });
@@ -54,7 +43,7 @@ export class LessonsService {
 
     let orderIndex: number;
 
-    // หา checkpoint เดิม (ถ้ามี)
+    // กัน checkpoint ไม่ให้ไปอยู่กลาง chapter
     const existingCheckpoint = lessons.find(
       (l) => l.lesson_type === LessonType.CHECKPOINT,
     );
@@ -68,9 +57,8 @@ export class LessonsService {
         orderIndex = lessons.length; // checkpoint ใหม่จะอยู่ท้ายสุดเสมอ
       }
     } else {
-      // ถ้าไม่ใช่ checkpoint
 
-      // ถ้ามี checkpoint อยู่แล้ว → แทรกก่อน checkpoint
+      // ถ้าไม่ใช่ checkpoint → แทรกก่อน checkpoint
       if (existingCheckpoint) {
         orderIndex = existingCheckpoint.orderIndex;
 
@@ -98,7 +86,6 @@ export class LessonsService {
     return this.toResponseDto(saved);
   }
 
-  // Get all lessons for a chapter
   async findByChapter(chapterId: number): Promise<LessonResponseDto[]> {
     const lessons = await this.lessonRepository.find({
       where: { chapter_id: chapterId },
@@ -108,7 +95,6 @@ export class LessonsService {
     return Promise.all(lessons.map((l) => this.toResponseDto(l)));
   }
 
-  // Find a lesson by ID
   async findOne(id: number): Promise<LessonResponseDto> {
     const lesson = await this.lessonRepository.findOne({ where: { lesson_id: id } });
 
@@ -116,14 +102,51 @@ export class LessonsService {
       throw new NotFoundException(`Lesson with ID ${id} not found`);
     }
 
-    // ถ้า lesson ยังไม่ publish ให้เช็คเนื้อหาตามประเภท
+    // ถ้า lesson ยังไม่ publish ให้เช็คว่า content ตาม type มีอยู่จริง
     if (!lesson.isPublished) {
-      // ...existing code...
+      switch (lesson.lesson_type) {
+        case LessonType.ARTICLE: {
+          const article = await this.articleRepo.findOne({
+            where: { lesson: { lesson_id: lesson.lesson_id } },
+          });
+          if (!article) {
+            throw new NotFoundException(
+              `Article content for lesson ID ${id} not found`,
+            );
+          }
+          break;
+        }
+        case LessonType.QUIZ: {
+          const quiz = await this.quizRepo.findOne({
+            where: { lesson: { lesson_id: lesson.lesson_id } },
+          });
+          if (!quiz) {
+            throw new NotFoundException(
+              `Quiz content for lesson ID ${id} not found`,
+            );
+          }
+          break;
+        }
+        case LessonType.CHECKPOINT: {
+          const checkpoint = await this.checkpointRepository.findOne({
+            where: { lesson: { lesson_id: lesson.lesson_id } },
+          });
+          if (!checkpoint) {
+            throw new NotFoundException(
+              `Checkpoint content for lesson ID ${id} not found`,
+            );
+          }
+          break;
+        }
+        default:
+          break;
+      }
     }
-    return await this.toResponseDto(lesson);
+
+    return this.toResponseDto(lesson);
   }
 
-  // Update a lesson
+  // Update lesson by ID
   async update(id: number, updateLessonDto: UpdateLessonDto): Promise<LessonResponseDto> {
     const lesson = await this.lessonRepository.findOne({ where: { lesson_id: id } });
 
@@ -133,8 +156,7 @@ export class LessonsService {
 
     const originalType = lesson.lesson_type;
 
-    // อัปเดตฟิลด์ที่ระบุใน DTO
-    // ---------------- Basic Field Updates ----------------
+    // Update fields if provided
     if (updateLessonDto.lesson_title !== undefined) {
       lesson.lesson_title = updateLessonDto.lesson_title;
     }
@@ -142,7 +164,6 @@ export class LessonsService {
     if (updateLessonDto.lesson_description !== undefined) {
       lesson.lesson_description = updateLessonDto.lesson_description;
     }
-    // ...existing code...
 
     if (updateLessonDto.lesson_ImageUrl !== undefined) {
       lesson.lesson_ImageUrl = updateLessonDto.lesson_ImageUrl;
@@ -152,10 +173,10 @@ export class LessonsService {
       lesson.lesson_videoUrl = updateLessonDto.lesson_videoUrl;
     }
 
-    // บังคับ publish ทุกครั้งที่ update
+    // บังคับ publish ทุกครั้งที่ update  
     lesson.isPublished = true;
 
-    // ---------------- Type Change Logic ----------------
+    // ถ้าเปลี่ยน type ตรวจสอบและจัดการความสัมพันธ์ของ content ตาม type ใหม่
     if (
       updateLessonDto.lesson_type !== undefined &&
       updateLessonDto.lesson_type !== originalType
@@ -171,9 +192,8 @@ export class LessonsService {
           l.lesson_id !== lesson.lesson_id,
       );
 
+      // ถ้าเปลี่ยนเป็น checkpoint -> ลบ checkpoint เดิมทิ้งก่อน
       if (updateLessonDto.lesson_type === LessonType.CHECKPOINT) {
-        // ถ้าจะเปลี่ยนเป็น checkpoint
-
         if (existingCheckpoint) {
           await this.lessonRepository.remove(existingCheckpoint);
         }
@@ -185,14 +205,13 @@ export class LessonsService {
       lesson.lesson_type = updateLessonDto.lesson_type;
     }
 
-    // ---------------- Publish Flag ----------------
+    // ถ้าเป็น checkpoint กันไม่ให้เปลี่ยน orderIndex
     if (updateLessonDto.isPublished !== undefined) {
       lesson.isPublished = updateLessonDto.isPublished;
     }
 
-    // ---------------- Manual Order Change ----------------
-    if (
-      updateLessonDto.orderIndex !== undefined &&
+    // ถ้า update orderIndex ให้ตรวจสอบว่าไม่ใช่ checkpoint และไม่ให้ไปอยู่กลาง chapter
+    if (updateLessonDto.orderIndex !== undefined &&
       lesson.lesson_type !== LessonType.CHECKPOINT
     ) {
       lesson.orderIndex = updateLessonDto.orderIndex;
@@ -203,7 +222,7 @@ export class LessonsService {
     return this.toResponseDto(saved);
   }
 
-  // Delete a lesson
+  // Delete lesson by ID
   async remove(id: number): Promise<{ message: string }> {
     const lesson = await this.lessonRepository.findOne({ where: { lesson_id: id } });
 
@@ -215,26 +234,30 @@ export class LessonsService {
     return { message: `Lesson with ID ${id} deleted successfully` };
   }
 
-  // Reorder lessons within a chapter
+  // reorder lessons within a chapter
   async reorder(chapterId: number, lessonIds: number[]): Promise<LessonResponseDto[]> {
     const lessons = await this.lessonRepository.find({
       where: { chapter_id: chapterId },
     });
 
+    // ถ้าไม่มีบทเรียนในบทนี้เลย ให้คืนค่าเป็น array ว่างแทน
     if (lessons.length === 0) {
       return [];
     }
 
+    // เช็คว่า lessonIds ที่ส่งมาครบถ้วนและถูกต้องมั้ย
     if (!Array.isArray(lessonIds) || lessonIds.length === 0) {
       throw new BadRequestException('lessonIds is required');
     }
 
+    // กันไม่ให้ส่ง lessonIds มาเกินจำนวนบทเรียนที่มีอยู่จริง
     if (lessonIds.length !== lessons.length) {
       throw new BadRequestException(
         `lessonIds must include all lessons in the chapter (expected ${lessons.length}, got ${lessonIds.length})`,
       );
     }
 
+    // กันไม่ให้ส่ง lessonIds ที่ไม่ใช่ของบทนี้มาด้วย
     const lessonMap = new Map(lessons.map((l) => [l.lesson_id, l]));
 
     for (const id of lessonIds) {
@@ -243,7 +266,6 @@ export class LessonsService {
       }
     }
 
-    // กัน checkpoint ไม่ให้ไปอยู่กลาง chapter
     const checkpoint = lessons.find(
       (l) => l.lesson_type === LessonType.CHECKPOINT,
     );
@@ -258,9 +280,9 @@ export class LessonsService {
       }
     }
 
-    // อัปเดต orderIndex ตามลำดับใหม่
     const updatedLessons: Lesson[] = [];
 
+    // อัพเดท orderIndex ตามลำดับใน lessonIds
     for (let i = 0; i < lessonIds.length; i++) {
       const lesson = lessonMap.get(lessonIds[i]);
       if (lesson) {
@@ -269,13 +291,12 @@ export class LessonsService {
       }
     }
 
-    // save ทีเดียว (ดีกว่า await ใน loop)
     await this.lessonRepository.save(updatedLessons);
 
     return await this.findByChapter(chapterId);
   }
 
-  // Convert Lesson entity to LessonResponseDto
+  // แปลง Lesson entity เป็น LessonResponseDto โดยถ้าเป็น checkpoint จะเติมข้อมูล checkpoint ลงไปใน response ด้วย
   private async toResponseDto(lesson: Lesson): Promise<LessonResponseDto> {
     const base: any = {
       lesson_id: lesson.lesson_id,
@@ -284,34 +305,31 @@ export class LessonsService {
       lesson_type: lesson.lesson_type,
       orderIndex: lesson.orderIndex,
       chapter_id: lesson.chapter_id,
-
       lesson_ImageUrl: lesson.lesson_ImageUrl,
       lesson_videoUrl: lesson.lesson_videoUrl,
-
       isPublished: lesson.isPublished,
-      // hasCheckpoint: false,
       createdAt: lesson.createdAt,
     };
 
     if (lesson.lesson_type === LessonType.CHECKPOINT) {
       try {
         const chk = await this.checkpointRepository.findOne({ where: { lessonId: lesson.lesson_id } });
+
+        // ถ้าเจอ checkpoint ให้เติมข้อมูล checkpoint ลงใน response ด้วย
         if (chk) {
-          // attach checkpoint object only (do not expose hasCheckpoint boolean)
           base.checkpoint = {
             checkpoint_id: chk.checkpointId,
             checkpoint_score: chk.checkpointScore,
             checkpoint_type: chk.checkpointType,
             checkpoint_questions: chk.checkpointQuestions,
             checkpoint_option: chk.checkpointOption,
-            // do not include checkpoint_answer here for student-facing responses
             checkpoint_explanation: chk.checkpointExplanation ?? null,
             createdAt: chk.createdAt,
             updatedAt: chk.updatedAt,
           };
         }
       } catch (err) {
-        // ignore checkpoint errors and return base
+        // ถ้า error จะไม่เติมข้อมูล checkpoint ลงใน response แต่จะไม่ทำให้การดึง lesson ล้มเหลว
       }
     }
 

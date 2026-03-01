@@ -5,7 +5,7 @@ import { randomUUID } from 'crypto';
 
 import { StorageFactory } from '../storage/storage.factory';
 import { VideoAsset, VideoAssetStatus } from './entities/video-asset.entity';
-import { CreateVideoUploadDto } from './dto/create-video-upload.dto';
+// import { CreateVideoUploadDto } from './dto/create-video-upload.dto';
 import { CreateVideoPresignDto } from './dto/create-video-presign.dto';
 import { AwsS3StorageService } from '../storage/aws.service';
 
@@ -20,10 +20,10 @@ export class MediaVideosService {
     private readonly aws: AwsS3StorageService
   ) { }
 
-  // เรียกดูนามสกุลไฟล์จากชื่อไฟล์ (ถ้ามี) เพื่อใช้ในการตั้งชื่อไฟล์ใน S3
+  // ดึงนามสกุลไฟล์จากชื่อไฟล์ (เช่น "video.mp4" → "mp4")
   private getFileExtension(filename: string | undefined): string | null {
     if (!filename) return null;
-    const match = filename.match(/\.([^.]+)$/); // ดึงนามสกุลจากชื่อไฟล์ (เช่น "video.mp4" → "mp4")
+    const match = filename.match(/\.([^.]+)$/);
     return match ? match[1].toLowerCase() : null;
   }
 
@@ -66,7 +66,7 @@ export class MediaVideosService {
   //   };
   // }
 
-  // 1. สร้าง presigned upload URL สำหรับอัพโหลดวิดีโอ (สำหรับไฟล์ขนาดใหญ่ - สูงสุด 1GB)
+  // สร้าง presigned upload URL สำหรับอัพโหลดวิดีโอ (สำหรับไฟล์ขนาดใหญ่ - สูงสุด 1GB)
   async createPresignedUpload(dto: CreateVideoPresignDto) {
     this.validateVideoMime(dto.mime_type);
 
@@ -76,15 +76,15 @@ export class MediaVideosService {
       throw new BadRequestException('file size exceeds limit');
     }
 
+    // สร้างชื่อไฟล์แบบสุ่มเพื่อเก็บใน storage โดยใช้ UUID และเก็บในโฟลเดอร์ videos/
     const bucket = process.env.AWS_S3_BUCKET!;
     const videoId = randomUUID();
     const ext = this.getFileExtension(dto.original_filename) || 'mp4';
     const key = `videos/${videoId}.${ext}`;
 
-    // generate presigned PUT URL (15 minutes)
+    // สร้าง presigned URL สำหรับอัพโหลดไปยัง S3 โดยกำหนด content type และระยะเวลาหมดอายุ (เช่น 15 นาที)
     const uploadUrl = await this.aws.presignPut(bucket, key, dto.mime_type, 60 * 15);
 
-    // save metadata with UPLOADING status
     const asset = this.repo.create({
       originalFilename: dto.original_filename ?? `${videoId}`,
       mimeType: dto.mime_type,
@@ -104,7 +104,7 @@ export class MediaVideosService {
     };
   }
 
-  // Confirm uploaded file exists in S3 and update status to READY
+  // ยืนยันการอัพโหลดโดยตรวจสอบว่าไฟล์ที่อัพโหลดไปยัง S3 มีอยู่จริงหรือไม่ ถ้ามีให้เปลี่ยนสถานะเป็น READY และบันทึก URL สาธารณะใน DB
   async confirmUpload(id: number) {
     const asset = await this.repo.findOne({ where: { id } });
     if (!asset) throw new NotFoundException('video asset not found');
@@ -124,17 +124,13 @@ export class MediaVideosService {
       success: true,
       video_id: asset.id,
       public_url: publicUrl,
-      // publicUrl: publicUrl,
-      // url: publicUrl,
     };
   }
 
-  // 2. Get public view URL
   async getPublicViewUrl(id: number) {
     const asset = await this.repo.findOne({ where: { id } });
     if (!asset) throw new NotFoundException('video asset not found');
 
-    // Return stored public URL, or build it from storage key
     const url = asset.publicUrl ?? this.storageFactory.video().buildPublicUrl(
       asset.storageBucket ?? this.storageFactory.video().bucket,
       asset.storageKey!,
@@ -144,13 +140,10 @@ export class MediaVideosService {
       video_id: asset.id,
       url,
       public_url: url,
-      // publicUrl: url,
-      // mime_type: asset.mimeType,
     };
   }
 
-  // 3. Delete video by ID
-  async deleteVideoById(id: number) {
+  async deleteVideoById(id: number): Promise<{ message: string }> {
     const asset = await this.repo.findOne({ where: { id } });
     if (!asset) throw new NotFoundException('video asset not found');
 
@@ -158,6 +151,7 @@ export class MediaVideosService {
     const bucket = asset.storageBucket ?? storage.bucket;
     const key = asset.storageKey;
 
+    // ลบไฟล์จาก storage provider (เช่น S3) ถ้า bucket และ key มีอยู่
     if (bucket && key) {
       try {
         await storage.deleteObject(bucket, key);
@@ -167,10 +161,10 @@ export class MediaVideosService {
     }
 
     await this.repo.remove(asset);
-    return { deleted: true, video_id: id };
+    return { message: `Video deleted successfully :${id}` };
   }
 
-  // Validate video mime type
+  // เช็คว่า MIME type ของไฟล์วิดีโอที่อัพโหลดมานั้นอยู่ใน allowlist หรือไม่ ถ้าไม่อยู่ให้โยน BadRequestException ออกมา
   private validateVideoMime(mimeType: string) {
     const allow = (
       process.env.VIDEO_MIME_ALLOWLIST ?? 'video/mp4,video/webm,video/quicktime,application/octet-stream'

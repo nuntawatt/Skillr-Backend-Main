@@ -1,5 +1,5 @@
 import { IsInt, IsOptional, IsString, Min } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
 export class CreateVideoUploadDto {
@@ -26,5 +26,4 @@ export class CreateVideoUploadDto {
   @Type(() => Number)
   @IsInt()
   media_asset_id?: number;
-
 }

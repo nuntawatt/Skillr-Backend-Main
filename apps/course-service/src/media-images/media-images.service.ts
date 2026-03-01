@@ -40,12 +40,11 @@ export class MediaImagesService {
     const storage = this.storageFactory.image();
     const bucket = storage.bucket;
 
-    // สร้าง storage key แบบ unique (คุณสามารถเปลี่ยน structure ได้)
+    // สร้างชื่อไฟล์แบบสุ่มเพื่อเก็บใน storage โดยใช้ UUID และเก็บในโฟลเดอร์ images/
     const uuid = randomUUID();
     const storageKey = `images/${uuid}`;
-    // const storageKey = `images/${uuid}${(file.originalname?.match(/\.[^.]+$/) ?? [''])[0]}`;
 
-    // อัพโหลดไฟล์ไปยัง storage provider s3 หรือตามที่คุณตั้งค่าไว้
+    // อัพโหลดไฟล์ไปยัง storage provider (เช่น S3) โดยใช้ buffer ที่ได้จาก multer
     await storage.putObject(
       bucket,
       storageKey,
@@ -54,10 +53,9 @@ export class MediaImagesService {
       { 'Content-Type': file.mimetype },
     );
 
-    // สร้าง URL สาธารณะสำหรับเข้าถึงไฟล์ผ่าน CloudFront หรือ storage provider อื่น
+    // สร้าง URL สาธารณะสำหรับเข้าถึงไฟล์ผ่าน CloudFront
     const publicUrl = storage.buildPublicUrl(bucket, storageKey);
 
-    // บันทึก metadata ลง DB
     const saved = await this.repo.save(
       this.repo.create({
         originalFilename: file.originalname,
@@ -78,12 +76,12 @@ export class MediaImagesService {
     };
   }
 
-  // ดึง URL สาธารณะของภาพโดยใช้ ID (จะดึงจาก DB หรือสร้างจาก storage key ก็ได้)
+  // ดึง URL สาธารณะของภาพโดยใช้ ID จาก DB ถ้าไม่พบจะโยน NotFoundException ออกมา
   async getPublicUrlById(id: number) {
     const asset = await this.repo.findOne({ where: { id } });
     if (!asset) throw new NotFoundException('image asset not found');
 
-    // ถ้า publicUrl มีอยู่แล้วก็ใช้เลย ถ้าไม่ก็สร้างจาก storage key (กรณีที่คุณไม่ได้บันทึก publicUrl ไว้ตอนอัพโหลด)
+    // ถ้า publicUrl มีอยู่แล้วก็ใช้เลย ถ้าไม่ก็สร้างจาก storage key และ bucket
     const url = asset.publicUrl ?? this.storageFactory.image().buildPublicUrl(asset.storageBucket, asset.storageKey);
 
     return {
@@ -93,7 +91,6 @@ export class MediaImagesService {
     };
   }
 
-  // Delete image by ID (ลบทั้ง metadata ใน DB และไฟล์ใน storage)
   async deleteImageById(id: number) {
     const asset = await this.repo.findOne({ where: { id } });
     if (!asset) throw new NotFoundException('media asset not found');

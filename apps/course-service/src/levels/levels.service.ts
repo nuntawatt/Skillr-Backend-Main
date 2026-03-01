@@ -14,9 +14,7 @@ export class LevelsService {
     private readonly courseRepository: Repository<Course>,
   ) {}
 
-  // Create a new level
   async create(createLevelDto: CreateLevelDto): Promise<LevelResponseDto> {
-    // อนุมัติ course มีอยู่จริง
     const course = await this.courseRepository.findOne({
       where: { course_id: createLevelDto.course_id },
     });
@@ -25,7 +23,7 @@ export class LevelsService {
       throw new NotFoundException(`Course with ID ${createLevelDto.course_id} not found`);
     }
 
-    // สร้าง orderIndex อัตโนมัติถ้าไม่ได้ระบุ
+    // ถ้าไม่ได้ระบุ orderIndex มา ให้กำหนดค่า orderIndex เป็นค่าที่มากที่สุดในคอร์สนี้ + 1 เพื่อให้ระดับใหม่อยู่ท้ายสุด
     let orderIndex = createLevelDto.level_orderIndex;
     if (orderIndex === undefined) {
       const maxOrderResult = await this.levelRepository
@@ -46,7 +44,6 @@ export class LevelsService {
     return this.toResponseDto(saved);
   }
 
-  // Find all levels for a course
   async findByCourse(courseId: number): Promise<LevelResponseDto[]> {
     const levels = await this.levelRepository.find({
       where: { course_id: courseId },
@@ -56,7 +53,6 @@ export class LevelsService {
     return levels.map((l) => this.toResponseDto(l));
   }
 
-  // Find a level by ID
   async findOne(id: number): Promise<LevelResponseDto> {
     const level = await this.levelRepository.findOne({ where: { level_id: id } });
 
@@ -67,7 +63,6 @@ export class LevelsService {
     return this.toResponseDto(level);
   }
 
-  // Update a level
   async update(id: number, updateLevelDto: UpdateLevelDto): Promise<LevelResponseDto> {
     const level = await this.levelRepository.findOne({ where: { level_id: id } });
 
@@ -87,7 +82,6 @@ export class LevelsService {
     return this.toResponseDto(saved);
   }
 
-  // Delete a level
   async remove(id: number): Promise<{ message: string }> {
     const level = await this.levelRepository.findOne({ where: { level_id: id } });
 
@@ -99,18 +93,18 @@ export class LevelsService {
     return { message: `Level with ID ${id} deleted successfully` };
   }
 
-  // Reorder levels within a course
   async reorder(courseId: number, levelIds: number[]): Promise<LevelResponseDto[]> {
     const levels = await this.levelRepository.find({
       where: { course_id: courseId },
     });
 
+    // ถ้าไม่มีระดับในคอร์สนี้เลย จะคืน array ว่างกลับไปโดยไม่ตรวจ levelIds ที่ส่งมา
     if (levels.length === 0) {
       return [];
     }
 
     if (!Array.isArray(levelIds) || levelIds.length === 0) {
-      throw new BadRequestException('level_ids is required');
+      throw new BadRequestException('level_ids must be a non-empty array');
     }
 
     if (levelIds.length !== levels.length) {
@@ -121,12 +115,14 @@ export class LevelsService {
 
     const levelMap = new Map(levels.map((l) => [l.level_id, l]));
 
+    // ตรวจสอบว่า levelIds ที่ส่งมาทุกตัวมีอยู่ในคอร์สนี้จริงๆ ถ้าไม่ใช่จะโยน error ออกมา
     for (const id of levelIds) {
       if (!levelMap.has(id)) {
         throw new BadRequestException(`Level ID ${id} does not belong to course ${courseId}`);
       }
     }
 
+    // ตรวจสอบว่า levelIds ที่ส่งมาครบทุกระดับในคอร์สนี้จริงๆ
     const provided = new Set(levelIds);
     for (const level of levels) {
       if (!provided.has(level.level_id)) {
@@ -136,6 +132,7 @@ export class LevelsService {
       }
     }
 
+    // อัปเดต orderIndex ของแต่ละระดับตามลำดับใน levelIds ที่ส่งมา
     for (let i = 0; i < levelIds.length; i++) {
       const level = levelMap.get(levelIds[i]);
       if (level) {
@@ -147,7 +144,7 @@ export class LevelsService {
     return this.findByCourse(courseId);
   }
 
-  // Convert Level entity to LevelResponseDto
+  // แปลง Level entity เป็น LevelResponseDto
   private toResponseDto(level: Level): LevelResponseDto {
     return {
       level_id: level.level_id,

@@ -30,17 +30,4 @@ export class LessonResponseDto {
 
   @ApiProperty({ description: 'Creation timestamp' })
   createdAt: Date;
-
-  // @ApiPropertyOptional({ description: 'Checkpoint data when lesson_type is checkpoint' })
-  // checkpoint?: {
-  //   checkpoint_id: number;
-  //   checkpoint_score: number;
-  //   checkpoint_type: string;
-  //   checkpoint_questions: string;
-  //   checkpoint_option?: any;
-  //   checkpoint_answer?: any;
-  //   checkpoint_explanation?: string | null;
-  //   createdAt: Date;
-  //   updatedAt: Date;
-  // };
 }

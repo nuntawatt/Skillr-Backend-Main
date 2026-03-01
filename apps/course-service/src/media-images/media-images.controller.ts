@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UploadedFile, UseInterceptors, Delete, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Param, Post, UploadedFile, UseInterceptors, Delete } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiParam, ApiResponse } from '@nestjs/swagger';
@@ -10,7 +10,6 @@ import { MediaImagesService } from './media-images.service';
 export class MediaImagesController {
   constructor(private readonly svc: MediaImagesService) { }
 
-  // ===== Upload image =====
   @Post('upload')
   @ApiOperation({ summary: 'อัพโหลดภาพ' })
   @ApiConsumes('multipart/form-data')
@@ -31,12 +30,9 @@ export class MediaImagesController {
     limits: { fileSize: 30 * 1024 * 1024 }, // 30MB
   }))
   async upload(@UploadedFile() file: Express.Multer.File) {
-    if (!file) throw new BadRequestException('file missing');
-    // คืนค่าเป็น image_id ให้ frontend เอาไปใส่ใน article_content
     return this.svc.uploadImageFileAndPersist(file);
   }
 
-  // ===== Get public URL by image id =====
   @Get(':id')
   @ApiOperation({ summary: 'รับ URL สาธารณะโดยใช้รหัสรูปภาพ' })
   @ApiParam({ name: 'id', description: 'Image asset id', type: 'number' })
@@ -47,7 +43,6 @@ export class MediaImagesController {
     return this.svc.getPublicUrlById(Number(id));
   }
 
-  // ===== Delete image by id =====
   @Delete(':id')
   @ApiOperation({ summary: 'ลบรูปภาพตาม ID' })
   @ApiParam({ name: 'id', description: 'Image asset id', type: 'number' })

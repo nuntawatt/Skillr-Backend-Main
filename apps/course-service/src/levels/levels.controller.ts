@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiQuery, ApiNoContentResponse, ApiResponse } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { LevelsService } from './levels.service';
 import { CreateLevelDto, UpdateLevelDto, LevelResponseDto, ReorderLevelsDto } from './dto';
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
@@ -15,21 +15,39 @@ export class LevelsController {
 
     @Post()
     @ApiOperation({ summary: 'สร้างระดับใหม่' })
-    @ApiCreatedResponse({ type: LevelResponseDto, description: 'Level created successfully' })
+    @ApiBody({
+        type: CreateLevelDto,
+        examples: {
+            example1: {
+                summary: 'Create level example',
+                value: {
+                    level_title: 'Level 1',
+                    level_description: 'Introduction to programming concepts',
+                    course_id: 1,
+                    orderIndex: 0,
+                    level_ImageUrl: 'https://cdn.skillacademy.com/images/level1.jpg',
+                },
+            },
+        },
+    })
+    @ApiResponse({ status: 201, description: 'Level created successfully', type: LevelResponseDto })
     @ApiResponse({ status: 400, description: 'Invalid input data' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Course not found' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     create(@Body() dto: CreateLevelDto): Promise<LevelResponseDto> {
         return this.levelsService.create(dto);
     }
-
 
     // @ApiTags('Student | Levels')
     // @UseGuards(JwtAuthGuard)
     @Get()
     @ApiOperation({ summary: 'ดึงระดับทั้งหมดสำหรับคอร์ส' })
     @ApiQuery({ name: 'course_id', required: true, type: Number })
-    @ApiOkResponse({ type: LevelResponseDto, isArray: true })
+    @ApiResponse({ status: 200, description: 'List of levels for the specified course', type: LevelResponseDto, isArray: true })
     @ApiResponse({ status: 400, description: 'Invalid course ID' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Course not found' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     findByCourse(@Query('course_id', ParseIntPipe) course_id: number,): Promise<LevelResponseDto[]> {
         return this.levelsService.findByCourse(course_id);
@@ -40,7 +58,9 @@ export class LevelsController {
     @Get(':id')
     @ApiOperation({ summary: 'ดึงระดับตาม ID' })
     @ApiParam({ name: 'id', type: Number })
-    @ApiOkResponse({ type: LevelResponseDto })
+    @ApiResponse({ status: 200, description: 'Level found', type: LevelResponseDto })
+    @ApiResponse({ status: 400, description: 'Invalid level ID' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 404, description: 'Level not found' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     findOne(@Param('id', ParseIntPipe) id: number): Promise<LevelResponseDto> {
@@ -50,7 +70,9 @@ export class LevelsController {
     @Patch(':id')
     @ApiOperation({ summary: 'อัปเดตระดับตาม ID' })
     @ApiParam({ name: 'id', type: Number })
-    @ApiOkResponse({ type: LevelResponseDto })
+    @ApiResponse({ status: 200, description: 'Level updated successfully', type: LevelResponseDto })
+    @ApiResponse({ status: 400, description: 'Invalid input data' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 404, description: 'Level not found' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     update(@Param('id', ParseIntPipe) id: number, @Body() updateLevelDto: UpdateLevelDto): Promise<LevelResponseDto> {
@@ -61,6 +83,8 @@ export class LevelsController {
     @ApiOperation({ summary: 'ลบระดับตาม ID' })
     @ApiParam({ name: 'id', type: Number })
     @ApiResponse({ status: 200, description: 'Level deleted successfully' })
+    @ApiResponse({ status: 400, description: 'Invalid level ID' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 404, description: 'Level not found' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     remove(@Param('id', ParseIntPipe) id: number): Promise<{ message: string }> {
@@ -69,8 +93,22 @@ export class LevelsController {
 
     @Post('reorder')
     @ApiOperation({ summary: 'จัดลำดับระดับภายในคอร์ส' })
-    @ApiOkResponse({ type: LevelResponseDto, isArray: true })
+    @ApiBody({
+        type: ReorderLevelsDto,
+        examples: {
+            example1: {
+                summary: 'Reorder levels example',
+                value: {
+                    course_id: 1,
+                    level_ids: [3, 1, 2] // ระบุลำดับใหม่ของ level_id ทั้งหมดในคอร์สนี้ (ต้องครบทุก level_id ของคอร์สนี้)
+                },
+            },
+        },
+    })
+    @ApiResponse({ status: 200, description: 'Levels reordered successfully', type: LevelResponseDto, isArray: true })
     @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Course not found' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     reorder(@Body() body: ReorderLevelsDto): Promise<LevelResponseDto[]> {
         return this.levelsService.reorder(body.course_id, body.level_ids);

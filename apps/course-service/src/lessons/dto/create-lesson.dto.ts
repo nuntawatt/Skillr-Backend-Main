@@ -26,7 +26,6 @@ export class CreateLessonDto {
   @IsEnum(LessonType)
   lesson_type: LessonType;
 
-
   @ApiPropertyOptional({ description: 'Order index within the chapter', example: 0, default: 0 })
   @IsOptional()
   @IsNumber()
