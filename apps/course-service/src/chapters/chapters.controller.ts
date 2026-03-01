@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiParam, ApiQuery, ApiNoContentResponse, ApiResponse } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation,ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { ChaptersService } from './chapters.service';
 import { CreateChapterDto, UpdateChapterDto, ChapterResponseDto, ReorderChaptersDto } from './dto';
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
@@ -15,7 +15,9 @@ export class ChaptersController {
 
     @Post()
     @ApiOperation({ summary: 'สร้างบทใหม่' })
-    @ApiCreatedResponse({ type: ChapterResponseDto, description: 'Chapter created successfully' })
+    @ApiResponse({ status: 201, description: 'Chapter created successfully', type: ChapterResponseDto })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 404, description: 'Level not found' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     create(@Body() dto: CreateChapterDto): Promise<ChapterResponseDto> {
         return this.chaptersService.create(dto);
@@ -26,7 +28,9 @@ export class ChaptersController {
     @Get()
     @ApiOperation({ summary: 'ดึงบททั้งหมดสำหรับระดับ' })
     @ApiQuery({ name: 'level_id', type: Number, required: true, description: 'ID of the level to fetch chapters for' })
-    @ApiOkResponse({ type: ChapterResponseDto, isArray: true })
+    @ApiResponse({ status: 200, description: 'List of chapters for the specified level', type: ChapterResponseDto, isArray: true })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 404, description: 'Level not found' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     findByLevel(@Query('level_id', ParseIntPipe) levelId: number): Promise<ChapterResponseDto[]> {
         return this.chaptersService.findByLevel(levelId);
@@ -37,7 +41,8 @@ export class ChaptersController {
     @Get(':id')
     @ApiOperation({ summary: 'ดึงบทตาม ID' })
     @ApiParam({ name: 'id', type: Number })
-    @ApiOkResponse({ type: ChapterResponseDto })
+    @ApiResponse({ status: 200, description: 'Chapter found', type: ChapterResponseDto })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
     @ApiResponse({ status: 404, description: 'Chapter not found' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     findOne(@Param('id', ParseIntPipe) id: number): Promise<ChapterResponseDto> {
@@ -47,7 +52,8 @@ export class ChaptersController {
     @Patch(':id')
     @ApiOperation({ summary: 'อัปเดตบทตาม ID' })
     @ApiParam({ name: 'id', type: Number })
-    @ApiOkResponse({ type: ChapterResponseDto })
+    @ApiResponse({ status: 200, description: 'Chapter updated successfully', type: ChapterResponseDto })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
     @ApiResponse({ status: 404, description: 'Chapter not found' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     update(@Param('id', ParseIntPipe) id: number, @Body() updateChapterDto: UpdateChapterDto): Promise<ChapterResponseDto> {
@@ -58,6 +64,7 @@ export class ChaptersController {
     @ApiOperation({ summary: 'ลบบทตาม ID' })
     @ApiParam({ name: 'id', type: Number })
     @ApiResponse({ status: 200, description: 'Chapter deleted successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
     @ApiResponse({ status: 404, description: 'Chapter not found' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     remove(@Param('id', ParseIntPipe) id: number): Promise<{ message: string }> {
@@ -66,8 +73,9 @@ export class ChaptersController {
 
     @Post('reorder')
     @ApiOperation({ summary: 'จัดลำดับบทภายในระดับ' })
-    @ApiOkResponse({ type: ChapterResponseDto, isArray: true })
+    @ApiResponse({ status: 200, description: 'Chapters reordered successfully', type: ChapterResponseDto, isArray: true })
     @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 404, description: 'Level not found' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     reorder(@Body() body: ReorderChaptersDto): Promise<ChapterResponseDto[]> {
         return this.chaptersService.reorder(body.level_id, body.chapter_ids);

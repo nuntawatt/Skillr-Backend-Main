@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+// DTO สำหรับโครงสร้างหลักสูตรที่มีระดับ บท และบทเรียน
 export class LessonStructureDto {
   @ApiProperty({ description: 'Lesson ID' })
   lesson_id: number;
@@ -13,10 +14,9 @@ export class LessonStructureDto {
   @ApiProperty({ description: 'Lesson description', required: false })
   lesson_description?: string;
 
-
   @ApiProperty({ description: 'Order index in chapter' })
   orderIndex: number;
-  
+
   @ApiProperty({ description: 'Whether the lesson is published', required: false })
   isPublished?: boolean;
 
@@ -24,6 +24,7 @@ export class LessonStructureDto {
   checkpoint?: any;
 }
 
+// DTO สำหรับโครงสร้างบทที่มีบทเรียน
 export class ChapterStructureDto {
   @ApiProperty({ description: 'Chapter ID' })
   chapter_id: number;
@@ -38,6 +39,7 @@ export class ChapterStructureDto {
   lessons: LessonStructureDto[];
 }
 
+// DTO สำหรับโครงสร้างระดับที่มีบท
 export class LevelStructureDto {
   @ApiProperty({ description: 'Level ID' })
   level_id: number;
@@ -52,6 +54,7 @@ export class LevelStructureDto {
   chapters: ChapterStructureDto[];
 }
 
+// DTO สำหรับโครงสร้างหลักสูตรที่มีระดับ บท และบทเรียน
 export class CourseStructureResponseDto {
   @ApiProperty({ description: 'Course ID' })
   course_id: number;

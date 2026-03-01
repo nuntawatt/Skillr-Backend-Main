@@ -16,7 +16,6 @@ export class ChaptersService {
 
   // Create a new chapter
   async create(createChapterDto: CreateChapterDto): Promise<ChapterResponseDto> {
-    // ตรวจสอบว่า level มีอยู่จริง
     const level = await this.levelRepository.findOne({
       where: { level_id: createChapterDto.level_id },
     });
@@ -25,16 +24,16 @@ export class ChaptersService {
       throw new NotFoundException(`Level with ID ${createChapterDto.level_id} not found`);
     }
 
-    // สร้าง orderIndex อัตโนมัติถ้าไม่ได้ระบุ
+    // ถ้าไม่ได้ระบุ orderIndex มา ให้กำหนดค่า orderIndex เป็นค่าที่มากที่สุดในระดับนั้น + 1 เพื่อให้บทใหม่อยู่ท้ายสุด
     let orderIndex = createChapterDto.chapter_orderIndex;
     if (orderIndex === undefined) {
       const maxOrderResult = await this.chapterRepository
         .createQueryBuilder('chapter')
         .where('chapter.level_id = :levelId', { levelId: createChapterDto.level_id })
-        .select('MAX(chapter.order_index)', 'maxOrder') // สมมติว่าชื่อคอลัมน์ในฐานข้อมูลคือ order_index
+        .select('MAX(chapter.order_index)', 'maxOrder') // column ในฐานข้อมูลชื่อ order_index
         .getRawOne();
 
-      // maxOrder อาจเป็นสตริงขึ้นอยู่กับฐานข้อมูล; แปลงเป็นตัวเลข
+      // ถ้าไม่มีบทใดในระดับนี้เลย ให้เริ่มต้น orderIndex ที่ 0
       const maxOrder = maxOrderResult && maxOrderResult.maxOrder !== null
         ? Number(maxOrderResult.maxOrder)
         : -1;
@@ -42,7 +41,7 @@ export class ChaptersService {
       orderIndex = maxOrder + 1;
     }
 
-    // สร้างบทใหม่
+    // สร้าง chapter ใหม่
     const chapter = this.chapterRepository.create({
       chapter_title: createChapterDto.chapter_title,
       chapter_name: createChapterDto.chapter_name,
@@ -55,7 +54,7 @@ export class ChaptersService {
     return this.toResponseDto(saved);
   }
 
-  // ดึงบททั้งหมดสำหรับ Level
+  // ค้นหาบททั้งหมดในระดับที่ระบุ
   async findByLevel(levelId: number): Promise<ChapterResponseDto[]> {
     const chapters = await this.chapterRepository.find({
       where: { levelId },
@@ -65,7 +64,7 @@ export class ChaptersService {
     return chapters.map((c) => this.toResponseDto(c));
   }
 
-  // หา chapter โดยใช้ ID
+  // ค้นหาบทโดยใช้ ID
   async findOne(id: number): Promise<ChapterResponseDto> {
     const chapter = await this.chapterRepository.findOne({
       where: { chapter_id: id },
@@ -78,18 +77,18 @@ export class ChaptersService {
     return this.toResponseDto(chapter);
   }
 
-  // อัปเดตบทโดยใช้ ID
+  // Update chapter by ID
   async update(id: number, updateChapterDto: UpdateChapterDto): Promise<ChapterResponseDto> {
     const chapter = await this.chapterRepository.findOne({
       where: { chapter_id: id },
     });
 
-    // ตรวจสอบว่าพบบทหรือไม่
+    // ตรวจสอบว่าบทที่ต้องการอัปเดตมีจริงมั้ย
     if (!chapter) {
       throw new NotFoundException(`Chapter with ID ${id} not found`);
     }
 
-    // อัปเดตฟิลด์ที่ระบุ
+    // Update fileds
     if (updateChapterDto.chapter_title !== undefined) {
       chapter.chapter_title = updateChapterDto.chapter_title;
     }
@@ -110,7 +109,7 @@ export class ChaptersService {
     return this.toResponseDto(saved);
   }
 
-  // ลบบทโดยใช้ ID
+  // Delete chapter by ID
   async remove(id: number): Promise<{ message: string }> {
     const chapter = await this.chapterRepository.findOne({
       where: { chapter_id: id },
@@ -124,12 +123,13 @@ export class ChaptersService {
     return { message: `Chapter with ID ${id} deleted successfully` };
   }
 
-  // จัดลำดับบทภายใน Level
+  // จัดลำดับบทภายในระดับ
   async reorder(levelId: number, chapterIds: number[]): Promise<ChapterResponseDto[]> {
     const chapters = await this.chapterRepository.find({
       where: { levelId },
     });
 
+    // ถ้าไม่มีบทในระดับนี้เลย ให้คืนค่าเป็น array ว่างแทน
     if (chapters.length === 0) {
       return [];
     }
@@ -144,6 +144,7 @@ export class ChaptersService {
       );
     }
 
+    // สร้าง map ของ chapter_id ไปยัง chapter entity เพื่อให้ค้นหาได้เร็วขึ้น
     const chapterMap = new Map(chapters.map((c) => [c.chapter_id, c]));
 
     for (const id of chapterIds) {
@@ -152,6 +153,7 @@ export class ChaptersService {
       }
     }
 
+    // ตรวจสอบว่า chapterIds ที่ให้มามีครบทุกบทในระดับนี้จริงมั้ย
     const provided = new Set(chapterIds);
     for (const chapter of chapters) {
       if (!provided.has(chapter.chapter_id)) {
@@ -161,7 +163,7 @@ export class ChaptersService {
       }
     }
 
-    // Update orderIndex based on provided chapterIds array
+    // อัปเดต orderIndex ของแต่ละบทตามลำดับใน chapterIds
     for (let i = 0; i < chapterIds.length; i++) {
       const chapter = chapterMap.get(chapterIds[i]);
       if (chapter) {
@@ -173,7 +175,7 @@ export class ChaptersService {
     return this.findByLevel(levelId);
   }
 
-  // แปลง Chapter entity เป็น ChapterResponseDto
+  // Chapter entity to ChapterResponseDto
   private toResponseDto(chapter: Chapter): ChapterResponseDto {
     return {
       chapter_id: chapter.chapter_id,

@@ -18,7 +18,6 @@ export class Course {
   @Column({ type: 'text', nullable: true })
   course_description?: string;
 
-  // cover image URL (CloudFront CDN)
   @Column({ name: 'course_image_url', type: 'varchar', length: 2048, nullable: true })
   course_imageUrl?: string | null;
 

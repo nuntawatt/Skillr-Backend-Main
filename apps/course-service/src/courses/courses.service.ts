@@ -2,7 +2,15 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Course } from './entities/course.entity';
-import { CreateCourseDto, UpdateCourseDto, CourseResponseDto, CourseStructureResponseDto, LevelStructureDto, ChapterStructureDto, LessonStructureDto } from './dto';
+import {
+  CreateCourseDto,
+  UpdateCourseDto,
+  CourseResponseDto,
+  CourseStructureResponseDto,
+  LevelStructureDto,
+  ChapterStructureDto,
+  LessonStructureDto
+} from './dto';
 import { LessonType } from '../lessons/entities/lesson.entity';
 
 @Injectable()
@@ -12,7 +20,6 @@ export class CoursesService {
     private readonly courseRepository: Repository<Course>,
   ) { }
 
-  // Create a new course
   async create(createCourseDto: CreateCourseDto): Promise<CourseResponseDto> {
     const course = this.courseRepository.create({
       course_ownerId: createCourseDto.course_ownerId ?? 0,
@@ -27,7 +34,6 @@ export class CoursesService {
     return this.toResponseDto(saved);
   }
 
-  // Get all courses with optional filters
   async findAll(params?: {
     isPublished?: boolean;
     course_ownerId?: number;
@@ -37,7 +43,7 @@ export class CoursesService {
   }): Promise<CourseResponseDto[]> {
     const query = this.courseRepository.createQueryBuilder('course');
 
-    // นับจำนวน Chapter ทั้งหมดในคอร์ส (ผ่าน levels -> chapters)
+    // เพิ่ม subquery เพื่อคำนวณจำนวนบททั้งหมดในแต่ละคอร์ส แล้วเลือกคอลัมน์นี้มาด้วยชื่อ course_totalChapter
     query.addSelect(
       (subQuery) =>
         subQuery
@@ -48,21 +54,21 @@ export class CoursesService {
       'course_totalChapter',
     );
 
-    // ถ้ามีการระบุพารามิเตอร์กรอง ให้เพิ่มเงื่อนไขใน query
+    // กรองตามสถานะการเผยแพร่
     if (params?.isPublished !== undefined) {
       query.andWhere('course.isPublished = :isPublished', {
         isPublished: params.isPublished,
       });
     }
 
-    // กรองตามเจ้าของคอร์ส
+    // กรองตามผู้สร้างคอร์ส
     if (params?.course_ownerId !== undefined) {
       query.andWhere('course.course_ownerId = :course_ownerId', {
         course_ownerId: params.course_ownerId,
       });
     }
 
-    // ค้นหาด้วยคีย์เวิร์ดใน title หรือ description
+    // กรองตามคำค้นในชื่อหรือคำอธิบายคอร์ส (case-insensitive)
     if (params?.search) {
       const keyword = params.search.toLowerCase();
       query.andWhere(
@@ -70,14 +76,16 @@ export class CoursesService {
       );
     }
 
-    // ตั้งค่าการแบ่งหน้า
+    // จำกัดจำนวนผลลัพธ์และการแบ่งหน้า
     const limit = params?.limit && params.limit > 0 ? Math.min(params.limit, 100) : 50;
     const offset = params?.offset && params.offset >= 0 ? params.offset : 0;
 
-    // เรียงลำดับตามวันที่สร้างล่าสุด และใช้การแบ่งหน้า
+    // เรียงลำดับตามวันที่สร้างล่าสุดก่อน
     query.orderBy('course.createdAt', 'DESC').take(limit).skip(offset);
-
     const { entities, raw } = await query.getRawAndEntities();
+
+    /* getRawAndEntities จะคืนค่า raw เป็น array ของผลลัพธ์ดิบที่มีคอลัมน์ course_totalChapter อยู่ด้วย 
+    ซึ่งจะนำมาผนวกกับ entities เพื่อสร้าง CourseResponseDto ที่มีข้อมูลจำนวนบททั้งหมดในแต่ละคอร์สด้วย */
     return entities.map((course, index) => {
       const total = Number(raw[index]?.course_totalChapter ?? 0);
       course.course_totalChapter = Number.isFinite(total) ? total : 0;
@@ -85,7 +93,6 @@ export class CoursesService {
     });
   }
 
-  // หา course โดยใช้ ID
   async findOne(id: number): Promise<CourseResponseDto> {
     const course = await this.courseRepository.findOne({ where: { course_id: id } });
 
@@ -96,7 +103,7 @@ export class CoursesService {
     return this.toResponseDto(course);
   }
 
-  // ดึงโครงสร้างแบบ nested ของคอร์ส (อ่านอย่างเดียว)
+  // ดึงโครงสร้างแบบ nested ทั้งหมดของคอร์ส (ระดับ -> บท -> บทเรียน) พร้อมข้อมูล checkpoint ของบทเรียนที่เป็นประเภท checkpoint
   async getStructure(id: number): Promise<CourseStructureResponseDto> {
     // ดึงคอร์สพร้อมกับ Level Chapter และ Lesson ที่เกี่ยวข้อง
     const course = await this.courseRepository.findOne({
@@ -108,7 +115,6 @@ export class CoursesService {
       ],
     });
 
-    // ตรวจสอบว่าพบคอร์สมั้ย
     if (!course) {
       throw new NotFoundException(`Course with ID ${id} not found`);
     }
@@ -118,19 +124,19 @@ export class CoursesService {
       (a, b) => a.level_orderIndex - b.level_orderIndex,
     );
 
-    // create levels
+    // สร้างโครงสร้างของ Level and Chapter โดยยังไม่รวมข้อมูล checkpoint
     const levels: LevelStructureDto[] = sortedLevels.map((level) => {
       const sortedChapters = (level.level_chapters || []).sort(
         (a, b) => a.chapter_orderIndex - b.chapter_orderIndex,
       );
 
-      // create chapters
+      // สร้างโครงสร้างของ Chapter
       const chapters: ChapterStructureDto[] = sortedChapters.map((chapter) => {
         const sortedLessons = (chapter.lessons || []).sort(
           (a, b) => a.orderIndex - b.orderIndex,
         );
 
-        // create lessons
+        // สร้างโครงสร้างของ Lesson
         const lessons: LessonStructureDto[] = sortedLessons.map((lesson) => ({
           lesson_id: lesson.lesson_id,
           lesson_title: lesson.lesson_title,
@@ -139,6 +145,7 @@ export class CoursesService {
           orderIndex: lesson.orderIndex,
         }));
 
+        // คืนค่าโครงสร้างของ Chapter พร้อมบทเรียนที่อยู่ภายใน
         return {
           chapter_id: chapter.chapter_id,
           chapter_title: chapter.chapter_title,
@@ -147,6 +154,7 @@ export class CoursesService {
         };
       });
 
+      // คืนค่าโครงสร้างของ Level พร้อมบทที่อยู่ภายใน
       return {
         level_id: level.level_id,
         level_title: level.level_title,
@@ -155,7 +163,7 @@ export class CoursesService {
       };
     });
 
-    // ดึง lesson_id ทั้งหมดที่อยู่ในคอร์สนี้ (ผ่าน levels -> chapters -> lessons) เพื่อ query ตาราง checkpoint ในภายหลัง
+    // รวม lesson_id ของบทเรียนทั้งหมดในคอร์สเพื่อใช้ในการดึงข้อมูล checkpoint ในขั้นตอนถัดไป
     const lessonIds: number[] = [];
     for (const lvl of sortedLevels) {
       for (const ch of lvl.level_chapters || []) {
@@ -165,7 +173,8 @@ export class CoursesService {
       }
     }
 
-    // ดึงข้อมูล checkpoint ของบทเรียนทั้งหมดในคอร์สนี้มาเก็บไว้ใน Map เพื่อให้เข้าถึงได้ง่ายในภายหลัง
+    /* ดึงข้อมูล checkpoint -> Lesson Type -> checkpoint ทั้งหมดในคอร์สนี้มาเก็บไว้ใน map โดยใช้ lesson_id เป็น key
+    เพื่อให้สามารถนำข้อมูล checkpoint มาผนวกกับบทเรียนที่เป็นประเภท checkpoint ได้ในขั้นตอนถัดไป */
     const checkpointMap = new Map<number, any>();
     if (lessonIds.length) {
       const rows: Array<any> = await this.courseRepository.query(
@@ -175,9 +184,11 @@ export class CoursesService {
       rows.forEach((r) => checkpointMap.set(Number(r.lesson_id), r));
     }
 
-    // สร้างโครงสร้างสุดท้ายโดยผนวกข้อมูล checkpoint เข้าไปในบทเรียนที่เป็นประเภท checkpoint
+    // สร้างโครงสร้างของคอร์สที่มีข้อมูล checkpoint ผนวกกับบทเรียนที่เป็นประเภท checkpoint
     const finalLevels: LevelStructureDto[] = sortedLevels.map((level) => {
       const chapters: ChapterStructureDto[] = (level.level_chapters || []).map((chapter) => {
+        
+        // สำหรับบทเรียนที่เป็นประเภท checkpoint ให้ผนวกข้อมูล checkpoint จาก checkpointMap เข้าไปในโครงสร้างของบทเรียน
         const lessons: LessonStructureDto[] = (chapter.lessons || [])
           .filter((lesson) => {
             if (!lesson.isPublished) return false;
@@ -188,7 +199,7 @@ export class CoursesService {
             return {
               lesson_id: lesson.lesson_id,
               lesson_title: lesson.lesson_title,
-              lesson_type: lesson.lesson_type, 
+              lesson_type: lesson.lesson_type,
               lesson_description: lesson.lesson_description ?? undefined,
               orderIndex: lesson.orderIndex,
               isPublished: lesson.isPublished,
@@ -221,7 +232,7 @@ export class CoursesService {
     };
   }
 
-  // 
+  // สร้างคอร์สใหม่
   async getStructureAdmin(id: number): Promise<CourseStructureResponseDto> {
     const course = await this.courseRepository.findOne({
       where: { course_id: id },
@@ -236,10 +247,12 @@ export class CoursesService {
       throw new NotFoundException(`Course with ID ${id} not found`);
     }
 
+    // จัดเรียง Level Chapter และ Lesson ตามลำดับ orderIndex
     const sortedLevels = (course.course_levels || []).sort(
       (a, b) => a.level_orderIndex - b.level_orderIndex,
     );
 
+    // สร้างโครงสร้างของ Level and Chapter โดยยังไม่รวมข้อมูล checkpoint
     const lessonIds: number[] = [];
     for (const lvl of sortedLevels) {
       for (const ch of lvl.level_chapters || []) {
@@ -249,6 +262,7 @@ export class CoursesService {
       }
     }
 
+    // ดึงข้อมูล checkpoint -> Lesson Type -> checkpoint ทั้งหมดในคอร์สนี้มาเก็บไว้ใน map โดยใช้ lesson_id เป็น key
     const checkpointMap = new Map<number, any>();
     if (lessonIds.length) {
       const rows: Array<any> = await this.courseRepository.query(
@@ -258,6 +272,7 @@ export class CoursesService {
       rows.forEach((r) => checkpointMap.set(Number(r.lesson_id), r));
     }
 
+    // สร้างโครงสร้างของคอร์สที่มีข้อมูล checkpoint ผนวกกับบทเรียนที่เป็นประเภท checkpoint
     const finalLevels: LevelStructureDto[] = sortedLevels.map((level) => {
       const chapters: ChapterStructureDto[] = (level.level_chapters || []).map((chapter) => {
         const lessons: LessonStructureDto[] = (chapter.lessons || [])
@@ -300,7 +315,7 @@ export class CoursesService {
     };
   }
 
-  // อัปเดตคอร์สโดยใช้ ID
+  // Update Course by ID
   async update(id: number, updateCourseDto: UpdateCourseDto): Promise<CourseResponseDto> {
     const course = await this.courseRepository.findOne({ where: { course_id: id } });
 
@@ -308,7 +323,7 @@ export class CoursesService {
       throw new NotFoundException(`Course with ID ${id} not found`);
     }
 
-    // อัปเดตฟิลด์ที่ระบุ
+    // Update fields if specified
     if (updateCourseDto.course_title !== undefined) course.course_title = updateCourseDto.course_title;
     if (updateCourseDto.course_description !== undefined) course.course_description = updateCourseDto.course_description;
     if (updateCourseDto.course_imageUrl !== undefined) course.course_imageUrl = updateCourseDto.course_imageUrl;
@@ -322,7 +337,7 @@ export class CoursesService {
     return this.toResponseDto(saved);
   }
 
-  // ลบคอร์สและเอนทิตีที่ซ้อนกันทั้งหมด (cascade)
+  // Delete Course by ID (Cascade delete จะทำงานลบ Level, Chapter และ Lesson ที่อยู่ภายในคอร์สนี้ทั้งหมดโดยอัตโนมัติ)
   async remove(id: number): Promise<{ message: string }> {
     const course = await this.courseRepository.findOne({ where: { course_id: id } });
 
@@ -334,7 +349,7 @@ export class CoursesService {
     return { message: `Course with ID ${id} deleted successfully` };
   }
 
-  // แปลง Course entity เป็น CourseResponseDto
+  // แปลง Entity เป็น DTO สำหรับการตอบกลับ API
   private toResponseDto(course: Course): CourseResponseDto {
     return {
       course_id: course.course_id,
