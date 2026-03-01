@@ -25,7 +25,6 @@ export class ProgressService {
     private readonly quizService: QuizService,
   ) { }
 
-  // Lesson Progress
   async getAllLessonProgress(
     userId: string,
   ): Promise<LessonProgressResponseDto[]> {
@@ -35,7 +34,7 @@ export class ProgressService {
       order: { updatedAt: 'DESC' },
     });
 
-    // ถ้าไม่มีแถวใดเลย ให้คืนค่า Array [null]
+    // ถ้าไม่มีแถวใดเลย ให้คืนค่า Array ว่าง
     if (rows.length === 0) {
       return [];
     }
@@ -46,21 +45,20 @@ export class ProgressService {
       where: { lesson_id: In(lessonIds) },
     });
 
-    // create map lessonId -> lesson
+    // map บทเรียนตาม ID เพื่อให้เข้าถึงได้ง่ายเมื่อสร้าง DTO สำหรับแต่ละแถว progress
     const lessonById = new Map(lessons.map((l) => [l.lesson_id, l] as const));
 
     // ดึงบทที่เกี่ยวข้องกับบทเรียนเหล่านั้น
     const chapterIds = Array.from(new Set(lessons.map((l) => l.chapter_id)));
     const chapters = chapterIds.length
       ? await this.chapterRepository.find({
-          where: { chapter_id: In(chapterIds) },
-        })
+        where: { chapter_id: In(chapterIds) },
+      })
       : [];
     const levelIdByChapterId = new Map(
       chapters.map((c) => [c.chapter_id, c.levelId] as const),
     );
 
-    // Map progress to DTO พร้อมข้อมูลบทเรียนและบทที่เกี่ยวข้อง
     return rows.map((r) => {
       const lesson = lessonById.get(r.lessonId);
       const chapterId = lesson?.chapter_id ?? null;
@@ -69,32 +67,30 @@ export class ProgressService {
     });
   }
 
-  // Get lesson progress by lesson ID
+  // ดึงความคืบหน้าของบทเรียนเดียว
   async getLessonProgress(
     userId: string,
     lessonId: number,
   ): Promise<LessonProgressResponseDto | null> {
-    // ตรวจสอบว่ามีบทเรียน (lesson) อยู่จริงก่อน
     const lesson = await this.lessonRepository.findOne({
       where: { lesson_id: lessonId },
     });
 
-    // ถ้าไม่พบบทเรียน ให้โยน 404 (Lesson not found)
     if (!lesson) {
       throw new NotFoundException(`Lesson with ID ${lessonId} not found`);
     }
 
-    // ดึงแถว progress สำหรับบทเรียนและผู้ใช้ที่ระบุ
+    // เรียกดูแถวของ lesson_progress สำหรับบทเรียนและผู้ใช้ที่ระบุ
     const row = await this.lessonProgressRepository.findOne({
       where: { userId, lessonId },
     });
 
-    // ถ้าไม่มีแถว progress ให้คืน 404
+    // ถ้าไม่มีแถว progress ให้คืน Error 404 
     if (!row) {
       throw new NotFoundException(`Progress for lesson ${lessonId} not found`);
     }
 
-    // ดึงบทที่เกี่ยวข้อง
+    // ดึงบทที่เกี่ยวข้องเพื่อใส่ใน DTO
     const chapterId = lesson?.chapter_id ?? null;
     const chapter = chapterId != null ? await this.chapterRepository.findOne({
       where: { chapter_id: chapterId },
@@ -106,13 +102,12 @@ export class ProgressService {
     return this.toResponse(row, { chapterId, levelId });
   }
 
-  // Upsert lesson progress
+  // เพิ่มหรือแก้ไขความคืบหน้าของบทเรียน
   async upsertLessonProgress(
     userId: string,
     lessonId: number,
     dto: UpsertLessonProgressDto,
   ): Promise<LessonProgressResponseDto> {
-    // ดึงบทเรียนที่ระบุ
     const lesson = await this.lessonRepository.findOne({
       where: { lesson_id: lessonId },
     });
@@ -121,7 +116,7 @@ export class ProgressService {
       throw new NotFoundException(`Lesson with ID ${lessonId} not found`);
     }
 
-    // ดึงหรือสร้างแถว progress ใหม่
+    // ดึงหรือสร้างแถว progress สำหรับบทเรียนนี้และผู้ใช้ที่ระบุ
     let row = await this.lessonProgressRepository.findOne({
       where: { userId, lessonId },
     });
@@ -136,26 +131,25 @@ export class ProgressService {
       });
     }
 
-    // ถ้าแถวนี้ถูกทำเครื่องหมายว่า COMPLETED แล้ว ห้ามเปลี่ยนสถานะให้เป็นอย่างอื่น
+    // ห้ามแก้ไขสถานะของบทเรียนที่ถูกทำเครื่องหมายว่าเสร็จสมบูรณ์แล้ว (COMPLETED) ให้ยกเว้นแต่จะยังคงเป็น COMPLETED เท่านั้น
     if (row && row.status === LessonProgressStatus.COMPLETED) {
       if (dto.status !== undefined && dto.status !== LessonProgressStatus.COMPLETED) {
         throw new BadRequestException('Cannot change status of a completed lesson');
       }
     }
 
+    // เก็บสถานะก่อนหน้าเพื่อใช้ในการตัดสินใจเรื่องการเพิ่ม streak
     const previousStatus = row.status;
 
-    // อัปเดตตำแหน่งวิดีโอถ้ามี
     if (dto.positionSeconds !== undefined) {
       row.positionSeconds = dto.positionSeconds;
     }
 
-    // อัปเดตระยะเวลาวิดีโอถ้ามี
     if (dto.durationSeconds !== undefined) {
       row.durationSeconds = dto.durationSeconds;
     }
 
-    // คำนวณเปอร์เซ็นต์ความคืบหน้าที่สันนิษฐาน
+    // คำนวณเปอร์เซ็นต์ความคืบหน้าที่ได้จาก positionSeconds และ durationSeconds ถ้า progressPercent ไม่ได้ถูกระบุมาใน DTO
     const inferredPercent =
       dto.progressPercent === undefined &&
         dto.positionSeconds !== undefined &&
@@ -170,11 +164,11 @@ export class ProgressService {
     // ตรวจสอบให้แน่ใจว่าเปอร์เซ็นต์อยู่ในช่วง 0-100
     if (nextPercent !== undefined && !Number.isNaN(nextPercent)) {
       const clamped = Math.max(0, Math.min(100, Number(nextPercent)));
-      // เก็บค่าเป็นจำนวนเต็ม (ปัดให้เป็น integer)
+
+      // ถ้าบทเรียนถูกทำเครื่องหมายว่าเสร็จสมบูรณ์แล้ว (COMPLETED) ให้บังคับให้เปอร์เซ็นต์เป็น 100 เสมอ
       row.progressPercent = Math.round(clamped);
     }
 
-    // อัปเดตสถานะถ้ามี
     if (dto.status !== undefined) {
       row.status = dto.status;
     }
@@ -182,7 +176,7 @@ export class ProgressService {
     // อัปเดตเวลาที่ดูล่าสุด
     row.lastViewedAt = new Date();
 
-    // ถ้าทำเครื่องหมายว่าเสร็จสิ้น
+    // ถ้าเสร็จสมบูรณ์แล้วแต่ยังไม่มีเวลาที่ทำเครื่องหมายว่าเสร็จสมบูรณ์ ให้ตั้งค่า completedAt เป็นเวลาปัจจุบัน
     if (dto.markCompleted) {
       row.status = LessonProgressStatus.COMPLETED;
       row.progressPercent = 100;
@@ -191,7 +185,7 @@ export class ProgressService {
 
     const saved = await this.lessonProgressRepository.save(row);
 
-    // Bump streak only on first transition to COMPLETED or SKIPPED
+    // เพิ่ม streak เฉพาะเมื่อเปลี่ยนสถานะเป็น COMPLETED หรือ SKIPPED เป็นครั้งแรก
     const wasCompleted = previousStatus === LessonProgressStatus.COMPLETED || previousStatus === LessonProgressStatus.SKIPPED;
     const nowCompleted = saved.status === LessonProgressStatus.COMPLETED || saved.status === LessonProgressStatus.SKIPPED;
     if (!wasCompleted && nowCompleted) {
@@ -240,12 +234,12 @@ export class ProgressService {
       }
     }
 
-    // หากไม่มีบทเรียนถัดไปในบทเดียวกัน ให้พยายามปลดล็อกบทถัดไปของบทถัดไป (next chapter)
+    // หากไม่มีบทเรียนถัดไปในบทเดียวกัน ให้พยายามปลดล็อกบทถัดไปของ -> บทถัดไป
     if (!nextLesson) {
-      // ตรวจสอบว่า chapter ปัจจุบันเสร็จสมบูรณ์สำหรับผู้ใช้หรือไม่
       const chapterCompleted = await this.isChapterCompletedForUser(userId, lesson.chapter_id);
+
+      // ถ้า chapter นี้ถูกทำเครื่องหมายว่าเสร็จสมบูรณ์แล้ว ให้ปลดล็อกบทเรียนตัวแรกของ chapter ถัดไป
       if (chapterCompleted) {
-        // หา chapter ถัดไปในระดับเดียวกัน (ทนต่อช่องว่างของ chapter_orderIndex)
         const currentChapter = await this.chapterRepository.findOne({ where: { chapter_id: lesson.chapter_id } });
         if (currentChapter) {
           const nextChapter = await this.chapterRepository.findOne({
@@ -256,18 +250,20 @@ export class ProgressService {
             order: { chapter_orderIndex: 'ASC' },
           });
 
+          // ถ้ามีบทถัดไปในระดับเดียวกัน ให้ปลดล็อกบทเรียนตัวแรกของบทถัดไป
           if (nextChapter) {
-            // ดึงบทเรียนตัวแรกของบทถัดไป
             const firstLessonNextChapter = await this.lessonRepository.findOne({
               where: { chapter_id: nextChapter.chapter_id },
               order: { orderIndex: 'ASC' },
             });
 
+            // ถ้ามีบทเรียนตัวแรกของบทถัดไป ให้ปลดล็อกบทเรียนตัวนั้น
             if (firstLessonNextChapter) {
               let nextChapterProgress = await this.lessonProgressRepository.findOne({
                 where: { userId, lessonId: firstLessonNextChapter.lesson_id },
               });
 
+              // ถ้าไม่มีแถว progress สำหรับบทเรียนตัวแรกของบทถัดไป ให้สร้างเป็น IN_PROGRESS
               if (!nextChapterProgress) {
                 nextChapterProgress = this.lessonProgressRepository.create({
                   userId,
@@ -289,19 +285,19 @@ export class ProgressService {
         }
       }
     }
-    // ดึงบทที่เกี่ยวข้อง
+
+    // ดึงบทที่เกี่ยวข้องเพื่อใส่ใน DTO
     const chapter = await this.chapterRepository.findOne({
       where: { chapter_id: lesson.chapter_id },
     });
 
-    // ส่งกลับข้อมูลความคืบหน้า
     return this.toResponse(saved, {
       chapterId: lesson.chapter_id,
       levelId: chapter?.levelId ?? null,
     });
   }
 
-  // Skip lesson and unlock next
+
   async skipLessonAndUnlockNext(
     userId: string,
     lessonId: number,
@@ -309,7 +305,6 @@ export class ProgressService {
     skipped: LessonProgressResponseDto;
     unlockedNext: LessonProgressResponseDto | null;
   }> {
-    // ดึงบทเรียนปัจจุบัน
     const currentLesson = await this.lessonRepository.findOne({
       where: { lesson_id: lessonId },
     });
@@ -318,8 +313,7 @@ export class ProgressService {
       throw new NotFoundException(`Lesson with ID ${lessonId} not found`);
     }
 
-    // ถ้าเป็นบทเรียนประเภท checkpoint: sync สถานะ checkpoint เป็น SKIPPED ด้วย
-    // (เพื่อไม่ต้องมี 2 เส้น skip แยกกัน และให้ progress/quiz สอดคล้องกัน)
+    // ถ้าบทเรียนนี้เป็น checkpoint ให้ข้ามบท checkpoint ที่เกี่ยวข้องทั้งหมดด้วย
     if (currentLesson.lesson_type === 'checkpoint') {
       await this.quizService.skipCheckpointsByLesson(lessonId, userId);
     }
@@ -355,13 +349,13 @@ export class ProgressService {
     // บันทึกแถวปัจจุบัน
     const savedCurrent = await this.lessonProgressRepository.save(currentProgress);
 
-    // Bump streak on first-time skip completion
+    // เพิ่ม streak เฉพาะเมื่อเปลี่ยนสถานะเป็น SKIPPED เป็นครั้งแรก
     const wasCompleted = previousStatus === LessonProgressStatus.COMPLETED || previousStatus === LessonProgressStatus.SKIPPED;
     if (!wasCompleted) {
       await this.streakService.bumpStreak(userId, savedCurrent.completedAt ?? new Date());
     }
 
-    // ดึงบทที่เกี่ยวข้อง
+    // ดึงบทที่เกี่ยวข้องเพื่อใส่ใน DTO
     const currentChapter = await this.chapterRepository.findOne({
       where: { chapter_id: currentLesson.chapter_id },
     });
@@ -376,7 +370,7 @@ export class ProgressService {
       order: { orderIndex: 'ASC' },
     });
 
-    // ถ้าไม่มีบทเรียนถัดไปในบทเดียวกัน ให้พยายามปลดล็อกบทแรกของ chapter ถัดไป
+    // ถ้าไม่มีบทเรียนถัดไปในบทเดียวกัน ให้พยายามปลดล็อกบทถัดไปของ -> บทถัดไป
     if (!nextLesson) {
       let unlockedNextProgress: LessonProgress | null = null;
       let unlockedChapterId: number | null = null;
@@ -394,6 +388,7 @@ export class ProgressService {
         };
       }
 
+      // ถ้า chapter ปัจจุบันถูกทำครบแล้ว ให้ปลดล็อกบทเรียนตัวแรกของบทถัดไป
       if (currentChapter) {
         const nextChapter = await this.chapterRepository.findOne({
           where: {
@@ -403,17 +398,20 @@ export class ProgressService {
           order: { chapter_orderIndex: 'ASC' },
         });
 
+        // ถ้ามีบทถัดไปในระดับเดียวกัน ให้ปลดล็อกบทเรียนตัวแรกของบทถัดไป
         if (nextChapter) {
           const firstLessonNextChapter = await this.lessonRepository.findOne({
             where: { chapter_id: nextChapter.chapter_id },
             order: { orderIndex: 'ASC' },
           });
 
+          // ถ้ามีบทเรียนตัวแรกของบทถัดไป ให้ปลดล็อกบทเรียนตัวนั้น
           if (firstLessonNextChapter) {
             let nextChapterProgress = await this.lessonProgressRepository.findOne({
               where: { userId, lessonId: firstLessonNextChapter.lesson_id },
             });
 
+            // ถ้าไม่มีแถว progress สำหรับบทเรียนตัวแรกของบทถัดไป ให้สร้างเป็น IN_PROGRESS
             if (!nextChapterProgress) {
               nextChapterProgress = this.lessonProgressRepository.create({
                 userId,
@@ -424,6 +422,8 @@ export class ProgressService {
                 lastViewedAt: new Date(),
               });
               nextChapterProgress = await this.lessonProgressRepository.save(nextChapterProgress);
+
+              // ถ้าแถว progress มีสถานะเป็น LOCKED ให้เปลี่ยนเป็น IN_PROGRESS
             } else if (nextChapterProgress.status === LessonProgressStatus.LOCKED) {
               nextChapterProgress.status = LessonProgressStatus.IN_PROGRESS;
               nextChapterProgress.mapLessonId = nextChapterProgress.mapLessonId ?? lessonId;
@@ -431,6 +431,7 @@ export class ProgressService {
               nextChapterProgress = await this.lessonProgressRepository.save(nextChapterProgress);
             }
 
+            // ถ้าได้แถว progress มาแล้ว (ไม่ว่าจะเป็นแถวใหม่หรือแถวที่อัปเดต) ให้เตรียมข้อมูลสำหรับส่งกลับ
             if (nextChapterProgress) {
               unlockedNextProgress = nextChapterProgress;
               unlockedChapterId = firstLessonNextChapter.chapter_id;
@@ -440,6 +441,7 @@ export class ProgressService {
         }
       }
 
+      // ส่งกลับข้อมูลความคืบหน้า
       return {
         skipped: this.toResponse(savedCurrent, {
           chapterId: currentLesson.chapter_id,
@@ -447,9 +449,9 @@ export class ProgressService {
         }),
         unlockedNext: unlockedNextProgress
           ? this.toResponse(unlockedNextProgress, {
-              chapterId: unlockedChapterId,
-              levelId: unlockedLevelId,
-            })
+            chapterId: unlockedChapterId,
+            levelId: unlockedLevelId,
+          })
           : null,
       };
     }
@@ -476,7 +478,8 @@ export class ProgressService {
     else if (nextProgress.status === LessonProgressStatus.LOCKED) {
       nextProgress.status = LessonProgressStatus.IN_PROGRESS;
       nextProgress.lastViewedAt = new Date();
-      // ตั้งค่า mapLessonId ถ้ายังไม่มี
+
+      // ถ้า mapLessonId ยังไม่มีค่า ให้ตั้งเป็น lessonId ของบทเรียนที่เพิ่งข้าม
       if (nextProgress.mapLessonId == null) {
         nextProgress.mapLessonId = lessonId;
       }
@@ -504,23 +507,11 @@ export class ProgressService {
     };
   }
 
-  // Chapter Progress
-  // NOTE (ปัญหาและการแก้ไข):
-  // ก่อนหน้านี้โค้ดคำนวณ `percent` โดยเฉลี่ยเฉพาะรายการที่มีสถานะ
-  // `COMPLETED` หรือ `SKIPPED` เท่านั้น ซึ่งทำให้ผลลัพธ์ผิดพลาดในกรณีที่
-  // มีเพียงบางรายการเป็น COMPLETED แต่รายการอื่นยังเป็น
-  // IN_PROGRESS หรือ LOCKED — ตัวอย่างจะได้ 100% ทั้งที่ยังไม่เสร็จ
-  // จริง ๆ. ผมเปลี่ยนเป็นคำนวณเฉลี่ยจากทุกรายการในบทเรียน:
-  // - ถ้าสถานะเป็น COMPLETED/SKIPPED นับเป็น 100
-  // - ถ้ามี `progressPercent` ให้ใช้ค่านั้น
-  // - ถ้าไม่มีค่า ให้ถือเป็น 0
-  // นอกจากนี้มีโค้ดที่เสียหายในแพตช์ก่อนหน้า (ลูป/return ผิดตำแหน่ง)
-  // ซึ่งผมได้ลบและจัดเรียงใหม่ให้อ่านได้ชัดเจนและปลอดภัยขึ้น.
+  // ดึงความคืบหน้าของบทเรียนทั้งหมดในบทเดียว
   async getChapterProgress(
     userId: string,
     chapterId: number,
   ): Promise<ChapterProgressDto> {
-    // ดึงบทที่ระบุ
     const chapter = await this.chapterRepository.findOne({
       where: { chapter_id: chapterId },
     });
@@ -572,12 +563,12 @@ export class ProgressService {
       where: { userId, lessonId: In(lessonIds) },
     });
 
-    // สร้างแผนที่ lessonId -> progress
+    // map progress ตาม lessonId เพื่อให้เข้าถึงได้ง่ายเมื่อคำนวณสรุปความคืบหน้าของบทเรียนแต่ละบท
     const progressByLessonId = new Map(
       progressRows.map((p) => [p.lessonId, p] as const),
     );
 
-    // calculate progress summary for the chapter
+    // คำนวณจำนวนบทเรียนที่เสร็จสมบูรณ์แล้ว (COMPLETED หรือ SKIPPED)
     const completedSet = new Set(
       progressRows
         .filter(
@@ -592,9 +583,7 @@ export class ProgressService {
 
     const totalItems = lessons.length;
 
-    // Calculate chapter percent as average over all lessons.
-    // For each lesson use its recorded progressPercent when available,
-    // treat COMPLETED/SKIPPED as 100, missing values as 0.
+    // คำนวณเปอร์เซ็นต์ความคืบหน้าของบทนี้โดยเฉลี่ยจากทุกบทเรียน (COMPLETED/SKIPPED = 100, ใช้ progressPercent เมื่อมี, ค่าว่าง = 0)
     let sumPercent = 0;
     for (const lesson of lessons) {
       const progress = progressByLessonId.get(lesson.lesson_id);
@@ -616,11 +605,12 @@ export class ProgressService {
 
     const percent = totalItems > 0 ? Math.round(sumPercent / totalItems) : 0;
 
-    // Find resume lesson
+    // ถ้ามีบทเรียนที่กำลังทำอยู่ (IN_PROGRESS) ให้แนะนำให้กลับไปที่บทเรียนนั้นก่อน
     const inProgress = lessons.find(
       (l) => progressByLessonId.get(l.lesson_id)?.status === LessonProgressStatus.IN_PROGRESS,
     );
 
+    // ถ้าไม่มีบทเรียนที่กำลังทำอยู่ ให้แนะนำบทเรียนแรกที่ยังไม่เสร็จสมบูรณ์ ถ้าบทเรียนนั้นถูกล็อกอยู่ ให้ไม่แนะนำบทเรียนนั้น
     if (inProgress) {
       return {
         chapterId,
@@ -634,8 +624,8 @@ export class ProgressService {
     const firstNotDone = lessons.find((l) => !completedSet.has(l.lesson_id));
     const resumeLessonId = firstNotDone
       ? (progressByLessonId.get(firstNotDone.lesson_id)?.status === LessonProgressStatus.LOCKED
-          ? null
-          : firstNotDone.lesson_id)
+        ? null
+        : firstNotDone.lesson_id)
       : null;
 
     return {
@@ -647,16 +637,11 @@ export class ProgressService {
     };
   }
 
-  // โค้ดเดิมคำนวณ `progressPercent` ของ roadmap โดยเฉลี่ยเฉพาะ
-  // รายการที่เป็น COMPLETED/SKIPPED ทำให้บางบทมีค่า 100% โดยไม่ถูกต้อง.
-  // แก้เป็นคำนวณเฉลี่ยจากทุก `items` (COMPLETED/SKIPPED = 100,
-  // ใช้ item.progressPercent เมื่อมี, ค่าว่าง = 0) เพื่อให้ค่า
-  // ใน roadmap สอดคล้องกับสถานะจริงของบทเรียน.
+  // ดึง roadmap ของบทเรียนทั้งหมดในบทเดียว พร้อมสถานะของแต่ละบทเรียน
   async getChapterRoadmap(
     userId: string,
     chapterId: number,
   ): Promise<ChapterRoadmapDto> {
-    // ดึงบทที่ระบุ
     const chapter = await this.chapterRepository.findOne({
       where: { chapter_id: chapterId },
     });
@@ -691,6 +676,7 @@ export class ProgressService {
       chapter,
       lessonIds,
     );
+
     // ถ้าไม่ถูกปลดล็อก ให้คืนค่า roadmap ที่มีสถานะ LOCKED ทั้งหมด
     if (!isUnlocked) {
       const items: ItemStatusDto[] = lessons.map((lesson) => ({
@@ -756,9 +742,9 @@ export class ProgressService {
       progressRows.splice(0, progressRows.length, ...refreshed);
     }
 
-    // สร้างสถานะบทเรียนสำหรับ roadmap
     let nextAvailableLessonId: number | null = null;
 
+    // สร้างรายการสถานะของแต่ละบทเรียนในบทนี้ โดยใช้ข้อมูลจาก progressRows เพื่อกำหนดสถานะและเปอร์เซ็นต์ความคืบหน้าของแต่ละบทเรียน
     const items: ItemStatusDto[] = lessons.map((lesson) => {
       const progress = progressRows.find(
         (p) => p.lessonId === lesson.lesson_id,
@@ -766,7 +752,8 @@ export class ProgressService {
 
       // กำหนดสถานะบทเรียน ถัดไปที่สามารถเข้าถึงได้
       const status = progress?.status ?? LessonProgressStatus.LOCKED;
-      // 
+
+      // ถ้าไม่มีบทเรียนที่กำลังทำอยู่ ให้แนะนำบทเรียนแรกที่ยังไม่เสร็จสมบูรณ์ ถ้าบทเรียนนั้นถูกล็อกอยู่ ให้ไม่แนะนำบทเรียนนั้น
       if (
         nextAvailableLessonId == null &&
         status === LessonProgressStatus.IN_PROGRESS
@@ -795,13 +782,11 @@ export class ProgressService {
 
     const totalItems = lessons.length;
 
-    // คำนวณเปอร์เซ็นต์ความคืบหน้าโดยรวม
-    // รวม progressPercent ของทุกรายการ (COMPLETED/SKIPPED = 100,
-    // IN_PROGRESS/LOCKED ใช้ progressPercent หรือ 0)
+    // คำนวณเปอร์เซ็นต์ความคืบหน้าของบทนี้โดยเฉลี่ยจากทุกบทเรียน (COMPLETED/SKIPPED = 100, ใช้ progressPercent เมื่อมี, ค่าว่าง = 0)
     const sumAll = items.reduce((acc, item) => acc + (Number(item.progressPercent) || 0), 0);
     const progressPercent = totalItems > 0 ? Math.round(sumAll / totalItems) : 0;
 
-    // ดึงสถานะ streak ของผู้ใช้ (COMPLETE = ไฟติด)
+    // ดึงสถานะ streak ของผู้ใช้เพื่อแสดงใน roadmap ด้วย
     const { isReward, isFlameOn } = await this.streakService.getStreak(userId);
     const streakStatus: 'IN_PROGRESS' | 'COMPLETE' = isFlameOn ? 'COMPLETE' : 'IN_PROGRESS';
 
@@ -816,22 +801,22 @@ export class ProgressService {
     };
   }
 
-  // Return roadmap for all chapters in a level
+  // ดึง roadmap ของบทเรียนทั้งหมดในระดับเดียว พร้อมสถานะของแต่ละบทเรียน
   async getLevelChapterRoadmaps(userId: string, levelId: number): Promise<ChapterRoadmapDto[]> {
     const chapters = await this.chapterRepository.find({
       where: { levelId },
       order: { chapter_orderIndex: 'ASC' },
     });
 
-    // If no chapters, return empty array
+    // ถ้าไม่มีบทเลย ให้คืนค่า roadmap ว่าง
     if (!chapters || chapters.length === 0) return [];
 
-    // Map each chapter to its roadmap (in parallel)
+    // ดึง roadmap ของแต่ละบทในระดับนี้พร้อมกัน
     const promises = chapters.map((c) => this.getChapterRoadmap(userId, c.chapter_id));
     return Promise.all(promises);
   }
-  
-  // Mapping
+
+  // ฟังก์ชันช่วยแปลงแถว progress เป็น DTO สำหรับส่งกลับใน API
   private toResponse(
     row: LessonProgress,
     location?: { chapterId?: number | null; levelId?: number | null },
@@ -855,6 +840,7 @@ export class ProgressService {
     };
   }
 
+  // function ตรวจสอบว่าบทนี้ถูกปลดล็อกสำหรับผู้ใช้หรือไม่
   private async isChapterUnlockedForUser(
     userId: string,
     chapter: Chapter,
@@ -886,7 +872,7 @@ export class ProgressService {
     return this.isChapterCompletedForUser(userId, prevChapter.chapter_id);
   }
 
-  // Check if a chapter is completed for a user
+  // function ตรวจสอบว่าบทนี้เสร็จสมบูรณ์สำหรับผู้ใช้หรือไม่
   private async isChapterCompletedForUser(
     userId: string,
     chapterId: number,
@@ -902,7 +888,7 @@ export class ProgressService {
       return true;
     }
 
-    // ดึง IDs ของบทเรียน
+    // ดึงแถว progress สำหรับบทเรียนนั้น
     const lessonIds = lessons.map((l) => l.lesson_id);
     const progressRows = await this.lessonProgressRepository.find({
       where: { userId, lessonId: In(lessonIds) },

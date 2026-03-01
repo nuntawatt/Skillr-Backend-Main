@@ -19,6 +19,9 @@ export class ProgressController {
     @Get('lessons')
     @ApiOperation({ summary: 'ดึงข้อมูลความคืบหน้าของบทเรียนทั้งหมด' })
     @ApiOkResponse({ type: [LessonProgressResponseDto] })
+    @ApiResponse({ status: 200, description: 'Lesson progress retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'No progress found for user' })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     getAllLessonProgress(
         @CurrentUserId() userId: string,
@@ -29,7 +32,9 @@ export class ProgressController {
     @Get('lessons/:lessonId')
     @ApiOperation({ summary: 'ดึงข้อมูลความคืบหน้าของบทเรียน' })
     @ApiParam({ name: 'lessonId', type: Number })
-    @ApiOkResponse({ type: LessonProgressResponseDto, description: 'Lesson progress (or null if not started)' })
+    @ApiOkResponse({ type: LessonProgressResponseDto, description: 'Lesson progress retrieved successfully' })
+    @ApiResponse({ status: 200, description: 'Lesson progress retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 404, description: 'Lesson not found' })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     getLessonProgress(
@@ -43,7 +48,9 @@ export class ProgressController {
     @ApiOperation({ summary: 'เพิ่มหรือแก้ไขความคืบหน้าของบทเรียน' })
     @ApiParam({ name: 'lessonId', type: Number })
     @ApiOkResponse({ type: LessonProgressResponseDto })
+    @ApiResponse({ status: 200, description: 'Lesson progress upserted successfully' })
     @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     upsertLessonProgress(
         @CurrentUserId() userId: string,
@@ -57,7 +64,9 @@ export class ProgressController {
     @ApiOperation({ summary: 'ข้ามบทเรียนและปลดล็อกบทเรียนถัดไป' })
     @ApiParam({ name: 'lessonId', type: Number })
     @ApiOkResponse({ type: SkipLessonResponseDto })
+    @ApiResponse({ status: 200, description: 'Lesson skipped and next lesson unlocked successfully' })
     @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     skipLesson(
         @CurrentUserId() userId: string,
@@ -70,6 +79,8 @@ export class ProgressController {
     @ApiOperation({ summary: 'ดึงข้อมูลความคืบหน้าของบทเรียน' })
     @ApiParam({ name: 'chapterId', type: Number })
     @ApiOkResponse({ type: ChapterProgressDto })
+    @ApiResponse({ status: 200, description: 'Chapter progress retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 404, description: 'Chapter not found' })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     getChapterProgress(
@@ -163,6 +174,8 @@ export class ProgressController {
         }
       }
     })
+    @ApiResponse({ status: 200, description: 'Chapter roadmap retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 404, description: 'Chapter not found' })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     getChapterRoadmap(
@@ -176,6 +189,9 @@ export class ProgressController {
     @ApiOperation({ summary: 'ดึง roadmap ของทุกบทใน level' })
     @ApiParam({ name: 'levelId', type: Number, example: 1 })
     @ApiOkResponse({ type: [ChapterRoadmapDto] })
+    @ApiResponse({ status: 200, description: 'Level chapter roadmaps retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Level not found' })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     getLevelChapterRoadmaps(
         @CurrentUserId() userId: string,

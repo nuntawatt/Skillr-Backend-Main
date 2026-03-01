@@ -56,7 +56,6 @@ export class ChapterRoadmapDto {
   @ApiProperty({ required: false, enum: ['IN_PROGRESS', 'COMPLETE'], description: 'สถานะไฟ streak ของผู้ใช้ (COMPLETE = ไฟติด)' })
   streakStatus?: 'IN_PROGRESS' | 'COMPLETE';
 
-  // Whether the user currently has an active streak that can claim reward
   @ApiProperty({ required: false, description: 'ทำสำเร็จวันนี้แล้ว และยังไม่เคยแสดง reward modal วันนี้' })
   isReward?: boolean;
 }

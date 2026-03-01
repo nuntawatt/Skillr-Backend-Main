@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull } from 'typeorm';
+import { Repository, IsNull, In } from 'typeorm';
 import { Notification } from './entities/notification.entity';
 import { AnnouncementsService } from '../announcements/announcements.service';
 
@@ -8,228 +8,149 @@ import { AnnouncementsService } from '../announcements/announcements.service';
 export class NotificationsService {
   constructor(
     @InjectRepository(Notification)
-    private readonly notificationRepository: Repository<Notification>,
+    private readonly notificationRepo: Repository<Notification>,
     private readonly announcementsService: AnnouncementsService,
-  ) {}
+  ) { }
 
-  private async syncActiveAnnouncementsToUser(userId: string): Promise<void> {
-    console.log(`🔄 Syncing announcements for user: ${userId}`);
-    const activeAnnouncements = await this.announcementsService.findActive(10);
-    console.log(`📢 Found ${activeAnnouncements.length} active announcements:`, activeAnnouncements.map(a => ({ id: a.announcement_id, title: a.title, active: a.activeStatus })));
-    
-    const activeAnnouncementIds = new Set(activeAnnouncements.map((item) => item.announcement_id.toString()));
-    console.log(`🎯 Active announcement IDs:`, Array.from(activeAnnouncementIds));
+  private assertUserId(userId: string) {
+    if (!userId) throw new UnauthorizedException();
+  }
 
-    // ค้นหา notifications ที่มาจาก announcements ทั้งหมดของ user
-    const existingAnnouncementNotifications = await this.notificationRepository
+  private assertPagination(limit: number, offset: number) {
+    if (limit < 1) throw new BadRequestException('limit must be positive');
+    if (offset < 0) throw new BadRequestException('offset must be >= 0');
+  }
+
+  // ดึงการแจ้งเตือนแบบแบ่งหน้า (pagination) โดยจะทำการซิงค์ประกาศก่อนทุกครั้งเพื่อให้แน่ใจว่าข้อมูลเป็นปัจจุบัน
+  async getPaginated(userId: string, limit: number, offset: number) {
+    this.assertUserId(userId);
+    this.assertPagination(limit, offset);
+
+    const safeLimit = Math.min(limit, 50);
+
+    await this.syncAnnouncements(userId);
+
+    const [notifications, total] = await Promise.all([
+      this.notificationRepo.find({
+        where: { userId },
+        order: { createdAt: 'DESC' },
+        take: safeLimit,
+        skip: offset,
+      }),
+      this.notificationRepo.count({ where: { userId } }),
+    ]);
+
+    return { notifications, total, limit: safeLimit };
+  }
+
+  // ดึงจำนวนการแจ้งเตือนที่ยังไม่ได้อ่าน โดยจะทำการซิงค์ประกาศก่อนทุกครั้งเพื่อให้แน่ใจว่าข้อมูลเป็นปัจจุบัน
+  async getUnreadCount(userId: string): Promise<number> {
+    this.assertUserId(userId);
+
+    await this.syncAnnouncements(userId);
+
+    return this.notificationRepo.count({
+      where: { userId, readAt: IsNull() },
+    });
+  }
+
+  // ทำเครื่องหมายการแจ้งเตือนว่าอ่านแล้ว
+  async markAsRead(notificationId: string, userId: string) {
+    this.assertUserId(userId);
+
+    await this.notificationRepo.update(
+      { notificationId, userId },
+      { readAt: new Date() },
+    );
+  }
+
+  // ทำเครื่องหมายการแจ้งเตือนทั้งหมดของผู้ใช้ว่าอ่านแล้ว
+  async markAllAsRead(userId: string) {
+    this.assertUserId(userId);
+
+    await this.notificationRepo.update(
+      { userId, readAt: IsNull() },
+      { readAt: new Date() },
+    );
+  }
+
+  // ซิงค์ประกาศที่ยังไม่หมดอายุจาก AnnouncementsService เข้าสู่ตาราง Notifications ของผู้ใช้แต่ละคน 
+  // โดยจะเพิ่มการแจ้งเตือนใหม่สำหรับประกาศที่ยังไม่มีในระบบ และลบการแจ้งเตือนที่เกี่ยวข้องกับประกาศที่หมดอายุไปแล้ว
+  private async syncAnnouncements(userId: string) {
+    const activeAnnouncements =
+      await this.announcementsService.findActive(20);
+
+    const activeIds = activeAnnouncements.map((a) =>
+      String(a.announcement_id),
+    );
+
+    const existing = await this.notificationRepo
       .createQueryBuilder('n')
       .where('n.user_id = :userId', { userId })
-      .andWhere(`n.metadata ->> 'source' = :source`, { source: 'announcement' })
+      .andWhere(`n.metadata ->> 'source' = 'announcement'`)
       .getMany();
-    console.log(`📋 Found ${existingAnnouncementNotifications.length} existing announcement notifications`);
 
-    // สร้าง map ของ announcementId -> notification
-    const existingByAnnouncementId = new Map<string, Notification>();
-    const duplicateNotifications: Notification[] = [];
-    
-    for (const item of existingAnnouncementNotifications) {
-      const announcementId = item.metadata?.announcementId;
-      console.log(`📝 Existing notification: ${item.notificationId} -> announcementId: ${announcementId}`);
-      
-      if (announcementId !== undefined && announcementId !== null) {
-        const announcementIdStr = String(announcementId);
-        
-        // ถ้าเจอซ้ำ -> เก็บไว้ลบ
-        if (existingByAnnouncementId.has(announcementIdStr)) {
-          console.log(`🔄 DUPLICATE FOUND: announcementId ${announcementIdStr} has multiple notifications`);
-          duplicateNotifications.push(item);
-        } else {
-          existingByAnnouncementId.set(announcementIdStr, item);
-        }
+    const existingMap = new Map<string, Notification>();
+
+    for (const n of existing) {
+      const id = String(n.metadata?.announcementId ?? '');
+      if (!existingMap.has(id)) {
+        existingMap.set(id, n);
       }
     }
-    
-    console.log(`🗺️  Unique existing map:`, Array.from(existingByAnnouncementId.keys()));
-    console.log(`🗑️  Found ${duplicateNotifications.length} duplicate notifications to delete`);
 
-    // ลบข้อมูลซ้ำก่อน
-    if (duplicateNotifications.length > 0) {
-      const duplicateIds = duplicateNotifications.map(n => n.notificationId);
-      await this.notificationRepository.delete(duplicateIds);
-      console.log(`💣 Deleted ${duplicateIds.length} duplicate notifications:`, duplicateIds);
-    }
-
-    const toInsert: Notification[] = [];
-    for (const announcement of activeAnnouncements) {
-      const announcementId = String(announcement.announcement_id);
-      
-      if (existingByAnnouncementId.has(announcementId)) {
-        console.log(`⏭️  Skipping announcement ${announcementId} - already exists as ${existingByAnnouncementId.get(announcementId)?.notificationId}`);
-        continue;
-      }
-
-      console.log(`➕ Creating notification for announcement ${announcementId}: ${announcement.title}`);
-      toInsert.push(
-        this.notificationRepository.create({
+    // เพิ่มการแจ้งเตือนใหม่สำหรับประกาศที่ยังไม่มีในระบบ
+    const toInsert = activeAnnouncements
+      .filter((a) => !existingMap.has(String(a.announcement_id)))
+      .map((a) =>
+        this.notificationRepo.create({
           userId,
-          title: announcement.title,
-          message: announcement.title,
+          title: a.title,
+          message: a.title,
           type: 'info',
           metadata: {
             source: 'announcement',
-            announcementId,
-            imageUrl: announcement.imageUrl ?? null,
-            deepLink: announcement.deepLink ?? null,
-            priority: announcement.priority,
+            announcementId: String(a.announcement_id),
+            imageUrl: a.imageUrl ?? null,
+            deepLink: a.deepLink ?? null,
+            priority: a.priority,
           },
         }),
       );
+
+    if (toInsert.length) {
+      await this.notificationRepo.save(toInsert);
     }
 
-    if (toInsert.length > 0) {
-      console.log(`💾 Inserting ${toInsert.length} new notifications`);
-      const saved = await this.notificationRepository.save(toInsert);
-      console.log(`✅ Saved notifications:`, saved.map(n => n.notificationId));
-    } else {
-      console.log(`📭 No new notifications to insert`);
+    // ลบการแจ้งเตือนที่เกี่ยวข้องกับประกาศที่หมดอายุไปแล้ว
+    const staleIds = existing
+      .filter(
+        (n) =>
+          !activeIds.includes(String(n.metadata?.announcementId ?? '')),
+      )
+      .map((n) => n.notificationId);
+
+    if (staleIds.length) {
+      await this.notificationRepo.delete({ notificationId: In(staleIds) });
     }
-
-    // ลบ notifications ที่ไม่ active แล้ว
-    const staleNotificationIds = existingAnnouncementNotifications
-      .filter((item) => {
-        const announcementId = String(item.metadata?.announcementId ?? '');
-        const isDuplicate = duplicateNotifications.includes(item);
-        const isStale = !activeAnnouncementIds.has(announcementId);
-        return !isDuplicate && isStale;
-      })
-      .map((item) => item.notificationId);
-
-    if (staleNotificationIds.length > 0) {
-      console.log(`🗑️  Deleting ${staleNotificationIds.length} stale notifications:`, staleNotificationIds);
-      await this.notificationRepository.delete(staleNotificationIds);
-    }
-
-    console.log(`✅ Sync completed for user: ${userId} - Final count: ${activeAnnouncementIds.size} active, ${toInsert.length} new, ${duplicateNotifications.length} duplicates removed, ${staleNotificationIds.length} stale removed`);
   }
 
+  // สร้างการแจ้งเตือนใหม่ด้วยข้อมูลที่กำหนด
   async createNotification(
     userId: string,
     title: string,
     message: string,
     type: 'info' | 'success' | 'warning' | 'error' = 'info',
     metadata?: Record<string, any>,
-  ): Promise<Notification> {
-    const notification = this.notificationRepository.create({
+  ) {
+    const notification = this.notificationRepo.create({
       userId,
       title,
       message,
       type,
       metadata,
     });
-    return this.notificationRepository.save(notification);
+
+    return this.notificationRepo.save(notification);
   }
-
-  async getUnreadCount(userId: string): Promise<number> {
-    await this.syncActiveAnnouncementsToUser(userId);
-    return this.notificationRepository.count({
-      where: { userId, readAt: IsNull() },
-    });
-  }
-
-  async getNotifications(userId: string, limit = 20, offset = 0) {
-    await this.syncActiveAnnouncementsToUser(userId);
-    return this.notificationRepository.find({
-      where: { userId },
-      order: { createdAt: 'DESC' },
-      take: limit,
-      skip: offset,
-    });
-  }
-
-  async countNotifications(userId: string): Promise<number> {
-    await this.syncActiveAnnouncementsToUser(userId);
-    return this.notificationRepository.count({
-      where: { userId },
-    });
-  }
-
-  async markAsRead(notificationId: string, userId: string): Promise<void> {
-    await this.notificationRepository.update(
-      { notificationId, userId },
-      { readAt: new Date() },
-    );
-  }
-
-  async markAllAsRead(userId: string): Promise<void> {
-    await this.notificationRepository.update(
-      { userId, readAt: IsNull() },
-      { readAt: new Date() },
-    );
-  }
-
-  // Helper method to create common notification types
-  async createCourseCompletedNotification(userId: string, courseTitle: string) {
-    return this.createNotification(
-      userId,
-      'Course Completed! 🎉',
-      `Congratulations! You've completed "${courseTitle}"`,
-      'success',
-      { type: 'course_completed', courseTitle },
-    );
-  }
-
-  async createStreakAchievementNotification(userId: string, streakDays: number) {
-    return this.createNotification(
-      userId,
-      'Streak Milestone! 🔥',
-      `Amazing! You've maintained a ${streakDays}-day learning streak!`,
-      'success',
-      { type: 'streak_milestone', streakDays },
-    );
-  }
-
-  async updateNotification(notificationId: string, updateData: Partial<{
-    title: string;
-    message: string;
-    type: 'info' | 'success' | 'warning' | 'error';
-    metadata: Record<string, any>;
-  }>): Promise<Notification | null> {
-    await this.notificationRepository.update(notificationId, updateData);
-    
-    return this.notificationRepository.findOne({
-      where: { notificationId }
-    });
-  }
-
-  async deleteNotification(notificationId: string): Promise<boolean> {
-    const result = await this.notificationRepository.delete(notificationId);
-    return (result.affected ?? 0) > 0;
-  }
-
-  async deleteUserNotification(notificationId: string, userId: string): Promise<boolean> {
-    const result = await this.notificationRepository.delete({
-      notificationId,
-      userId
-    });
-    return (result.affected ?? 0) > 0;
-  }
-
-  async deleteAllUserNotifications(userId: string): Promise<void> {
-    await this.notificationRepository.delete({ userId });
-  }
-
-  // Admin methods
-  async getAllNotifications(limit = 20, offset = 0) {
-    const [notifications, total] = await Promise.all([
-      this.notificationRepository.find({
-        order: { createdAt: 'DESC' },
-        take: limit,
-        skip: offset,
-      }),
-      this.notificationRepository.count(),
-    ]);
-
-    return { notifications, total };
-  }
-
 }
