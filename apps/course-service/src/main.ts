@@ -29,7 +29,7 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle('Skillr Course Service API')
-    .setDescription('API documentation for the Course Service')
+    .setDescription('Official API documentation for Skllr Platform')
     .setVersion('1.0.0')
     .addServer('https://api.skllracademy.com/s2/api')
     .addServer('http://localhost:3002/api')
@@ -37,7 +37,15 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, document);
+  SwaggerModule.setup('docs', app, document, {
+    swaggerOptions: {
+      docExpansion: 'none',      // ปิด expand ทั้งหมด
+      persistAuthorization: true,
+      displayRequestDuration: true,
+      filter: true,
+    },
+    customSiteTitle: 'Skllr API Docs',
+  });
 
 
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));

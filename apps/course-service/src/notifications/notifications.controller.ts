@@ -29,7 +29,7 @@ import { NotificationResponseDto } from './dto/notification-response.dto';
 @UseGuards(JwtAuthGuard)
 @Controller('notifications')
 export class NotificationsController {
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor(private readonly notificationsService: NotificationsService) { }
 
   @Get()
   @ApiOperation({ summary: 'Get user notifications (paginated)' })
@@ -76,8 +76,7 @@ export class NotificationsController {
   async getUnreadCount(
     @CurrentUserId() userId: string,
   ): Promise<{ unreadCount: number }> {
-    const unreadCount =
-      await this.notificationsService.getUnreadCount(userId);
+    const unreadCount = await this.notificationsService.getUnreadCount(userId);
 
     return { unreadCount };
   }

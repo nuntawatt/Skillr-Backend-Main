@@ -1,5 +1,5 @@
-import { Body, Controller, Post, Get, Param, Query, Patch, Delete, BadRequestException, ParseIntPipe, NotFoundException, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiCreatedResponse, ApiOkResponse, ApiBody, ApiParam, ApiResponse } from '@nestjs/swagger';
+import { Body, Controller, Post, Get, Param, Patch, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiBody, ApiParam, ApiResponse } from '@nestjs/swagger';
 import { ArticlesService } from './articles.service';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { ArticleResponseDto } from './dto/article-response.dto';
@@ -40,41 +40,35 @@ export class ArticlesController {
             },
         },
     })
-    @ApiCreatedResponse({ type: ArticleResponseDto, description: 'Article created successfully' })
+    @ApiResponse({ status: 201, description: 'Article created successfully', type: ArticleResponseDto })
     @ApiResponse({ status: 400, description: 'Bad Request' })
     @ApiResponse({ status: 404, description: 'Lesson not found' })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     async create(@Body() body: CreateArticleDto) {
-        if (!body?.lesson_id) throw new BadRequestException('lesson_id is required');
         return this.svc.create(body);
     }
 
     @Patch(':id')
     @ApiOperation({ summary: 'แก้ไขบทความตาม ID' })
-    @ApiParam({ name: 'id', description: 'Article id', type: 'number' })
+    @ApiParam({ name: 'id', type: 'number' })
     @ApiBody({ type: UpdateArticleDto })
+    @ApiResponse({ status: 200, description: 'Article updated successfully', type: ArticleResponseDto })
     @ApiResponse({ status: 400, description: 'Bad Request' })
     @ApiResponse({ status: 404, description: 'Article not found' })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
-    async update(@Param('id', ParseIntPipe) id: number, @Body() body: UpdateArticleDto,) {
-        if (!id) throw new BadRequestException('Invalid article id');
-
+    async update(@Param('id', ParseIntPipe) id: number, @Body() body: UpdateArticleDto) {
         return this.svc.update(id, body);
     }
 
     @Delete(':id')
     @ApiOperation({ summary: 'ลบบทความตาม ID' })
-    @ApiParam({ name: 'id', description: 'Article id', type: 'number' })
+    @ApiParam({ name: 'id', type: 'number' })
     @ApiOkResponse({ description: 'Article deleted successfully' })
     @ApiResponse({ status: 400, description: 'Bad Request' })
     @ApiResponse({ status: 404, description: 'Article not found' })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     async remove(@Param('id', ParseIntPipe) id: number,) {
-        await this.svc.remove(id);
-
-        return {
-            message: 'Article deleted successfully',
-        };
+        return this.svc.remove(id);
     }
 
     // @ApiTags('Student | Articles')
@@ -84,7 +78,7 @@ export class ArticlesController {
     @ApiResponse({ status: 200, description: 'Articles retrieved successfully' })
     @ApiResponse({ status: 400, description: 'Bad Request' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
-    findAll(): Promise<ArticleResponseDto[]> {
+    async findAll(): Promise<ArticleResponseDto[]> {
         return this.svc.findAll();
     }
 
@@ -92,7 +86,7 @@ export class ArticlesController {
     // @UseGuards(JwtAuthGuard)
     @Get(':id')
     @ApiOperation({ summary: 'ดึงบทความตาม ID' })
-    @ApiParam({ name: 'id', description: 'Article id', type: 'number' })
+    @ApiParam({ name: 'id', type: 'number' })
     @ApiResponse({ status: 200, description: 'Article retrieved successfully' })
     @ApiResponse({ status: 400, description: 'Bad Request' })
     @ApiResponse({ status: 404, description: 'Article not found' })

@@ -110,10 +110,10 @@ export class StreakController {
       }
     }
   })
-  @ApiResponse({
-    status: 401,
-    description: 'ไม่ได้รับอนุญาต (ไม่มี JWT token)'
-  })
+  @ApiResponse({status: 200, description: 'Get streak successfully' })
+  @ApiResponse({status: 404, description: 'Streak not found' })
+  @ApiResponse({status: 401, description: 'Unauthorized' })
+  @ApiResponse({status: 500, description: 'Internal server error' })
   async getStreak(@CurrentUserId() userId: string): Promise<StreakResponseDto> {
     const { streak, color, isReward, isFlameOn } = await this.streakService.getStreak(userId);
     return {
@@ -131,21 +131,12 @@ export class StreakController {
     summary: 'ทำเครื่องหมายโมดอลรางวัลตามที่แสดง',
     description: 'บันทึกว่าผู้ใช้ได้เห็น reward modal แล้วสำหรับวันนี้'
   })
-  @ApiOkResponse({
-    description: 'บันทึกสำเร็จ',
-    schema: {
-      type: 'object',
-      properties: {
-        message: { type: 'string', example: 'Reward modal marked as shown' }
-      }
-    }
-  })
-  @ApiResponse({
-    status: 401,
-    description: 'ไม่ได้รับอนุญาต (ไม่มี JWT token)'
-  })
+  @ApiResponse({status: 200,description: 'Success | Reward modal marked as shown'})
+  @ApiResponse({status: 401,description: 'Unauthorized'})
+  @ApiResponse({status: 404,description: 'Streak not found'})
+  @ApiResponse({status: 500,description: 'Internal server error'})
   async markRewardShown(@CurrentUserId() userId: string): Promise<{ message: string }> {
-    
+
     await this.streakService.markRewardShown(userId);
     return { message: 'Reward modal marked as shown' };
   }

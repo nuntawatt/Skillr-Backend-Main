@@ -81,6 +81,7 @@ export class LearnerHomeController {
   })
   @ApiResponse({ status: 200, description: 'Learner homepage data successfully retrieved', type: LearnerHomeResponseDto })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'User not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async getHome(
     @CurrentUserId() userId: string,
