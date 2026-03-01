@@ -1,5 +1,3 @@
-import { ApiProperty } from '@nestjs/swagger';
-
 export type StreakColor = 'yellow' | 'orange' | 'red' | 'pink' | 'purple';
 
 export const getStreakColor = (days: number): StreakColor | null => {

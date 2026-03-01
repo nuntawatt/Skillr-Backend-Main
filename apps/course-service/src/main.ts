@@ -11,8 +11,6 @@ async function bootstrap() {
     logger: ['log', 'error', 'warn'],
   });
 
-  // origin: [process.env.FRONTEND_URL, 'http://localhost:3000', 'https://skllracademy.com'],
-  // credentials: true,
   app.enableCors({
     origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',

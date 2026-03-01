@@ -7,9 +7,7 @@ import { getStreakColor } from './dto/streak-color.dto';
 // เรียกใช้ฟังก์ชันนี้เพื่อคำนวณสีของ streak ตามจำนวนวันที่ต่อเนื่อง
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-// บังคับใช้ timezone ไทย (UTC+7)
-// ไม่ว่า server จะอยู่ที่ไหน จะ reset 00:00 ตามเวลาไทยเสมอ
-// ---------- Timezone Utilities (Bangkok UTC+7) ----------
+// ฟังก์ชันช่วยแปลงเวลาปัจจุบันเป็นเวลาเริ่มต้นของวันในเขตเวลา Bangkok (UTC+7) เพื่อใช้ในการคำนวณ streak
 function startOfBangkokDay(date: Date): number {
   const offsetMs = 7 * 60 * 60 * 1000;
   const bangkokTime = new Date(date.getTime() + offsetMs);
@@ -36,7 +34,7 @@ export class StreakService {
   constructor(
     @InjectRepository(UserStreak)
     private readonly streakRepository: Repository<UserStreak>,
-  ) {}
+  ) { }
 
   // ---------- Increment Streak ----------
   async bumpStreak(
@@ -120,13 +118,13 @@ export class StreakService {
   }
 
   // ---------- Reset Streak (Testing Only) ----------
-  async resetStreak(userId: string): Promise<UserStreak> {
-    const streak = await this.ensureStreak(userId);
-    streak.currentStreak = 0;
-    streak.lastCompletedAt = null;
-    streak.rewardShownAt = null;
-    return this.streakRepository.save(streak);
-  }
+  // async resetStreak(userId: string): Promise<UserStreak> {
+  //   const streak = await this.ensureStreak(userId);
+  //   streak.currentStreak = 0;
+  //   streak.lastCompletedAt = null;
+  //   streak.rewardShownAt = null;
+  //   return this.streakRepository.save(streak);
+  // }
 
   // ---------- Ensure Streak Exists ----------
   private async ensureStreak(userId: string): Promise<UserStreak> {

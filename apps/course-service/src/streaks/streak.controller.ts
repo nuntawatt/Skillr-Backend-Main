@@ -4,8 +4,8 @@ import { JwtAuthGuard } from '@auth';
 import { CurrentUserId } from './decorators/current-user-id.decorator';
 import { StreakService } from './streak.service';
 import { StreakResponseDto } from './dto/streak-response.dto';
-import { TestBumpDto } from './dto/test-bump.dto';
-import { getStreakColor } from './dto/streak-color.dto';
+// import { TestBumpDto } from './dto/test-bump.dto';
+// import { getStreakColor } from './dto/streak-color.dto';
 
 @ApiTags('Streaks')
 @Controller('streaks')
@@ -150,58 +150,58 @@ export class StreakController {
     return { message: 'Reward modal marked as shown' };
   }
 
-  @Post('debug/bump')
-  @ApiOperation({ summary: '[DEBUG] Bump streak with detailed log' })
-  @ApiBody({ schema: { type: 'object', properties: { date: { type: 'string', example: '2025-01-01T16:50:00.000Z' } } } })
-  async debugBump(
-    @CurrentUserId() userId: string,
-    @Body() body: { date: string },
-  ) {
-    const testDate = new Date(body.date);
-
-    if (isNaN(testDate.getTime())) {
-      throw new Error('Invalid ISO date format. Example: 2025-01-01T16:50:00.000Z');
-    }
-
-    const result = await this.streakService.bumpStreak(userId, testDate);
-
-    return {
-      inputUTC: testDate.toISOString(),
-      currentStreak: result.currentStreak,
-      longestStreak: result.longestStreak,
-      lastCompletedAt: result.lastCompletedAt,
-    };
-
-  }
-
-  @Post('test/reset')
-  @ApiOperation({
-    summary: '[TEST] Reset streak for current user',
-  })
+  // @Post('debug/bump')
+  // @ApiOperation({ summary: '[DEBUG] Bump streak with detailed log' })
   // @ApiBody({ schema: { type: 'object', properties: { date: { type: 'string', example: '2025-01-01T16:50:00.000Z' } } } })
-  async testResetStreak(
-    @CurrentUserId() userId: string,
-  ) {
-    console.log('==========================');
-    console.log('RESET DEBUG');
-    console.log('User:', userId);
+  // async debugBump(
+  //   @CurrentUserId() userId: string,
+  //   @Body() body: { date: string },
+  // ) {
+  //   const testDate = new Date(body.date);
 
-    const streak = await this.streakService.resetStreak(userId);
+  //   if (isNaN(testDate.getTime())) {
+  //     throw new Error('Invalid ISO date format. Example: 2025-01-01T16:50:00.000Z');
+  //   }
 
-    console.log('After reset:', {
-      currentStreak: streak.currentStreak,
-      longestStreak: streak.longestStreak,
-      lastCompletedAt: streak.lastCompletedAt,
-      rewardShownAt: streak.rewardShownAt,
-    });
+  //   const result = await this.streakService.bumpStreak(userId, testDate);
 
-    console.log('==========================');
+  //   return {
+  //     inputUTC: testDate.toISOString(),
+  //     currentStreak: result.currentStreak,
+  //     longestStreak: result.longestStreak,
+  //     lastCompletedAt: result.lastCompletedAt,
+  //   };
 
-    return {
-      message: 'Streak reset successfully',
-      currentStreak: streak.currentStreak,
-      longestStreak: streak.longestStreak,
-      lastCompletedAt: streak.lastCompletedAt,
-    };
-  }
+  // }
+
+  // @Post('test/reset')
+  // @ApiOperation({
+  //   summary: '[TEST] Reset streak for current user',
+  // })
+  // // @ApiBody({ schema: { type: 'object', properties: { date: { type: 'string', example: '2025-01-01T16:50:00.000Z' } } } })
+  // async testResetStreak(
+  //   @CurrentUserId() userId: string,
+  // ) {
+  //   console.log('==========================');
+  //   console.log('RESET DEBUG');
+  //   console.log('User:', userId);
+
+  //   const streak = await this.streakService.resetStreak(userId);
+
+  //   console.log('After reset:', {
+  //     currentStreak: streak.currentStreak,
+  //     longestStreak: streak.longestStreak,
+  //     lastCompletedAt: streak.lastCompletedAt,
+  //     rewardShownAt: streak.rewardShownAt,
+  //   });
+
+  //   console.log('==========================');
+
+  //   return {
+  //     message: 'Streak reset successfully',
+  //     currentStreak: streak.currentStreak,
+  //     longestStreak: streak.longestStreak,
+  //     lastCompletedAt: streak.lastCompletedAt,
+  //   };
+  // }
 }

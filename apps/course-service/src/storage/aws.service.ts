@@ -17,8 +17,8 @@ export class AwsS3StorageService implements StorageProvider {
   private readonly cloudfrontDomain: string;
   private cachedMcEndpoint?: string;
 
+  // ใน constructor จะตรวจสอบ environment variables ที่จำเป็นและสร้าง S3 client ขึ้นมา
   constructor() {
-    // เช็ค environment variables ที่จำเป็นทั้งหมดก่อนเริ่มต้น
     if (!process.env.AWS_REGION) {
       throw new Error('AWS_REGION environment variable is required');
     }
@@ -33,14 +33,13 @@ export class AwsS3StorageService implements StorageProvider {
     this._bucket = process.env.AWS_S3_BUCKET;
     this.cloudfrontDomain = process.env.AWS_CLOUDFRONT_DOMAIN;
 
-    // อนุญาตให้ใช้ AWS credentials จาก environment variables หรือจาก IAM role (ถ้าแอปรันบน EC2/Lambda)
-    const credentials =
-      process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
-        ? {
-          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-        }
-        : undefined;
+    // อนุญาตให้ใช้ AWS credentials จาก environment variables หรือจาก IAM role 
+    const credentials = process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+      ? {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      }
+      : undefined;
 
     this.s3 = new S3Client({
       region: this.region,
@@ -50,21 +49,12 @@ export class AwsS3StorageService implements StorageProvider {
     this.logger.log(`AWS S3 initialized → bucket: ${this._bucket}, region: ${this.region}, CDN: ${this.cloudfrontDomain}`);
   }
 
-  // getter เพื่อให้เข้าถึง bucket ได้จากภายนอก
+  // getter สำหรับ bucket เพื่อให้สามารถเข้าถึงได้จากภายนอก
   get bucket(): string {
     return this._bucket;
   }
 
-  // ==================== Upload Methods ====================
-
-  /**
-   * Upload a file to S3
-   * @param bucket - S3 bucket name
-   * @param key - Storage key (e.g., images/{uuid}.jpg)
-   * @param body - File buffer
-   * @param size - File size in bytes (optional)
-   * @param metadata - Additional metadata (e.g., { 'Content-Type': 'image/jpeg' })
-   */
+  // ฟังก์ชันหลักสำหรับอัพโหลดไฟล์ไปยัง S3 โดยรับ bucket, key, body, size และ metadata (ถ้ามี) และจัดการ Content-Type อัตโนมัติ
   async putObject(
     bucket: string,
     key: string,
@@ -82,7 +72,7 @@ export class AwsS3StorageService implements StorageProvider {
         ContentType: contentType,
         ContentLength: size,
         ACL: 'private', // ใช้ private แล้วให้ CloudFront จัดการ caching แทน
-        CacheControl: 'max-age=31536000', // 1 year cache
+        CacheControl: 'max-age=31536000', // cache 1 ปี
       });
 
       await this.s3.send(cmd);
@@ -93,7 +83,6 @@ export class AwsS3StorageService implements StorageProvider {
     }
   }
 
-  // อัพโหลดไฟล์แบบ helper ที่รับเฉพาะข้อมูลที่จำเป็นและจัดการ key เอง
   async uploadFile(params: {
     key: string;
     body: Buffer;
@@ -113,11 +102,7 @@ export class AwsS3StorageService implements StorageProvider {
     };
   }
 
-  // ==================== Delete Methods ====================
-
-  /**
-   * Delete a file from S3
-   */
+  // ฟังก์ชันสำหรับลบไฟล์จาก S3 โดยรับ bucket และ key ของไฟล์ที่ต้องการลบ
   async deleteObject(bucket: string, key: string): Promise<void> {
     try {
       const cmd = new DeleteObjectCommand({
@@ -133,25 +118,17 @@ export class AwsS3StorageService implements StorageProvider {
     }
   }
 
-  // ==================== URL Methods ====================
-
-  /**
-   * Build CloudFront public URL
-   * Format: https://cdn.skillacademy.com/{folder}/{filename}
-   */
+  // ฟังก์ชันสำหรับสร้าง URL สาธารณะของไฟล์ที่อัพโหลดไปยัง S3 โดยใช้ CloudFront URL แทน S3 URL เพื่อประสิทธิภาพและ caching ที่ดีขึ้น
   buildPublicUrl(bucket: string, key: string): string {
-    // ใช้ CloudFront URL แทน S3 URL เพื่อประสิทธิภาพและ caching 
     return `https://${this.cloudfrontDomain}/${encodeURI(key)}`;
   }
 
-  // สำหรับกรณีที่ต้องการ S3 URL ตรงๆ (ไม่แนะนำให้ใช้สำหรับ public access)
+  // สำหรับกรณีที่ต้องการ S3 URL ตรงๆ 
   getS3Url(bucket: string, key: string): string {
     return `https://${bucket || this._bucket}.s3.${this.region}.amazonaws.com/${encodeURI(key)}`;
   }
 
-  // ==================== Presigned URL Methods ====================
-
-  // คืน URL สำหรับให้ client อัพโหลดไฟล์โดยตรงไปยัง S3 โดยไม่ต้องผ่าน backend (เผื่อนำไปต่อยอดทำ Quantity Video Upload ในอนาคต)
+  // สร้าง Presigned PUT URL (ให้อัปโหลดขึ้น S3 ได้ตรง ๆ ภายในเวลาที่กำหนด)
   async presignPut(
     bucket: string,
     key: string,
@@ -173,10 +150,6 @@ export class AwsS3StorageService implements StorageProvider {
     }
   }
 
-
-
-  // ==================== Utility Methods ====================
-
   // ตรวจสอบว่าไฟล์มีอยู่ใน S3 หรือไม่
   async fileExists(bucket: string, key: string): Promise<boolean> {
     try {
@@ -197,18 +170,17 @@ export class AwsS3StorageService implements StorageProvider {
 
   // ตรวจสอบและกำหนด Content-Type จาก metadata หรือจากนามสกุลไฟล์
   private detectContentType(key: string, metadata?: Record<string, string>): string {
-    // ถ้ามี Content-Type ใน metadata ให้ใช้ค่านั้น
     if (metadata?.['Content-Type']) {
       return metadata['Content-Type'];
     }
 
-    // ลองตรวจสอบจากนามสกุลไฟล์
+    // ใช้ mime-types library เพื่อตรวจสอบ Content-Type จากนามสกุลไฟล์
     const mimeType = lookup(key);
     if (mimeType) {
       return mimeType;
     }
 
-    // กำหนดค่าเริ่มต้นตาม prefix ของ key (ถ้าไม่สามารถตรวจสอบได้)
+    // ถ้าไม่รู้จักนามสกุลไฟล์ ให้ตรวจสอบ prefix ของ key เพื่อกำหนด Content-Type
     if (key.startsWith('images/')) {
       return 'image/jpeg';
     }
@@ -235,15 +207,14 @@ export class AwsS3StorageService implements StorageProvider {
     return `videos/${uuid}.${ext}`;
   }
 
-  // เรียกใช้ฟังก์ชันเดียวกันในการสร้าง key สำหรับทั้งภาพและวิดีโอ โดยตรวจสอบ prefix ของ originalFilename
+  // ฟังก์ชันช่วยดึงนามสกุลไฟล์จากชื่อไฟล์ (เช่น "example.jpg" จะได้ "jpg") ถ้าไม่มีนามสกุลจะคืนค่า null
   private getFileExtension(filename: string): string | null {
     if (!filename) return null;
     const match = filename.match(/\.([^.]+)$/); // ดึงนามสกุลไฟล์จากชื่อไฟล์
     return match ? match[1].toLowerCase() : null;
   }
 
-
-  // เรียก MediaConvert endpoint และ cache ไว้ในตัวแปรเพื่อใช้ซ้ำในการสร้างงานแปลงวิดีโอ
+  // เรียก MediaConvert endpoint และ cache ไว้ในตัวแปรเพื่อใช้ซ้ำในการสร้างงานแปลงวิดีโอ (เพื่อลด latency ในการสร้างงานแปลงวิดีโอในอนาคต)
   private async getMediaConvertEndpoint(): Promise<string> {
     if (this.cachedMcEndpoint) return this.cachedMcEndpoint;
 

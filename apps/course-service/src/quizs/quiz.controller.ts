@@ -14,7 +14,6 @@ import { CurrentUserId } from '../notifications/decorators/current-user-id.decor
 export class QuizAdminController {
   constructor(private readonly quizService: QuizService) { }
 
-  // สร้างหรืออัปเดต quiz สำหรับบทเรียน (1 บทเรียน = 1 ควิซ)
   @Post()
   @ApiOperation({ summary: 'สร้างหรืออัปเดต quiz สำหรับบทเรียน (1 บทเรียน = 1 ควิซ)' })
   @ApiBody({
@@ -46,6 +45,8 @@ export class QuizAdminController {
   })
   @ApiResponse({ status: 201, description: 'Quiz created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Lesson not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   createQuiz(@Body() dto: CreateQuizsDto) {
     return this.quizService.createQuizs(dto);
@@ -86,6 +87,8 @@ export class QuizAdminController {
   })
   @ApiResponse({ status: 200, description: 'Quiz updated successfully' })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Quiz not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   updateQuiz(@Param('lessonId', ParseIntPipe) lessonId: number, @Body() dto: Partial<UpdateQuizsDto>) {
     return this.quizService.updateQuizs(lessonId, dto);
@@ -99,7 +102,9 @@ export class QuizAdminController {
     description: 'ID ของบทเรียน',
   })
   @ApiResponse({ status: 200, description: 'Quiz retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Quiz not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   findQuizByLessonAdmin(
     @Param('lessonId', ParseIntPipe) lessonId: number,
   ) {
@@ -114,6 +119,8 @@ export class QuizAdminController {
     type: Number,
   })
   @ApiResponse({ status: 204, description: 'Quiz deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Quiz not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   removeQuiz(@Param('lessonId', ParseIntPipe) lessonId: number) {
 
@@ -152,6 +159,8 @@ export class QuizAdminController {
   })
   @ApiResponse({ status: 201, description: 'Checkpoint created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Lesson not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async createCheckpoint(@Body() dto: CreateCheckpointDto) {
     const checkpoint = await this.quizService.createCheckpoint(dto);
@@ -165,7 +174,9 @@ export class QuizAdminController {
   @ApiOperation({ summary: 'ดึง checkpoint ตาม lesson ID' })
   @ApiParam({ name: 'lessonId', type: Number })
   @ApiResponse({ status: 200, description: 'Checkpoint retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Checkpoint not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   async findCheckpointByLessonId(@Param('lessonId', ParseIntPipe) lessonId: number) {
     const checkpoint = await this.quizService.findOneCheckpointByLessonId(lessonId);
     return { ...checkpoint, score: checkpoint.checkpointScore ?? 5 };
@@ -201,6 +212,7 @@ export class QuizAdminController {
     },
   })
   @ApiResponse({ status: 200, description: 'Checkpoint updated successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Checkpoint not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async updateCheckpoint(
@@ -219,6 +231,7 @@ export class QuizAdminController {
     type: Number,
   })
   @ApiResponse({ status: 204, description: 'Checkpoint deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Checkpoint not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   removeCheckpoint(
@@ -240,6 +253,8 @@ export class QuizController {
   @Get()
   @ApiOperation({ summary: 'ดึงรายการ quiz ทั้งหมด' })
   @ApiResponse({ status: 200, description: 'List of quizzes retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'No quizzes found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   findAllQuizzes() {
     return this.quizService.findAllQuizs();
@@ -301,6 +316,7 @@ export class QuizController {
       ]
     }
   })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Quiz not found' })
   @ApiResponse({ status: 409, description: 'This quiz has already been attempted and cannot be answered again' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
@@ -319,6 +335,8 @@ export class QuizController {
     description: 'ID ของบทเรียน',
   })
   @ApiResponse({ status: 200, description: 'Checkpoints retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Lesson not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   findCheckpointsByLesson(
     @Param('lessonId', ParseIntPipe) lessonId: number,
@@ -351,6 +369,9 @@ export class QuizController {
     },
   })
   @ApiResponse({ status: 200, description: 'Answer checked and saved successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid answer format' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Quiz not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   checkQuizs(
     @Param('lessonId', ParseIntPipe) lessonId: number,
@@ -368,6 +389,9 @@ export class QuizController {
     description: 'ID ของบทเรียน',
   })
   @ApiResponse({ status: 200, description: 'Quiz skipped successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Quiz not found' })
+  @ApiResponse({ status: 409, description: 'This quiz has already been attempted and cannot be skipped' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   skipQuiz(@Param('lessonId', ParseIntPipe) lessonId: number, @CurrentUserId() userId: string) {
     return this.quizService.skipQuiz(lessonId, userId);
@@ -398,6 +422,10 @@ export class QuizController {
     },
   })
   @ApiResponse({ status: 200, description: 'Checkpoint answer checked successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid answer format' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Checkpoint not found' })
+  @ApiResponse({ status: 409, description: 'This checkpoint has already been attempted and cannot be answered again' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   checkCheckpoint(
     @Param('checkpointId', ParseIntPipe) checkpointId: number,
@@ -415,6 +443,9 @@ export class QuizController {
     description: 'Checkpoint ID (ไม่ใช่ lessonId)',
   })
   @ApiResponse({ status: 200, description: 'Checkpoint skipped successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Checkpoint not found' })
+  @ApiResponse({ status: 409, description: 'This checkpoint has already been attempted and cannot be skipped' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   skipCheckpoint(
     @Param('checkpointId', ParseIntPipe) checkpointId: number,

@@ -9,8 +9,6 @@ async function bootstrap() {
     logger: ['log', 'error', 'warn'],
   });
 
-  // allowedHeaders: ['http://localhost:3000', 'https://skllracademy.com'],
-  // origin: [process.env.FRONTEND_URL, 'http://localhost:3000', 'https://skllracademy.com'],
   app.enableCors({
     origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
@@ -32,7 +30,7 @@ async function bootstrap() {
     .setVersion('1.0.0')
     .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'access-token')
     .addServer('https://api.skllracademy.com/s1/api')
-    .addServer('/api')
+    .addServer('http://localhost:3001/api')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
