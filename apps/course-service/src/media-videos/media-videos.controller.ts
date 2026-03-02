@@ -64,7 +64,7 @@ export class MediaVideosController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'อัปเดตข้อมูลวิดีโอบางส่วน (PATCH)' })
+  @ApiOperation({ summary: 'อัปเดตข้อมูลวิดีโอด้วย ID' })
   @ApiParam({ name: 'id', description: 'Video asset id', type: 'number' })
   @ApiBody({
     type: UpdateVideoDto,

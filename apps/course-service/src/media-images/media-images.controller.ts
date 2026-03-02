@@ -45,7 +45,7 @@ export class MediaImagesController {
   }
 
   @Patch(':id')
-  @ApiOperation({ summary: 'อัปเดตข้อมูลรูปภาพบางส่วน (PATCH)' })
+  @ApiOperation({ summary: 'อัปเดตข้อมูลรูปภาพด้วย ID' })
   @ApiParam({ name: 'id', type: 'number' })
   @ApiBody({
     type: UpdateImageDto,
