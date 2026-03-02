@@ -17,8 +17,8 @@ export class MediaImagesService {
   // ตรวจสอบ MIME type ของไฟล์ภาพที่อัพโหลดเข้ามา (รองรับ jpg/jpeg/png/webp)
   private validateImageMime(mime: string, originalName?: string) {
     const ext = (originalName ?? '').split('.').pop()?.toLowerCase();
-    const allowMime = ['image/jpeg', 'image/png', 'image/jpg', 'image/pjpeg', 'image/webp'];
-    const allowExt = ['jpg', 'jpeg', 'png', 'webp'];
+    const allowMime = ['image/jpeg', 'image/png', 'image/jpg', 'image/pjpeg', 'image/webp', 'image/svg+xml'];
+    const allowExt = ['jpg', 'jpeg', 'png', 'webp', 'svg'];
 
     if (allowMime.includes((mime ?? '').toLowerCase())) return;
     if ((mime === 'application/octet-stream' || !mime) && ext && allowExt.includes(ext)) return;
