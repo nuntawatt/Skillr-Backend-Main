@@ -69,6 +69,15 @@ export class UsersController {
   // Avatar Upload
   // =========================
 
+  @Get('avatar-options')
+  @ApiOperation({ summary: 'Get available avatar options' })
+  @ApiResponse({ status: 200, description: 'Avatar options retrieved successfully.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
+  async getAvatarOptions() {
+    return this.usersService.getAvatarOptions();
+  }
+
   @Patch('avatar')
   @ApiOperation({ summary: 'Upload or update user avatar' })
   @ApiResponse({ status: 200, description: 'Avatar uploaded successfully.' })

@@ -23,6 +23,24 @@ import { count } from 'console';
 export class UsersService {
   private readonly s3Client: S3Client;
 
+  private readonly avatarOptions = [
+    'https://cdn.skllracademy.com/images/16302a9b-a621-4718-9f9c-7d2e33538625',
+    'https://cdn.skllracademy.com/images/3d55a1c3-7df8-4007-a8d4-e5a32b2c9819',
+    'https://cdn.skllracademy.com/images/451f8c25-fb70-4b5d-bb04-258463c8cf78',
+    'https://cdn.skllracademy.com/images/dadbb475-a926-4a62-b952-c4119554e0d5',
+    'https://cdn.skllracademy.com/images/a07b241e-4ab4-4803-bb71-6dc1c9e2e628',
+    'https://cdn.skllracademy.com/images/e172a8fd-1c6d-4d80-bd64-c27eab05f8c4',
+    'https://cdn.skllracademy.com/images/6e45ebad-e177-4fef-a414-3edd7504f8d8',
+    'https://cdn.skllracademy.com/images/b0a70cac-6b54-4cb0-8199-613d5af97695',
+    'https://cdn.skllracademy.com/images/4627652d-52f2-4db4-88ab-48967a17f26a',
+    'https://cdn.skllracademy.com/images/0eed3f5e-a06a-4413-93fd-9e3efd4953e3',
+    'https://cdn.skllracademy.com/images/b5b84212-8f93-442b-9d49-fba9986a238b',
+    'https://cdn.skllracademy.com/images/57bc5ecc-a8cc-4611-8d04-ad55adf56f30',
+    'https://cdn.skllracademy.com/images/69427dd7-11a8-41fe-bb94-8a17f7f4e96b',
+    'https://cdn.skllracademy.com/images/c86deff5-4d1e-4b1b-8a1a-2e1352a788ed',
+    'https://cdn.skllracademy.com/images/a9462080-9d1b-43a1-9910-1a9bef7e3568',
+  ] as const;
+
   constructor(
     @InjectRepository(User, 'auth')
     private readonly userRepo: Repository<User>,
@@ -221,6 +239,10 @@ export class UsersService {
   // =====================================================
   // AVATAR (S3)
   // =====================================================
+
+  getAvatarOptions(): readonly string[] {
+    return this.avatarOptions;
+  }
 
   // อัปโหลดหรืออัปเดต avatar ของผู้ใช้ (ใช้เมื่อผู้ใช้อัปโหลดรูปโปรไฟล์ใหม่)
   async uploadAvatar(id: string, file: Express.Multer.File): Promise<User> {
