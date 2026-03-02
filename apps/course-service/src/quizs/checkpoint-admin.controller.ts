@@ -56,7 +56,7 @@ export class CheckpointAdminController {
         };
     }
 
-    @Post(':id/check')
+    @Post(':checkpointId/check')
     @ApiOperation({ summary: 'ตรวจคำตอบ checkpoint ตาม id' })
     @ApiParam({
         name: 'checkpointId',
@@ -94,7 +94,7 @@ export class CheckpointAdminController {
         return this.quizService.checkCheckpointAnswer(checkpointId, userId, answer);
     }
 
-    @Post(':id/skip')
+    @Post(':checkpointId/skip')
     @ApiOperation({ summary: 'ข้าม checkpoint และบันทึกสถานะเป็น skipped' })
     @ApiParam({
         name: 'checkpointId',
@@ -113,7 +113,7 @@ export class CheckpointAdminController {
         return this.quizService.skipCheckpoint(checkpointId, userId);
     }
 
-    @Get(':id')
+    @Get(':lessonId')
     @ApiOperation({ summary: 'ดึง checkpoint ตาม lesson ID' })
     @ApiParam({ name: 'lessonId', type: Number })
     @ApiResponse({ status: 200, description: 'Checkpoint retrieved successfully' })
@@ -125,7 +125,7 @@ export class CheckpointAdminController {
         return { ...checkpoint, score: checkpoint.checkpointScore };
     }
 
-    @Get(':id/status')
+    @Get(':lessonId/status')
     @ApiOperation({ summary: 'ดึง checkpoint พร้อม Student_Progress ตาม lesson ID' })
     @ApiParam({ name: 'lessonId', type: Number })
     @ApiResponse({ status: 200, description: 'Checkpoints retrieved successfully' })
@@ -139,7 +139,7 @@ export class CheckpointAdminController {
         return this.quizService.findCheckpointsByLesson(lessonId, userId);
     }
 
-    @Patch(':id')
+    @Patch(':lessonId')
     @ApiOperation({ summary: 'อัปเดต checkpoint ตาม lesson ID' })
     @ApiParam({ name: 'lessonId', type: Number })
     @ApiBody({
@@ -179,7 +179,7 @@ export class CheckpointAdminController {
         return { ...checkpoint, score: checkpoint.checkpointScore };
     }
 
-    @Delete(':id')
+    @Delete(':lessonId')
     @ApiOperation({ summary: 'ลบ checkpoint ตาม lesson ID' })
     @ApiParam({ name: 'lessonId', type: Number })
     @ApiResponse({ status: 204, description: 'Checkpoint deleted successfully' })

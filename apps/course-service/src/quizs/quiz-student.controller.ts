@@ -23,7 +23,7 @@ export class QuizStudentController {
     return this.quizService.findAllQuizs();
   }
 
-  @Get(':id')
+  @Get(':lessonId')
   @ApiOperation({ summary: 'ดึง quiz พร้อมสถานะตาม lesson ID ' })
   @ApiParam({ name: 'lessonId', type: Number })
   @ApiResponse({ status: 200, description: 'Quiz retrieved successfully' })
@@ -40,7 +40,7 @@ export class QuizStudentController {
   }
 
 
-  @Post(':id/check')
+  @Post(':lessonId/check')
   @ApiOperation({ summary: 'ตรวจคำตอบ quiz และบันทึกผล' })
   @ApiBody({
     schema: {
@@ -76,7 +76,7 @@ export class QuizStudentController {
     return this.quizService.checkAndSaveAnswer(lessonId, userId, answer);
   }
 
-  @Post(':id/skip')
+  @Post(':lessonId/skip')
   @ApiOperation({ summary: 'ข้าม quiz และบันทึกสถานะเป็น completed' })
   @ApiParam({ name: 'lessonId', type: Number })
   @ApiResponse({ status: 200, description: 'Quiz skipped successfully' })

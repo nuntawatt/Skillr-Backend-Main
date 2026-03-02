@@ -18,10 +18,6 @@ import { LessonsAdminController } from './lessons/lessons-admin.controller';
 import { LessonsStudentController } from './lessons/lessons-student.controller';
 import { ArticlesAdminController } from './articles/articles-admin.controller';
 import { ArticlesStudentController } from './articles/articles-student.controller';
-import { QuizAdminController } from './quizs/quiz-admin.controller';
-import { QuizStudentController } from './quizs/quiz-student.controller';
-import { CheckpointAdminController } from './quizs/checkpoint-admin.controller';
-import { CheckpointStudentController } from './quizs/checkpoint-student.controller';
 import { ProgressController } from './progress/progress.controller';
 import { StreakController } from './streaks/streak.controller';
 import { StudentCoursesController } from './courses/courses-student.controller';
@@ -36,10 +32,11 @@ import { StorageModule } from './storage/storage.module';
 import { MediaImagesModule } from './media-images/media-images.module';
 import { MediaVideosModule } from './media-videos/media-videos.module';
 import { ProgressService } from './progress/progress.service';
-import { QuizService } from "./quizs/quiz.service";
 import { StreakService } from './streaks/streak.service';
 import { LearnerHomeModule } from './learner-home/learner-home.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { QuizsModule } from './quizs/quizs.module';
+import { AiQuizModule } from './ai-analyzer/ai-quiz.module';
 
 // Entities
 import { Course } from './courses/entities/course.entity';
@@ -48,13 +45,11 @@ import { Chapter } from './chapters/entities/chapter.entity';
 import { Lesson } from './lessons/entities/lesson.entity';
 import { Article } from './articles/entities/article.entity';
 import { LessonProgress } from './progress/entities/progress.entity';
-import { Quizs } from './quizs/entities/quizs.entity';
-import { QuizsCheckpoint } from './quizs/entities/checkpoint.entity';
-import { QuizsResult } from './quizs/entities/quizs-result.entity';
-import { UserXp } from './quizs/entities/user-xp.entity';
 import { UserStreak } from './streaks/entities/user-streak.entity';
 import { Announcement } from './announcements/entities/announcement.entity';
 import { VideoAsset } from './media-videos/entities/video-asset.entity';
+import { Quizs } from './quizs/entities/quizs.entity';
+import { QuizsCheckpoint } from './quizs/entities/checkpoint.entity';
 
 const isTest = process.env.NODE_ENV === 'test';
 
@@ -81,12 +76,10 @@ const isTest = process.env.NODE_ENV === 'test';
           Chapter,
           Lesson,
           Article,
-          LessonProgress,
-          UserStreak,
-          UserXp,
           Quizs,
           QuizsCheckpoint,
-          QuizsResult,
+          LessonProgress,
+          UserStreak,
           Announcement,
           VideoAsset,
         ]),
@@ -97,6 +90,8 @@ const isTest = process.env.NODE_ENV === 'test';
         MediaVideosModule,
 
         AnnouncementsModule,
+        QuizsModule,
+        AiQuizModule,
         LearnerHomeModule,
         NotificationsModule,
       ]),
@@ -113,10 +108,6 @@ const isTest = process.env.NODE_ENV === 'test';
     LessonsStudentController,
     ArticlesAdminController,
     ArticlesStudentController,
-    QuizAdminController,
-    QuizStudentController,
-    CheckpointAdminController,
-    CheckpointStudentController,
     ProgressController,
     StreakController,
   ],
@@ -128,7 +119,6 @@ const isTest = process.env.NODE_ENV === 'test';
     LessonsService,
     ArticlesService,
     ProgressService,
-    QuizService,
     StreakService,
   ],
 })

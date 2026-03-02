@@ -13,7 +13,7 @@ import { CurrentUserId } from '../notifications/decorators/current-user-id.decor
 export class CheckpointStudentController {
     constructor(private readonly quizService: QuizService) { }
 
-    @Get(':id')
+    @Get(':lessonId')
     @ApiOperation({ summary: 'ดึง checkpoint ตาม lesson ID' })
     @ApiParam({ name: 'lessonId', type: Number })
     @ApiResponse({ status: 200, description: 'Checkpoint retrieved successfully' })
@@ -25,7 +25,7 @@ export class CheckpointStudentController {
         return { ...checkpoint, score: checkpoint.checkpointScore };
     }
 
-    @Get(':id/status')
+    @Get(':lessonId/status')
     @ApiOperation({ summary: 'ดึง checkpoint พร้อม Student_Progress ตาม lesson ID' })
     @ApiParam({ name: 'lessonId', type: Number })
     @ApiResponse({ status: 200, description: 'Checkpoints retrieved successfully' })
@@ -39,7 +39,7 @@ export class CheckpointStudentController {
         return this.quizService.findCheckpointsByLesson(lessonId, userId);
     }
 
-    @Post(':id/check')
+    @Post(':checkpointId/check')
     @ApiOperation({ summary: 'ตรวจคำตอบ checkpoint ตาม id' })
     @ApiParam({
         name: 'checkpointId',
@@ -77,7 +77,7 @@ export class CheckpointStudentController {
         return this.quizService.checkCheckpointAnswer(checkpointId, userId, answer);
     }
 
-    @Post(':id/skip')
+    @Post(':checkpointId/skip')
     @ApiOperation({ summary: 'ข้าม checkpoint และบันทึกสถานะเป็น skipped' })
     @ApiParam({
         name: 'checkpointId',

@@ -52,7 +52,7 @@ export class QuizAdminController {
         return this.quizService.createQuizs(dto);
     }
 
-    @Post(':id/check')
+    @Post(':lessonId/check')
     @ApiOperation({ summary: 'ตรวจคำตอบ quiz และบันทึกผล' })
     @ApiBody({
         schema: {
@@ -88,7 +88,7 @@ export class QuizAdminController {
         return this.quizService.checkAndSaveAnswer(lessonId, userId, answer);
     }
 
-    @Post(':id/skip')
+    @Post(':lessonId/skip')
     @ApiOperation({ summary: 'ข้าม quiz และบันทึกสถานะเป็น completed' })
     @ApiParam({ name: 'lessonId', type: Number })
     @ApiResponse({ status: 200, description: 'Quiz skipped successfully' })
@@ -110,7 +110,7 @@ export class QuizAdminController {
         return this.quizService.findAllQuizs();
     }
 
-    @Get(':id')
+    @Get(':lessonId')
     @ApiOperation({ summary: 'ดึง quiz ตาม lesson ID' })
     @ApiParam({ name: 'lessonId', type: Number })
     @ApiResponse({ status: 200, description: 'Quiz retrieved successfully' })
@@ -121,7 +121,7 @@ export class QuizAdminController {
         return this.quizService.findOneQuizsByLesson(lessonId);
     }
 
-    @Get(':id/status')
+    @Get(':lessonId/status')
     @ApiOperation({ summary: 'ดึง quiz พร้อมสถานะตาม lesson ID ทั้งหมด' })
     @ApiParam({ name: 'lessonId', type: Number })
     @ApiResponse({ status: 200, description: 'Quiz retrieved successfully' })
@@ -136,7 +136,7 @@ export class QuizAdminController {
         return this.quizService.getQuizWithStatus(lessonId, userId);
     }
 
-    @Patch(':id')
+    @Patch(':lessonId')
     @ApiOperation({ summary: 'อัปเดต quiz ตาม lesson ID' })
     @ApiParam({ name: 'lessonId', type: Number })
     @ApiBody({
@@ -173,7 +173,7 @@ export class QuizAdminController {
         return this.quizService.updateQuizs(lessonId, dto);
     }
 
-    @Delete(':id')
+    @Delete(':lessonId')
     @ApiOperation({ summary: 'ลบ quiz ตาม lesson ID' })
     @ApiParam({ name: 'lessonId', type: Number })
     @ApiResponse({ status: 204, description: 'Quiz deleted successfully' })

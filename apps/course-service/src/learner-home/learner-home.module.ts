@@ -14,11 +14,8 @@ import { Level } from '../levels/entities/level.entity';
 import { StreakService } from '../streaks/streak.service';
 import { UserStreak } from '../streaks/entities/user-streak.entity';
 import { ProgressService } from '../progress/progress.service';
-import { QuizService } from '../quizs/quiz.service';
-import { Quizs } from '../quizs/entities/quizs.entity';
-import { QuizsCheckpoint } from '../quizs/entities/checkpoint.entity';
-import { QuizsResult } from '../quizs/entities/quizs-result.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { QuizsModule } from '../quizs/quizs.module';
 
 @Module({
   imports: [
@@ -30,15 +27,13 @@ import { NotificationsModule } from '../notifications/notifications.module';
       Course,
       Level,
       UserStreak,
-      Quizs,
-      QuizsCheckpoint,
-      QuizsResult,
     ]),
     HttpModule,
     AuthLibModule,
     NotificationsModule,
+    QuizsModule,
   ],
   controllers: [LearnerHomeController],
-  providers: [LearnerHomeService, StreakService, ProgressService, QuizService],
+  providers: [LearnerHomeService, StreakService, ProgressService],
 })
 export class LearnerHomeModule { }
