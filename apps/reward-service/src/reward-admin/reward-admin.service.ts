@@ -1,23 +1,19 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateRewardAdminDto } from './dto/create-reward-admin.dto';
 import { UpdateRewardAdminDto } from './dto/update-reward-admin.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Reward } from '../reward/entities/rewards.entity';
 import { randomUUID } from 'crypto';
-import { StorageFactory } from 'apps/course-service/src/storage/storage.factory';
+import { AwsS3StorageService } from 'apps/course-service/src/storage/aws.service';
 
 @Injectable()
 export class RewardAdminService {
   constructor(
-    private readonly storageFactory: StorageFactory,
+    private readonly aws: AwsS3StorageService,
     @InjectRepository(Reward, 'reward')
     private rewardRepo: Repository<Reward>,
-  ) {}
+  ) { }
 
   getAllReward() {
     return this.rewardRepo.find();
@@ -86,8 +82,6 @@ export class RewardAdminService {
   async removeRewardById(id: number) {
     const reward = await this.rewardRepo.findOne({ where: { id } });
 
-    console.log(reward);
-
     if (reward === null || reward === undefined) {
       throw new NotFoundException('Reward not found');
     }
@@ -137,20 +131,17 @@ export class RewardAdminService {
       throw new BadRequestException('file too large');
     }
 
-    const storage = this.storageFactory.image();
-    const bucket = storage.bucket;
+    const bucket = this.aws.bucket;
 
     // สร้าง storage key แบบ unique (คุณสามารถเปลี่ยน structure ได้)
     const uuid = randomUUID();
     const storageKey = `rewards/${uuid}${(file.originalname?.match(/\.[^.]+$/) ?? [''])[0]}`;
 
     // อัพโหลดไฟล์ไปยัง storage provider s3 หรือตามที่คุณตั้งค่าไว้
-    await storage.putObject(bucket, storageKey, file.buffer, file.size, {
-      'Content-Type': file.mimetype,
-    });
+    await this.aws.putObject(bucket, storageKey, file.buffer, file.size, file.mimetype);
 
     // สร้าง URL สาธารณะสำหรับเข้าถึงไฟล์ผ่าน CloudFront หรือ storage provider อื่น
-    const publicUrl = storage.buildPublicUrl(bucket, storageKey);
+    const publicUrl = this.aws.buildPublicUrl(bucket, storageKey);
 
     return publicUrl;
   }

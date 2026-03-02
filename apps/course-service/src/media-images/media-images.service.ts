@@ -3,13 +3,14 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 
-import { StorageFactory } from '../storage/storage.factory';
+import { AwsS3StorageService } from '../storage/aws.service';
 import { ImageAsset, ImageAssetStatus } from './entities/image-asset.entity';
+import { UpdateImageDto } from './dto/update-image.dto';
 
 @Injectable()
 export class MediaImagesService {
   constructor(
-    private readonly storageFactory: StorageFactory,
+    private readonly aws: AwsS3StorageService,
     @InjectRepository(ImageAsset)
     private readonly repo: Repository<ImageAsset>,
   ) { }
@@ -37,24 +38,23 @@ export class MediaImagesService {
       throw new BadRequestException('file too large');
     }
 
-    const storage = this.storageFactory.image();
-    const bucket = storage.bucket;
+    const bucket = this.aws.bucket;
 
     // สร้างชื่อไฟล์แบบสุ่มเพื่อเก็บใน storage โดยใช้ UUID และเก็บในโฟลเดอร์ images/
     const uuid = randomUUID();
     const storageKey = `images/${uuid}`;
 
     // อัพโหลดไฟล์ไปยัง storage provider (เช่น S3) โดยใช้ buffer ที่ได้จาก multer
-    await storage.putObject(
+    await this.aws.putObject(
       bucket,
       storageKey,
       file.buffer,
       file.size,
-      { 'Content-Type': file.mimetype },
+      file.mimetype,
     );
 
     // สร้าง URL สาธารณะสำหรับเข้าถึงไฟล์ผ่าน CloudFront
-    const publicUrl = storage.buildPublicUrl(bucket, storageKey);
+    const publicUrl = this.aws.buildPublicUrl(bucket, storageKey);
 
     const saved = await this.repo.save(
       this.repo.create({
@@ -82,7 +82,7 @@ export class MediaImagesService {
     if (!asset) throw new NotFoundException('image asset not found');
 
     // ถ้า publicUrl มีอยู่แล้วก็ใช้เลย ถ้าไม่ก็สร้างจาก storage key และ bucket
-    const url = asset.publicUrl ?? this.storageFactory.image().buildPublicUrl(asset.storageBucket, asset.storageKey);
+    const url = asset.publicUrl ?? this.aws.buildPublicUrl(asset.storageBucket, asset.storageKey);
 
     return {
       image_id: asset.id,
@@ -91,14 +91,43 @@ export class MediaImagesService {
     };
   }
 
+  async updateImageAsset(id: number, dto: UpdateImageDto) {
+    const hasAnyField = Object.values(dto).some((v) => v !== undefined);
+    if (!hasAnyField) {
+      throw new BadRequestException('no fields to update');
+    }
+
+    const asset = await this.repo.findOne({ where: { id } });
+    if (!asset) throw new NotFoundException('image asset not found');
+
+    if (dto.mime_type !== undefined) {
+      this.validateImageMime(dto.mime_type, dto.original_filename ?? asset.originalFilename);
+      asset.mimeType = dto.mime_type;
+    }
+
+    if (dto.original_filename !== undefined) {
+      asset.originalFilename = dto.original_filename;
+    }
+
+    const saved = await this.repo.save(asset);
+
+    return {
+      image_id: saved.id,
+      url: saved.publicUrl ?? this.aws.buildPublicUrl(saved.storageBucket, saved.storageKey),
+      status: saved.status,
+      original_filename: saved.originalFilename,
+      mime_type: saved.mimeType,
+    };
+  }
+
   async deleteImageById(id: number) {
     const asset = await this.repo.findOne({ where: { id } });
     if (!asset) throw new NotFoundException('media asset not found');
 
-    const storage = this.storageFactory.image();
-    await storage.deleteObject(asset.storageBucket, asset.storageKey);
+    await this.aws.deleteObject(asset.storageBucket, asset.storageKey);
 
     await this.repo.remove(asset);
     return { deleted: true };
   }
+
 }

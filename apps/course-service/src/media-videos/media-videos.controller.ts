@@ -1,58 +1,49 @@
-import { Body, Controller, Post, Req, UploadedFile, UseInterceptors, Get, Param, Delete } from '@nestjs/common';
+import { Body, Controller, Post, Get, Param, Delete, Patch } from '@nestjs/common';
 import { MediaVideosService } from './media-videos.service';
-import { CreateVideoPresignDto } from './dto/create-video-presign.dto';
+import { CreateVideoDto } from './dto/create-video.dto';
+import { UpdateVideoDto } from './dto/update-video.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam } from '@nestjs/swagger';
-
-// import { FileInterceptor } from '@nestjs/platform-express';
-// import * as multer from 'multer';
-// import { CreateVideoUploadDto } from './dto/create-video-upload.dto';
-// import type { AuthUser } from '@auth';
 
 @ApiTags('Upload | Video')
 @Controller('media/video')
 export class MediaVideosController {
   constructor(private readonly svc: MediaVideosService) { }
 
-  // อัพโหลดวิดีโอผ่าน form-data (สำหรับไฟล์ขนาดเล็ก - สูงสุด 1GB)
-  // @Post('upload')
-  // @ApiOperation({ summary: 'อัปโหลดวิดีโอผ่านฟอร์มดาต้าฝั่งเซิร์ฟเวอร์' })
-  // @ApiConsumes('multipart/form-data')
-  // @ApiBody({
-  //   schema: {
-  //     type: 'object',
-  //     properties: {
-  //       file: { type: 'string', format: 'binary', description: 'Video file' },
-  //     },
-  //     required: ['file'],
-  //   },
-  // })
-  // @ApiCreatedResponse({ description: 'Video uploaded successfully' })
-  // @ApiResponse({ status: 400, description: 'Invalid file or file size exceeds limit' })
-  // @ApiResponse({ status: 500, description: 'Internal server error' })
-  // @UseInterceptors(
-  //   FileInterceptor('file', {
-  //     storage: multer.memoryStorage(),
-  //     limits: { fileSize: 1 * 1024 * 1024 * 1024 }, // 1GB limit for form upload
-  //   }),
-  // )
-  // async uploadVideo(@UploadedFile() file: Express.Multer.File, @Body() body: Record<string, any>) {
-  //   return this.svc.uploadVideoFileAndPersist(file);
-  // }
-
-  // สร้าง presigned URL สำหรับอัพโหลดวิดีโอ (สำหรับไฟล์ขนาดใหญ่ - สูงสุด 1GB)
+  // สร้าง presigned URL สำหรับอัพโหลดวิดีโอ (สำหรับไฟล์ขนาด 1GB)
   @Post()
-  @ApiOperation({ summary: 'สร้าง URL ที่ลงชื่อล่วงหน้าสำหรับการอัปโหลดวิดีโอ (สำหรับไฟล์ขนาดใหญ่)' })
-  @ApiBody({ type: CreateVideoPresignDto })
+  @ApiOperation({ summary: 'สร้าง URL ที่ลงชื่อล่วงหน้าสำหรับการอัปโหลดวิดีโอ' })
+  @ApiBody({
+    type: CreateVideoDto,
+    examples: {
+      createNew: {
+        summary: 'อัปโหลดวิดีโอไฟล์ใหม่',
+        value: {
+          original_filename: 'sample.mp4',
+          mime_type: 'video/mp4',
+          size_bytes: 10485760,
+        },
+      },
+      attachExisting: {
+        summary: 'อัปโหลดให้ media asset เดิม (optional)',
+        value: {
+          media_asset_id: 123,
+          original_filename: 'lecture-1.mp4',
+          mime_type: 'video/mp4',
+          size_bytes: 52428800,
+        },
+      },
+    },
+  })
   @ApiResponse({ status: 201, description: 'Presigned URL created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid input or file size exceeds limit' })
   @ApiResponse({ status: 404, description: 'Related entities not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  async presign(@Body() dto: CreateVideoPresignDto) {
+  async presign(@Body() dto: CreateVideoDto) {
     return this.svc.createPresignedUpload(dto);
   }
 
   @Post(':id/confirm')
-  @ApiOperation({ summary: 'Confirm uploaded file exists in S3 and mark READY' })
+  @ApiOperation({ summary: 'ยืนยันการอัปโหลดไฟล์วิดีโอและเปลี่ยนสถานะเป็น Ready' })
   @ApiResponse({ status: 200, description: 'Confirmed' })
   @ApiResponse({ status: 400, description: 'File not uploaded yet' })
   @ApiResponse({ status: 404, description: 'Video not found' })
@@ -70,6 +61,37 @@ export class MediaVideosController {
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async getViewUrl(@Param('id') id: string) {
     return this.svc.getPublicViewUrl(Number(id));
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'อัปเดตข้อมูลวิดีโอบางส่วน (PATCH)' })
+  @ApiParam({ name: 'id', description: 'Video asset id', type: 'number' })
+  @ApiBody({
+    type: UpdateVideoDto,
+    examples: {
+      setPublicUrl: {
+        summary: 'ตั้งค่า public_url หลังอัปโหลดเสร็จ',
+        value: {
+          public_url: 'https://cdn.example.com/videos/abc.mp4',
+          status: 'ready',
+        },
+      },
+      updateMeta: {
+        summary: 'อัปเดต metadata',
+        value: {
+          original_filename: 'lecture-1.mp4',
+          mime_type: 'video/mp4',
+          size_bytes: 10485760,
+        },
+      },
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Updated' })
+  @ApiResponse({ status: 400, description: 'No fields to update / invalid payload' })
+  @ApiResponse({ status: 404, description: 'Video not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  async patch(@Param('id') id: string, @Body() dto: UpdateVideoDto) {
+    return this.svc.updateVideoAsset(Number(id), dto);
   }
 
   @Delete(':id')

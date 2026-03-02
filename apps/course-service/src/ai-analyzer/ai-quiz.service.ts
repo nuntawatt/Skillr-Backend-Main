@@ -126,8 +126,7 @@ export class AiQuizService {
             ) {
                 throw new HttpException(
                     {
-                        message:
-                            'OpenAI quota exceeded (insufficient_quota). Please check billing/quota and try again.',
+                        message: 'OpenAI quota exceeded (insufficient_quota). Please check billing/quota and try again.',
                     },
                     HttpStatus.TOO_MANY_REQUESTS,
                 );
@@ -171,7 +170,7 @@ export class AiQuizService {
             quizsType: 'multiple_choice',
             quizsQuestions: question.question,
             quizsOption: question.choices,
-            
+
             // เก็บเป็นข้อความคำตอบที่ถูก เพื่อให้เข้ากับ flow เดิม (frontend ส่งเป็น string)
             quizsAnswer: correctChoice,
             quizsExplanation: question.explanation,

@@ -1,21 +1,17 @@
-import { Injectable, Logger, InternalServerErrorException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
 import { S3Client, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { MediaConvertClient, DescribeEndpointsCommand, CreateJobCommand } from '@aws-sdk/client-mediaconvert';
 import { randomUUID } from 'crypto';
 import { lookup } from 'mime-types';
 
-import { StorageProvider } from './storage.interface';
-
 // AWS S3 Storage Service
 @Injectable()
-export class AwsS3StorageService implements StorageProvider {
+export class AwsS3StorageService {
   private readonly logger = new Logger(AwsS3StorageService.name);
   private readonly s3: S3Client;
   private readonly region: string;
   private readonly _bucket: string;
   private readonly cloudfrontDomain: string;
-  private cachedMcEndpoint?: string;
 
   // ใน constructor จะตรวจสอบ environment variables ที่จำเป็นและสร้าง S3 client ขึ้นมา
   constructor() {
@@ -60,16 +56,16 @@ export class AwsS3StorageService implements StorageProvider {
     key: string,
     body: Buffer,
     size?: number,
-    metadata?: Record<string, string>,
+    contentType?: string,
   ): Promise<void> {
     try {
-      const contentType = this.detectContentType(key, metadata);
+      const resolvedContentType = contentType ?? this.detectContentType(key);
 
       const cmd = new PutObjectCommand({
         Bucket: bucket || this._bucket,
         Key: key,
         Body: body,
-        ContentType: contentType,
+        ContentType: resolvedContentType,
         ContentLength: size,
         ACL: 'private', // ใช้ private แล้วให้ CloudFront จัดการ caching แทน
         CacheControl: 'max-age=31536000', // cache 1 ปี
@@ -92,9 +88,7 @@ export class AwsS3StorageService implements StorageProvider {
     const bucket = params.bucket || this._bucket;
     const contentType = params.contentType || this.detectContentType(params.key);
 
-    await this.putObject(bucket, params.key, params.body, params.body.length, {
-      'Content-Type': contentType,
-    });
+    await this.putObject(bucket, params.key, params.body, params.body.length, contentType);
 
     return {
       key: params.key,
@@ -169,11 +163,7 @@ export class AwsS3StorageService implements StorageProvider {
   }
 
   // ตรวจสอบและกำหนด Content-Type จาก metadata หรือจากนามสกุลไฟล์
-  private detectContentType(key: string, metadata?: Record<string, string>): string {
-    if (metadata?.['Content-Type']) {
-      return metadata['Content-Type'];
-    }
-
+  private detectContentType(key: string): string {
     // ใช้ mime-types library เพื่อตรวจสอบ Content-Type จากนามสกุลไฟล์
     const mimeType = lookup(key);
     if (mimeType) {
@@ -207,7 +197,7 @@ export class AwsS3StorageService implements StorageProvider {
     return `videos/${uuid}.${ext}`;
   }
 
-  // ฟังก์ชันช่วยดึงนามสกุลไฟล์จากชื่อไฟล์ (เช่น "example.jpg" จะได้ "jpg") ถ้าไม่มีนามสกุลจะคืนค่า null
+  // ฟังก์ชันช่วยเหลือสำหรับดึงนามสกุลไฟล์จากชื่อไฟล์ (ใช้ในการสร้าง storage key ที่มีนามสกุลถูกต้อง)
   private getFileExtension(filename: string): string | null {
     if (!filename) return null;
     const match = filename.match(/\.([^.]+)$/); // ดึงนามสกุลไฟล์จากชื่อไฟล์
@@ -215,131 +205,131 @@ export class AwsS3StorageService implements StorageProvider {
   }
 
   // เรียก MediaConvert endpoint และ cache ไว้ในตัวแปรเพื่อใช้ซ้ำในการสร้างงานแปลงวิดีโอ (เพื่อลด latency ในการสร้างงานแปลงวิดีโอในอนาคต)
-  private async getMediaConvertEndpoint(): Promise<string> {
-    if (this.cachedMcEndpoint) return this.cachedMcEndpoint;
+  // private async getMediaConvertEndpoint(): Promise<string> {
+  //   if (this.cachedMcEndpoint) return this.cachedMcEndpoint;
 
-    const client = new MediaConvertClient({ region: this.region });
-    const res = await client.send(new DescribeEndpointsCommand({}));
-    if (!res.Endpoints || res.Endpoints.length === 0) {
-      throw new BadRequestException('No MediaConvert endpoints returned');
-    }
+  //   const client = new MediaConvertClient({ region: this.region });
+  //   const res = await client.send(new DescribeEndpointsCommand({}));
+  //   if (!res.Endpoints || res.Endpoints.length === 0) {
+  //     throw new BadRequestException('No MediaConvert endpoints returned');
+  //   }
 
-    this.cachedMcEndpoint = res.Endpoints[0].Url!;
-    this.logger.log(`MediaConvert endpoint: ${this.cachedMcEndpoint}`);
-    return this.cachedMcEndpoint;
-  }
+  //   this.cachedMcEndpoint = res.Endpoints[0].Url!;
+  //   this.logger.log(`MediaConvert endpoint: ${this.cachedMcEndpoint}`);
+  //   return this.cachedMcEndpoint;
+  // }
 
   // สร้างงาน MediaConvert เพื่อแปลงวิดีโอ (เพื่อใช้ในฟีเจอร์ Video Transcoding ในอนาคต) 
-  async createMediaConvertJob(inputS3Url: string, outputS3Prefix: string, roleArn: string) {
-    const endpoint = await this.getMediaConvertEndpoint();
-    const mc = new MediaConvertClient({
-      region: this.region,
-      endpoint,
-    });
+  // async createMediaConvertJob(inputS3Url: string, outputS3Prefix: string, roleArn: string) {
+  //   const endpoint = await this.getMediaConvertEndpoint();
+  //   const mc = new MediaConvertClient({
+  //     region: this.region,
+  //     endpoint,
+  //   });
 
-    const jobSettings: any = {
-      OutputGroups: [
-        {
-          Name: 'Apple HLS',
-          OutputGroupSettings: {
-            Type: 'HLS_GROUP_SETTINGS',
-            HlsGroupSettings: {
-              Destination: `s3://${this._bucket}/${outputS3Prefix}`,
-              SegmentLength: 6,
-              MinSegmentLength: 0,
-            },
-          },
-          Outputs: [
-            // 1080p
-            {
-              ContainerSettings: { Container: 'M3U8', M3u8Settings: {} },
-              VideoDescription: {
-                CodecSettings: {
-                  Codec: 'H_264',
-                  H264Settings: {
-                    RateControlMode: 'CBR',
-                    Bitrate: 6500000,
-                    CodecProfile: 'MAIN',
-                    Height: 1080,
-                    Width: 1920,
-                    MaxBitrate: 6500000,
-                    SceneChangeDetect: 'TRANSITION_DETECTION',
-                  },
-                },
-              },
-              AudioDescriptions: [
-                {
-                  CodecSettings: {
-                    Codec: 'AAC',
-                    AacSettings: { Bitrate: 96000, CodingMode: 'CODING_MODE_2_0', SampleRate: 48000 },
-                  },
-                },
-              ],
-            },
-            // 720p
-            {
-              ContainerSettings: { Container: 'M3U8', M3u8Settings: {} },
-              VideoDescription: {
-                CodecSettings: {
-                  Codec: 'H_264',
-                  H264Settings: {
-                    RateControlMode: 'CBR',
-                    Bitrate: 3500000,
-                    CodecProfile: 'MAIN',
-                    Height: 720,
-                    Width: 1280,
-                    MaxBitrate: 3500000,
-                    SceneChangeDetect: 'TRANSITION_DETECTION',
-                  },
-                },
-              },
-              AudioDescriptions: [
-                {
-                  CodecSettings: {
-                    Codec: 'AAC',
-                    AacSettings: { Bitrate: 96000, CodingMode: 'CODING_MODE_2_0', SampleRate: 48000 },
-                  },
-                },
-              ],
-            },
-            // 360p
-            {
-              ContainerSettings: { Container: 'M3U8', M3u8Settings: {} },
-              VideoDescription: {
-                CodecSettings: {
-                  Codec: 'H_264',
-                  H264Settings: {
-                    RateControlMode: 'CBR',
-                    Bitrate: 800000,
-                    CodecProfile: 'MAIN',
-                    Height: 360,
-                    Width: 640,
-                    MaxBitrate: 800000,
-                    SceneChangeDetect: 'TRANSITION_DETECTION',
-                  },
-                },
-              },
-              AudioDescriptions: [
-                {
-                  CodecSettings: {
-                    Codec: 'AAC',
-                    AacSettings: { Bitrate: 64000, CodingMode: 'CODING_MODE_2_0', SampleRate: 48000 },
-                  },
-                },
-              ],
-            },
-          ],
-        },
-      ],
-      AdAvailOffset: 0,
-      Inputs: [{ FileInput: inputS3Url }],
-    };
+  //   const jobSettings: any = {
+  //     OutputGroups: [
+  //       {
+  //         Name: 'Apple HLS',
+  //         OutputGroupSettings: {
+  //           Type: 'HLS_GROUP_SETTINGS',
+  //           HlsGroupSettings: {
+  //             Destination: `s3://${this._bucket}/${outputS3Prefix}`,
+  //             SegmentLength: 6,
+  //             MinSegmentLength: 0,
+  //           },
+  //         },
+  //         Outputs: [
+  //           // 1080p
+  //           {
+  //             ContainerSettings: { Container: 'M3U8', M3u8Settings: {} },
+  //             VideoDescription: {
+  //               CodecSettings: {
+  //                 Codec: 'H_264',
+  //                 H264Settings: {
+  //                   RateControlMode: 'CBR',
+  //                   Bitrate: 6500000,
+  //                   CodecProfile: 'MAIN',
+  //                   Height: 1080,
+  //                   Width: 1920,
+  //                   MaxBitrate: 6500000,
+  //                   SceneChangeDetect: 'TRANSITION_DETECTION',
+  //                 },
+  //               },
+  //             },
+  //             AudioDescriptions: [
+  //               {
+  //                 CodecSettings: {
+  //                   Codec: 'AAC',
+  //                   AacSettings: { Bitrate: 96000, CodingMode: 'CODING_MODE_2_0', SampleRate: 48000 },
+  //                 },
+  //               },
+  //             ],
+  //           },
+  //           // 720p
+  //           {
+  //             ContainerSettings: { Container: 'M3U8', M3u8Settings: {} },
+  //             VideoDescription: {
+  //               CodecSettings: {
+  //                 Codec: 'H_264',
+  //                 H264Settings: {
+  //                   RateControlMode: 'CBR',
+  //                   Bitrate: 3500000,
+  //                   CodecProfile: 'MAIN',
+  //                   Height: 720,
+  //                   Width: 1280,
+  //                   MaxBitrate: 3500000,
+  //                   SceneChangeDetect: 'TRANSITION_DETECTION',
+  //                 },
+  //               },
+  //             },
+  //             AudioDescriptions: [
+  //               {
+  //                 CodecSettings: {
+  //                   Codec: 'AAC',
+  //                   AacSettings: { Bitrate: 96000, CodingMode: 'CODING_MODE_2_0', SampleRate: 48000 },
+  //                 },
+  //               },
+  //             ],
+  //           },
+  //           // 360p
+  //           {
+  //             ContainerSettings: { Container: 'M3U8', M3u8Settings: {} },
+  //             VideoDescription: {
+  //               CodecSettings: {
+  //                 Codec: 'H_264',
+  //                 H264Settings: {
+  //                   RateControlMode: 'CBR',
+  //                   Bitrate: 800000,
+  //                   CodecProfile: 'MAIN',
+  //                   Height: 360,
+  //                   Width: 640,
+  //                   MaxBitrate: 800000,
+  //                   SceneChangeDetect: 'TRANSITION_DETECTION',
+  //                 },
+  //               },
+  //             },
+  //             AudioDescriptions: [
+  //               {
+  //                 CodecSettings: {
+  //                   Codec: 'AAC',
+  //                   AacSettings: { Bitrate: 64000, CodingMode: 'CODING_MODE_2_0', SampleRate: 48000 },
+  //                 },
+  //               },
+  //             ],
+  //           },
+  //         ],
+  //       },
+  //     ],
+  //     AdAvailOffset: 0,
+  //     Inputs: [{ FileInput: inputS3Url }],
+  //   };
 
-    const createJobCmd = new CreateJobCommand({ Role: roleArn, Settings: jobSettings });
-    const res = await mc.send(createJobCmd);
-    this.logger.log(`MediaConvert job created: ${res.Job?.Id}`);
-    return res.Job;
-  }
+  //   const createJobCmd = new CreateJobCommand({ Role: roleArn, Settings: jobSettings });
+  //   const res = await mc.send(createJobCmd);
+  //   this.logger.log(`MediaConvert job created: ${res.Job?.Id}`);
+  //   return res.Job;
+  // }
 
   // ฟังก์ชันช่วยเหลือสำหรับการสร้าง video ID แบบสุ่ม (ถ้าต้องการใช้ในที่อื่นๆ)
   generateVideoId(): string {
