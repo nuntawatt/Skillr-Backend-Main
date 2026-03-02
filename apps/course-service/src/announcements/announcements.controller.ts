@@ -11,7 +11,7 @@ import { UpdateAnnouncementDto } from './dto/update-announcement.dto';
 import { AnnouncementResponseDto } from './dto/announcement-response.dto';
 import { AnnouncementsService } from './announcements.service';
 
-@ApiTags('Announcements')
+@ApiTags('Announcement')
 @Controller('announcements')
 export class AnnouncementsController {
   constructor(private readonly announcementsService: AnnouncementsService) { }

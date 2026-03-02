@@ -6,10 +6,10 @@ import { CurrentUserId } from './decorators/current-user-id.decorator';
 import { LearnerHomeService } from './learner-home.service';
 import { LearnerHomeResponseDto } from './dto/learner-home-response.dto';
 
-@ApiTags('LearnerHome')
+@ApiTags('Learner Home')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('learner/home')
+@Controller('learner-home')
 export class LearnerHomeController {
   constructor(
     private readonly learnerHomeService: LearnerHomeService,

@@ -5,12 +5,12 @@ import { ApiTags, ApiOperation, ApiParam, ApiResponse, ApiBearerAuth } from '@ne
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import { UserRole } from '@common/enums/user-role.enum';
 
-@ApiTags('Courses')
-// @ApiTags('Admin | Courses')
-// @UseGuards(JwtAuthGuard, RolesGuard)
-// @Roles(UserRole.ADMIN)
-@Controller('courses')
-export class CoursesController {
+@ApiTags('Admin | Course')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN)
+@Controller('admin/course')
+export class AdminCoursesController {
   constructor(private readonly coursesService: CoursesService) { }
 
   @Post()
@@ -22,6 +22,17 @@ export class CoursesController {
   @ApiResponse({ status: 500, description: 'Internal server error' })
   create(@Body() dto: CreateCourseDto): Promise<CourseResponseDto> {
     return this.coursesService.create(dto);
+  }
+
+  @Get(':id/structure')
+  @ApiOperation({ summary: 'ดึงโครงสร้างคอร์สแบบ nested (รวม draft/unpublished)' })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiResponse({ status: 200, description: 'Course structure retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Course not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  getStructure(@Param('id', ParseIntPipe) id: number): Promise<CourseStructureResponseDto> {
+    return this.coursesService.getStructureAdmin(id);
   }
 
   @Get()
@@ -45,18 +56,6 @@ export class CoursesController {
   @ApiResponse({ status: 500, description: 'Internal server error' })
   findOne(@Param('id', ParseIntPipe) id: number): Promise<CourseResponseDto> {
     return this.coursesService.findOne(id);
-  }
-
-  @Get(':id/structure')
-  @ApiOperation({ summary: 'ดึงโครงสร้างแบบ nested ทั้งหมดของคอร์ส' })
-  @ApiParam({ name: 'id', type: Number })
-  @ApiResponse({ status: 200, description: 'Course structure retrieved successfully', type: CourseStructureResponseDto })
-  @ApiResponse({ status: 400, description: 'Invalid course ID' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Course not found' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  getStructure(@Param('id', ParseIntPipe) id: number): Promise<CourseStructureResponseDto> {
-    return this.coursesService.getStructure(id);
   }
 
   @Patch(':id')

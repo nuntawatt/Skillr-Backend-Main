@@ -24,7 +24,7 @@ import { NotificationsService } from './notifications.service';
 import { PaginatedNotificationsDto } from './dto/paginated-notifications.dto';
 import { NotificationResponseDto } from './dto/notification-response.dto';
 
-@ApiTags('Notifications')
+@ApiTags('Notification')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('notifications')

@@ -5,8 +5,8 @@ import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiParam, ApiResponse } fr
 
 import { MediaImagesService } from './media-images.service';
 
-@ApiTags('Media Images')
-@Controller('media/images')
+@ApiTags('Upload | Image')
+@Controller('media/image')
 export class MediaImagesController {
   constructor(private readonly svc: MediaImagesService) { }
 

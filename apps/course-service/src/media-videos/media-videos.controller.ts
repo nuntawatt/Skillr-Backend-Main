@@ -1,17 +1,15 @@
 import { Body, Controller, Post, Req, UploadedFile, UseInterceptors, Get, Param, Delete } from '@nestjs/common';
-// import { FileInterceptor } from '@nestjs/platform-express';
-
-import * as multer from 'multer';
 import { MediaVideosService } from './media-videos.service';
-// import { CreateVideoUploadDto } from './dto/create-video-upload.dto';
 import { CreateVideoPresignDto } from './dto/create-video-presign.dto';
-
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam } from '@nestjs/swagger';
+
+// import { FileInterceptor } from '@nestjs/platform-express';
+// import * as multer from 'multer';
+// import { CreateVideoUploadDto } from './dto/create-video-upload.dto';
 // import type { AuthUser } from '@auth';
 
-
-@ApiTags('Media Videos')
-@Controller('media/videos')
+@ApiTags('Upload | Video')
+@Controller('media/video')
 export class MediaVideosController {
   constructor(private readonly svc: MediaVideosService) { }
 

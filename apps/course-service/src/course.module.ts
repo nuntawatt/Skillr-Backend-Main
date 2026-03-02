@@ -9,15 +9,22 @@ import { AuthLibModule } from '@auth/auth-lib.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
 
 // Controllers
-import { CoursesController } from './courses/courses.controller';
-import { LevelsController } from './levels/levels.controller';
-import { ChaptersController } from './chapters/chapters.controller';
-import { LessonsController } from './lessons/lessons.controller';
-import { ArticlesController } from './articles/articles.controller';
+import { AdminCoursesController } from './courses/courses-admin.controller';
+import { LevelsAdminController } from './levels/levels-admin.controller';
+import { LevelsStudentController } from './levels/levels-student.controller';
+import { ChaptersAdminController } from './chapters/chapters-admin.controller';
+import { ChaptersStudentController } from './chapters/chapters-student.controller';
+import { LessonsAdminController } from './lessons/lessons-admin.controller';
+import { LessonsStudentController } from './lessons/lessons-student.controller';
+import { ArticlesAdminController } from './articles/articles-admin.controller';
+import { ArticlesStudentController } from './articles/articles-student.controller';
+import { QuizAdminController } from './quizs/quiz-admin.controller';
+import { QuizStudentController } from './quizs/quiz-student.controller';
+import { CheckpointAdminController } from './quizs/checkpoint-admin.controller';
+import { CheckpointStudentController } from './quizs/checkpoint-student.controller';
 import { ProgressController } from './progress/progress.controller';
-import { QuizAdminController, QuizController } from './quizs/quiz.controller';
 import { StreakController } from './streaks/streak.controller';
-import { AdminCoursesController } from './courses/admin-courses.controller';
+import { StudentCoursesController } from './courses/courses-student.controller';
 
 // Services
 import { CoursesService } from './courses/courses.service';
@@ -96,16 +103,22 @@ const isTest = process.env.NODE_ENV === 'test';
   ],
 
   controllers: [
-    CoursesController,
-    LevelsController,
-    ChaptersController,
-    LessonsController,
-    ArticlesController,
+    AdminCoursesController,
+    StudentCoursesController,
+    LevelsAdminController,
+    LevelsStudentController,
+    ChaptersAdminController,
+    ChaptersStudentController,
+    LessonsAdminController,
+    LessonsStudentController,
+    ArticlesAdminController,
+    ArticlesStudentController,
+    QuizAdminController,
+    QuizStudentController,
+    CheckpointAdminController,
+    CheckpointStudentController,
     ProgressController,
     StreakController,
-    QuizController,
-    QuizAdminController,
-    AdminCoursesController,
   ],
 
   providers: [

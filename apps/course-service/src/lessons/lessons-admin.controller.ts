@@ -1,16 +1,16 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { LessonsService } from './lessons.service';
 import { CreateLessonDto, UpdateLessonDto, LessonResponseDto, ReorderLessonsDto } from './dto/lesson';
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import { UserRole } from '@common/enums/user-role.enum';
 
-@ApiTags('Lessons')
-// @ApiTags('Admin | Lessons')
-// @UseGuards(JwtAuthGuard, RolesGuard)
-// @Roles(UserRole.ADMIN)
-@Controller('lessons')
-export class LessonsController {
+@ApiTags('Admin | Lesson')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN)
+@Controller('admin/lesson')
+export class LessonsAdminController {
   constructor(private readonly lessonsService: LessonsService) { }
 
   @Post()
@@ -77,8 +77,6 @@ export class LessonsController {
     return this.lessonsService.create(dto);
   }
 
-  // @ApiTags('Student | Lessons')
-  // @UseGuards(JwtAuthGuard)
   @Get()
   @ApiOperation({ summary: 'ดึงบทเรียนทั้งหมดสำหรับบท' })
   @ApiQuery({ name: 'chapterId', required: true, type: Number })
@@ -91,8 +89,6 @@ export class LessonsController {
     return this.lessonsService.findByChapter(chapterId);
   }
 
-  // @ApiTags('Student | Lessons')
-  // @UseGuards(JwtAuthGuard)
   @Get(':id')
   @ApiOperation({ summary: 'ดึงบทเรียนตาม ID' })
   @ApiParam({ name: 'id', type: Number })
@@ -190,7 +186,7 @@ export class LessonsController {
       reorder: {
         value: {
           chapterId: 1,
-          lessonIds: [3, 1, 2, 4] // ลำดับใหม่ของบทเรียนในบทที่มี ID = 1
+          lessonIds: [3, 1, 2, 4]
         }
       }
     }

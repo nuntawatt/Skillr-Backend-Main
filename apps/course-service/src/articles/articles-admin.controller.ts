@@ -1,5 +1,5 @@
 import { Body, Controller, Post, Get, Param, Patch, Delete, ParseIntPipe, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiBody, ApiParam, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiBody, ApiParam, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { ArticlesService } from './articles.service';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { ArticleResponseDto } from './dto/article-response.dto';
@@ -7,12 +7,12 @@ import { UpdateArticleDto } from './dto';
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import { UserRole } from '@common/enums/user-role.enum';
 
-@ApiTags('Articles')
-// @ApiTags('Admin | Articles')
-// @UseGuards(JwtAuthGuard, RolesGuard)
-// @Roles(UserRole.ADMIN)
-@Controller('articles')
-export class ArticlesController {
+@ApiTags('Admin | Article')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN)
+@Controller('admin/article')
+export class ArticlesAdminController {
     constructor(private readonly svc: ArticlesService) { }
 
     @Post()
@@ -42,10 +42,47 @@ export class ArticlesController {
     })
     @ApiResponse({ status: 201, description: 'Article created successfully', type: ArticleResponseDto })
     @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 404, description: 'Lesson not found' })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     async create(@Body() body: CreateArticleDto) {
         return this.svc.create(body);
+    }
+
+    @Get()
+    @ApiOperation({ summary: 'ดึงบทความทั้งหมดพร้อมตัวกรองที่เลือกได้' })
+    @ApiResponse({ status: 200, description: 'Articles retrieved successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
+    async findAll(): Promise<ArticleResponseDto[]> {
+        return this.svc.findAll();
+    }
+
+    @Get(':id')
+    @ApiOperation({ summary: 'ดึงบทความตาม ID' })
+    @ApiParam({ name: 'id', type: 'number' })
+    @ApiResponse({ status: 200, description: 'Article retrieved successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Article not found' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    @ApiOkResponse({ type: ArticleResponseDto })
+    async findOne(@Param('id', ParseIntPipe) id: number) {
+        return this.svc.findOne(id);
+    }
+
+    @Get('lesson/:id')
+    @ApiOperation({ summary: 'ดึงบทความตาม lesson ID' })
+    @ApiParam({ name: 'id', description: 'Lesson id', type: 'number' })
+    @ApiResponse({ status: 200, description: 'Articles retrieved successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Lesson not found' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    @ApiOkResponse({ type: ArticleResponseDto, isArray: true })
+    async findByLesson(@Param('id', ParseIntPipe) lessonId: number) {
+        return this.svc.findByLesson(lessonId);
     }
 
     @Patch(':id')
@@ -54,6 +91,7 @@ export class ArticlesController {
     @ApiBody({ type: UpdateArticleDto })
     @ApiResponse({ status: 200, description: 'Article updated successfully', type: ArticleResponseDto })
     @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 404, description: 'Article not found' })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     async update(@Param('id', ParseIntPipe) id: number, @Body() body: UpdateArticleDto) {
@@ -63,50 +101,12 @@ export class ArticlesController {
     @Delete(':id')
     @ApiOperation({ summary: 'ลบบทความตาม ID' })
     @ApiParam({ name: 'id', type: 'number' })
-    @ApiOkResponse({ description: 'Article deleted successfully' })
+    @ApiResponse({ status: 200, description: 'Article deleted successfully' })
     @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 404, description: 'Article not found' })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     async remove(@Param('id', ParseIntPipe) id: number,) {
         return this.svc.remove(id);
-    }
-
-    // @ApiTags('Student | Articles')
-    // @UseGuards(JwtAuthGuard)
-    @Get()
-    @ApiOperation({ summary: 'ดึงบทความทั้งหมดพร้อมตัวกรองที่เลือกได้' })
-    @ApiResponse({ status: 200, description: 'Articles retrieved successfully' })
-    @ApiResponse({ status: 400, description: 'Bad Request' })
-    @ApiResponse({ status: 500, description: 'Internal server error' })
-    async findAll(): Promise<ArticleResponseDto[]> {
-        return this.svc.findAll();
-    }
-
-    // @ApiTags('Student | Articles')
-    // @UseGuards(JwtAuthGuard)
-    @Get(':id')
-    @ApiOperation({ summary: 'ดึงบทความตาม ID' })
-    @ApiParam({ name: 'id', type: 'number' })
-    @ApiResponse({ status: 200, description: 'Article retrieved successfully' })
-    @ApiResponse({ status: 400, description: 'Bad Request' })
-    @ApiResponse({ status: 404, description: 'Article not found' })
-    @ApiResponse({ status: 500, description: 'Internal Server Error' })
-    @ApiOkResponse({ type: ArticleResponseDto })
-    async findOne(@Param('id', ParseIntPipe) id: number) {
-        return this.svc.findOne(id);
-    }
-
-    // @ApiTags('Student | Articles')
-    // @UseGuards(JwtAuthGuard)
-    @Get('lesson/:id')
-    @ApiOperation({ summary: 'ดึงบทความตาม lesson ID' })
-    @ApiParam({ name: 'id', description: 'Lesson id', type: 'number' })
-    @ApiResponse({ status: 200, description: 'Articles retrieved successfully' })
-    @ApiResponse({ status: 400, description: 'Bad Request' })
-    @ApiResponse({ status: 404, description: 'Lesson not found' })
-    @ApiResponse({ status: 500, description: 'Internal Server Error' })
-    @ApiOkResponse({ type: ArticleResponseDto, isArray: true })
-    async findByLesson(@Param('id', ParseIntPipe) lessonId: number) {
-        return this.svc.findByLesson(lessonId);
     }
 }

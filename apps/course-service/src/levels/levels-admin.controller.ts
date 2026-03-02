@@ -1,16 +1,16 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, ParseIntPipe, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { LevelsService } from './levels.service';
 import { CreateLevelDto, UpdateLevelDto, LevelResponseDto, ReorderLevelsDto } from './dto';
 import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import { UserRole } from '@common/enums/user-role.enum';
 
-@ApiTags('Levels')
-// @ApiTags('Admin | Levels')
-// @UseGuards(JwtAuthGuard, RolesGuard)
-// @Roles(UserRole.ADMIN)
-@Controller('levels')
-export class LevelsController {
+@ApiTags('Admin | Level')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN)
+@Controller('admin/level')
+export class LevelsAdminController {
     constructor(private readonly levelsService: LevelsService) { }
 
     @Post()
@@ -39,8 +39,6 @@ export class LevelsController {
         return this.levelsService.create(dto);
     }
 
-    // @ApiTags('Student | Levels')
-    // @UseGuards(JwtAuthGuard)
     @Get()
     @ApiOperation({ summary: 'ดึงระดับทั้งหมดสำหรับคอร์ส' })
     @ApiQuery({ name: 'course_id', required: true, type: Number })
@@ -53,8 +51,6 @@ export class LevelsController {
         return this.levelsService.findByCourse(course_id);
     }
 
-    // @ApiTags('Student | Levels')
-    // @UseGuards(JwtAuthGuard)
     @Get(':id')
     @ApiOperation({ summary: 'ดึงระดับตาม ID' })
     @ApiParam({ name: 'id', type: Number })
@@ -100,7 +96,7 @@ export class LevelsController {
                 summary: 'Reorder levels example',
                 value: {
                     course_id: 1,
-                    level_ids: [3, 1, 2] // ระบุลำดับใหม่ของ level_id ทั้งหมดในคอร์สนี้ (ต้องครบทุก level_id ของคอร์สนี้)
+                    level_ids: [3, 1, 2]
                 },
             },
         },

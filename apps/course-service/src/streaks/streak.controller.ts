@@ -1,5 +1,5 @@
-import { Controller, Get, Post, UseGuards, Body } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiOkResponse, ApiBearerAuth, ApiParam, ApiBody } from '@nestjs/swagger';
+import { Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@auth';
 import { CurrentUserId } from './decorators/current-user-id.decorator';
 import { StreakService } from './streak.service';
@@ -7,10 +7,10 @@ import { StreakResponseDto } from './dto/streak-response.dto';
 // import { TestBumpDto } from './dto/test-bump.dto';
 // import { getStreakColor } from './dto/streak-color.dto';
 
-@ApiTags('Streaks')
-@Controller('streaks')
-@UseGuards(JwtAuthGuard)
+@ApiTags('Streak')
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@Controller('streaks')
 export class StreakController {
   constructor(private readonly streakService: StreakService) { }
 
@@ -110,10 +110,10 @@ export class StreakController {
       }
     }
   })
-  @ApiResponse({status: 200, description: 'Get streak successfully' })
-  @ApiResponse({status: 404, description: 'Streak not found' })
-  @ApiResponse({status: 401, description: 'Unauthorized' })
-  @ApiResponse({status: 500, description: 'Internal server error' })
+  @ApiResponse({ status: 200, description: 'Get streak successfully' })
+  @ApiResponse({ status: 404, description: 'Streak not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   async getStreak(@CurrentUserId() userId: string): Promise<StreakResponseDto> {
     const { streak, color, isReward, isFlameOn } = await this.streakService.getStreak(userId);
     return {
@@ -129,14 +129,19 @@ export class StreakController {
   @Post('reward/shown')
   @ApiOperation({
     summary: 'ทำเครื่องหมายโมดอลรางวัลตามที่แสดง',
-    description: 'บันทึกว่าผู้ใช้ได้เห็น reward modal แล้วสำหรับวันนี้'
+    description: 'เรียก endpoint นี้เมื่อโมดอลรางวัลถูกแสดงแล้ว เพื่อให้ระบบไม่แสดงโมดอลซ้ำในวันเดียวกัน'
   })
-  @ApiResponse({status: 200,description: 'Success | Reward modal marked as shown'})
-  @ApiResponse({status: 401,description: 'Unauthorized'})
-  @ApiResponse({status: 404,description: 'Streak not found'})
-  @ApiResponse({status: 500,description: 'Internal server error'})
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {},
+    },
+  })
+  @ApiResponse({ status: 200, description: 'Success | Reward modal marked as shown' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Streak not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
   async markRewardShown(@CurrentUserId() userId: string): Promise<{ message: string }> {
-
     await this.streakService.markRewardShown(userId);
     return { message: 'Reward modal marked as shown' };
   }
