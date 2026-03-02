@@ -64,7 +64,7 @@ GOOGLE_CALLBACK_URL=http://localhost:3001/api/auth/google/callback
 
 ```
 skillr/
-  apps/   # auth, course, media, learning, payment
+  apps/   # auth-service, course-service, reward-service
   libs/   # common, config, auth, shared
 ```
 
@@ -99,6 +99,7 @@ pnpm install
 # run migrations (เลือก service ที่ต้องการ)
 pnpm run migration:run:auth
 pnpm run migration:run:course
+pnpm run migration:run:reward
 
 # start service
 pnpm run start:auth
@@ -123,12 +124,17 @@ GOOGLE_CALLBACK_URL=localhost:Port/auth/google/callback
 
 ## Docker / Compose
 
-Each service has its own `docker-compose.yaml` under `apps/<service>/`.
-
 Auth service:
 
 ```bash
-docker compose -f apps/auth-service/docker-compose.yaml up -d --build
+# Build and Start
+docker compose  up -d --build
+
+# Logs
+docker compose logs -f
+
+# Stop and Remove Volumes
+docker compose down -v
 ```
 
 - Postgres: `localhost:5430`
@@ -137,7 +143,14 @@ docker compose -f apps/auth-service/docker-compose.yaml up -d --build
 Course service:
 
 ```bash
-docker compose -f apps/course-service/docker-compose.yaml up -d --build
+# Build and Start
+docker compose  up -d --build
+
+# Logs
+docker compose logs -f
+
+# Stop and Remove Volumes
+docker compose down -v
 ```
 
 - Postgres: `localhost:5435`
@@ -146,19 +159,18 @@ docker compose -f apps/course-service/docker-compose.yaml up -d --build
 Reward service:
 
 ```bash
-docker compose -f apps/reward-service/docker-compose.yaml up -d --build
+# Build and Start
+docker compose  up -d --build
+
+# Logs
+docker compose logs -f
+
+# Stop and Remove Volumes
+docker compose down -v
 ```
 
 - Postgres: `localhost:5445`
 - API: `http://localhost:3003/api`
-
-Stop containers:
-
-```bash
-docker compose -f apps/auth-service/docker-compose.yaml down
-docker compose -f apps/course-service/docker-compose.yaml down
-docker compose -f apps/reward-service/docker-compose.yaml down
-```
 
 ## API / Swagger
 
@@ -181,12 +193,15 @@ Run migrations:
 ```bash
 pnpm run migration:run:auth
 pnpm run migration:run:course
+pnpm run migration:run:reward
 ```
 
 Generate migration (course service):
 
 ```bash
+pnpm run migration:generate:auth
 pnpm run migration:generate:course
+pnpm run migration:generate:reward
 ```
 
 ## Common Commands
@@ -204,12 +219,17 @@ Unit tests (runs all `*.spec.ts`):
 
 ```bash
 pnpm run test
+pnpm run test:auth
+pnpm run test:course
+pnpm run test:reward
 ```
 
 Run a specific spec file:
 
 ```bash
 pnpm jest apps/auth-service/src/.../something.spec.ts
+pnpm jest apps/course-service/src/.../something.spec.ts
+pnpm jest apps/reward-service/src/.../something.spec.ts
 ```
 
 E2E tests:
