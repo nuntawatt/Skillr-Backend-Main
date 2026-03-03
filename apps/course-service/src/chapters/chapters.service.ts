@@ -64,6 +64,15 @@ export class ChaptersService {
     return chapters.map((c) => this.toResponseDto(c));
   }
 
+  // ค้นหาบททั้งหมด
+  async findAll(): Promise<ChapterResponseDto[]> {
+    const chapters = await this.chapterRepository.find({
+      order: { chapter_orderIndex: 'ASC' },
+    });
+
+    return chapters.map((c) => this.toResponseDto(c));
+  }
+
   // ค้นหาบทโดยใช้ ID
   async findOne(id: number): Promise<ChapterResponseDto> {
     const chapter = await this.chapterRepository.findOne({

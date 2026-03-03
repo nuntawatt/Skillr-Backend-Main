@@ -25,6 +25,16 @@ export class ChaptersStudentController {
         return this.chaptersService.findByLevel(levelId);
     }
 
+    @Get('all')
+    @ApiOperation({ summary: 'ดึงบททั้งหมด' })
+    @ApiResponse({ status: 200, description: 'List of all chapters', type: ChapterResponseDto, isArray: true })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
+    findAll(): Promise<ChapterResponseDto[]> {
+        return this.chaptersService.findAll();
+    }
+
     @Get(':id')
     @ApiOperation({ summary: 'ดึงบทตาม ID' })
     @ApiParam({ name: 'id', type: Number })

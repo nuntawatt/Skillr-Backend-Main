@@ -51,6 +51,16 @@ export class LevelsAdminController {
         return this.levelsService.findByCourse(course_id);
     }
 
+    @Get('all')
+    @ApiOperation({ summary: 'ดึงระดับทั้งหมด' })
+    @ApiResponse({ status: 200, description: 'List of all levels', type: LevelResponseDto, isArray: true })
+    @ApiResponse({ status: 400, description: 'Invalid input data' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
+    findAll(): Promise<LevelResponseDto[]> {
+        return this.levelsService.findAll();
+    }
+
     @Get(':id')
     @ApiOperation({ summary: 'ดึงระดับตาม ID' })
     @ApiParam({ name: 'id', type: Number })

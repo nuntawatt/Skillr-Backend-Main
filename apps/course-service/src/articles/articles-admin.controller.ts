@@ -59,6 +59,8 @@ export class ArticlesAdminController {
         return this.svc.findAll();
     }
 
+    
+
     @Get(':id')
     @ApiOperation({ summary: 'ดึงบทความตาม ID' })
     @ApiParam({ name: 'id', type: 'number' })
