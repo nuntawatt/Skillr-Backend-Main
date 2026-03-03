@@ -89,6 +89,16 @@ export class LessonsAdminController {
     return this.lessonsService.findByChapter(chapterId);
   }
 
+  @Get('all')
+  @ApiOperation({ summary: 'ดึงบทเรียนทั้งหมด' })
+  @ApiResponse({ status: 200, description: 'List of all lessons', type: LessonResponseDto, isArray: true })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error' })
+  findAll(): Promise<LessonResponseDto[]> {
+    return this.lessonsService.findAll();
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'ดึงบทเรียนตาม ID' })
   @ApiParam({ name: 'id', type: Number })
