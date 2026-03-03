@@ -9,6 +9,7 @@ import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { JwtAuthGuard, CurrentUser } from '@auth';
 
 @ApiTags('Authentication')
+@ApiBearerAuth('access-token')
 @Controller('auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
@@ -37,8 +38,6 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Bad Request.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async login(@Body() loginDto: LoginDto) {
-
-    // คืน accessToken + refreshToken ให้ client เก็บเอง
     return this.authService.login(loginDto);
   }
 
@@ -50,6 +49,8 @@ export class AuthController {
     description: `เปลี่ยนเส้นทางผู้ใช้ไปที่ Google เพื่อทำการยืนยันตัวตน จุดเชื่อมต่อนี้จะไม่ส่งคืน Token ใด ๆ โดยตรง แต่จะเปลี่ยนเส้นทางผู้ใช้ไปที่หน้าการยืนยันตัวตนของ Google`
   })
   @ApiResponse({ status: 302, description: 'Redirect to Google OAuth consent screen' })
+  @ApiResponse({ status: 400, description: 'Bad Request.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async googleAuth() {
     // redirect ไปที่ Google
   }
@@ -60,13 +61,14 @@ export class AuthController {
   @ApiOperation({ summary: 'Google OAuth callback' })
   @ApiResponse({ status: 302, description: 'Redirect to frontend after successful authentication' })
   @ApiResponse({ status: 400, description: 'Bad Request.' })
+  @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async googleCallback(@CurrentUser() googleProfile: any, @Res() res: Response) {
 
     const result = await this.authService.googleLogin(googleProfile);
 
     const frontend = process.env.FRONTEND_URL;
     const accessToken = encodeURIComponent(result.tokens.accessToken);
-    
+
     // redirect กลับไปที่ frontend พร้อมกับ accessToken ใน query string
     return res.redirect(`${frontend}/google-callback?accessToken=${accessToken}`);
   }
@@ -82,10 +84,6 @@ export class AuthController {
   @ApiResponse({ status: 403, description: 'Forbidden (refresh token revoked)' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async refresh(@Body() dto: RefreshTokenDto) {
-    if (!dto.refreshToken || typeof dto.refreshToken !== 'string') {
-      throw new BadRequestException('refreshToken is required');
-    }
-
     return this.authService.refreshTokens(dto.refreshToken);
   }
 
@@ -93,7 +91,6 @@ export class AuthController {
   @Post('logout')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Logout (revoke refresh token)' })
   @ApiBody({ type: RefreshTokenDto })
   @ApiResponse({ status: 200, description: 'Logged out successfully.' })
@@ -101,12 +98,12 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Unauthorized (invalid access token)' })
   @ApiResponse({ status: 403, description: 'Forbidden (refresh token already revoked)' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
-  async logout(@Body() body: { refreshToken?: string }) {
-    if (!body.refreshToken || typeof body.refreshToken !== 'string') {
-      throw new BadRequestException('refreshToken is required');
-    }
+  async logout(
+    @CurrentUser('userId') userId: string,
+    @Body() dto: RefreshTokenDto
+  ) {
+    await this.authService.logout(userId, dto.refreshToken);
 
-    await this.authService.logout(body.refreshToken);
     return { message: 'Logged out successfully' };
   }
 
@@ -114,7 +111,6 @@ export class AuthController {
   @Post('logout-all')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  @ApiBearerAuth('access-token')
   @ApiResponse({ status: 200, description: 'Logged out from all devices successfully.' })
   @ApiResponse({ status: 400, description: 'Bad Request.' })
   @ApiResponse({ status: 401, description: 'Unauthorized (invalid access token)' })

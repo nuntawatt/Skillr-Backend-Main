@@ -21,10 +21,8 @@ export class UsersController {
     private readonly configService: ConfigService,
   ) { }
 
-  // =========================
-  // Profile
-  // =========================
 
+  // Profile
   @Get('profile')
   @ApiBearerAuth('access-token')
   @ApiOperation({ summary: 'Get current user profile' })
@@ -65,10 +63,7 @@ export class UsersController {
     return this.usersService.update(userId, dto);
   }
 
-  // =========================
   // Avatar Upload
-  // =========================
-
   @Get('avatar-options')
   @ApiOperation({ summary: 'Get available avatar options' })
   @ApiResponse({ status: 200, description: 'Avatar options retrieved successfully.' })

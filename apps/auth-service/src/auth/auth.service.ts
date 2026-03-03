@@ -153,45 +153,78 @@ export class AuthService {
     };
   }
 
-  // Refresh access token using refresh token
+  // Refresh token เพื่อขอ access token + refresh token ใหม่
   async refreshTokens(refreshTokenValue: string): Promise<TokenResponse> {
     const refreshTokenHash = this.hashRefreshToken(refreshTokenValue);
+
+    // console.log('Received refresh token:', refreshTokenValue);
+    // console.log('Hashed refresh token:', refreshTokenHash);
+
+    // ค้นหา session ที่ตรงกับ refresh token hash และโหลดข้อมูล user มาใช้ด้วย
     const session = await this.sessionRepository.findOne({
-      where: {
-        refreshTokenHash,
-        revokedAt: IsNull(),
-        expiresAt: MoreThan(new Date()), // ตรวจสอบว่า token ยังไม่หมดอายุ
-      },
-      relations: ['user']
+      where: { refreshTokenHash },
+      relations: ['user'],
     });
 
+    // console.log('Found session:', session);
+
     if (!session) {
-      throw new UnauthorizedException('Invalid or expired refresh token');
+      throw new UnauthorizedException('Invalid refresh token');
     }
 
-    // revoke the old session (rotate)
+    // ตรวจสอบว่า refresh token หมดอายุมั้ย ถ้าหมดอายุแล้วจะไม่สามารถใช้ refresh ได้
+    if (session.expiresAt < new Date()) {
+      throw new UnauthorizedException('Refresh token expired');
+    }
+
+    // ตรวจสอบว่า token นี้ถูก revoke ไปยัง
+    if (session.revokedAt) {
+      await this.revokeAllUserSessions(session.user.id);
+
+      throw new UnauthorizedException(
+        'Refresh token has been revoked. All sessions have been logged out.'
+      );
+    }
+
+    const user = session.user;
+
+    // ทำ Refresh Token Rotation และยกเลิก token เดิมทันที เพื่อป้องกัน replay attack
     session.revokedAt = new Date();
     await this.sessionRepository.save(session);
 
-    return this.generateTokens(session.user); // สร้าง token ใหม่
+    return this.generateTokens(user);
+  }
+
+  // Logout from current device
+  async logout(userId: string, refreshTokenValue: string): Promise<void> {
+    const refreshTokenHash = this.hashRefreshToken(refreshTokenValue);
+
+    // revoke เฉพาะ token ของ user คนนี้เท่านั้น
+    await this.sessionRepository.update(
+      {
+        userId,
+        refreshTokenHash,
+        revokedAt: IsNull()
+      },
+      {
+        revokedAt: new Date()
+      },
+    );
   }
 
   // Logout from all devices
   async logoutAll(userId: string): Promise<void> {
-    const result = await this.sessionRepository.update(
-      { userId, revokedAt: IsNull() },
-      { revokedAt: new Date() },
+    await this.sessionRepository.update(
+      {
+        userId,
+        revokedAt: IsNull()
+      },
+      {
+        revokedAt: new Date()
+      },
     );
   }
 
-  // Logout from current device
-  async logout(refreshTokenValue: string): Promise<void> {
-    const refreshTokenHash = this.hashRefreshToken(refreshTokenValue);
-    await this.sessionRepository.update(
-      { refreshTokenHash, revokedAt: IsNull() },
-      { revokedAt: new Date() },
-    );
-  }
 
   // Forgot password - generate OTP and send email
   async forgotPassword(email: string): Promise<{ message: string }> {
@@ -383,5 +416,17 @@ export class AuthService {
   private formatLockMessage(remainingMs: number): string {
     const secondsRemaining = Math.max(1, Math.ceil(remainingMs / 1000));
     return `Account locked. Please try again in ${secondsRemaining} seconds`;
+  }
+
+  private async revokeAllUserSessions(userId: string): Promise<void> {
+    await this.sessionRepository.update(
+      {
+        userId,
+        revokedAt: IsNull(),
+      },
+      {
+        revokedAt: new Date(),
+      },
+    );
   }
 }
