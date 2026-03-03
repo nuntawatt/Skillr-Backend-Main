@@ -124,9 +124,8 @@ export class AdminController {
       createRewardDto,
       imgUrl,
     );
-    return {
-      message: 'Create reward success',
-    };
+
+    return rewardCreated;
   }
 
   @Patch('reward/update/:id')
@@ -161,9 +160,7 @@ export class AdminController {
       imageUrl,
     );
 
-    return {
-      message: 'Update reward success',
-    };
+    return updatedReward;
   }
 
   @Delete('reward/delete/:id')
@@ -176,8 +173,6 @@ export class AdminController {
   async deleteReward(@Param('id', ParseIntPipe) id: number) {
     const removeReward = await this.RewardAdminService.removeRewardById(id);
 
-    return {
-      message: 'Remove reward success',
-    };
+    return removeReward;
   }
 }

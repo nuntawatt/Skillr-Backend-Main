@@ -135,7 +135,7 @@ export class RewardAdminService {
 
     // สร้าง storage key แบบ unique (คุณสามารถเปลี่ยน structure ได้)
     const uuid = randomUUID();
-    const storageKey = `rewards/${uuid}${(file.originalname?.match(/\.[^.]+$/) ?? [''])[0]}`;
+    const storageKey = `rewards/${uuid}`;
 
     // อัพโหลดไฟล์ไปยัง storage provider s3 หรือตามที่คุณตั้งค่าไว้
     await this.aws.putObject(bucket, storageKey, file.buffer, file.size, file.mimetype);
