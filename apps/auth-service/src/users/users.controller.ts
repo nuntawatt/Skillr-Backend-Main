@@ -1,6 +1,5 @@
 import { Controller, Get, Patch, Body, UseGuards, UseInterceptors, UploadedFile, BadRequestException, Param, Headers } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import * as multer from 'multer';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 
@@ -9,6 +8,7 @@ import { UpdateUserDto } from './dto';
 import { JwtAuthGuard, CurrentUserId } from '@auth';
 
 import { ApiTags, ApiBearerAuth, ApiConsumes, ApiBody, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { avatarUploadOptions } from './avatar-upload.config';
 
 @ApiTags('User')
 @ApiBearerAuth('access-token')
@@ -88,27 +88,11 @@ export class UsersController {
       },
     },
   })
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: multer.memoryStorage(),
-      limits: { fileSize: 5 * 1024 * 1024 },
-      fileFilter: (req, file, cb) => {
-        const allowed = ['image/jpeg', 'image/png'];
-        if (!allowed.includes(file.mimetype)) {
-          return cb(
-            new BadRequestException('Only JPG and PNG are allowed'),
-            false,
-          );
-        }
-        cb(null, true);
-      },
-    }),
-  )
+  @UseInterceptors(FileInterceptor('file', avatarUploadOptions))
   async uploadAvatar(
     @CurrentUserId() userId: string,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    if (!file) throw new BadRequestException('File is required');
     return this.usersService.uploadAvatar(userId, file);
   }
 

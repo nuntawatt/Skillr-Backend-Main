@@ -1,9 +1,9 @@
-import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException, Logger, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import * as argon2 from 'argon2';
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
 
@@ -22,6 +22,7 @@ import { count } from 'console';
 @Injectable()
 export class UsersService {
   private readonly s3Client: S3Client;
+  private readonly logger = new Logger(UsersService.name);
 
   private readonly avatarOptions = [
     'https://cdn.skllracademy.com/images/16302a9b-a621-4718-9f9c-7d2e33538625',
@@ -246,30 +247,69 @@ export class UsersService {
 
   // อัปโหลดหรืออัปเดต avatar ของผู้ใช้ (ใช้เมื่อผู้ใช้อัปโหลดรูปโปรไฟล์ใหม่)
   async uploadAvatar(id: string, file: Express.Multer.File): Promise<User> {
-    const user = await this.findById(id);
 
+    // validate file
     if (!file?.buffer) {
-      throw new BadRequestException('Invalid file');
+      throw new BadRequestException('File is required');
     }
 
+    const allowedTypes = ['image/jpeg', 'image/png'];
+    if (!allowedTypes.includes(file.mimetype)) {
+      throw new BadRequestException('Invalid file type');
+    }
+
+    // find user
+    const user = await this.findById(id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const oldMediaId = user.avatar_media_id;
+
+    // generate new avatar to S3
     const mediaId = randomUUID();
     const key = `profile/${mediaId}`;
 
-    await this.s3Client.send(
-      new PutObjectCommand({
-        Bucket: this.getBucket(),
-        Key: key,
-        Body: file.buffer,
-        ContentType: file.mimetype,
-      }),
-    );
+    // upload new avatar to S3
+    try {
+      await this.s3Client.send(
+        new PutObjectCommand({
+          Bucket: this.getBucket(),
+          Key: key,
+          Body: file.buffer,
+          ContentType: file.mimetype,
+          CacheControl: 'public, max-age=31536000', // 1 year cache
+        }),
+      );
+    } catch (err) {
+      this.logger.error('S3 upload failed', err);
+      throw new InternalServerErrorException('Failed to upload avatar');
+    }
 
+    // update database
     user.avatar_media_id = mediaId;
     user.avatar = await this.getAvatarPresignedUrl(mediaId);
 
-    return this.userRepo.save(user);
+    await this.userRepo.save(user);
+
+    // Delete old avatar (soft-fail)
+    if (oldMediaId) {
+      try {
+        await this.s3Client.send(
+          new DeleteObjectCommand({
+            Bucket: this.getBucket(),
+            Key: `profile/${oldMediaId}`,
+          }),
+        );
+      } catch (err) {
+        this.logger.warn(`Failed to delete old avatar: ${oldMediaId}`);
+      }
+    }
+
+    return user;
   }
 
+  // ดึงข้อมูลโปรไฟล์ของผู้ใช้รวมถึง XP และ streak (ใช้เมื่อแอปต้องการแสดงข้อมูลโปรไฟล์ที่ครบถ้วน)
   async getStudentProfile(userId: string) {
     const user = await this.findById(userId);
 
@@ -297,6 +337,7 @@ export class UsersService {
     };
   }
 
+  // ดึงรายชื่อคอร์สที่ผู้ใช้เรียนจบแล้ว (ใช้เมื่อแอปต้องการแสดงคอร์สที่ผู้ใช้เรียนจบในโปรไฟล์)
   async getAllCompleteCourse(userId: string) {
     const user = await this.findById(userId);
 
@@ -304,58 +345,6 @@ export class UsersService {
       throw new NotFoundException('User not found');
     }
 
-    //   const relation = await this.completeCourseRepo.find({
-    //     where: { userId: userId, progressPercent: 100 },
-    //   });
-
-    //   if(!relation){
-    //     throw new NotFoundException('Complete course not found');
-    //   }
-    //   console.log('relation pass');
-
-    //   const lesson = await this.completeCourseRepo.find({
-    //     where: { userId: userId, progressPercent: 100 },
-    //     relations: {
-    //       lesson: {},
-    //     },
-    //   });
-
-    //   if(!lesson){
-    //     throw new NotFoundException('Complete lesson not found');
-    //   }
-    //   console.log('lesson pass',);
-
-    // const chapterIds = lesson.map((l) => l.lesson.chapter_id);
-
-    // const chapter = await this.chapterRepo.find({
-    //   where: {
-    //     levelId: In(chapterIds),
-    //   },
-    // });
-    // if(!chapter){
-    //   throw new NotFoundException('Complete chapter not found');
-    // }
-    // console.log('chapter pass',);
-    // const levelIds = chapter.map((c) => c.levelId);
-    // const level = await this.levelRepo.find({
-    //   where: {
-    //     course_id: In(levelIds),
-    //   }
-    // });
-    // if(!level){
-    //   throw new NotFoundException('Complete level not found');
-    // }
-    // console.log('level pass',);
-    // const courseIds = level.map((l) => l.course_id);
-    // const course = await this.courseRepo.find({
-    //   where: {
-    //     course_id: In(courseIds),
-    //   }
-    // });
-    // if(!course){
-    //   throw new NotFoundException('Complete course not found');
-    // }
-    // console.log('course pass',);
     const completeCourse = await this.completeCourseRepo.find({
       where: { userId: userId, progressPercent: 100 },
       relations: {
@@ -368,7 +357,6 @@ export class UsersService {
         },
       },
     });
-
 
     return {
       completeCourse:
@@ -393,9 +381,7 @@ export class UsersService {
     const cloudFront = this.config.get<string>('AWS_CLOUDFRONT_DOMAIN');
 
     if (cloudFront) {
-      const domain = cloudFront.startsWith('http')
-        ? cloudFront
-        : `https://${cloudFront}`;
+      const domain = `https://${cloudFront}`;
       return `${domain}/${key}`;
     }
 
