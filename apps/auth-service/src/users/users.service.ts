@@ -363,8 +363,7 @@ export class UsersService {
         completeCourse?.map((item) => ({
           lesson_progress_id: item.lessonProgressId,
           lessong_id: item.lessonId,
-          course_image:
-            item.lesson?.chapter?.level?.course?.course_imageUrl ?? null,
+          course_image: item.lesson?.chapter?.level?.course?.course_imageUrl ?? null,
           lesson: item.lesson?.lesson_title ?? null,
           lesson_description: item.lesson?.lesson_description ?? null,
           lesson_type: item.lesson?.lesson_type ?? null,
@@ -375,24 +374,13 @@ export class UsersService {
   }
 
   // ดึง URL สำหรับดาวน์โหลด avatar ของผู้ใช้ (ใช้เมื่อแอปต้องการแสดงรูปโปรไฟล์)
-  async getAvatarPresignedUrl(mediaId: string): Promise<string> {
+  async getAvatarPresignedUrl(mediaId: string) {
     const key = `profile/${mediaId}`;
+    const presign_url = `https://${process.env.AWS_CLOUDFRONT_DOMAIN}/${key}`;
 
-    const cloudFront = this.config.get<string>('AWS_CLOUDFRONT_DOMAIN');
+    // console.log('presigned URL : ', presign_url);
 
-    if (cloudFront) {
-      const domain = `https://${cloudFront}`;
-      return `${domain}/${key}`;
-    }
-
-    return getSignedUrl(
-      this.s3Client,
-      new GetObjectCommand({
-        Bucket: this.getBucket(),
-        Key: key,
-      }),
-      { expiresIn: 900 },
-    );
+    return presign_url;
   }
 
   // =====================================================

@@ -96,7 +96,6 @@ export class UsersController {
     return this.usersService.uploadAvatar(userId, file);
   }
 
-  
   @Get('avatar/:id')
   @ApiOperation({ summary: 'Get user avatar by ID' })
   @ApiResponse({ status: 200, description: 'User avatar retrieved successfully.' })
@@ -104,7 +103,7 @@ export class UsersController {
   @ApiResponse({ status: 404, description: 'User not found.' })
   @ApiResponse({ status: 500, description: 'Internal Server Error.' })
   async getAvatar(@Param('id') id: string) {
-    const url = await this.usersService.getAvatarPresignedUrl(id);
-    return { url };
+     const presign = await this.usersService.getAvatarPresignedUrl(id);
+     return { success: true, avatar_url: presign };
   }
 }
