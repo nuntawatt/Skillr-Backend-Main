@@ -13,6 +13,16 @@ import { CourseResponseDto, CourseStructureResponseDto } from './dto';
 export class StudentCoursesController {
     constructor(private readonly coursesService: CoursesService) { }
 
+    @Get()
+    @ApiOperation({ summary: 'ดึงข้อมูลคอร์สทั้งหมด' })
+    @ApiResponse({ status: 200, description: 'Courses retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Courses not found' })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
+    findAll(): Promise<CourseResponseDto[]> {
+        return this.coursesService.findAll();
+    }
+
     @Get(':id')
     @ApiOperation({ summary: 'ดึงข้อมูลคอร์สด้วย ID' })
     @ApiParam({ name: 'id', type: Number })

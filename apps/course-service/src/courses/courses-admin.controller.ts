@@ -24,17 +24,6 @@ export class AdminCoursesController {
     return this.coursesService.create(dto);
   }
 
-  @Get(':id/structure')
-  @ApiOperation({ summary: 'ดึงโครงสร้างคอร์สแบบ nested (รวม draft/unpublished)' })
-  @ApiParam({ name: 'id', type: Number })
-  @ApiResponse({ status: 200, description: 'Course structure retrieved successfully' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Course not found' })
-  @ApiResponse({ status: 500, description: 'Internal server error' })
-  getStructure(@Param('id', ParseIntPipe) id: number): Promise<CourseStructureResponseDto> {
-    return this.coursesService.getStructureAdmin(id);
-  }
-
   @Get()
   @ApiOperation({ summary: 'ดึงข้อมูลคอร์สทั้งหมดพร้อมตัวกรองที่เลือกได้' })
   @ApiResponse({ status: 200, description: 'List of courses retrieved successfully', type: [CourseResponseDto] })
@@ -56,6 +45,17 @@ export class AdminCoursesController {
   @ApiResponse({ status: 500, description: 'Internal server error' })
   findOne(@Param('id', ParseIntPipe) id: number): Promise<CourseResponseDto> {
     return this.coursesService.findOne(id);
+  }
+  
+  @Get(':id/structure')
+  @ApiOperation({ summary: 'ดึงโครงสร้างคอร์สแบบ nested (รวม draft/unpublished)' })
+  @ApiParam({ name: 'id', type: Number })
+  @ApiResponse({ status: 200, description: 'Course structure retrieved successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'Course not found' })
+  @ApiResponse({ status: 500, description: 'Internal server error' })
+  getStructure(@Param('id', ParseIntPipe) id: number): Promise<CourseStructureResponseDto> {
+    return this.coursesService.getStructureAdmin(id);
   }
 
   @Patch(':id')

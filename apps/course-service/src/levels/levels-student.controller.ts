@@ -25,6 +25,17 @@ export class LevelsStudentController {
         return this.levelsService.findByCourse(course_id);
     }
 
+    @Get('all')
+    @ApiOperation({ summary: 'ดึงระดับทั้งหมด' })
+    @ApiResponse({ status: 200, description: 'List of all levels', type: LevelResponseDto, isArray: true })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Levels not found' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    findAll(): Promise<LevelResponseDto[]> {
+        return this.levelsService.findAll();
+    }
+
     @Get(':id')
     @ApiOperation({ summary: 'ดึงระดับตาม ID' })
     @ApiParam({ name: 'id', type: Number })

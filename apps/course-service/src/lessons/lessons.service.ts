@@ -95,6 +95,14 @@ export class LessonsService {
     return Promise.all(lessons.map((l) => this.toResponseDto(l)));
   }
 
+  async findAll(): Promise<LessonResponseDto[]> {
+    const lessons = await this.lessonRepository.find({
+      order: { orderIndex: 'ASC' },
+    });
+
+    return Promise.all(lessons.map((l) => this.toResponseDto(l)));
+  }
+
   async findOne(id: number): Promise<LessonResponseDto> {
     const lesson = await this.lessonRepository.findOne({ where: { lesson_id: id } });
 

@@ -53,6 +53,14 @@ export class LevelsService {
     return levels.map((l) => this.toResponseDto(l));
   }
 
+  async findAll(): Promise<LevelResponseDto[]> {
+    const levels = await this.levelRepository.find({
+      order: { level_orderIndex: 'ASC' },
+    });
+
+    return levels.map((l) => this.toResponseDto(l));
+  }
+
   async findOne(id: number): Promise<LevelResponseDto> {
     const level = await this.levelRepository.findOne({ where: { level_id: id } });
 

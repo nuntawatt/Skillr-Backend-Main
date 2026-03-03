@@ -13,6 +13,18 @@ import { UserRole } from '@common/enums/user-role.enum';
 export class ArticlesStudentController {
     constructor(private readonly svc: ArticlesService) { }
 
+    @Get()
+    @ApiOperation({ summary: 'ดึงบทความทั้งหมด' })
+    @ApiResponse({ status: 200, description: 'Articles retrieved successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Articles not found' })
+    @ApiResponse({ status: 500, description: 'Internal Server Error' })
+    @ApiOkResponse({ type: ArticleResponseDto, isArray: true })
+    async findAll() {
+        return this.svc.findAll();
+    }
+
     @Get(':id')
     @ApiOperation({ summary: 'ดึงบทความตาม ID' })
     @ApiParam({ name: 'id', type: 'number' })
