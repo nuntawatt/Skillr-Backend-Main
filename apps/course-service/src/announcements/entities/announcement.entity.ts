@@ -22,10 +22,10 @@ export class Announcement {
   @Column({ name: 'priority', type: 'int', default: 0 })
   priority: number;
 
-  @Column({ name: 'start_date', type: 'timestamptz', nullable: true })
+  @Column({ name: 'start_date', type: 'timestamp', nullable: true })
   startDate?: Date | null;
 
-  @Column({ name: 'end_date', type: 'timestamptz', nullable: true })
+  @Column({ name: 'end_date', type: 'timestamp', nullable: true })
   endDate?: Date | null;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })

@@ -4,20 +4,20 @@ export class AnnouncementResponseDto {
   @ApiProperty({ description: 'รหัสป้ายประกาศ', example: 1 })
   announcement_id: number;
 
-  @ApiProperty({ 
-    description: 'หัวข้อป้ายประกาศ', 
-    example: '🔥 เปิดคอร์สใหม่! React Advanced 2025' 
+  @ApiProperty({
+    description: 'หัวข้อป้ายประกาศ',
+    example: '🔥 เปิดคอร์สใหม่! React Advanced 2025'
   })
   title: string;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'URL รูปภาพป้ายประกาศ (จาก CDN)',
     example: 'https://cdn.example.com/banners/react-course-2025.jpg',
     nullable: true
   })
   imageUrl?: string | null;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'ลิงก์เมื่อกดป้าย (internal path หรือ external URL)',
     example: '/courses/react-advanced-2025',
     nullable: true
@@ -30,14 +30,14 @@ export class AnnouncementResponseDto {
   @ApiProperty({ description: 'ลำดับความสำคัญ', example: 10 })
   priority: number;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'วันที่เริ่มแสดง',
     example: '2025-02-20T00:00:00Z',
     nullable: true
   })
   startDate?: Date | null;
 
-  @ApiPropertyOptional({ 
+  @ApiPropertyOptional({
     description: 'วันที่สิ้นสุดการแสดง',
     example: '2025-03-20T23:59:59Z',
     nullable: true

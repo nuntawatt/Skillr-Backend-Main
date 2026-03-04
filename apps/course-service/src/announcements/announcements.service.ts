@@ -56,7 +56,7 @@ export class AnnouncementsService {
   // function ตรวจสอบและอัปเดตสถานะของป้ายประกาศตามวันที่และเวลาปัจจุบัน
   @Cron(CronExpression.EVERY_MINUTE)
   async syncAnnouncementStatusByDate(): Promise<void> {
-    const now = new Date();
+    const nowExpr = "(NOW() AT TIME ZONE 'UTC')";
 
     // เปิดประกาศที่ถึงเวลาเปิดและยังไม่หมดอายุ
     const activatedResult = await this.announcementRepository
@@ -65,10 +65,10 @@ export class AnnouncementsService {
       .set({ activeStatus: true })
       .where('active_status = :active', { active: false })
       .andWhere('start_date IS NOT NULL')
-      .andWhere('start_date <= :now', { now })
+      .andWhere(`start_date <= ${nowExpr}`)
       .andWhere(
         new Brackets((qb) => {
-          qb.where('end_date IS NULL').orWhere('end_date >= :now', { now: now.toISOString() });
+          qb.where('end_date IS NULL').orWhere(`end_date >= ${nowExpr}`);
         }),
       )
       .execute();
@@ -86,8 +86,8 @@ export class AnnouncementsService {
       .where('active_status = :active', { active: true })
       .andWhere(
         new Brackets((qb) => {
-          qb.where('start_date IS NOT NULL AND start_date > :now', { now })
-            .orWhere('end_date IS NOT NULL AND end_date < :now', { now });
+          qb.where(`start_date IS NOT NULL AND start_date > ${nowExpr}`)
+            .orWhere(`end_date IS NOT NULL AND end_date < ${nowExpr}`);
         }),
       )
       .execute();
@@ -114,18 +114,18 @@ export class AnnouncementsService {
 
   // ดึงป้ายประกาศที่ active และอยู่ในช่วงเวลาที่กำหนด พร้อม placeholder image ถ้าไม่มีรูปภาพ
   async findActive(limit = 3): Promise<AnnouncementResponseDto[]> {
-    const now = new Date();
+    const nowExpr = "(NOW() AT TIME ZONE 'UTC')";
 
     const list = await this.announcementRepository
       .createQueryBuilder('a')
       .where('a.active_status = :active', { active: true })
       .andWhere(new Brackets((qb) => {
-        qb.where('a.start_date IS NULL').orWhere('a.start_date <= :now', { now });
+        qb.where('a.start_date IS NULL').orWhere(`a.start_date <= ${nowExpr}`);
       }),
       )
       .andWhere(
         new Brackets((qb) => {
-          qb.where('a.end_date IS NULL').orWhere('a.end_date >= :now', { now: now.toISOString() });
+          qb.where('a.end_date IS NULL').orWhere(`a.end_date >= ${nowExpr}`);
         }),
       )
       .orderBy('a.priority', 'DESC')
