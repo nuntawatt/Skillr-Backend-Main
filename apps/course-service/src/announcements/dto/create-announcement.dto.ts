@@ -52,7 +52,7 @@ export class CreateAnnouncementDto {
   })
   @IsDateString()
   @IsOptional()
-  date_time?: string;
+  startDate?: string;
 
   @ApiPropertyOptional({
     description: 'วันที่สิ้นสุดการแสดง (ISO 8601)',
@@ -60,5 +60,5 @@ export class CreateAnnouncementDto {
   })
   @IsDateString()
   @IsOptional()
-  end_date?: string;
+  endDate?: string;
 }

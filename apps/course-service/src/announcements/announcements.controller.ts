@@ -43,8 +43,8 @@ export class AnnouncementsController {
               deepLink: { type: 'string', example: '/courses/react-advanced-2025' },
               activeStatus: { type: 'boolean', example: true },
               priority: { type: 'number', example: 10 },
-              date_time: { type: 'string', example: '2025-02-20T00:00:00Z', nullable: true },
-              end_date: { type: 'string', example: '2025-03-20T23:59:59Z', nullable: true },
+              startDate: { type: 'string', example: '2025-02-20T00:00:00Z', nullable: true },
+              endDate: { type: 'string', example: '2025-03-20T23:59:59Z', nullable: true },
               createdAt: { type: 'string', example: '2025-02-17T10:00:00Z' },
               updatedAt: { type: 'string', example: '2025-02-17T10:00:00Z' },
             },
@@ -178,7 +178,7 @@ export class AnnouncementsController {
   })
   @ApiResponse({
     status: 200,
-    description: '**Force sync สำเร็จ (Admin เท่านั้น)**\n\n✅ สำเร็จ - sync สถานะป้ายประกาศตาม date_time/end_date เรียบร้อย\n📊 จะอัปเดต activeStatus ของป้ายที่ถึงเวลาแล้วทั้งหมด',
+    description: '**Force sync สำเร็จ (Admin เท่านั้น)**\n\n✅ สำเร็จ - sync สถานะป้ายประกาศตาม startDate/endDate เรียบร้อย\n📊 จะอัปเดต activeStatus ของป้ายที่ถึงเวลาแล้วทั้งหมด',
     schema: {
       type: 'object',
       properties: {

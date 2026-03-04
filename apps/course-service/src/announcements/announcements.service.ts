@@ -25,8 +25,8 @@ export class AnnouncementsService {
       deepLink: announcement.deepLink ?? null,
       activeStatus: announcement.activeStatus,
       priority: announcement.priority,
-      date_time: announcement.startDate ?? null,
-      end_date: announcement.endDate ?? null,
+      startDate: announcement.startDate ?? null,
+      endDate: announcement.endDate ?? null,
       createdAt: announcement.createdAt,
       updatedAt: announcement.updatedAt,
     };
@@ -45,8 +45,8 @@ export class AnnouncementsService {
       deepLink: dto.deepLink ?? null,
       activeStatus: dto.activeStatus ?? false,
       priority: dto.priority ?? 0,
-      startDate: dto.date_time ? new Date(dto.date_time) : null,
-      endDate: dto.end_date ? new Date(dto.end_date) : null,
+      startDate: dto.startDate ? new Date(dto.startDate) : null,
+      endDate: dto.endDate ? new Date(dto.endDate) : null,
     });
 
     const saved = await this.announcementRepository.save(announcement);
@@ -64,8 +64,8 @@ export class AnnouncementsService {
       .update(Announcement)
       .set({ activeStatus: true })
       .where('active_status = :active', { active: false })
-      .andWhere('date_time IS NOT NULL')
-      .andWhere('date_time <= :now', { now })
+      .andWhere('start_date IS NOT NULL')
+      .andWhere('start_date <= :now', { now })
       .andWhere(
         new Brackets((qb) => {
           qb.where('end_date IS NULL').orWhere('end_date >= :now', { now });
@@ -86,7 +86,7 @@ export class AnnouncementsService {
       .where('active_status = :active', { active: true })
       .andWhere(
         new Brackets((qb) => {
-          qb.where('date_time IS NOT NULL AND date_time > :now', { now })
+          qb.where('start_date IS NOT NULL AND start_date > :now', { now })
             .orWhere('end_date IS NOT NULL AND end_date < :now', { now });
         }),
       )
@@ -120,7 +120,7 @@ export class AnnouncementsService {
       .createQueryBuilder('a')
       .where('a.active_status = :active', { active: true })
       .andWhere(new Brackets((qb) => {
-        qb.where('a.date_time IS NULL').orWhere('a.date_time <= :now', { now });
+        qb.where('a.start_date IS NULL').orWhere('a.start_date <= :now', { now });
       }),
       )
       .andWhere(
@@ -198,12 +198,12 @@ export class AnnouncementsService {
       announcement.priority = dto.priority;
     }
 
-    if (dto.date_time !== undefined) {
-      announcement.startDate = dto.date_time ? new Date(dto.date_time) : null;
+    if (dto.startDate !== undefined) {
+      announcement.startDate = dto.startDate ? new Date(dto.startDate) : null;
     }
 
-    if (dto.end_date !== undefined) {
-      announcement.endDate = dto.end_date ? new Date(dto.end_date) : null;
+    if (dto.endDate !== undefined) {
+      announcement.endDate = dto.endDate ? new Date(dto.endDate) : null;
     }
 
     const saved = await this.announcementRepository.save(announcement);
