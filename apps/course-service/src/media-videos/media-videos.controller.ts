@@ -1,10 +1,15 @@
-import { Body, Controller, Post, Get, Param, Delete, Patch } from '@nestjs/common';
+import { Body, Controller, Post, Get, Param, Delete, Patch, UseGuards } from '@nestjs/common';
 import { MediaVideosService } from './media-videos.service';
 import { CreateVideoDto } from './dto/create-video.dto';
 import { UpdateVideoDto } from './dto/update-video.dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
+import { UserRole } from '@common/enums/user-role.enum';
 
 @ApiTags('Upload | Video')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN)
 @Controller('media/video')
 export class MediaVideosController {
   constructor(private readonly svc: MediaVideosService) { }
@@ -36,6 +41,8 @@ export class MediaVideosController {
   })
   @ApiResponse({ status: 201, description: 'Presigned URL created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid input or file size exceeds limit' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Related entities not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async presign(@Body() dto: CreateVideoDto) {
@@ -46,6 +53,8 @@ export class MediaVideosController {
   @ApiOperation({ summary: 'ยืนยันการอัปโหลดไฟล์วิดีโอและเปลี่ยนสถานะเป็น Ready' })
   @ApiResponse({ status: 200, description: 'Confirmed' })
   @ApiResponse({ status: 400, description: 'File not uploaded yet' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Video not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async confirm(@Param('id') id: string) {
@@ -57,6 +66,8 @@ export class MediaVideosController {
   @ApiParam({ name: 'id', description: 'Video asset id', type: 'number' })
   @ApiResponse({ status: 200, description: 'Public URL for viewing' })
   @ApiResponse({ status: 400, description: 'Invalid video ID' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Video not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async getViewUrl(@Param('id') id: string) {
@@ -88,6 +99,8 @@ export class MediaVideosController {
   })
   @ApiResponse({ status: 200, description: 'Updated' })
   @ApiResponse({ status: 400, description: 'No fields to update / invalid payload' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Video not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async patch(@Param('id') id: string, @Body() dto: UpdateVideoDto) {
@@ -98,6 +111,9 @@ export class MediaVideosController {
   @ApiOperation({ summary: 'ลบวิดีโอตาม ID' })
   @ApiParam({ name: 'id', description: 'Video asset id', type: 'number' })
   @ApiResponse({ status: 200, description: 'Video deleted' })
+  @ApiResponse({ status: 400, description: 'Invalid video ID' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Video not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async deleteVideo(@Param('id') id: string) {

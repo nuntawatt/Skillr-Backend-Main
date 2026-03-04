@@ -1,12 +1,17 @@
-import { Body, Controller, Get, Param, Post, UploadedFile, UseInterceptors, Delete, Patch } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UploadedFile, UseInterceptors, Delete, Patch, UseGuards } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
-import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiParam, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiParam, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
 import { MediaImagesService } from './media-images.service';
 import { UpdateImageDto } from './dto/update-image.dto';
+import { JwtAuthGuard, Roles, RolesGuard } from '@auth';
+import { UserRole } from '@common/enums';
 
 @ApiTags('Upload | Image')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN)
 @Controller('media/image')
 export class MediaImagesController {
   constructor(private readonly svc: MediaImagesService) { }
@@ -25,6 +30,8 @@ export class MediaImagesController {
   })
   @ApiResponse({ status: 201, description: 'Image uploaded successfully' })
   @ApiResponse({ status: 400, description: 'Bad Request' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
   @UseInterceptors(FileInterceptor('file', {
     storage: multer.memoryStorage(),
@@ -38,6 +45,9 @@ export class MediaImagesController {
   @ApiOperation({ summary: 'รับ URL สาธารณะโดยใช้รหัสรูปภาพ' })
   @ApiParam({ name: 'id', type: 'number' })
   @ApiResponse({ status: 200, description: 'Public URL retrieved' })
+  @ApiResponse({ status: 400, description: 'Invalid image ID' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Image not found' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
   async getImage(@Param('id') id: string) {
@@ -67,6 +77,8 @@ export class MediaImagesController {
   })
   @ApiResponse({ status: 200, description: 'Updated' })
   @ApiResponse({ status: 400, description: 'No fields to update / invalid payload' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Image not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
   async patch(@Param('id') id: string, @Body() dto: UpdateImageDto) {
@@ -77,6 +89,9 @@ export class MediaImagesController {
   @ApiOperation({ summary: 'ลบรูปภาพตาม ID' })
   @ApiParam({ name: 'id', type: 'number' })
   @ApiResponse({ status: 200, description: 'Image deleted successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid image ID' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Image not found' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
   async delete(@Param('id') id: string) {

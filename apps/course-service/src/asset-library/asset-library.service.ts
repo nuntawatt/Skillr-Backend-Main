@@ -83,6 +83,13 @@ export class AssetLibraryService {
         throw new BadRequestException(`mime type not allowed: ${mimeType}`);
     }
 
+    // validate video by checking if the file exists in S3 (used for confirm video upload)
+    private extractStorageKey(url: string): string {
+        return decodeURIComponent(
+            new URL(url).pathname.replace(/^\//, '')
+        );
+    }
+
     /* -------------------------------------------------------------------------- */
     /*                                IMAGE UPLOAD                                */
     /* -------------------------------------------------------------------------- */
@@ -182,7 +189,7 @@ export class AssetLibraryService {
         }
 
         const storageKey = decodeURIComponent(
-            new URL(asset.publicUrl).pathname.replace(/^\//, ''),
+            new URL(asset.publicUrl!).pathname.replace(/^\//, ''),
         );
 
         const exists = await this.aws.fileExists(bucket, storageKey);
@@ -282,10 +289,30 @@ export class AssetLibraryService {
         const imageAsset = await this.imageRepo.findOne({
             where: { assetImageId: id },
         });
+
         if (!imageAsset) {
             throw new NotFoundException('Image not found');
         }
-        await this.imageRepo.remove(imageAsset);
+
+        if (!imageAsset.publicUrl) {
+            throw new BadRequestException('missing publicUrl');
+        }
+
+        const bucket = this.getBucket();
+        const storageKey = this.extractStorageKey(imageAsset.publicUrl);
+
+        try {
+            await this.aws.deleteObject(bucket, storageKey);
+        } catch (err) {
+            console.warn(
+                'S3 delete failed',
+                err?.name,
+                err?.message,
+                err?.$metadata?.httpStatusCode
+            );
+        }
+
+        await this.imageRepo.delete(id);
 
         return { message: `Image deleted successfully : ${id}` };
     }
@@ -294,10 +321,30 @@ export class AssetLibraryService {
         const videoAsset = await this.videoRepo.findOne({
             where: { assetVideoId: id },
         });
+
         if (!videoAsset) {
             throw new NotFoundException('Video not found');
         }
-        await this.videoRepo.remove(videoAsset);
+
+        if (!videoAsset.publicUrl) {
+            throw new BadRequestException('missing publicUrl');
+        }
+
+        const bucket = this.getBucket();
+        const storageKey = this.extractStorageKey(videoAsset.publicUrl);
+
+        try {
+            await this.aws.deleteObject(bucket, storageKey);
+        } catch (err) {
+            console.warn(
+                'S3 delete failed',
+                err?.name,
+                err?.message,
+                err?.$metadata?.httpStatusCode
+            );
+        }
+
+        await this.videoRepo.delete(id);
 
         return { message: `Video deleted successfully : ${id}` };
     }

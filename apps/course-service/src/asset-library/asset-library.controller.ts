@@ -10,9 +10,9 @@ import { CreateAssetVideoDto, UpdateAssetImageDto, UpdateAssetVideoDto } from '.
 
 @ApiTags('Asset Library')
 @ApiBearerAuth()
-@Controller('asset-library')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
+@Controller('asset-library')
 export class AssetLibraryController {
     constructor(private readonly svc: AssetLibraryService) { }
 
@@ -30,6 +30,7 @@ export class AssetLibraryController {
     })
     @ApiResponse({ status: 201, description: 'Image uploaded successfully' })
     @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     @UseInterceptors(
         FileInterceptor('file', {
@@ -49,6 +50,7 @@ export class AssetLibraryController {
     @ApiBody({ type: CreateAssetVideoDto })
     @ApiResponse({ status: 201, description: 'Presigned URL created successfully' })
     @ApiResponse({ status: 400, description: 'Invalid input or file size exceeds limit' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     async presignAssetVideo(
         @CurrentUserId() adminId: string,
@@ -61,6 +63,7 @@ export class AssetLibraryController {
     @ApiOperation({ summary: 'ยืนยันวิดีโอใน Asset Library หลังอัปโหลดเสร็จ' })
     @ApiResponse({ status: 200, description: 'Confirmed' })
     @ApiResponse({ status: 400, description: 'File not uploaded yet' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 404, description: 'Video not found' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     async confirmAssetVideo(@Param('id') id: string) {
@@ -71,6 +74,7 @@ export class AssetLibraryController {
     @Get('image')
     @ApiOperation({ summary: 'ดึงรายการภาพจาก Asset Library ทั้งหมด' })
     @ApiResponse({ status: 200, description: 'List of images retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 404, description: 'No images found' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     async getAssetImagesAll() {
@@ -80,15 +84,17 @@ export class AssetLibraryController {
     @Get('image/:id')
     @ApiOperation({ summary: 'ดึงรายละเอียดภาพจาก Asset Library ตาม ID' })
     @ApiResponse({ status: 200, description: 'Image retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 404, description: 'Image not found' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     async getAssetImageById(@Param('id') id: string) {
-        return this.svc.getAssetImageById(Number(id));
+        return this.svc.getAssetImageById((Number(id)));
     }
 
     @Get('video')
     @ApiOperation({ summary: 'ดึงรายการวิดีโอจาก Asset Library ทั้งหมด' })
     @ApiResponse({ status: 200, description: 'List of videos retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 404, description: 'No videos found' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     async getAssetVideosAll() {
@@ -98,6 +104,7 @@ export class AssetLibraryController {
     @Get('video/:id')
     @ApiOperation({ summary: 'ดึงรายละเอียดวิดีโอจาก Asset Library ตาม ID' })
     @ApiResponse({ status: 200, description: 'Video retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 404, description: 'Video not found' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     async getAssetVideoById(@Param('id') id: string) {
@@ -109,6 +116,7 @@ export class AssetLibraryController {
     @ApiBody({ type: UpdateAssetImageDto })
     @ApiResponse({ status: 200, description: 'Image updated successfully' })
     @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 404, description: 'Image not found' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     async updateAssetImage(@Param('id') id: string, @Body() dto: UpdateAssetImageDto) {
@@ -120,6 +128,7 @@ export class AssetLibraryController {
     @ApiBody({ type: UpdateAssetVideoDto })
     @ApiResponse({ status: 200, description: 'Video updated successfully' })
     @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 404, description: 'Video not found' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     async updateAssetVideo(@Param('id') id: string, @Body() dto: UpdateAssetVideoDto) {
@@ -129,6 +138,9 @@ export class AssetLibraryController {
     @Delete('image/:id')
     @ApiOperation({ summary: 'ลบภาพจาก Asset Library ตาม ID' })
     @ApiResponse({ status: 200, description: 'Image deleted successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 403, description: 'Forbidden' })
     @ApiResponse({ status: 404, description: 'Image not found' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     async deleteAssetImage(@Param('id') id: string) {
@@ -138,6 +150,9 @@ export class AssetLibraryController {
     @Delete('video/:id')
     @ApiOperation({ summary: 'ลบวิดีโอจาก Asset Library ตาม ID' })
     @ApiResponse({ status: 200, description: 'Video deleted successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 403, description: 'Forbidden' })
     @ApiResponse({ status: 404, description: 'Video not found' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     async deleteAssetVideo(@Param('id') id: string) {
