@@ -64,9 +64,10 @@ export class AssetLibraryService {
             throw new BadRequestException('file too large');
         }
 
-        const bucket = process.env.ASSET_IMAGE_BUCKET;
+        const bucket = process.env.AWS_S3_BUCKET;
+        // const bucket = process.env.ASSET_IMAGE_BUCKET;
         if (!bucket) {
-            throw new BadRequestException('ASSET_IMAGE_BUCKET not configured');
+            throw new BadRequestException('AWS_S3_BUCKET not configured');
         }
 
         // console.log('Uploading asset image to bucket : ', bucket);
@@ -109,9 +110,9 @@ export class AssetLibraryService {
             throw new BadRequestException('file size exceeds limit');
         }
 
-        const bucket = process.env.ASSET_VIDEO_BUCKET;
+        const bucket = process.env.AWS_S3_BUCKET;
         if (!bucket) {
-            throw new BadRequestException('ASSET_VIDEO_BUCKET not configured');
+            throw new BadRequestException('AWS_S3_BUCKET not configured');
         }
 
         const uuid = randomUUID();
