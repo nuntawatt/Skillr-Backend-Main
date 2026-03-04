@@ -47,8 +47,8 @@ export class AnnouncementsService {
       .update(Announcement)
       .set({ activeStatus: true })
       .where('active_status = :active', { active: false })
-      .andWhere('start_date IS NOT NULL')
-      .andWhere('start_date <= :now', { now })
+      .andWhere('date_time IS NOT NULL')
+      .andWhere('date_time <= :now', { now })
       .andWhere(
         new Brackets((qb) => {
           qb.where('end_date IS NULL').orWhere('end_date >= :now', { now });
@@ -69,7 +69,7 @@ export class AnnouncementsService {
       .where('active_status = :active', { active: true })
       .andWhere(
         new Brackets((qb) => {
-          qb.where('start_date IS NOT NULL AND start_date > :now', { now })
+          qb.where('date_time IS NOT NULL AND date_time > :now', { now })
             .orWhere('end_date IS NOT NULL AND end_date < :now', { now });
         }),
       )
@@ -101,7 +101,7 @@ export class AnnouncementsService {
       .createQueryBuilder('a')
       .where('a.active_status = :active', { active: true })
       .andWhere(new Brackets((qb) => {
-        qb.where('a.start_date IS NULL').orWhere('a.start_date <= :now', { now });
+        qb.where('a.date_time IS NULL').orWhere('a.date_time <= :now', { now });
       }),
       )
       .andWhere(
