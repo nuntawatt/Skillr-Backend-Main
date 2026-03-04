@@ -78,7 +78,7 @@ export class NotificationsService {
   // โดยจะเพิ่มการแจ้งเตือนใหม่สำหรับประกาศที่ยังไม่มีในระบบ และลบการแจ้งเตือนที่เกี่ยวข้องกับประกาศที่หมดอายุไปแล้ว
   private async syncAnnouncements(userId: string) {
     const activeAnnouncements =
-      await this.announcementsService.findActive(20);
+      await this.announcementsService.findActive();
 
     const activeIds = activeAnnouncements.map((a) =>
       String(a.announcement_id),
