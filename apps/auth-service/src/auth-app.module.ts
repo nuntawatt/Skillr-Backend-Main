@@ -8,6 +8,7 @@ import * as path from 'path';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { WebsocketModule } from './gateway/websocket.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 // Import course entities
 import { Course } from 'apps/course-service/src/courses/entities/course.entity';
@@ -20,6 +21,8 @@ import { UserStreak } from 'apps/course-service/src/streaks/entities/user-streak
 import { UserXp } from 'apps/course-service/src/quizs/entities/user-xp.entity';
 import { Quizs } from 'apps/course-service/src/quizs/entities/quizs.entity';
 import { QuizsCheckpoint } from 'apps/course-service/src/quizs/entities/checkpoint.entity';
+import { RewardRedemption } from 'apps/reward-service/src/reward/entities/reward-redemption';
+import { Reward } from 'apps/reward-service/src/reward/entities/rewards.entity';
 
 @Module({
   imports: [
@@ -50,6 +53,16 @@ import { QuizsCheckpoint } from 'apps/course-service/src/quizs/entities/checkpoi
         synchronize: false,
       }),
     }),
+    TypeOrmModule.forRootAsync({
+      name: 'reward',
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'postgres',
+        url: config.get<string>('REWARD_DATABASE_URL'),
+        entities: [RewardRedemption, Reward],
+        synchronize: false,
+      }),
+    }),
 
     ThrottlerModule.forRoot([
       {
@@ -60,6 +73,7 @@ import { QuizsCheckpoint } from 'apps/course-service/src/quizs/entities/checkpoi
     ]),
     AuthModule,
     UsersModule,
+    AnalyticsModule,
     WebsocketModule,
   ],
   providers: [
