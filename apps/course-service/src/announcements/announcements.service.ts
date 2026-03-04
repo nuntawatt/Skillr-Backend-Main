@@ -46,7 +46,7 @@ export class AnnouncementsService {
       activeStatus: dto.activeStatus ?? false,
       priority: dto.priority ?? 0,
       startDate: dto.startDate ? new Date(dto.startDate + 'Z') : null,
-      endDate: dto.endDate ? new Date(dto.endDate + 'Z') : null,
+      endDate: dto.end_date ? new Date(dto.end_date + 'Z') : null,
     });
 
     const saved = await this.announcementRepository.save(announcement);
@@ -202,8 +202,8 @@ export class AnnouncementsService {
       announcement.startDate = dto.startDate ? new Date(dto.startDate + 'Z') : null;
     }
 
-    if (dto.endDate !== undefined) {
-      announcement.endDate = dto.endDate ? new Date(dto.endDate + 'Z') : null;
+    if (dto.end_date !== undefined) {
+      announcement.endDate = dto.end_date ? new Date(dto.end_date + 'Z') : null;
     }
 
     const saved = await this.announcementRepository.save(announcement);

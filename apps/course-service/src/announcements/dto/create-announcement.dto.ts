@@ -61,4 +61,5 @@ export class CreateAnnouncementDto {
   @IsDateString()
   @IsOptional()
   end_date?: string;
+  startDate: any;
 }
