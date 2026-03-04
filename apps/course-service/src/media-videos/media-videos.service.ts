@@ -24,7 +24,7 @@ export class MediaVideosService {
 
     const allowMimes = (
       process.env.VIDEO_MIME_ALLOWLIST ??
-      'video/mp4,video/webm,video/quicktime,video/x-msvideo,video/x-matroska,video/mpeg,application/octet-stream'
+      'video/mp4,video/webm,video/quicktime,video/x-msvideo,video/avi,video/x-matroska,video/mpeg,application/octet-stream'
     )
       .split(',')
       .map((x) => x.trim().toLowerCase());
