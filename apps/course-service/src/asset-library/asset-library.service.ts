@@ -59,14 +59,22 @@ export class AssetLibraryService {
 
         this.validateImageMime(file.mimetype, file.originalname);
 
-        const maxSize = Number(process.env.ASSET_IMAGE_MAX_SIZE_BYTES ?? 30 * 1024 * 1024);
+        const maxSize = 30 * 1024 * 1024; // 30MB
         if (file.size > maxSize) {
             throw new BadRequestException('file too large');
         }
 
-        const bucket = process.env.ASSET_IMAGE_BUCKET ?? 'asset_image';
+        const bucket = process.env.ASSET_IMAGE_BUCKET;
+        if (!bucket) {
+            throw new BadRequestException('ASSET_IMAGE_BUCKET not configured');
+        }
+
+        // console.log('Uploading asset image to bucket : ', bucket);
+
         const uuid = randomUUID();
         const storageKey = `library-images/${uuid}`;
+
+        // console.log('Uploading asset image with storage key : ', storageKey);
 
         await this.aws.putObject(bucket, storageKey, file.buffer, file.size, file.mimetype);
 
@@ -101,7 +109,11 @@ export class AssetLibraryService {
             throw new BadRequestException('file size exceeds limit');
         }
 
-        const bucket = process.env.ASSET_VIDEO_BUCKET ?? 'asset_video';
+        const bucket = process.env.ASSET_VIDEO_BUCKET;
+        if (!bucket) {
+            throw new BadRequestException('ASSET_VIDEO_BUCKET not configured');
+        }
+
         const uuid = randomUUID();
         const storageKey = `library-videos/${uuid}`;
 
@@ -136,7 +148,10 @@ export class AssetLibraryService {
             throw new BadRequestException(`cannot confirm asset video with status ${asset.status}`);
         }
 
-        const bucket = process.env.ASSET_VIDEO_BUCKET ?? 'asset_video';
+        const bucket = process.env.ASSET_VIDEO_BUCKET;
+        if (!bucket) {
+            throw new BadRequestException('ASSET_VIDEO_BUCKET not configured');
+        }
 
         const publicUrl = asset.publicUrl;
         if (!publicUrl) {
