@@ -171,15 +171,15 @@ export class AnalyticsService {
       .leftJoin('ch.level', 'lvl')
       .leftJoin('lvl.course', 'c')
       .select([
-        'c.courseId',
-        'lp.userId',
-        'COUNT(l.lessonId) as total_lessons',
+        'c.course_id',
+        'lp.user_id',
+        'COUNT(l.lesson_id) as total_lessons',
         'COUNT(CASE WHEN lp.status IN (\'COMPLETED\', \'SKIPPED\') THEN 1 END) as completed',
       ])
-      .groupBy('c.courseId, lp.userId')
+      .groupBy('c.course_id, lp.user_id')
       .getRawMany<{
-        courseId: string;
-        userId: string;
+        course_id: string;
+        user_id: string;
         total_lessons: string;
         completed: string;
       }>();
