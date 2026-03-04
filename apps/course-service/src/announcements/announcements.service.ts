@@ -68,7 +68,7 @@ export class AnnouncementsService {
       .andWhere('start_date <= :now', { now })
       .andWhere(
         new Brackets((qb) => {
-          qb.where('end_date IS NULL').orWhere('end_date >= :now', { now });
+          qb.where('end_date IS NULL').orWhere('end_date >= :now', { now: now.toISOString() });
         }),
       )
       .execute();
@@ -125,7 +125,7 @@ export class AnnouncementsService {
       )
       .andWhere(
         new Brackets((qb) => {
-          qb.where('a.end_date IS NULL').orWhere('a.end_date >= :now', { now });
+          qb.where('a.end_date IS NULL').orWhere('a.end_date >= :now', { now: now.toISOString() });
         }),
       )
       .orderBy('a.priority', 'DESC')
