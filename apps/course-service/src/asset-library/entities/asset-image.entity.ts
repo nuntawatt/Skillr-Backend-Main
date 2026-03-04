@@ -23,15 +23,6 @@ export class AssetImage {
   @Column({ name: 'size_bytes', type: 'bigint' })
   sizeBytes: string;
 
-  @Column({ name: 'storage_provider', type: 'varchar', length: 32, default: 's3' })
-  storageProvider: string;
-
-  @Column({ name: 'storage_bucket', type: 'varchar', length: 255 })
-  storageBucket: string;
-
-  @Column({ name: 'storage_key', type: 'varchar', length: 1024 })
-  storageKey: string;
-
   @Column({ name: 'public_url', type: 'varchar', length: 2048, nullable: true })
   publicUrl?: string;
 
