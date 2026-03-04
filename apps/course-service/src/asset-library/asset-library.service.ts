@@ -64,7 +64,7 @@ export class AssetLibraryService {
     private validateVideoMime(mimeType: string, originalFilename?: string) {
         const normalizedMime = mimeType?.trim().toLowerCase();
 
-        const allowMimes = ('video/mp4,video/webm,video/quicktime,video/x-msvideo,video/x-matroska,video/mpeg,application/octet-stream')
+        const allowMimes = 'video/mp4,video/webm,video/quicktime,video/x-msvideo,video/avi,video/x-matroska,video/mpeg,application/octet-stream'
             .split(',')
             .map((x) => x.trim().toLowerCase());
 
