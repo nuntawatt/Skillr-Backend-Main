@@ -35,14 +35,14 @@ export class AnnouncementResponseDto {
     example: '2025-02-20T00:00:00Z',
     nullable: true
   })
-  startDate?: Date | null;
+  date_time?: Date | null;
 
   @ApiPropertyOptional({ 
     description: 'วันที่สิ้นสุดการแสดง',
     example: '2025-03-20T23:59:59Z',
     nullable: true
   })
-  endDate?: Date | null;
+  end_date?: Date | null;
 
   @ApiProperty({ description: 'วันที่สร้าง', example: '2025-02-17T10:00:00Z' })
   createdAt: Date;

@@ -7,6 +7,7 @@ import { MediaImagesService } from '../media-images/media-images.service';
 import { Announcement } from './entities/announcement.entity';
 import { CreateAnnouncementDto } from './dto/create-announcement.dto';
 import { UpdateAnnouncementDto } from './dto/update-announcement.dto';
+import { AnnouncementResponseDto } from './dto/announcement-response.dto';
 
 @Injectable()
 export class AnnouncementsService {
@@ -16,9 +17,24 @@ export class AnnouncementsService {
     private readonly announcementRepository: Repository<Announcement>,
   ) { }
 
+  private toResponseDto(announcement: Announcement): AnnouncementResponseDto {
+    return {
+      announcement_id: announcement.announcement_id,
+      title: announcement.title,
+      imageUrl: announcement.imageUrl ?? null,
+      deepLink: announcement.deepLink ?? null,
+      activeStatus: announcement.activeStatus,
+      priority: announcement.priority,
+      date_time: announcement.startDate ?? null,
+      end_date: announcement.endDate ?? null,
+      createdAt: announcement.createdAt,
+      updatedAt: announcement.updatedAt,
+    };
+  }
+
 
   // Create a new announcement
-  async create(dto: CreateAnnouncementDto): Promise<Announcement> {
+  async create(dto: CreateAnnouncementDto): Promise<AnnouncementResponseDto> {
     if (dto.deepLink) {
       this.assertValidDeepLink(dto.deepLink);
     }
@@ -29,11 +45,12 @@ export class AnnouncementsService {
       deepLink: dto.deepLink ?? null,
       activeStatus: dto.activeStatus ?? false,
       priority: dto.priority ?? 0,
-      startDate: dto.startDate ? new Date(dto.startDate) : null,
-      endDate: dto.endDate ? new Date(dto.endDate) : null,
+      startDate: dto.date_time ? new Date(dto.date_time) : null,
+      endDate: dto.end_date ? new Date(dto.end_date) : null,
     });
 
-    return this.announcementRepository.save(announcement);
+    const saved = await this.announcementRepository.save(announcement);
+    return this.toResponseDto(saved);
   }
 
   // function ตรวจสอบและอัปเดตสถานะของป้ายประกาศตามวันที่และเวลาปัจจุบัน
@@ -87,17 +104,19 @@ export class AnnouncementsService {
     }
   }
 
-  async findAll(): Promise<Announcement[]> {
-    return this.announcementRepository.find({
+  async findAll(): Promise<AnnouncementResponseDto[]> {
+    const list = await this.announcementRepository.find({
       order: { priority: 'DESC', createdAt: 'DESC' },
     });
+
+    return list.map((a) => this.toResponseDto(a));
   }
 
   // ดึงป้ายประกาศที่ active และอยู่ในช่วงเวลาที่กำหนด พร้อม placeholder image ถ้าไม่มีรูปภาพ
-  async findActive(limit = 3): Promise<Announcement[]> {
+  async findActive(limit = 3): Promise<AnnouncementResponseDto[]> {
     const now = new Date();
 
-    return this.announcementRepository
+    const list = await this.announcementRepository
       .createQueryBuilder('a')
       .where('a.active_status = :active', { active: true })
       .andWhere(new Brackets((qb) => {
@@ -113,16 +132,19 @@ export class AnnouncementsService {
       .addOrderBy('a.created_at', 'DESC')
       .limit(limit)
       .getMany();
+
+    return list.map((a) => this.toResponseDto(a));
   }
 
   // อัปโหลดรูปภาพสำหรับป้ายประกาศและอัปเดต URL ในฐานข้อมูล
-  async uploadBannerImage(id: number, file: Express.Multer.File): Promise<Announcement> {
-    const announcement = await this.findOne(id);
+  async uploadBannerImage(id: number, file: Express.Multer.File): Promise<AnnouncementResponseDto> {
+    const announcementEntity = await this.findOneEntity(id);
 
     const uploaded = await this.mediaImagesService.uploadImageFileAndPersist(file);
-    announcement.imageUrl = uploaded.url;
+    announcementEntity.imageUrl = uploaded.url;
 
-    return this.announcementRepository.save(announcement);
+    const saved = await this.announcementRepository.save(announcementEntity);
+    return this.toResponseDto(saved);
   }
 
   // ดึง URL รูปภาพ placeholder สำหรับประกาศ (ใช้เมื่อประกาศไม่มีรูปภาพ)
@@ -131,7 +153,12 @@ export class AnnouncementsService {
   }
 
   // หา announcement โดยใช้ ID
-  async findOne(id: number): Promise<Announcement> {
+  async findOne(id: number): Promise<AnnouncementResponseDto> {
+    const announcement = await this.findOneEntity(id);
+    return this.toResponseDto(announcement);
+  }
+
+  private async findOneEntity(id: number): Promise<Announcement> {
     const announcement = await this.announcementRepository.findOne({
       where: { announcement_id: id },
     });
@@ -144,8 +171,8 @@ export class AnnouncementsService {
   }
 
   // อัปเดตข้อมูลป้ายประกาศ
-  async update(id: number, dto: UpdateAnnouncementDto): Promise<Announcement> {
-    const announcement = await this.findOne(id);
+  async update(id: number, dto: UpdateAnnouncementDto): Promise<AnnouncementResponseDto> {
+    const announcement = await this.findOneEntity(id);
 
     if (dto.deepLink) {
       this.assertValidDeepLink(dto.deepLink);
@@ -171,20 +198,21 @@ export class AnnouncementsService {
       announcement.priority = dto.priority;
     }
 
-    if (dto.startDate !== undefined) {
-      announcement.startDate = dto.startDate ? new Date(dto.startDate) : null;
+    if (dto.date_time !== undefined) {
+      announcement.startDate = dto.date_time ? new Date(dto.date_time) : null;
     }
 
-    if (dto.endDate !== undefined) {
-      announcement.endDate = dto.endDate ? new Date(dto.endDate) : null;
+    if (dto.end_date !== undefined) {
+      announcement.endDate = dto.end_date ? new Date(dto.end_date) : null;
     }
 
-    return this.announcementRepository.save(announcement);
+    const saved = await this.announcementRepository.save(announcement);
+    return this.toResponseDto(saved);
   }
 
   // ลบป้ายประกาศ
   async remove(id: number): Promise<{ message: string }> {
-    const announcement = await this.findOne(id);
+    const announcement = await this.findOneEntity(id);
     await this.announcementRepository.remove(announcement);
     return { message: `Announcement with ID ${id} deleted successfully` };
   }
