@@ -66,7 +66,7 @@ export class AssetLibraryService {
 
         const bucket = process.env.ASSET_IMAGE_BUCKET ?? 'asset_image';
         const uuid = randomUUID();
-        const storageKey = `images/${uuid}`;
+        const storageKey = `library-images/${uuid}`;
 
         await this.aws.putObject(bucket, storageKey, file.buffer, file.size, file.mimetype);
 
@@ -103,7 +103,7 @@ export class AssetLibraryService {
 
         const bucket = process.env.ASSET_VIDEO_BUCKET ?? 'asset_video';
         const uuid = randomUUID();
-        const storageKey = `videos/${uuid}`;
+        const storageKey = `library-videos/${uuid}`;
 
         const uploadUrl = await this.aws.presignPut(bucket, storageKey, dto.mime_type, 60 * 15);
 
@@ -136,8 +136,26 @@ export class AssetLibraryService {
             throw new BadRequestException(`cannot confirm asset video with status ${asset.status}`);
         }
 
+        const bucket = process.env.ASSET_VIDEO_BUCKET ?? 'asset_video';
+
+        const publicUrl = asset.publicUrl;
+        if (!publicUrl) {
+            throw new BadRequestException('missing publicUrl for this asset video');
+        }
+
+        let storageKey: string;
+        try {
+            storageKey = decodeURIComponent(new URL(publicUrl).pathname.replace(/^\//, ''));
+        } catch {
+            throw new BadRequestException('invalid publicUrl for this asset video');
+        }
+
+        const exists = await this.aws.fileExists(bucket, storageKey);
+        if (!exists) {
+            throw new BadRequestException('file not uploaded yet');
+        }
+
         asset.status = AssetVideoStatus.READY;
-        asset.publicUrl = asset.publicUrl ;
         await this.videoRepo.save(asset);
 
         return {
