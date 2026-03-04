@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Post, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -6,11 +6,11 @@ import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiResponse, ApiTags
 import { CurrentUserId, JwtAuthGuard, Roles, RolesGuard } from '@auth';
 import { UserRole } from '@common/enums';
 import { AssetLibraryService } from './asset-library.service';
-import { CreateAssetVideoDto } from './dto/create-asset-video.dto';
+import { CreateAssetVideoDto, UpdateAssetImageDto, UpdateAssetVideoDto } from './dto';
 
 @ApiTags('Asset Library')
 @ApiBearerAuth()
-@Controller('assets')
+@Controller('asset-library')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.ADMIN)
 export class AssetLibraryController {
@@ -65,5 +65,82 @@ export class AssetLibraryController {
     @ApiResponse({ status: 500, description: 'Internal server error' })
     async confirmAssetVideo(@Param('id') id: string) {
         return this.svc.confirmAssetVideo(Number(id));
+    }
+
+
+    @Get('image')
+    @ApiOperation({ summary: 'ดึงรายการภาพจาก Asset Library ทั้งหมด' })
+    @ApiResponse({ status: 200, description: 'List of images retrieved successfully' })
+    @ApiResponse({ status: 404, description: 'No images found' })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
+    async getAssetImagesAll() {
+        return this.svc.getAssetImagesAll();
+    }
+
+    @Get('image/:id')
+    @ApiOperation({ summary: 'ดึงรายละเอียดภาพจาก Asset Library ตาม ID' })
+    @ApiResponse({ status: 200, description: 'Image retrieved successfully' })
+    @ApiResponse({ status: 404, description: 'Image not found' })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
+    async getAssetImageById(@Param('id') id: string) {
+        return this.svc.getAssetImageById(Number(id));
+    }
+
+    @Get('video')
+    @ApiOperation({ summary: 'ดึงรายการวิดีโอจาก Asset Library ทั้งหมด' })
+    @ApiResponse({ status: 200, description: 'List of videos retrieved successfully' })
+    @ApiResponse({ status: 404, description: 'No videos found' })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
+    async getAssetVideosAll() {
+        return this.svc.getAssetVideosAll();
+    }
+
+    @Get('video/:id')
+    @ApiOperation({ summary: 'ดึงรายละเอียดวิดีโอจาก Asset Library ตาม ID' })
+    @ApiResponse({ status: 200, description: 'Video retrieved successfully' })
+    @ApiResponse({ status: 404, description: 'Video not found' })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
+    async getAssetVideoById(@Param('id') id: string) {
+        return this.svc.getAssetVideoById(Number(id));
+    }
+
+    @Patch('image/:id')
+    @ApiOperation({ summary: 'อัปเดตข้อมูลภาพใน Asset Library ตาม ID' })
+    @ApiBody({ type: UpdateAssetImageDto })
+    @ApiResponse({ status: 200, description: 'Image updated successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 404, description: 'Image not found' })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
+    async updateAssetImage(@Param('id') id: string, @Body() dto: UpdateAssetImageDto) {
+        return this.svc.updateAssetImage(Number(id), dto);
+    }
+
+    @Patch('video/:id')
+    @ApiOperation({ summary: 'อัปเดตข้อมูลวิดีโอใน Asset Library ตาม ID' })
+    @ApiBody({ type: UpdateAssetVideoDto })
+    @ApiResponse({ status: 200, description: 'Video updated successfully' })
+    @ApiResponse({ status: 400, description: 'Bad Request' })
+    @ApiResponse({ status: 404, description: 'Video not found' })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
+    async updateAssetVideo(@Param('id') id: string, @Body() dto: UpdateAssetVideoDto) {
+        return this.svc.updateAssetVideo(Number(id), dto);
+    }
+
+    @Delete('image/:id')
+    @ApiOperation({ summary: 'ลบภาพจาก Asset Library ตาม ID' })
+    @ApiResponse({ status: 200, description: 'Image deleted successfully' })
+    @ApiResponse({ status: 404, description: 'Image not found' })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
+    async deleteAssetImage(@Param('id') id: string) {
+        return this.svc.deleteAssetImageById(Number(id));
+    }
+
+    @Delete('video/:id')
+    @ApiOperation({ summary: 'ลบวิดีโอจาก Asset Library ตาม ID' })
+    @ApiResponse({ status: 200, description: 'Video deleted successfully' })
+    @ApiResponse({ status: 404, description: 'Video not found' })
+    @ApiResponse({ status: 500, description: 'Internal server error' })
+    async deleteAssetVideo(@Param('id') id: string) {
+        return this.svc.deleteAssetVideoById(Number(id));
     }
 }

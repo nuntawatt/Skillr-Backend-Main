@@ -6,7 +6,7 @@ import { randomUUID } from 'crypto';
 import { AwsS3StorageService } from '../storage/aws.service';
 import { AssetImage, AssetImageStatus } from './entities/asset-image.entity';
 import { AssetVideo, AssetVideoStatus } from './entities/asset-video.entity';
-import { CreateAssetVideoDto } from './dto/create-asset-video.dto';
+import { CreateAssetVideoDto, UpdateAssetImageDto, UpdateAssetVideoDto } from './dto';
 
 const IMAGE_MAX_SIZE = 30 * 1024 * 1024; // 30MB
 const VIDEO_MAX_SIZE = 1 * 1024 * 1024 * 1024; // 1GB
@@ -145,8 +145,8 @@ export class AssetLibraryService {
                 originalFilename: dto.original_filename ?? storageKey,
                 mimeType: dto.mime_type,
                 sizeBytes: String(dto.size_bytes),
-                durationSeconds: dto.duration_seconds,
-                thumbnailUrl: dto.thumbnail_url,
+                // durationSeconds: dto.duration_seconds,
+                // thumbnailUrl: dto.thumbnail_url,
                 publicUrl,
                 status: AssetVideoStatus.UPLOADING,
             }),
@@ -201,5 +201,104 @@ export class AssetLibraryService {
             publicUrl: asset.publicUrl,
             status: asset.status,
         };
+    }
+
+    async getAssetImagesAll() {
+        const imageAssets = await this.imageRepo.find({
+            order: { createdAt: 'DESC' },
+        });
+        if (!imageAssets || imageAssets.length === 0) {
+            throw new NotFoundException('No images found');
+        }
+
+        return imageAssets;
+    }
+
+    async getAssetImageById(id: number) {
+        const imageAsset = await this.imageRepo.findOne({ where: { assetImageId: id } });
+        if (!imageAsset) {
+            throw new NotFoundException('Image not found');
+        }
+        return imageAsset;
+    }
+
+    async getAssetVideosAll() {
+        const videoAssets = await this.videoRepo.find({
+            order: { createdAt: 'DESC' },
+        });
+        if (!videoAssets || videoAssets.length === 0) {
+            throw new NotFoundException('No videos found');
+        }
+        return videoAssets;
+    }
+
+    async getAssetVideoById(id: number) {
+        const videoAsset = await this.videoRepo.findOne({ where: { assetVideoId: id } });
+        if (!videoAsset) {
+            throw new NotFoundException('Video not found');
+        }
+        return videoAsset;
+    }
+
+    async updateAssetImage(id: number, dto: UpdateAssetImageDto) {
+        const imageAsset = await this.imageRepo.findOne({
+            where: { assetImageId: id },
+        });
+
+        if (!imageAsset) {
+            throw new NotFoundException('Image not found');
+        }
+
+        Object.assign(imageAsset, {
+            ...(dto.original_filename && { originalFilename: dto.original_filename }),
+            ...(dto.public_url && { publicUrl: dto.public_url }),
+            ...(dto.status && { status: dto.status }),
+        });
+        console.log('Updating asset image:', imageAsset);
+
+        return this.imageRepo.save(imageAsset);
+    }
+
+    async updateAssetVideo(id: number, dto: UpdateAssetVideoDto) {
+        const videoAsset = await this.videoRepo.findOne({
+            where: { assetVideoId: id },
+        });
+        if (!videoAsset) {
+            throw new NotFoundException('Video not found');
+        }
+        Object.assign(videoAsset, {
+            ...(dto.original_filename && { originalFilename: dto.original_filename }),
+            ...(dto.thumbnail_url && { thumbnailUrl: dto.thumbnail_url }),
+            ...(dto.duration_seconds && { durationSeconds: dto.duration_seconds }),
+            ...(dto.status && { status: dto.status }),
+        });
+
+        // console.log('Updating asset video:', videoAsset);
+        return this.videoRepo.save(videoAsset);
+    }
+
+    async deleteAssetImageById(id: number): Promise<{ message: string }> {
+
+        const imageAsset = await this.imageRepo.findOne({
+            where: { assetImageId: id },
+        });
+        if (!imageAsset) {
+            throw new NotFoundException('Image not found');
+        }
+        await this.imageRepo.remove(imageAsset);
+
+        return { message: `Image deleted successfully : ${id}` };
+    }
+
+    async deleteAssetVideoById(id: number): Promise<{ message: string }> {
+        const videoAsset = await this.videoRepo.findOne({
+            where: { assetVideoId: id },
+        });
+        if (!videoAsset) {
+            throw new NotFoundException('Video not found');
+        }
+        await this.videoRepo.remove(videoAsset);
+
+        return { message: `Video deleted successfully : ${id}` };
     }
 }
