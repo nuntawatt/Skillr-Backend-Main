@@ -29,10 +29,10 @@ export class LearningOverviewDto {
 
 /**
  * สรุปสถานะ Admin Accounts - เฉพาะ OWNER เห็นข้อมูลนี้
- * นับทั้ง ADMIN และ OWNER roles (ทั้ง 2 role คือ admin)
+ * นับเฉพาะ ADMIN role เท่านั้น (ไม่รวม OWNER)
  */
 export class AdminStatusSummaryDto {
-  @ApiProperty({ description: 'Total number of admin accounts (role in ADMIN or OWNER)' })
+  @ApiProperty({ description: 'Total number of admin accounts (role = ADMIN only)' })
   total: number;
 
   @ApiProperty({ description: "Number of admin accounts with status 'active'" })

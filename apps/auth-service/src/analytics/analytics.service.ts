@@ -333,7 +333,7 @@ export class AnalyticsService {
   /**
    * สรุปสถานะ Admin Accounts
    * 
-   * Logic: นับ ADMIN + OWNER และแยกตามสถานะ (active, invited)
+   * Logic: นับ ADMIN เท่านั้น (ไม่รวม OWNER)
    * 
    * @returns AdminStatusSummaryDto สรุป admin accounts
    */
@@ -342,7 +342,7 @@ export class AnalyticsService {
       .createQueryBuilder('u')
       .select('u.status')
       .addSelect('COUNT(*)', 'count')
-      .where('u.role IN (:...roles)', { roles: [UserRole.ADMIN, UserRole.OWNER] })
+      .where('u.role = :role', { role: UserRole.ADMIN })
       .groupBy('u.status')
       .getRawMany<{ status: string; count: string }>();
 
