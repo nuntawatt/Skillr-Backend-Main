@@ -31,6 +31,7 @@ import { ArticlesService } from './articles/articles.service';
 import { StorageModule } from './storage/storage.module';
 import { MediaImagesModule } from './media-images/media-images.module';
 import { MediaVideosModule } from './media-videos/media-videos.module';
+import { AssetLibraryModule } from './asset-library/asset-library.module';
 import { ProgressService } from './progress/progress.service';
 import { StreakService } from './streaks/streak.service';
 import { LearnerHomeModule } from './learner-home/learner-home.module';
@@ -88,6 +89,7 @@ const isTest = process.env.NODE_ENV === 'test';
         StorageModule,
         MediaImagesModule,
         MediaVideosModule,
+        AssetLibraryModule,
 
         AnnouncementsModule,
         QuizsModule,
