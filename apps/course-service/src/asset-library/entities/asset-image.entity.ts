@@ -6,10 +6,10 @@ export enum AssetImageStatus {
   FAILED = 'failed',
 }
 
-@Entity('asset_image_assets')
-export class AssetImageAsset {
+@Entity('asset_image')
+export class AssetImage {
   @PrimaryGeneratedColumn()
-  id: number;
+  assetImageId: number;
 
   @Column({ name: 'admin_id', type: 'uuid' })
   adminId: string;

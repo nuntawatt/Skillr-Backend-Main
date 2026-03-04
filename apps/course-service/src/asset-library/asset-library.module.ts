@@ -5,12 +5,12 @@ import { AssetLibraryController } from './asset-library.controller';
 import { JwtAuthGuard, RolesGuard } from '@auth';
 import { StorageModule } from '../storage/storage.module';
 import { AssetLibraryService } from './asset-library.service';
-import { AssetImageAsset } from './entities/asset-image.entity';
-import { AssetVideoAsset } from './entities/asset-video.entity';
+import { AssetImage } from './entities/asset-image.entity';
+import { AssetVideo } from './entities/asset-video.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([AssetImageAsset, AssetVideoAsset]), StorageModule],
-  controllers: [AssetLibraryController],
-  providers: [AssetLibraryService, JwtAuthGuard, RolesGuard],
+    imports: [TypeOrmModule.forFeature([AssetImage, AssetVideo]), StorageModule],
+    controllers: [AssetLibraryController],
+    providers: [AssetLibraryService, JwtAuthGuard, RolesGuard],
 })
-export class AssetLibraryModule {}
+export class AssetLibraryModule { }

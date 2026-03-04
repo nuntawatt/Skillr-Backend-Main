@@ -2,7 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsEnum, IsInt, IsOptional, IsString, IsUrl, Min } from 'class-validator';
 
-import { VideoAssetStatus } from '../entities/video-asset.entity';
+import { VideoAssetStatus } from '../entities/video.entity';
 
 export class UpdateVideoDto {
   @IsOptional()

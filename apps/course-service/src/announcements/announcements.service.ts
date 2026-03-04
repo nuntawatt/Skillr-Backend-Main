@@ -113,7 +113,7 @@ export class AnnouncementsService {
   }
 
   // ดึงป้ายประกาศที่ active และอยู่ในช่วงเวลาที่กำหนด พร้อม placeholder image ถ้าไม่มีรูปภาพ
-  async findActive(limit = 3): Promise<AnnouncementResponseDto[]> {
+  async findActive(): Promise<AnnouncementResponseDto[]> {
     const nowExpr = "(NOW() AT TIME ZONE 'UTC')";
 
     const list = await this.announcementRepository
@@ -130,7 +130,7 @@ export class AnnouncementsService {
       )
       .orderBy('a.priority', 'DESC')
       .addOrderBy('a.created_at', 'DESC')
-      .limit(limit)
+      // .limit(limit)
       .getMany();
 
     return list.map((a) => this.toResponseDto(a));

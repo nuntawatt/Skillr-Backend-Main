@@ -7,16 +7,16 @@ export enum AssetVideoStatus {
   FAILED = 'failed',
 }
 
-@Entity('asset_video_assets')
-export class AssetVideoAsset {
+@Entity('asset_video')
+export class AssetVideo {
   @PrimaryGeneratedColumn()
-  id: number;
+  assetVideoId: number;
 
   @Column({ name: 'admin_id', type: 'uuid' })
   adminId: string;
 
   @Column({ name: 'original_filename', type: 'varchar', length: 255, nullable: true })
-  originalFilename?: string;
+  originalFilename: string;
 
   @Column({ name: 'mime_type', type: 'varchar', length: 255 })
   mimeType: string;
@@ -24,17 +24,14 @@ export class AssetVideoAsset {
   @Column({ name: 'size_bytes', type: 'bigint' })
   sizeBytes: string;
 
-  @Column({ name: 'storage_provider', type: 'varchar', length: 32, default: 's3' })
-  storageProvider: string;
+  @Column({ name: 'duration_seconds', type: 'integer', nullable: true })
+  durationSeconds?: number;
 
-  @Column({ name: 'storage_bucket', type: 'varchar', length: 255 })
-  storageBucket: string;
-
-  @Column({ name: 'storage_key', type: 'varchar', length: 1024 })
-  storageKey: string;
+  @Column({ name: 'thumbnail_url', type: 'varchar', length: 2048, nullable: true })
+  thumbnailUrl?: string;
 
   @Column({ name: 'public_url', type: 'varchar', length: 2048, nullable: true })
-  publicUrl?: string;
+  publicUrl: string;
 
   @Column({ name: 'status', type: 'varchar', length: 20, default: AssetVideoStatus.UPLOADING })
   status: AssetVideoStatus;

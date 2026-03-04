@@ -1,13 +1,14 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
-export enum ImageAssetStatus {
+export enum VideoAssetStatus {
   UPLOADING = 'uploading',
+  PROCESSING = 'processing',
   READY = 'ready',
   FAILED = 'failed',
 }
 
-@Entity('image_assets')
-export class ImageAsset {
+@Entity('video')
+export class VideoAsset {
   @PrimaryGeneratedColumn()
   id: number;
 
@@ -20,34 +21,28 @@ export class ImageAsset {
   @Column({ name: 'size_bytes', type: 'bigint' })
   sizeBytes: string;
 
-  @Column({ name: 'storage_provider' })
-  storageProvider: string;
+  @Column({ name: 'storage_provider', nullable: true })
+  storageProvider?: string;
 
-  @Column({ name: 'storage_bucket' })
-  storageBucket: string;
+  @Column({ name: 'storage_bucket', nullable: true })
+  storageBucket?: string;
 
-  @Column({ name: 'storage_key' })
-  storageKey: string;
+  @Column({ name: 'storage_key', type: 'varchar', length: 1024, nullable: true })
+  storageKey?: string;
 
   @Column({ name: 'public_url', type: 'varchar', length: 2048, nullable: true })
   publicUrl?: string;
 
   @Column({
     type: 'enum',
-    enum: ImageAssetStatus,
-    default: ImageAssetStatus.UPLOADING,
+    enum: VideoAssetStatus,
+    default: VideoAssetStatus.UPLOADING,
   })
-  status: ImageAssetStatus;
+  status: VideoAssetStatus;
 
-  @CreateDateColumn({
-    name: 'created_at',
-    type: 'timestamptz',
-  })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 
-  @UpdateDateColumn({
-    name: 'updated_at',
-    type: 'timestamptz',
-  })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt: Date;
 }

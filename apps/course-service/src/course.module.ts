@@ -48,7 +48,7 @@ import { Article } from './articles/entities/article.entity';
 import { LessonProgress } from './progress/entities/progress.entity';
 import { UserStreak } from './streaks/entities/user-streak.entity';
 import { Announcement } from './announcements/entities/announcement.entity';
-import { VideoAsset } from './media-videos/entities/video-asset.entity';
+import { VideoAsset } from './media-videos/entities/video.entity';
 import { Quizs } from './quizs/entities/quizs.entity';
 import { QuizsCheckpoint } from './quizs/entities/checkpoint.entity';
 

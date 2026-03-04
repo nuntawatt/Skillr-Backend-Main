@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 
 import { AwsS3StorageService } from '../storage/aws.service';
-import { ImageAsset, ImageAssetStatus } from './entities/image-asset.entity';
+import { ImageAsset, ImageAssetStatus } from './entities/image.entity';
 import { UpdateImageDto } from './dto/update-image.dto';
 
 @Injectable()

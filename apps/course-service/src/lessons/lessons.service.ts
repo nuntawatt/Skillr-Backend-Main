@@ -6,7 +6,7 @@ import { Chapter } from '../chapters/entities/chapter.entity';
 import { Article } from '../articles/entities/article.entity';
 import { Quizs } from '../quizs/entities/quizs.entity';
 import { QuizsCheckpoint } from '../quizs/entities/checkpoint.entity';
-import { VideoAsset } from '../media-videos/entities/video-asset.entity';
+import { VideoAsset } from '../media-videos/entities/video.entity';
 import { CreateLessonDto, UpdateLessonDto, LessonResponseDto } from './dto/lesson';
 
 @Injectable()

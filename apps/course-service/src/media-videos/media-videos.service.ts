@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 
-import { VideoAsset, VideoAssetStatus } from './entities/video-asset.entity';
+import { VideoAsset, VideoAssetStatus } from './entities/video.entity';
 import { CreateVideoDto } from './dto/create-video.dto';
 import { UpdateVideoDto } from './dto/update-video.dto';
 import { AwsS3StorageService } from '../storage/aws.service';
