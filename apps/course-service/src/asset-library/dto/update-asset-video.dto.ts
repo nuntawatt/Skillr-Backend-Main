@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
-import { AssetVideoStatus } from '../entities/asset-video.entity';
+import { AssetMediaStatus } from '../entities/asset-media.entity';
 
 export class UpdateAssetVideoDto {
 
@@ -20,9 +20,9 @@ export class UpdateAssetVideoDto {
   @Min(1)
   duration_seconds?: number;
 
-  @ApiProperty({ example: AssetVideoStatus.READY, enum: AssetVideoStatus, required: false })
+  @ApiProperty({ example: AssetMediaStatus.READY, enum: AssetMediaStatus, required: false })
   @IsOptional()
-  @IsEnum(AssetVideoStatus)
-  status?: AssetVideoStatus;
+  @IsEnum(AssetMediaStatus)
+  status?: AssetMediaStatus;
 
 }

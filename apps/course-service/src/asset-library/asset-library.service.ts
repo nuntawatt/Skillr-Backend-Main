@@ -4,8 +4,7 @@ import { Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 
 import { AwsS3StorageService } from '../storage/aws.service';
-import { AssetImage, AssetImageStatus } from './entities/asset-image.entity';
-import { AssetVideo, AssetVideoStatus } from './entities/asset-video.entity';
+import { AssetMedia, AssetMediaStatus, AssetMediaType } from './entities/asset-media.entity';
 import { CreateAssetVideoDto, UpdateAssetImageDto, UpdateAssetVideoDto } from './dto';
 
 const IMAGE_MAX_SIZE = 30 * 1024 * 1024; // 30MB
@@ -16,11 +15,8 @@ export class AssetLibraryService {
     constructor(
         private readonly aws: AwsS3StorageService,
 
-        @InjectRepository(AssetImage)
-        private readonly imageRepo: Repository<AssetImage>,
-
-        @InjectRepository(AssetVideo)
-        private readonly videoRepo: Repository<AssetVideo>,
+        @InjectRepository(AssetMedia)
+        private readonly mediaRepo: Repository<AssetMedia>,
     ) { }
 
     /* -------------------------------------------------------------------------- */
@@ -110,19 +106,21 @@ export class AssetLibraryService {
 
         const publicUrl = this.aws.buildPublicUrl(bucket, storageKey);
 
-        const asset = await this.imageRepo.save(
-            this.imageRepo.create({
+        const asset = await this.mediaRepo.save(
+            this.mediaRepo.create({
                 adminId,
+                type: AssetMediaType.IMAGE,
                 originalFilename: file.originalname,
                 mimeType: file.mimetype,
                 sizeBytes: String(file.size),
                 publicUrl,
-                status: AssetImageStatus.READY,
+                status: AssetMediaStatus.READY,
             }),
         );
 
         return {
-            assetImageId: asset.assetImageId,
+            assetMediaId: asset.assetMediaId,
+            type: asset.type,
             url: asset.publicUrl,
             status: asset.status,
         };
@@ -146,21 +144,23 @@ export class AssetLibraryService {
 
         const publicUrl = this.aws.buildPublicUrl(bucket, storageKey);
 
-        const asset = await this.videoRepo.save(
-            this.videoRepo.create({
+        const asset = await this.mediaRepo.save(
+            this.mediaRepo.create({
                 adminId,
+                type: AssetMediaType.VIDEO,
                 originalFilename: dto.original_filename ?? storageKey,
                 mimeType: dto.mime_type,
                 sizeBytes: String(dto.size_bytes),
                 // durationSeconds: dto.duration_seconds,
                 // thumbnailUrl: dto.thumbnail_url,
                 publicUrl,
-                status: AssetVideoStatus.UPLOADING,
+                status: AssetMediaStatus.UPLOADING,
             }),
         );
 
         return {
-            assetVideoId: asset.assetVideoId,
+            assetMediaId: asset.assetMediaId,
+            type: asset.type,
             uploadUrl,
             publicUrl,
             status: asset.status,
@@ -172,13 +172,13 @@ export class AssetLibraryService {
     /* -------------------------------------------------------------------------- */
 
     async confirmAssetVideo(assetVideoId: number) {
-        const asset = await this.videoRepo.findOne({ where: { assetVideoId } });
+        const asset = await this.mediaRepo.findOne({ where: { assetMediaId: assetVideoId, type: AssetMediaType.VIDEO } });
 
         if (!asset) {
             throw new NotFoundException('asset video not found');
         }
 
-        if (asset.status !== AssetVideoStatus.UPLOADING) {
+        if (asset.status !== AssetMediaStatus.UPLOADING) {
             throw new BadRequestException(`cannot confirm asset video with status ${asset.status}`);
         }
 
@@ -198,58 +198,45 @@ export class AssetLibraryService {
             throw new BadRequestException('file not uploaded yet');
         }
 
-        asset.status = AssetVideoStatus.READY;
+        asset.status = AssetMediaStatus.READY;
 
-        await this.videoRepo.save(asset);
+        await this.mediaRepo.save(asset);
 
         return {
             success: true,
-            assetVideoId: asset.assetVideoId,
+            assetMediaId: asset.assetMediaId,
+            type: asset.type,
             publicUrl: asset.publicUrl,
             status: asset.status,
         };
     }
 
-    async getAssetImagesAll() {
-        const imageAssets = await this.imageRepo.find({
+    async getAssetLibraryAll(type?: AssetMediaType) {
+        const where = type ? { type } : {};
+        const assets = await this.mediaRepo.find({
+            where,
             order: { createdAt: 'DESC' },
         });
-        if (!imageAssets || imageAssets.length === 0) {
-            throw new NotFoundException('No images found');
+
+        if (!assets || assets.length === 0) {
+            throw new NotFoundException('No assets found');
         }
 
-        return imageAssets;
+        return assets;
     }
 
-    async getAssetImageById(id: number) {
-        const imageAsset = await this.imageRepo.findOne({ where: { assetImageId: id } });
-        if (!imageAsset) {
-            throw new NotFoundException('Image not found');
+    async getAssetById(id: number) {
+        const asset = await this.mediaRepo.findOne({ where: { assetMediaId: id } });
+        if (!asset) {
+            throw new NotFoundException('Asset not found');
         }
-        return imageAsset;
+        return asset;
     }
 
-    async getAssetVideosAll() {
-        const videoAssets = await this.videoRepo.find({
-            order: { createdAt: 'DESC' },
-        });
-        if (!videoAssets || videoAssets.length === 0) {
-            throw new NotFoundException('No videos found');
-        }
-        return videoAssets;
-    }
-
-    async getAssetVideoById(id: number) {
-        const videoAsset = await this.videoRepo.findOne({ where: { assetVideoId: id } });
-        if (!videoAsset) {
-            throw new NotFoundException('Video not found');
-        }
-        return videoAsset;
-    }
 
     async updateAssetImage(id: number, dto: UpdateAssetImageDto) {
-        const imageAsset = await this.imageRepo.findOne({
-            where: { assetImageId: id },
+        const imageAsset = await this.mediaRepo.findOne({
+            where: { assetMediaId: id, type: AssetMediaType.IMAGE },
         });
 
         if (!imageAsset) {
@@ -261,14 +248,12 @@ export class AssetLibraryService {
             ...(dto.public_url && { publicUrl: dto.public_url }),
             ...(dto.status && { status: dto.status }),
         });
-        console.log('Updating asset image:', imageAsset);
-
-        return this.imageRepo.save(imageAsset);
+        return this.mediaRepo.save(imageAsset);
     }
 
     async updateAssetVideo(id: number, dto: UpdateAssetVideoDto) {
-        const videoAsset = await this.videoRepo.findOne({
-            where: { assetVideoId: id },
+        const videoAsset = await this.mediaRepo.findOne({
+            where: { assetMediaId: id, type: AssetMediaType.VIDEO },
         });
         if (!videoAsset) {
             throw new NotFoundException('Video not found');
@@ -281,25 +266,24 @@ export class AssetLibraryService {
         });
 
         // console.log('Updating asset video:', videoAsset);
-        return this.videoRepo.save(videoAsset);
+        return this.mediaRepo.save(videoAsset);
     }
 
-    async deleteAssetImageById(id: number): Promise<{ message: string }> {
-
-        const imageAsset = await this.imageRepo.findOne({
-            where: { assetImageId: id },
+    async deleteAssetById(id: number): Promise<{ message: string }> {
+        const asset = await this.mediaRepo.findOne({
+            where: { assetMediaId: id },
         });
 
-        if (!imageAsset) {
-            throw new NotFoundException('Image not found');
+        if (!asset) {
+            throw new NotFoundException('Asset not found');
         }
 
-        if (!imageAsset.publicUrl) {
+        if (!asset.publicUrl) {
             throw new BadRequestException('missing publicUrl');
         }
 
         const bucket = this.getBucket();
-        const storageKey = this.extractStorageKey(imageAsset.publicUrl);
+        const storageKey = this.extractStorageKey(asset.publicUrl);
 
         try {
             await this.aws.deleteObject(bucket, storageKey);
@@ -312,40 +296,8 @@ export class AssetLibraryService {
             );
         }
 
-        await this.imageRepo.delete(id);
+        await this.mediaRepo.delete({ assetMediaId: id });
 
-        return { message: `Image deleted successfully : ${id}` };
-    }
-
-    async deleteAssetVideoById(id: number): Promise<{ message: string }> {
-        const videoAsset = await this.videoRepo.findOne({
-            where: { assetVideoId: id },
-        });
-
-        if (!videoAsset) {
-            throw new NotFoundException('Video not found');
-        }
-
-        if (!videoAsset.publicUrl) {
-            throw new BadRequestException('missing publicUrl');
-        }
-
-        const bucket = this.getBucket();
-        const storageKey = this.extractStorageKey(videoAsset.publicUrl);
-
-        try {
-            await this.aws.deleteObject(bucket, storageKey);
-        } catch (err) {
-            console.warn(
-                'S3 delete failed',
-                err?.name,
-                err?.message,
-                err?.$metadata?.httpStatusCode
-            );
-        }
-
-        await this.videoRepo.delete(id);
-
-        return { message: `Video deleted successfully : ${id}` };
+        return { message: `Asset deleted successfully : ${id}` };
     }
 }

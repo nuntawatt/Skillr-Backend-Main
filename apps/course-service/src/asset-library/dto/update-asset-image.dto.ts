@@ -1,6 +1,6 @@
 import { IsEnum, IsOptional, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { AssetImageStatus } from '../entities/asset-image.entity';
+import { AssetMediaStatus } from '../entities/asset-media.entity';
 
 export class UpdateAssetImageDto {
     @ApiProperty({ example: 'original_filename.jpg', required: false })
@@ -13,8 +13,8 @@ export class UpdateAssetImageDto {
     @IsString()
     public_url?: string;
 
-    @ApiProperty({ example: AssetImageStatus.READY, enum: AssetImageStatus, required: false })
+    @ApiProperty({ example: AssetMediaStatus.READY, enum: AssetMediaStatus, required: false })
     @IsOptional()
-    @IsEnum(AssetImageStatus)
-    status?: AssetImageStatus;
+    @IsEnum(AssetMediaStatus)
+    status?: AssetMediaStatus;
 }

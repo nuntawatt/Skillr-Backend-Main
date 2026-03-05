@@ -1,22 +1,32 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 
-export enum AssetVideoStatus {
+export enum AssetMediaType {
+  IMAGE = 'image',
+  VIDEO = 'video',
+}
+
+export enum AssetMediaStatus {
   UPLOADING = 'uploading',
   PROCESSING = 'processing',
   READY = 'ready',
   FAILED = 'failed',
 }
 
-@Entity('asset_video')
-export class AssetVideo {
+@Entity('asset_media')
+export class AssetMedia {
   @PrimaryGeneratedColumn()
-  assetVideoId: number;
+  assetMediaId: number;
 
+  @Index('idx_asset_media_admin_id')
   @Column({ name: 'admin_id', type: 'uuid' })
   adminId: string;
 
+  @Index('idx_asset_media_type')
+  @Column({ name: 'type', type: 'varchar', length: 10 })
+  type: AssetMediaType;
+
   @Column({ name: 'original_filename', type: 'varchar', length: 255, nullable: true })
-  originalFilename: string;
+  originalFilename?: string;
 
   @Column({ name: 'mime_type', type: 'varchar', length: 255 })
   mimeType: string;
@@ -31,10 +41,10 @@ export class AssetVideo {
   thumbnailUrl?: string;
 
   @Column({ name: 'public_url', type: 'varchar', length: 2048, nullable: true })
-  publicUrl: string;
+  publicUrl?: string;
 
-  @Column({ name: 'status', type: 'varchar', length: 20, default: AssetVideoStatus.UPLOADING })
-  status: AssetVideoStatus;
+  @Column({ name: 'status', type: 'varchar', length: 20, default: AssetMediaStatus.UPLOADING })
+  status: AssetMediaStatus;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;
