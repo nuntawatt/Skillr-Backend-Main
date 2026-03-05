@@ -183,6 +183,15 @@ export class ProgressService {
       row.completedAt = new Date();
     }
 
+    // ถ้าสถานะเป็น COMPLETED/SKIPPED ให้ percent=100 และมี completedAt เสมอ
+    if (
+      row.status === LessonProgressStatus.COMPLETED ||
+      row.status === LessonProgressStatus.SKIPPED
+    ) {
+      row.progressPercent = 100;
+      row.completedAt = row.completedAt ?? new Date();
+    }
+
     const saved = await this.lessonProgressRepository.save(row);
 
     // เพิ่ม streak เฉพาะเมื่อเปลี่ยนสถานะเป็น COMPLETED หรือ SKIPPED เป็นครั้งแรก
@@ -767,12 +776,13 @@ export class ProgressService {
         lessonType: lesson.lesson_type,
         status,
         progressPercent:
-          progress?.progressPercent != null
-            ? Math.round(Number(progress.progressPercent))
-            : (status === LessonProgressStatus.COMPLETED ||
-              status === LessonProgressStatus.SKIPPED
-              ? 100
-              : 0),
+          status === LessonProgressStatus.COMPLETED ||
+          status === LessonProgressStatus.SKIPPED
+            ? 100
+            : (progress?.progressPercent != null &&
+                !Number.isNaN(Number(progress.progressPercent))
+                ? Math.round(Number(progress.progressPercent))
+                : 0),
         positionSeconds: progress?.positionSeconds ?? null,
         durationSeconds: progress?.durationSeconds ?? null,
         completedAt: progress?.completedAt ?? null,
@@ -821,6 +831,10 @@ export class ProgressService {
     row: LessonProgress,
     location?: { chapterId?: number | null; levelId?: number | null },
   ): LessonProgressResponseDto {
+    const isDone =
+      row.status === LessonProgressStatus.COMPLETED ||
+      row.status === LessonProgressStatus.SKIPPED;
+
     return {
       lessonId: row.lessonId,
       chapterId: location?.chapterId ?? null,
@@ -828,9 +842,12 @@ export class ProgressService {
       userId: row.userId,
       status: row.status,
       progressPercent:
-        row.progressPercent != null
-          ? Math.round(Number(row.progressPercent))
-          : null,
+        isDone
+          ? 100
+          : (row.progressPercent != null &&
+              !Number.isNaN(Number(row.progressPercent))
+              ? Math.round(Number(row.progressPercent))
+              : null),
       positionSeconds: row.positionSeconds ?? null,
       durationSeconds: row.durationSeconds ?? null,
       lastViewedAt: row.lastViewedAt ?? null,

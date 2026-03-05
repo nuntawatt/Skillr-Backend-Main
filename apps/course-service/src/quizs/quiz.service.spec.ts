@@ -253,6 +253,22 @@ describe('QuizService (quiz)', () => {
       expect(res.status).toBe(QuizsStatus.COMPLETED);
       expect(res.is_correct).toBe(true);
     });
+
+    it('keeps COMPLETED status when result already completed', async () => {
+      quizRepo.findOne.mockResolvedValue(makeQuiz({ lessonId: 10, quizsAnswer: 'A' }));
+      resultRepo.findOne.mockResolvedValue(
+        makeResult({
+          status: QuizsStatus.COMPLETED,
+          userAnswer: 'a',
+          isCorrect: true,
+          updatedAt: new Date('2026-03-05T01:00:00.000Z'),
+        }),
+      );
+
+      const res = await service.getQuizWithStatus(10, 'u1');
+      expect(res.status).toBe(QuizsStatus.COMPLETED);
+      expect(res.quizs_answer).toBe('A');
+    });
   });
 
   describe('checkAndSaveAnswer', () => {
@@ -266,6 +282,28 @@ describe('QuizService (quiz)', () => {
       resultRepo.findOne.mockResolvedValue(makeResult({ userAnswer: 'a', status: QuizsStatus.COMPLETED }));
 
       await expect(service.checkAndSaveAnswer(10, 'u1', 'a')).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('throws conflict when result already final (SKIPPED) even if no answer stored', async () => {
+      quizRepo.findOne.mockResolvedValue(makeQuiz({ lessonId: 10 }));
+      resultRepo.findOne.mockResolvedValue(makeResult({ status: QuizsStatus.SKIPPED, userAnswer: null }));
+
+      await expect(service.checkAndSaveAnswer(10, 'u1', 'a')).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('updates existing PENDING result when userAnswer is null', async () => {
+      quizRepo.findOne.mockResolvedValue(makeQuiz({ lessonId: 10, quizsAnswer: 'A', quizsExplanation: 'E' }));
+      resultRepo.findOne.mockResolvedValue(makeResult({ status: QuizsStatus.PENDING, userAnswer: null }));
+      resultRepo.save.mockImplementation(async (r) => r as any);
+      lessonRepo.findOne.mockResolvedValue(null);
+
+      const res = await service.checkAndSaveAnswer(10, 'u1', 'a');
+
+      expect(resultRepo.save).toHaveBeenCalledWith(expect.objectContaining({
+        userAnswer: 'a',
+        status: QuizsStatus.COMPLETED,
+      }));
+      expect(res.quizs_answer).toBe('A');
     });
 
     it('saves result and syncs userXp when correct', async () => {
@@ -318,6 +356,15 @@ describe('QuizService (quiz)', () => {
 
       const saved = await service.skipQuiz(10, 'u1');
       expect(saved.status).toBe(QuizsStatus.SKIPPED);
+    });
+
+    it('marks existing result as SKIPPED', async () => {
+      resultRepo.findOne.mockResolvedValue(makeResult({ status: QuizsStatus.PENDING }));
+      resultRepo.save.mockImplementation(async (x) => x as any);
+
+      const saved = await service.skipQuiz(10, 'u1');
+      expect(saved.status).toBe(QuizsStatus.SKIPPED);
+      expect(resultRepo.save).toHaveBeenCalled();
     });
   });
 

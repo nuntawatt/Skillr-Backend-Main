@@ -82,6 +82,20 @@ describe('StreakService', () => {
       expect(res.currentStreak).toBe(1);
       expect(res.rewardShownAt).toBeNull();
     });
+
+    it('increments when lastCompletedAt was yesterday (gap = 1)', async () => {
+      const last = new Date('2026-03-04T10:00:00.000Z');
+      const now = new Date('2026-03-05T10:00:00.000Z');
+      const streak = makeStreak({ currentStreak: 2, longestStreak: 2, lastCompletedAt: last });
+      repo.findOne!.mockResolvedValue(streak);
+      repo.save!.mockImplementation(async (s) => s as any);
+
+      const res = await service.bumpStreak('u1', now);
+
+      expect(res.currentStreak).toBe(3);
+      expect(res.longestStreak).toBe(3);
+      expect(repo.save).toHaveBeenCalled();
+    });
   });
 
   describe('getStreak', () => {
@@ -104,6 +118,28 @@ describe('StreakService', () => {
       expect(res.isFlameOn).toBe(true);
       expect(res.isReward).toBe(true);
     });
+
+    it('returns isReward false when reward already shown today', async () => {
+      const now = new Date();
+      const streak = makeStreak({ currentStreak: 2, lastCompletedAt: now, rewardShownAt: now });
+      repo.findOne!.mockResolvedValue(streak);
+
+      const res = await service.getStreak('u1');
+      expect(res.isFlameOn).toBe(true);
+      expect(res.isReward).toBe(false);
+    });
+
+    it('returns isFlameOn false when not completed today (gap = 1)', async () => {
+      const last = new Date('2026-03-04T10:00:00.000Z');
+      const streak = makeStreak({ currentStreak: 2, lastCompletedAt: last, rewardShownAt: null });
+      repo.findOne!.mockResolvedValue(streak);
+
+      const res = await service.getStreak('u1');
+      expect(res.isFlameOn).toBe(false);
+      expect(res.isReward).toBe(false);
+      expect(res.streak.currentStreak).toBe(2);
+      expect(repo.save).not.toHaveBeenCalled();
+    });
   });
 
   describe('markRewardShown', () => {
@@ -114,6 +150,19 @@ describe('StreakService', () => {
 
       const res = await service.markRewardShown('u1');
       expect(res.rewardShownAt).toBeInstanceOf(Date);
+      expect(repo.save).toHaveBeenCalled();
+    });
+
+    it('creates streak if missing then marks shown', async () => {
+      (repo.findOne as jest.Mock)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(makeStreak())
+        .mockResolvedValueOnce(makeStreak());
+
+      repo.save!.mockImplementation(async (s) => s as any);
+
+      await service.markRewardShown('u1');
+      expect(repo.upsert).toHaveBeenCalled();
       expect(repo.save).toHaveBeenCalled();
     });
   });

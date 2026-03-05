@@ -360,6 +360,20 @@ describe('QuizService (checkpoint)', () => {
             expect(res[0].score).toBe(5);
             expect(res[0].checkpoint_explanation).toBe('E');
         });
+
+        it('does not show solution when not attempted', async () => {
+            lessonRepo.findOne.mockResolvedValue({ lesson_id: 10, lesson_type: LessonType.CHECKPOINT, chapter_id: 1 } as any);
+            checkpointRepo.find.mockResolvedValue([
+                makeCheckpoint({ checkpointId: 1, lessonId: 10, checkpointAnswer: 'a', checkpointExplanation: 'E', checkpointScore: 5 }),
+            ]);
+            resultRepo.find.mockResolvedValue([]);
+
+            const res = await service.findCheckpointsByLesson(10, 'u1');
+            expect(res[0].student_progress.correct_answer).toBeNull();
+            expect(res[0].checkpoint_explanation).toBeNull();
+            expect(res[0].score).toBeNull();
+            expect(res[0].student_progress.checkpoint_status).toBe('PENDING');
+        });
     });
 
     describe('skipCheckpoint', () => {
@@ -400,6 +414,24 @@ describe('QuizService (checkpoint)', () => {
             expect(res.checkpoint_status).toBe('SKIPPED');
             expect(resultRepo.save).toHaveBeenCalled();
         });
+
+        it('allows skip after wrong attempt (overwrites answer to null)', async () => {
+            checkpointRepo.findOne.mockResolvedValue(makeCheckpoint({ checkpointId: 1, lessonId: 10, checkpointAnswer: 'a' }));
+            resultRepo.findOne.mockResolvedValue(
+                makeResult({ type: QuizsResultType.CHECKPOINT, checkpointId: 1, status: QuizsStatus.PENDING, userAnswer: 'b', isCorrect: false }),
+            );
+            resultRepo.save.mockImplementation(async (x: any) => x);
+
+            const res = await service.skipCheckpoint(1, 'u1');
+
+            expect(resultRepo.save).toHaveBeenCalledWith(expect.objectContaining({
+                status: QuizsStatus.SKIPPED,
+                userAnswer: null,
+                isCorrect: null,
+            }));
+            expect(res.checkpoint_status).toBe('SKIPPED');
+            expect(res.correct_answer).toBe('a');
+        });
     });
 
     describe('skipCheckpointsByLesson', () => {
@@ -431,6 +463,15 @@ describe('QuizService (checkpoint)', () => {
             checkpointRepo.findOne.mockResolvedValue(makeCheckpoint({ checkpointId: 1 }));
             resultRepo.findOne.mockResolvedValue(
                 makeResult({ type: QuizsResultType.CHECKPOINT, checkpointId: 1, status: QuizsStatus.SKIPPED }),
+            );
+
+            await expect(service.checkCheckpointAnswer(1, 'u1', 'a')).rejects.toBeInstanceOf(ConflictException);
+        });
+
+        it('throws when checkpoint already completed', async () => {
+            checkpointRepo.findOne.mockResolvedValue(makeCheckpoint({ checkpointId: 1 }));
+            resultRepo.findOne.mockResolvedValue(
+                makeResult({ type: QuizsResultType.CHECKPOINT, checkpointId: 1, status: QuizsStatus.COMPLETED, userAnswer: 'a', isCorrect: true }),
             );
 
             await expect(service.checkCheckpointAnswer(1, 'u1', 'a')).rejects.toBeInstanceOf(ConflictException);

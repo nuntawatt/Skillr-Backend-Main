@@ -78,7 +78,14 @@ describe('CoursesService', () => {
         isPublished: undefined,
       } as any);
 
-      expect(repo.create).toHaveBeenCalled();
+      expect(repo.create).toHaveBeenCalledWith({
+        course_ownerId: 0,
+        course_title: 'C1',
+        course_description: 'Desc',
+        course_imageUrl: undefined,
+        course_tags: null,
+        isPublished: false,
+      });
       expect(repo.save).toHaveBeenCalledWith(created);
       expect(result.course_id).toBe(123);
       expect(result.course_title).toBe('C1');
@@ -116,6 +123,50 @@ describe('CoursesService', () => {
       expect(qb.take).toHaveBeenCalledWith(10);
       expect(qb.skip).toHaveBeenCalledWith(5);
       expect(result[0].course_totalChapter).toBe(7);
+    });
+
+    it('does not apply filters when params omitted and clamps limit to max 100', async () => {
+      const qb: any = {
+        addSelect: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [makeCourse({ course_id: 1 })],
+          raw: [{}],
+        }),
+      };
+      repo.createQueryBuilder!.mockReturnValue(qb);
+
+      await service.findAll({ limit: 9999 });
+
+      expect(qb.andWhere).not.toHaveBeenCalled();
+      expect(qb.take).toHaveBeenCalledWith(100);
+      expect(qb.skip).toHaveBeenCalledWith(0);
+    });
+
+    it('uses case-insensitive search keyword and coerces invalid total to 0', async () => {
+      const qb: any = {
+        addSelect: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        take: jest.fn().mockReturnThis(),
+        skip: jest.fn().mockReturnThis(),
+        getRawAndEntities: jest.fn().mockResolvedValue({
+          entities: [makeCourse({ course_id: 1 })],
+          raw: [{ course_totalChapter: 'not-a-number' }],
+        }),
+      };
+      repo.createQueryBuilder!.mockReturnValue(qb);
+
+      const result = await service.findAll({ search: 'HeLLo' });
+
+      const searchCall = (qb.andWhere as jest.Mock).mock.calls.find((c: any[]) =>
+        String(c?.[0] ?? '').includes('LOWER(course.course_title)'),
+      );
+      expect(searchCall?.[1]).toEqual({ kw: '%hello%' });
+      expect(result[0].course_totalChapter).toBe(0);
     });
 
     it('clamps default limit/offset when invalid', async () => {
@@ -213,6 +264,114 @@ describe('CoursesService', () => {
       const lessons = result.course_levels[0].chapters[0].lessons;
       expect(lessons.map((l) => l.lesson_id)).toEqual([1000, 1002]);
       expect(lessons.find((l) => l.lesson_id === 1002)?.checkpoint).toBeTruthy();
+
+      expect(repo.query).toHaveBeenCalledWith(
+        expect.stringContaining('FROM quizs_checkpoint'),
+        [[1000, 1001, 1002]],
+      );
+    });
+
+    it('sorts levels/chapters/lessons and filters out empty chapters/levels', async () => {
+      const course = makeCourse({
+        course_id: 1,
+        course_levels: [
+          {
+            level_id: 2,
+            level_title: 'L2',
+            level_orderIndex: 1,
+            level_chapters: [
+              {
+                chapter_id: 21,
+                chapter_title: 'C21',
+                chapter_orderIndex: 0,
+                lessons: [
+                  {
+                    lesson_id: 2101,
+                    lesson_title: 'Draft',
+                    lesson_type: LessonType.ARTICLE,
+                    orderIndex: 0,
+                    isPublished: false,
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            level_id: 1,
+            level_title: 'L1',
+            level_orderIndex: 0,
+            level_chapters: [
+              {
+                chapter_id: 12,
+                chapter_title: 'C12',
+                chapter_orderIndex: 1,
+                lessons: [
+                  {
+                    lesson_id: 1202,
+                    lesson_title: 'B',
+                    lesson_type: LessonType.ARTICLE,
+                    orderIndex: 1,
+                    isPublished: true,
+                  },
+                  {
+                    lesson_id: 1201,
+                    lesson_title: 'A',
+                    lesson_type: LessonType.ARTICLE,
+                    orderIndex: 0,
+                    isPublished: true,
+                  },
+                ],
+              },
+              {
+                chapter_id: 11,
+                chapter_title: 'C11',
+                chapter_orderIndex: 0,
+                lessons: [],
+              },
+            ],
+          },
+        ] as any,
+      });
+
+      repo.findOne!.mockResolvedValue(course);
+      repo.query!.mockResolvedValue([]);
+
+      const result = await service.getStructure(1);
+
+      expect(result.course_levels.map((l) => l.level_id)).toEqual([1]);
+      expect(result.course_levels[0].chapters.map((c) => c.chapter_id)).toEqual([12]);
+      expect(result.course_levels[0].chapters[0].lessons.map((l) => l.lesson_id)).toEqual([
+        1201,
+        1202,
+      ]);
+    });
+
+    it('does not query checkpoints when course has no lessons', async () => {
+      const course = makeCourse({
+        course_id: 1,
+        course_levels: [
+          {
+            level_id: 1,
+            level_title: 'L1',
+            level_orderIndex: 0,
+            level_chapters: [
+              {
+                chapter_id: 1,
+                chapter_title: 'C1',
+                chapter_orderIndex: 0,
+                lessons: [],
+              },
+            ],
+          },
+        ] as any,
+      });
+
+      repo.findOne!.mockResolvedValue(course);
+
+      const result = await service.getStructure(1);
+
+      expect(repo.query).not.toHaveBeenCalled();
+      expect(result.course_levels).toEqual([]);
     });
   });
 
@@ -252,6 +411,41 @@ describe('CoursesService', () => {
       expect(result.course_levels[0].chapters[0].lessons).toHaveLength(1);
       expect(result.course_levels[0].chapters[0].lessons[0].lesson_id).toBe(1000);
     });
+
+    it('sorts lessons by orderIndex and queries checkpoints when lessons exist', async () => {
+      const course = makeCourse({
+        course_id: 1,
+        course_levels: [
+          {
+            level_id: 10,
+            level_title: 'L1',
+            level_orderIndex: 0,
+            level_chapters: [
+              {
+                chapter_id: 100,
+                chapter_title: 'C1',
+                chapter_orderIndex: 0,
+                lessons: [
+                  { lesson_id: 2, lesson_title: 'B', lesson_type: LessonType.ARTICLE, orderIndex: 1, isPublished: false },
+                  { lesson_id: 1, lesson_title: 'A', lesson_type: LessonType.ARTICLE, orderIndex: 0, isPublished: false },
+                ],
+              },
+            ],
+          },
+        ] as any,
+      });
+
+      repo.findOne!.mockResolvedValue(course);
+      repo.query!.mockResolvedValue([]);
+
+      const result = await service.getStructureAdmin(1);
+
+      expect(repo.query).toHaveBeenCalledWith(
+        expect.stringContaining('FROM quizs_checkpoint'),
+        [[2, 1]],
+      );
+      expect(result.course_levels[0].chapters[0].lessons.map((l) => l.lesson_id)).toEqual([1, 2]);
+    });
   });
 
   describe('update', () => {
@@ -270,6 +464,19 @@ describe('CoursesService', () => {
       expect(course.course_title).toBe('New');
       expect(course.isPublished).toBe(true);
       expect(result.course_title).toBe('New');
+    });
+
+    it('allows setting nullable fields to null and maps nulls to undefined in response dto', async () => {
+      const course = makeCourse({ course_id: 1, course_imageUrl: 'x', course_tags: ['a'] as any });
+      repo.findOne!.mockResolvedValue(course);
+      repo.save!.mockImplementation(async (c) => c as any);
+
+      const result = await service.update(1, { course_imageUrl: null, course_tags: null } as any);
+
+      expect(course.course_imageUrl).toBeNull();
+      expect(course.course_tags).toBeNull();
+      expect(result.course_imageUrl).toBeUndefined();
+      expect(result.course_tags).toBeUndefined();
     });
   });
 

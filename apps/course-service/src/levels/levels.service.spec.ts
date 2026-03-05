@@ -107,6 +107,44 @@ describe('LevelsService', () => {
 
       expect(result.level_orderIndex).toBe(3);
     });
+
+    it('auto-assigns orderIndex = 0 when MAX is null', async () => {
+      courseRepo.findOne!.mockResolvedValue({ course_id: 10 } as any);
+
+      const qb = {
+        where: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn().mockResolvedValue({ maxOrder: null }),
+      };
+      levelRepo.createQueryBuilder!.mockReturnValue(qb as any);
+
+      const level = makeLevel({ level_title: 'L1', course_id: 10, level_orderIndex: 0 });
+      levelRepo.create!.mockReturnValue(level);
+      levelRepo.save!.mockResolvedValue(level);
+
+      const result = await service.create({ level_title: 'L1', course_id: 10 } as any);
+
+      expect(result.level_orderIndex).toBe(0);
+    });
+
+    it('auto-assigns orderIndex = 0 when MAX query returns undefined', async () => {
+      courseRepo.findOne!.mockResolvedValue({ course_id: 10 } as any);
+
+      const qb = {
+        where: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn().mockResolvedValue(undefined),
+      };
+      levelRepo.createQueryBuilder!.mockReturnValue(qb as any);
+
+      const level = makeLevel({ level_title: 'L1', course_id: 10, level_orderIndex: 0 });
+      levelRepo.create!.mockReturnValue(level);
+      levelRepo.save!.mockResolvedValue(level);
+
+      const result = await service.create({ level_title: 'L1', course_id: 10 } as any);
+
+      expect(result.level_orderIndex).toBe(0);
+    });
   });
 
   describe('findByCourse', () => {
@@ -190,9 +228,31 @@ describe('LevelsService', () => {
       await expect(service.reorder(10, [] as any)).rejects.toBeInstanceOf(BadRequestException);
     });
 
+    it('throws when levelIds is not an array', async () => {
+      levelRepo.find!.mockResolvedValue([makeLevel({ level_id: 1, course_id: 10 })]);
+      await expect(service.reorder(10, null as any)).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('throws when levelIds length mismatches levels length', async () => {
+      levelRepo.find!.mockResolvedValue([
+        makeLevel({ level_id: 1, course_id: 10 }),
+        makeLevel({ level_id: 2, course_id: 10 }),
+      ]);
+      await expect(service.reorder(10, [1] as any)).rejects.toBeInstanceOf(BadRequestException);
+    });
+
     it('throws when ids include other course', async () => {
       levelRepo.find!.mockResolvedValue([makeLevel({ level_id: 1, course_id: 10 })]);
       await expect(service.reorder(10, [999])).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('throws when levelIds contains duplicates (missing some levels)', async () => {
+      levelRepo.find!.mockResolvedValue([
+        makeLevel({ level_id: 1, course_id: 10 }),
+        makeLevel({ level_id: 2, course_id: 10 }),
+        makeLevel({ level_id: 3, course_id: 10 }),
+      ]);
+      await expect(service.reorder(10, [1, 1, 2] as any)).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('updates orderIndex and returns findByCourse', async () => {

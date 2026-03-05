@@ -203,6 +203,34 @@ describe('ChaptersService', () => {
       );
       expect(result.chapter_orderIndex).toBe(0);
     });
+
+    it('auto-assigns orderIndex = 0 when MAX query returns undefined', async () => {
+      levelRepo.findOne!.mockResolvedValue({ level_id: 10 } as Level);
+
+      const mockQB = {
+        where: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn().mockResolvedValue(undefined),
+      };
+      chapterRepo.createQueryBuilder!.mockReturnValue(mockQB as any);
+
+      const created = makeChapter({
+        chapter_title: 'C1',
+        chapter_name: 'c1',
+        levelId: 10,
+        chapter_orderIndex: 0,
+      });
+      chapterRepo.create!.mockReturnValue(created);
+      chapterRepo.save!.mockResolvedValue(created);
+
+      const result = await service.create({
+        chapter_title: 'C1',
+        chapter_name: 'c1',
+        level_id: 10,
+      });
+
+      expect(result.chapter_orderIndex).toBe(0);
+    });
   });
 
   describe('findByLevel / findByLevelStudent', () => {
@@ -368,6 +396,11 @@ describe('ChaptersService', () => {
         title: 'throws when chapter_ids is missing/empty',
         chapters: [makeChapter({ chapter_id: 1, levelId: 10 })],
         ids: [] as any,
+      },
+      {
+        title: 'throws when chapter_ids is not an array',
+        chapters: [makeChapter({ chapter_id: 1, levelId: 10 })],
+        ids: null as any,
       },
       {
         title: 'throws when chapter_ids length mismatches',

@@ -184,6 +184,85 @@ describe('LessonsService', () => {
       expect(result.orderIndex).toBe(1);
       expect(result.isPublished).toBe(false);
     });
+
+    it('creates checkpoint as last lesson when no existing checkpoint', async () => {
+      chapterRepo.findOne!.mockResolvedValue({ chapter_id: 10 } as any);
+
+      lessonRepo.find!.mockResolvedValue([
+        makeLesson({ lesson_id: 1, orderIndex: 0, lesson_type: LessonType.ARTICLE }),
+        makeLesson({ lesson_id: 2, orderIndex: 1, lesson_type: LessonType.QUIZ }),
+      ]);
+
+      const checkpointLesson = makeLesson({
+        lesson_id: 3,
+        lesson_type: LessonType.CHECKPOINT,
+        orderIndex: 2,
+        isPublished: false,
+      });
+      lessonRepo.create!.mockReturnValue(checkpointLesson);
+      lessonRepo.save!.mockResolvedValue(checkpointLesson);
+
+      const result = await service.create({
+        chapter_id: 10,
+        lesson_title: 'CP',
+        lesson_type: LessonType.CHECKPOINT,
+        isPublished: true,
+      } as any);
+
+      expect(result.orderIndex).toBe(2);
+      expect(result.isPublished).toBe(false);
+    });
+
+    it('creates non-checkpoint as last when no existing checkpoint', async () => {
+      chapterRepo.findOne!.mockResolvedValue({ chapter_id: 10 } as any);
+
+      lessonRepo.find!.mockResolvedValue([makeLesson({ lesson_id: 1, orderIndex: 0 })]);
+      lessonRepo.save!.mockImplementation(async (l: any) => l);
+
+      const newLesson = makeLesson({
+        lesson_id: 2,
+        lesson_type: LessonType.VIDEO,
+        orderIndex: 1,
+        isPublished: false,
+      });
+      lessonRepo.create!.mockReturnValue(newLesson);
+      lessonRepo.save!.mockResolvedValue(newLesson);
+
+      const result = await service.create({
+        chapter_id: 10,
+        lesson_title: 'V',
+        lesson_type: LessonType.VIDEO,
+      } as any);
+
+      expect(result.orderIndex).toBe(1);
+      expect(result.isPublished).toBe(false);
+      expect(chapterRepo.update).toHaveBeenCalled();
+    });
+
+    it('syncChapterIsPublished sets chapter.isPublished true when published lesson exists', async () => {
+      chapterRepo.findOne!.mockResolvedValue({ chapter_id: 10 } as any);
+
+      lessonRepo.find!.mockResolvedValue([]);
+      lessonRepo.exist!.mockResolvedValue(true);
+
+      const newLesson = makeLesson({
+        lesson_id: 1,
+        lesson_type: LessonType.ARTICLE,
+        orderIndex: 0,
+        isPublished: true,
+      });
+      lessonRepo.create!.mockReturnValue(newLesson);
+      lessonRepo.save!.mockResolvedValue(newLesson);
+
+      await service.create({
+        chapter_id: 10,
+        lesson_title: 'A',
+        lesson_type: LessonType.ARTICLE,
+        isPublished: true,
+      } as any);
+
+      expect(chapterRepo.update).toHaveBeenCalledWith(10, { isPublished: true });
+    });
   });
 
   describe('findByChapter / findPublishedByChapter', () => {
@@ -239,6 +318,31 @@ describe('LessonsService', () => {
       await expect(service.findOne(1)).rejects.toBeInstanceOf(NotFoundException);
     });
 
+    it('findOne throws when draft QUIZ has no content', async () => {
+      lessonRepo.findOne!.mockResolvedValue(makeLesson({ lesson_id: 1, lesson_type: LessonType.QUIZ, isPublished: false }));
+      quizRepo.findOne!.mockResolvedValue(null);
+
+      await expect(service.findOne(1)).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('findOne throws when draft CHECKPOINT has no content', async () => {
+      lessonRepo.findOne!.mockResolvedValue(
+        makeLesson({ lesson_id: 1, lesson_type: LessonType.CHECKPOINT, isPublished: false }),
+      );
+      checkpointRepo.findOne!.mockResolvedValue(null);
+
+      await expect(service.findOne(1)).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('findOne returns dto for draft ARTICLE when content exists', async () => {
+      lessonRepo.findOne!.mockResolvedValue(makeLesson({ lesson_id: 1, lesson_type: LessonType.ARTICLE, isPublished: false }));
+      articleRepo.findOne!.mockResolvedValue({ article_id: 1 } as any);
+      checkpointRepo.findOne!.mockResolvedValue(null);
+
+      const result = await service.findOne(1);
+      expect(result.lesson_id).toBe(1);
+    });
+
     it('findOnePublished throws when not found', async () => {
       lessonRepo.findOne!.mockResolvedValue(null);
       await expect(service.findOnePublished(1)).rejects.toBeInstanceOf(NotFoundException);
@@ -251,6 +355,17 @@ describe('LessonsService', () => {
       checkpointRepo.findOne!.mockResolvedValue(null);
       const result = await service.findOneAdmin(1);
       expect(result.lesson_id).toBe(1);
+    });
+
+    it('findOne does not validate content when published', async () => {
+      lessonRepo.findOne!.mockResolvedValue(makeLesson({ lesson_id: 1, lesson_type: LessonType.QUIZ, isPublished: true }));
+      quizRepo.findOne!.mockResolvedValue(null);
+      checkpointRepo.findOne!.mockResolvedValue(null);
+
+      const result = await service.findOne(1);
+
+      expect(result.lesson_id).toBe(1);
+      expect(quizRepo.findOne).not.toHaveBeenCalled();
     });
   });
 
@@ -278,6 +393,72 @@ describe('LessonsService', () => {
       expect(lesson.isPublished).toBe(true);
       expect(result.lesson_title).toBe('New');
       expect(chapterRepo.update).toHaveBeenCalled();
+    });
+
+    it('converts lesson to CHECKPOINT, removes other checkpoint, moves to end, and forces draft', async () => {
+      const lesson = makeLesson({
+        lesson_id: 10,
+        chapter_id: 99,
+        lesson_type: LessonType.ARTICLE,
+        isPublished: true,
+        orderIndex: 0,
+      });
+      lessonRepo.findOne!.mockResolvedValue(lesson);
+
+      const otherCheckpoint = makeLesson({
+        lesson_id: 11,
+        chapter_id: 99,
+        lesson_type: LessonType.CHECKPOINT,
+        orderIndex: 2,
+      });
+
+      lessonRepo.find!.mockResolvedValue([
+        lesson,
+        makeLesson({ lesson_id: 12, chapter_id: 99, orderIndex: 1 }),
+        otherCheckpoint,
+      ]);
+      lessonRepo.remove!.mockResolvedValue(otherCheckpoint);
+      lessonRepo.save!.mockImplementation(async (l) => l as any);
+      checkpointRepo.exist!.mockResolvedValue(true);
+
+      const result = await service.update(10, { lesson_type: LessonType.CHECKPOINT, isPublished: true } as any);
+
+      expect(lessonRepo.remove).toHaveBeenCalledWith(otherCheckpoint);
+      expect(result.lesson_type).toBe(LessonType.CHECKPOINT);
+      expect(result.isPublished).toBe(false);
+      expect(result.orderIndex).toBe(2);
+    });
+
+    it('publishes checkpoint when content exists', async () => {
+      const lesson = makeLesson({ lesson_id: 1, lesson_type: LessonType.CHECKPOINT, isPublished: false });
+      lessonRepo.findOne!.mockResolvedValue(lesson);
+      lessonRepo.save!.mockImplementation(async (l) => l as any);
+      checkpointRepo.exist!.mockResolvedValue(true);
+
+      const result = await service.update(1, { isPublished: true } as any);
+
+      expect(result.isPublished).toBe(true);
+    });
+
+    it('updates orderIndex for non-checkpoint when provided', async () => {
+      const lesson = makeLesson({ lesson_id: 1, lesson_type: LessonType.ARTICLE, orderIndex: 0 });
+      lessonRepo.findOne!.mockResolvedValue(lesson);
+      lessonRepo.save!.mockImplementation(async (l) => l as any);
+
+      const result = await service.update(1, { orderIndex: 5 } as any);
+
+      expect(result.orderIndex).toBe(5);
+    });
+
+    it('ignores orderIndex update for checkpoint lessons', async () => {
+      const lesson = makeLesson({ lesson_id: 1, lesson_type: LessonType.CHECKPOINT, orderIndex: 0, isPublished: false });
+      lessonRepo.findOne!.mockResolvedValue(lesson);
+      lessonRepo.save!.mockImplementation(async (l) => l as any);
+      checkpointRepo.exist!.mockResolvedValue(true);
+
+      const result = await service.update(1, { orderIndex: 5 } as any);
+
+      expect(result.orderIndex).toBe(0);
     });
   });
 
@@ -314,6 +495,26 @@ describe('LessonsService', () => {
       await expect(service.reorder(10, [2, 1])).rejects.toBeInstanceOf(BadRequestException);
     });
 
+    it('throws when lessonIds missing/empty', async () => {
+      lessonRepo.find!.mockResolvedValue([makeLesson({ lesson_id: 1 })]);
+      await expect(service.reorder(10, [] as any)).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('throws when lessonIds not array', async () => {
+      lessonRepo.find!.mockResolvedValue([makeLesson({ lesson_id: 1 })]);
+      await expect(service.reorder(10, null as any)).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('throws when lessonIds length mismatches', async () => {
+      lessonRepo.find!.mockResolvedValue([makeLesson({ lesson_id: 1 }), makeLesson({ lesson_id: 2 })]);
+      await expect(service.reorder(10, [1] as any)).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('throws when lesson id does not belong to chapter', async () => {
+      lessonRepo.find!.mockResolvedValue([makeLesson({ lesson_id: 1 }), makeLesson({ lesson_id: 2 })]);
+      await expect(service.reorder(10, [1, 999] as any)).rejects.toBeInstanceOf(BadRequestException);
+    });
+
     it('saves updated order and returns findByChapter', async () => {
       const l1 = makeLesson({ lesson_id: 1, orderIndex: 0 });
       const l2 = makeLesson({ lesson_id: 2, orderIndex: 1 });
@@ -329,6 +530,41 @@ describe('LessonsService', () => {
 
       expect(lessonRepo.save).toHaveBeenCalledWith([expect.any(Object), expect.any(Object)]);
       expect(result[0].lesson_id).toBe(2);
+    });
+  });
+
+  describe('toResponseDto (checkpoint enrichment)', () => {
+    it('attaches checkpoint data when lesson is CHECKPOINT and checkpoint exists', async () => {
+      const checkpointLesson = makeLesson({ lesson_id: 1, lesson_type: LessonType.CHECKPOINT });
+      lessonRepo.findOne!.mockResolvedValue(checkpointLesson);
+
+      checkpointRepo.findOne!.mockResolvedValue({
+        checkpointId: 99,
+        checkpointScore: 5,
+        checkpointType: 'mcq',
+        checkpointQuestions: [],
+        checkpointOption: [],
+        checkpointExplanation: null,
+        createdAt: fixedNow,
+        updatedAt: fixedNow,
+      } as any);
+
+      const result: any = await service.findOneAdmin(1);
+
+      expect(result.checkpoint).toEqual(
+        expect.objectContaining({ checkpoint_id: 99, checkpoint_score: 5, checkpoint_type: 'mcq' }),
+      );
+    });
+
+    it('swallows errors from checkpointRepository.findOne', async () => {
+      const checkpointLesson = makeLesson({ lesson_id: 1, lesson_type: LessonType.CHECKPOINT });
+      lessonRepo.findOne!.mockResolvedValue(checkpointLesson);
+      checkpointRepo.findOne!.mockRejectedValue(new Error('db down'));
+
+      const result: any = await service.findOneAdmin(1);
+
+      expect(result.lesson_id).toBe(1);
+      expect(result.checkpoint).toBeUndefined();
     });
   });
 });

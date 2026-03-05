@@ -150,6 +150,16 @@ describe('ProgressService', () => {
       expect(res[0].chapterId).toBe(1);
       expect(res[0].levelId).toBe(2);
     });
+
+    it('returns DTO with null chapterId/levelId when lesson lookup missing', async () => {
+      progressRepo.find!.mockResolvedValue([makeProgress({ lessonId: 999 })]);
+      lessonRepo.find!.mockResolvedValue([] as any);
+
+      const res = await service.getAllLessonProgress('u1');
+      expect(res[0].lessonId).toBe(999);
+      expect(res[0].chapterId).toBeNull();
+      expect(res[0].levelId).toBeNull();
+    });
   });
 
   describe('getLessonProgress', () => {
@@ -225,6 +235,104 @@ describe('ProgressService', () => {
       await expect(
         service.upsertLessonProgress('u1', 10, { status: LessonProgressStatus.IN_PROGRESS } as any),
       ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('keeps progressPercent=100 for completed lessons even if dto tries to change it', async () => {
+      const lesson = makeLesson({ lesson_id: 10, chapter_id: 1, orderIndex: 1 });
+
+      (lessonRepo.findOne as jest.Mock).mockImplementation(async (args: any) => {
+        if (args?.where?.lesson_id === 10) return lesson;
+        if (args?.where?.chapter_id === 1 && args?.where?.orderIndex) return null;
+        return null;
+      });
+
+      progressRepo.findOne!.mockResolvedValue(
+        makeProgress({
+          lessonId: 10,
+          userId: 'u1',
+          status: LessonProgressStatus.COMPLETED,
+          progressPercent: 80,
+        }),
+      );
+
+      // allow the "no next lesson" path to run without unlocking next chapter
+      lessonRepo.find!.mockResolvedValue([lesson] as any);
+      progressRepo.find!.mockResolvedValue([
+        makeProgress({ lessonId: 10, userId: 'u1', status: LessonProgressStatus.COMPLETED, progressPercent: 80 }),
+      ]);
+
+      (chapterRepo.findOne as jest.Mock).mockImplementation(async (args: any) => {
+        if (args?.where?.chapter_id === 1) return makeChapter({ chapter_id: 1, levelId: 2, chapter_orderIndex: 1 }) as any;
+        // nextChapter lookup
+        if (args?.where?.levelId) return null;
+        return null;
+      });
+
+      const res = await service.upsertLessonProgress('u1', 10, { progressPercent: 20 } as any);
+      expect(res.status).toBe(LessonProgressStatus.COMPLETED);
+      expect(res.progressPercent).toBe(100);
+    });
+
+    it('clamps and rounds progressPercent to 0..100', async () => {
+      lessonRepo.findOne!.mockResolvedValue(makeLesson({ lesson_id: 10, chapter_id: 1, orderIndex: 1 }) as any);
+      progressRepo.findOne!.mockResolvedValue(makeProgress({ lessonId: 10, userId: 'u1', status: LessonProgressStatus.IN_PROGRESS }));
+      // no next lesson
+      (lessonRepo.findOne as jest.Mock).mockImplementation(async (args: any) => {
+        if (args?.where?.lesson_id === 10) return makeLesson({ lesson_id: 10, chapter_id: 1, orderIndex: 1 });
+        if (args?.where?.chapter_id === 1 && args?.where?.orderIndex) return null;
+        return null;
+      });
+
+      lessonRepo.find!.mockResolvedValue([] as any);
+      progressRepo.find!.mockResolvedValue([] as any);
+      chapterRepo.findOne!.mockResolvedValue(makeChapter({ chapter_id: 1, levelId: 2 }) as any);
+
+      const res = await service.upsertLessonProgress('u1', 10, { progressPercent: 1000 } as any);
+      expect(res.progressPercent).toBe(100);
+
+      const res2 = await service.upsertLessonProgress('u1', 10, { progressPercent: -10.2 } as any);
+      expect(res2.progressPercent).toBe(0);
+    });
+
+    it('infers progressPercent from positionSeconds/durationSeconds when not provided', async () => {
+      lessonRepo.findOne!.mockResolvedValue(makeLesson({ lesson_id: 10, chapter_id: 1, orderIndex: 1 }) as any);
+      progressRepo.findOne!.mockResolvedValue(makeProgress({ lessonId: 10, userId: 'u1', status: LessonProgressStatus.IN_PROGRESS }));
+      // no next lesson
+      (lessonRepo.findOne as jest.Mock).mockImplementation(async (args: any) => {
+        if (args?.where?.lesson_id === 10) return makeLesson({ lesson_id: 10, chapter_id: 1, orderIndex: 1 });
+        if (args?.where?.chapter_id === 1 && args?.where?.orderIndex) return null;
+        return null;
+      });
+
+      lessonRepo.find!.mockResolvedValue([] as any);
+      progressRepo.find!.mockResolvedValue([] as any);
+      chapterRepo.findOne!.mockResolvedValue(makeChapter({ chapter_id: 1, levelId: 2 }) as any);
+
+      const res = await service.upsertLessonProgress('u1', 10, {
+        positionSeconds: 50,
+        durationSeconds: 200,
+      } as any);
+
+      expect(res.progressPercent).toBe(25);
+    });
+
+    it('does not bump streak when already completed/skipped before', async () => {
+      lessonRepo.findOne!.mockResolvedValue(makeLesson({ lesson_id: 10, chapter_id: 1, orderIndex: 1 }) as any);
+      progressRepo.findOne!.mockResolvedValue(
+        makeProgress({ lessonId: 10, userId: 'u1', status: LessonProgressStatus.SKIPPED, progressPercent: 100 }),
+      );
+
+      (lessonRepo.findOne as jest.Mock).mockImplementation(async (args: any) => {
+        if (args?.where?.lesson_id === 10) return makeLesson({ lesson_id: 10, chapter_id: 1, orderIndex: 1 });
+        if (args?.where?.chapter_id === 1 && args?.where?.orderIndex) return null;
+        return null;
+      });
+      lessonRepo.find!.mockResolvedValue([] as any);
+      progressRepo.find!.mockResolvedValue([] as any);
+      chapterRepo.findOne!.mockResolvedValue(makeChapter({ chapter_id: 1, levelId: 2 }) as any);
+
+      await service.upsertLessonProgress('u1', 10, { markCompleted: true } as any);
+      expect(streakService.bumpStreak).not.toHaveBeenCalled();
     });
 
     it('unlocks first lesson of next chapter when this chapter completes and no next lesson', async () => {
@@ -352,6 +460,42 @@ describe('ProgressService', () => {
       expect(res.percent).toBe(25);
       expect(res.resumeLessonId).toBe(10);
     });
+
+    it('returns resumeLessonId null when first not-done is locked', async () => {
+      chapterRepo.findOne!.mockResolvedValue(makeChapter({ chapter_id: 1, levelId: 2 }) as any);
+      lessonRepo.find!.mockResolvedValue([
+        makeLesson({ lesson_id: 10, chapter_id: 1, orderIndex: 1 }),
+        makeLesson({ lesson_id: 11, chapter_id: 1, orderIndex: 2 }),
+      ] as any);
+
+      // unlocked
+      progressRepo.findOne!.mockResolvedValue(makeProgress({ lessonId: 10 }));
+      // progress: first completed, second locked
+      progressRepo.find!.mockResolvedValue([
+        makeProgress({ lessonId: 10, status: LessonProgressStatus.COMPLETED, progressPercent: null as any }),
+        makeProgress({ lessonId: 11, status: LessonProgressStatus.LOCKED, progressPercent: 0 }),
+      ]);
+
+      const res = await service.getChapterProgress('u1', 1);
+      expect(res.resumeLessonId).toBeNull();
+      // completed should count as 100 even if progressPercent null
+      expect(res.percent).toBe(50);
+    });
+
+    it('treats NaN progressPercent as 0 when computing chapter percent', async () => {
+      chapterRepo.findOne!.mockResolvedValue(makeChapter({ chapter_id: 1, levelId: 2 }) as any);
+      lessonRepo.find!.mockResolvedValue([
+        makeLesson({ lesson_id: 10, chapter_id: 1, orderIndex: 1 }),
+      ] as any);
+
+      progressRepo.findOne!.mockResolvedValue(makeProgress({ lessonId: 10 }));
+      progressRepo.find!.mockResolvedValue([
+        makeProgress({ lessonId: 10, status: LessonProgressStatus.IN_PROGRESS, progressPercent: 'nope' as any }),
+      ]);
+
+      const res = await service.getChapterProgress('u1', 1);
+      expect(res.percent).toBe(0);
+    });
   });
 
   describe('getChapterRoadmap', () => {
@@ -414,6 +558,46 @@ describe('ProgressService', () => {
       expect(res.nextAvailableLessonId).toBe(10);
       expect(res.streakStatus).toBe('IN_PROGRESS');
       expect(res.isReward).toBe(false);
+    });
+
+    it('returns streakStatus COMPLETE when flame is on', async () => {
+      chapterRepo.findOne!.mockResolvedValue(makeChapter({ chapter_id: 1, levelId: 2, chapter_title: 'Ch' }) as any);
+      lessonRepo.find!.mockResolvedValue([
+        makeLesson({ lesson_id: 10, chapter_id: 1, orderIndex: 1, lesson_title: 'L1', lesson_type: 'video' as any }),
+      ] as any);
+
+      progressRepo.findOne!.mockResolvedValue(makeProgress({ lessonId: 10 }));
+      progressRepo.find!.mockResolvedValue([
+        makeProgress({ lessonId: 10, status: LessonProgressStatus.COMPLETED, progressPercent: null as any }),
+      ]);
+
+      (streakService.getStreak as jest.Mock).mockResolvedValue({ isReward: true, isFlameOn: true });
+
+      const res = await service.getChapterRoadmap('u1', 1);
+
+      expect(res.streakStatus).toBe('COMPLETE');
+      expect(res.isReward).toBe(true);
+      expect(res.items[0].progressPercent).toBe(100);
+    });
+
+    it('forces progressPercent=100 for COMPLETED even if stored progressPercent is lower', async () => {
+      chapterRepo.findOne!.mockResolvedValue(makeChapter({ chapter_id: 1, levelId: 2, chapter_title: 'Ch' }) as any);
+      lessonRepo.find!.mockResolvedValue([
+        makeLesson({ lesson_id: 10, chapter_id: 1, orderIndex: 1, lesson_title: 'L1', lesson_type: 'video' as any }),
+      ] as any);
+
+      // unlocked
+      progressRepo.findOne!.mockResolvedValue(makeProgress({ lessonId: 10 }));
+      progressRepo.find!.mockResolvedValue([
+        makeProgress({ lessonId: 10, status: LessonProgressStatus.COMPLETED, progressPercent: 80 }),
+      ]);
+
+      (streakService.getStreak as jest.Mock).mockResolvedValue({ isReward: false, isFlameOn: false });
+
+      const res = await service.getChapterRoadmap('u1', 1);
+      expect(res.items[0].status).toBe(LessonProgressStatus.COMPLETED);
+      expect(res.items[0].progressPercent).toBe(100);
+      expect(res.progressPercent).toBe(100);
     });
   });
 

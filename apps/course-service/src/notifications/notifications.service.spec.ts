@@ -1,6 +1,7 @@
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { In } from 'typeorm';
 
 import { NotificationsService } from './notifications.service';
 import { Notification } from './entities/notification.entity';
@@ -139,9 +140,17 @@ describe('NotificationsService', () => {
   });
 
   describe('markAsRead / markAllAsRead', () => {
+    it('markAsRead throws UnauthorizedException when userId missing', async () => {
+      await expect(service.markAsRead('n1', '')).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
     it('markAsRead updates by notificationId+userId', async () => {
       await service.markAsRead('n1', 'u1');
       expect(repo.update).toHaveBeenCalledWith({ notificationId: 'n1', userId: 'u1' }, expect.any(Object));
+    });
+
+    it('markAllAsRead throws UnauthorizedException when userId missing', async () => {
+      await expect(service.markAllAsRead('')).rejects.toBeInstanceOf(UnauthorizedException);
     });
 
     it('markAllAsRead updates all unread', async () => {
@@ -157,6 +166,80 @@ describe('NotificationsService', () => {
 
       const result = await service.createNotification('u1', 't', 'm');
       expect(result.notificationId).toBe('n1');
+    });
+
+    it('passes type and metadata through', async () => {
+      repo.create!.mockImplementation((x: any) => x);
+      repo.save!.mockImplementation(async (x: any) => ({ ...makeNotification(), ...x }));
+
+      const result = await service.createNotification('u1', 't', 'm', 'warning', { a: 1 });
+
+      expect(repo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'u1', title: 't', message: 'm', type: 'warning', metadata: { a: 1 } }),
+      );
+      expect(result.type).toBe('warning');
+      expect(result.metadata).toEqual({ a: 1 });
+    });
+  });
+
+  describe('syncAnnouncements via getPaginated/getUnreadCount', () => {
+    it('does not insert when all active announcements already exist', async () => {
+      (announcements.findActive as jest.Mock).mockResolvedValue([
+        {
+          announcement_id: 1,
+          title: 'A1',
+          imageUrl: null,
+          deepLink: null,
+          priority: 1,
+        },
+      ]);
+
+      const qb: any = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([
+          makeNotification({
+            notificationId: 'n1',
+            metadata: { source: 'announcement', announcementId: '1' },
+          }),
+        ]),
+      };
+      repo.createQueryBuilder!.mockReturnValue(qb);
+
+      repo.find!.mockResolvedValue([makeNotification({ notificationId: 'n1' })]);
+      repo.count!.mockResolvedValue(1);
+
+      await service.getPaginated('u1', 10, 0);
+
+      expect(repo.save).not.toHaveBeenCalled();
+      expect(repo.delete).not.toHaveBeenCalled();
+    });
+
+    it('deletes stale announcement notifications', async () => {
+      (announcements.findActive as jest.Mock).mockResolvedValue([]);
+
+      const qb: any = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([
+          makeNotification({
+            notificationId: 'n1',
+            metadata: { source: 'announcement', announcementId: '1' },
+          }),
+          makeNotification({
+            notificationId: 'n2',
+            metadata: { source: 'announcement', announcementId: '2' },
+          }),
+        ]),
+      };
+      repo.createQueryBuilder!.mockReturnValue(qb);
+
+      repo.find!.mockResolvedValue([]);
+      repo.count!.mockResolvedValue(0);
+
+      await service.getPaginated('u1', 10, 0);
+
+      expect(repo.delete).toHaveBeenCalledWith({ notificationId: In(['n1', 'n2']) });
     });
   });
 });
