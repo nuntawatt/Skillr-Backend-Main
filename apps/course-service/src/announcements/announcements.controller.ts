@@ -3,7 +3,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
-import { JwtAuthGuard, Roles, RolesGuard } from '@auth';
+import { CurrentUserId, JwtAuthGuard, Roles, RolesGuard } from '@auth';
 import { UserRole } from '@common/enums';
 
 import { CreateAnnouncementDto } from './dto/create-announcement.dto';
@@ -155,6 +155,9 @@ export class AnnouncementsController {
   @ApiResponse({ status: 404, description: 'Announcement not found' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
 
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   @UseInterceptors(
     FileInterceptor('file', {
       storage: multer.memoryStorage(),
@@ -164,8 +167,9 @@ export class AnnouncementsController {
   async uploadImage(
     @Param('id', ParseIntPipe) id: number,
     @UploadedFile() file: Express.Multer.File,
+    @CurrentUserId() adminId: string,
   ) {
-    return this.announcementsService.uploadBannerImage(id, file);
+    return this.announcementsService.uploadBannerImage(id, file, adminId);
   }
 
   @ApiBearerAuth()

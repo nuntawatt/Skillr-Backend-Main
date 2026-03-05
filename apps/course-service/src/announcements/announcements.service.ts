@@ -137,10 +137,10 @@ export class AnnouncementsService {
   }
 
   // อัปโหลดรูปภาพสำหรับป้ายประกาศและอัปเดต URL ในฐานข้อมูล
-  async uploadBannerImage(id: number, file: Express.Multer.File): Promise<AnnouncementResponseDto> {
+  async uploadBannerImage(id: number, file: Express.Multer.File, adminId: string): Promise<AnnouncementResponseDto> {
     const announcementEntity = await this.findOneEntity(id);
 
-    const uploaded = await this.mediaImagesService.uploadImageFileAndPersist(file);
+    const uploaded = await this.mediaImagesService.uploadImageFileAndPersist(file, adminId);
     announcementEntity.imageUrl = uploaded.url;
 
     const saved = await this.announcementRepository.save(announcementEntity);
