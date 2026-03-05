@@ -40,12 +40,14 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       throw new UnauthorizedException('Invalid token subject');
     }
 
-    const role =
-      payload.role === UserRole.ADMIN
-        ? UserRole.ADMIN
-        : payload.role === UserRole.STUDENT
-          ? UserRole.STUDENT
-          : UserRole.STUDENT;
+    const allowedRoles = new Set<UserRole>([
+      UserRole.OWNER,
+      UserRole.ADMIN,
+      UserRole.STUDENT,
+    ]);
+
+    const payloadRole = payload.role as UserRole;
+    const role = allowedRoles.has(payloadRole) ? payloadRole : UserRole.STUDENT;
 
     return {
       userId: String(payload.sub),
