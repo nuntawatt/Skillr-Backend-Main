@@ -234,9 +234,6 @@ export class LessonsService {
       updateLessonDto.lesson_type === LessonType.CHECKPOINT &&
       updateLessonDto.lesson_type !== originalType;
 
-    // Default publish behavior:
-    // - Non-checkpoint: keep existing behavior (auto-publish on update)
-    // - Checkpoint: do NOT auto-publish; require explicit isPublished=true and ensure content exists
     if (updateLessonDto.isPublished !== undefined) {
       lesson.isPublished = updateLessonDto.isPublished;
     } else {
