@@ -148,19 +148,7 @@ export class AdminController {
     @UploadedFile() file: Express.Multer.File,
     @Body() dto: UpdateRewardAdminDto,
   ) {
-    let imageUrl: string | undefined;
-
-    if (file) {
-      imageUrl = await this.RewardAdminService.uploadRewardImage(file);
-    }
-
-    const updatedReward = this.RewardAdminService.updateReward(
-      id,
-      dto,
-      imageUrl,
-    );
-
-    return updatedReward;
+    return this.RewardAdminService.updateReward(id, dto, file);
   }
 
   @Delete('reward/delete/:id')

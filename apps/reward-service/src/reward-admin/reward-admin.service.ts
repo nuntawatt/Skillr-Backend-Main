@@ -48,8 +48,8 @@ export class RewardAdminService {
 
   async updateReward(
     id: number,
-    updateRewardAdminDto: UpdateRewardAdminDto,
-    imageUrl?: string,
+    dto: UpdateRewardAdminDto,
+    file?: Express.Multer.File,
   ) {
     const reward = await this.rewardRepo.findOne({ where: { id } });
 
@@ -57,24 +57,30 @@ export class RewardAdminService {
       throw new NotFoundException('Reward not found');
     }
 
-    if (updateRewardAdminDto.total_limit !== undefined) {
+    let imageUrl: string | undefined;
+
+    if (file) {
+      imageUrl = await this.uploadRewardImage(file);
+    }
+
+    if (dto.total_limit !== undefined) {
       const redeemed = reward.total_limit - reward.remain;
 
-      if (updateRewardAdminDto.total_limit < redeemed) {
+      if (dto.total_limit < redeemed) {
         throw new BadRequestException(
           'Total limit cannot be less than already redeemed amount',
         );
       }
 
-      reward.remain = updateRewardAdminDto.total_limit - redeemed;
-      reward.total_limit = updateRewardAdminDto.total_limit;
+      reward.remain = dto.total_limit - redeemed;
+      reward.total_limit = dto.total_limit;
     }
 
     if (imageUrl) {
       reward.image_url = imageUrl;
     }
 
-    Object.assign(reward, updateRewardAdminDto);
+    Object.assign(reward, dto);
 
     return await this.rewardRepo.save(reward);
   }
