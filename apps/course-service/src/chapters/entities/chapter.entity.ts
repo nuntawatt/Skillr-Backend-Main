@@ -27,10 +27,10 @@ export class Chapter {
   @Column({ name: 'level_id', type: 'int' })
   levelId: number;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
   updatedAt: Date;
 
   @OneToMany(() => Lesson, (lesson) => lesson.chapter, { cascade: true })

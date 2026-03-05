@@ -60,6 +60,6 @@ export class Lesson {
   @OneToMany(() => QuizsCheckpoint, (checkpoint) => checkpoint.lesson, { cascade: true })
   lesson_checkpoints: QuizsCheckpoint[];
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;
 }

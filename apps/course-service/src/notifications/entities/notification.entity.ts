@@ -21,12 +21,12 @@ export class Notification {
   @Column({ name: 'type', type: 'varchar', length: 50, default: 'info' })
   type: 'info' | 'success' | 'warning' | 'error';
 
-  @Column({ name: 'read_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'read_at', type: 'timestamp', nullable: true })
   readAt: Date | null;
 
   @Column({ name: 'metadata', type: 'jsonb', nullable: true })
   metadata?: Record<string, any>;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;
 }

@@ -27,15 +27,15 @@ export class UserXp {
     })
     checkpointStatus: 'PENDING' | 'COMPLETED' | 'SKIPPED';
 
-    @Column({ name: 'completed_at', type: 'timestamptz', nullable: true })
+    @Column({ name: 'completed_at', type: 'timestamp', nullable: true })
     completedAt?: Date | null;
 
-    @Column({ name: 'last_attempt_at', type: 'timestamptz', nullable: true })
+    @Column({ name: 'last_attempt_at', type: 'timestamp', nullable: true })
     lastAttemptAt?: Date | null;
 
-    @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+    @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
     createdAt: Date;
 
-    @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
+    @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
     updatedAt: Date;
 }

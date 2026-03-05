@@ -15,15 +15,15 @@ export class UserStreak {
   @Column({ name: 'longest_streak', type: 'int', default: 0 })
   longestStreak: number;
 
-  @Column({ name: 'last_completed_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'last_completed_at', type: 'timestamp', nullable: true })
   lastCompletedAt: Date | null;
 
-  @Column({ name: 'reward_shown_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'reward_shown_at', type: 'timestamp', nullable: true })
   rewardShownAt: Date | null;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
   updatedAt: Date;
 }

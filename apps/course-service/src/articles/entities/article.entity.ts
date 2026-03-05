@@ -17,6 +17,6 @@ export class Article {
   @Column({ type: 'jsonb', default: () => "'[]'" })
   article_content: any[];
 
-  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
   updatedAt: Date;
 }

@@ -24,6 +24,10 @@ FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 
+# Ensure Node can use Asia/Bangkok timezone (timestamp without tz depends on process TZ).
+RUN apk add --no-cache tzdata
+ENV TZ=Asia/Bangkok
+
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json

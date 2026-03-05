@@ -48,9 +48,9 @@ export class AiQuizGeneration {
     @Column({ name: 'error_message', type: 'text', nullable: true })
     error_message?: string | null;
 
-    @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+    @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
     created_at: Date;
 
-    @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
+    @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
     updated_at: Date;
 }

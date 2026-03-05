@@ -10,11 +10,14 @@ dotenv.config({
 });
 
 export const RewardDataSource = new DataSource({
-  
-    type: 'postgres',
-    url: process.env.DATABASE_URL,
 
-   entities: [Reward, RewardRedemption],
+  type: 'postgres',
+  url: process.env.DATABASE_URL,
+
+  // Ensure DB-side functions like now() are evaluated in Thai time.
+  extra: { options: '-c timezone=Asia/Bangkok' },
+
+  entities: [Reward, RewardRedemption],
   migrations: ['apps/reward-service/migrations/*.ts'],
 
   synchronize: false,

@@ -49,15 +49,15 @@ export class LessonProgress {
   @Column({ name: 'duration_seconds', type: 'int', nullable: true })
   durationSeconds?: number | null;
 
-  @Column({ name: 'last_viewed_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'last_viewed_at', type: 'timestamp', nullable: true })
   lastViewedAt?: Date | null;
 
-  @Column({ name: 'completed_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'completed_at', type: 'timestamp', nullable: true })
   completedAt?: Date | null;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
   updatedAt: Date;
 }

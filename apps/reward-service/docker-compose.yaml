@@ -24,6 +24,8 @@ services:
       dockerfile: apps/reward-service/dockerfile.reward
     env_file:
       - .env.docker
+    environment:
+      TZ: Asia/Bangkok
     ports:
       - "3003:3003"
     depends_on:

@@ -31,6 +31,6 @@ export class AuthAccount {
   @Column({ name: 'password_hash', type: 'text', nullable: true })
   passwordHash: string | null;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
   createdAt: Date;
 }
