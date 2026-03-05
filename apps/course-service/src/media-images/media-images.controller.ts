@@ -5,7 +5,7 @@ import { ApiTags, ApiOperation, ApiConsumes, ApiBody, ApiParam, ApiResponse, Api
 
 import { MediaImagesService } from './media-images.service';
 import { UpdateImageDto } from './dto/update-image.dto';
-import { JwtAuthGuard, Roles, RolesGuard } from '@auth';
+import { CurrentUserId, JwtAuthGuard, Roles, RolesGuard } from '@auth';
 import { UserRole } from '@common/enums';
 
 @ApiTags('Upload | Image')
@@ -37,8 +37,8 @@ export class MediaImagesController {
     storage: multer.memoryStorage(),
     limits: { fileSize: 30 * 1024 * 1024 }, // 30MB
   }))
-  async upload(@UploadedFile() file: Express.Multer.File) {
-    return this.svc.uploadImageFileAndPersist(file);
+  async upload(@CurrentUserId() adminId: string, @UploadedFile() file: Express.Multer.File) {
+    return this.svc.uploadImageFileAndPersist(file, adminId);
   }
 
   @Get(':id')

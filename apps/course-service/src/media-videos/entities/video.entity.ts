@@ -12,6 +12,9 @@ export class VideoAsset {
   @PrimaryGeneratedColumn()
   id: number;
 
+  @Column({ name: 'admin_id', type: 'uuid', nullable: true })
+  adminId?: string | null;
+
   @Column({ name: 'original_filename', nullable: true })
   originalFilename?: string;
 

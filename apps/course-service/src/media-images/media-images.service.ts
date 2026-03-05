@@ -28,7 +28,7 @@ export class MediaImagesService {
   }
 
   // อัพโหลดไฟล์ภาพผ่าน form-data (รองรับขนาดสูงสุด 30MB) และบันทึก metadata ลง DB
-  async uploadImageFileAndPersist(file: Express.Multer.File, ownerUserId?: number) {
+  async uploadImageFileAndPersist(file: Express.Multer.File, adminId: string) {
     if (!file) throw new BadRequestException('file missing');
 
     this.validateImageMime(file.mimetype, file.originalname);
@@ -58,6 +58,7 @@ export class MediaImagesService {
 
     const saved = await this.repo.save(
       this.repo.create({
+        adminId,
         originalFilename: file.originalname,
         mimeType: file.mimetype,
         sizeBytes: String(file.size),

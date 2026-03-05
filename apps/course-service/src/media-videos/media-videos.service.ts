@@ -43,7 +43,7 @@ export class MediaVideosService {
   }
 
   // สร้าง presigned upload URL สำหรับอัพโหลดวิดีโอ (สำหรับไฟล์ขนาดใหญ่ - สูงสุด 1GB)
-  async createPresignedUpload(dto: CreateVideoDto) {
+  async createPresignedUpload(dto: CreateVideoDto, adminId: string) {
     this.validateVideoMime(dto.mime_type, dto.original_filename);
 
     const maxSize = Number(process.env.VIDEO_MAX_SIZE_BYTES) || 1 * 1024 * 1024 * 1024; // 1GB
@@ -61,6 +61,7 @@ export class MediaVideosService {
     const uploadUrl = await this.aws.presignPut(bucket, key, dto.mime_type, 60 * 15);
 
     const asset = this.repo.create({
+      adminId,
       originalFilename: dto.original_filename ?? `${videoId}`,
       mimeType: dto.mime_type,
       sizeBytes: String(dto.size_bytes),

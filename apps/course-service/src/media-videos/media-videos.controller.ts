@@ -3,7 +3,7 @@ import { MediaVideosService } from './media-videos.service';
 import { CreateVideoDto } from './dto/create-video.dto';
 import { UpdateVideoDto } from './dto/update-video.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard, RolesGuard, Roles } from '@auth';
+import { CurrentUserId, JwtAuthGuard, RolesGuard, Roles } from '@auth';
 import { UserRole } from '@common/enums/user-role.enum';
 
 @ApiTags('Upload | Video')
@@ -45,8 +45,8 @@ export class MediaVideosController {
   @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Related entities not found' })
   @ApiResponse({ status: 500, description: 'Internal server error' })
-  async presign(@Body() dto: CreateVideoDto) {
-    return this.svc.createPresignedUpload(dto);
+  async presign(@CurrentUserId() adminId: string, @Body() dto: CreateVideoDto) {
+    return this.svc.createPresignedUpload(dto, adminId);
   }
 
   @Post(':id/confirm')
