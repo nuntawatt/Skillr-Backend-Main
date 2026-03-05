@@ -247,7 +247,6 @@ export class UsersService {
 
   // อัปโหลดหรืออัปเดต avatar ของผู้ใช้ (ใช้เมื่อผู้ใช้อัปโหลดรูปโปรไฟล์ใหม่)
   async uploadAvatar(id: string, file: Express.Multer.File): Promise<User> {
-
     // validate file
     if (!file?.buffer) {
       throw new BadRequestException('File is required');
@@ -260,11 +259,7 @@ export class UsersService {
 
     // find user
     const user = await this.findById(id);
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    const oldMediaId = user.avatar_media_id;
+    const oldAvatarKey = this.getAvatarKeyFromUrl(user.avatar);
 
     // generate new avatar to S3
     const mediaId = randomUUID();
@@ -287,26 +282,41 @@ export class UsersService {
     }
 
     // update database
-    user.avatar_media_id = mediaId;
     user.avatar = await this.getAvatarPresignedUrl(mediaId);
 
     await this.userRepo.save(user);
 
     // Delete old avatar (soft-fail)
-    if (oldMediaId) {
+    if (oldAvatarKey) {
       try {
         await this.s3Client.send(
           new DeleteObjectCommand({
             Bucket: this.getBucket(),
-            Key: `profile/${oldMediaId}`,
+            Key: oldAvatarKey,
           }),
         );
       } catch (err) {
-        this.logger.warn(`Failed to delete old avatar: ${oldMediaId}`);
+        this.logger.warn(`Failed to delete old avatar: ${oldAvatarKey}`);
       }
     }
 
     return user;
+  }
+
+  private getAvatarKeyFromUrl(avatarUrl: string | null | undefined): string | null {
+    if (!avatarUrl) return null;
+
+    // Expected URL shape from getAvatarPresignedUrl():
+    //   https://<cloudfront-domain>/profile/<uuid>
+    try {
+      const url = new URL(avatarUrl);
+      const key = url.pathname.replace(/^\/+/, '');
+      return key.startsWith('profile/') ? key : null;
+    } catch {
+      // If the value isn't a valid URL, treat it as a raw key.
+      const key = String(avatarUrl).replace(/^\/+/, '');
+      return key.startsWith('profile/') ? key : null;
+    }
   }
 
   // ดึงข้อมูลโปรไฟล์ของผู้ใช้รวมถึง XP และ streak (ใช้เมื่อแอปต้องการแสดงข้อมูลโปรไฟล์ที่ครบถ้วน)
