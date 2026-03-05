@@ -42,6 +42,17 @@ describe('ChaptersService', () => {
       ...overrides,
     }) as Chapter;
 
+  const toDto = (chapter: Chapter) => ({
+    chapter_id: chapter.chapter_id,
+    chapter_title: chapter.chapter_title,
+    chapter_name: chapter.chapter_name,
+    isPublished: chapter.isPublished,
+    chapter_orderIndex: chapter.chapter_orderIndex,
+    level_id: chapter.levelId,
+    createdAt: chapter.createdAt,
+    updatedAt: chapter.updatedAt,
+  });
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -116,16 +127,7 @@ describe('ChaptersService', () => {
         levelId: 10,
         chapter_orderIndex: 7,
       });
-      expect(result).toEqual({
-        chapter_id: 123,
-        chapter_title: 'C1',
-        chapter_name: 'c1',
-        isPublished: false,
-        chapter_orderIndex: 7,
-        level_id: 10,
-        createdAt: fixedNow,
-        updatedAt: fixedNow,
-      });
+      expect(result).toEqual(toDto(saved));
     });
 
     it('auto-assigns orderIndex = max + 1 when chapter_orderIndex not provided', async () => {
@@ -268,20 +270,10 @@ describe('ChaptersService', () => {
     });
 
     it('returns response dto when chapter found', async () => {
-      chapterRepo.findOne!.mockResolvedValue(makeChapter({ chapter_id: 123, levelId: 10 }));
+      const chapter = makeChapter({ chapter_id: 123, levelId: 10 });
+      chapterRepo.findOne!.mockResolvedValue(chapter);
 
-      const result = await service.findOne(123);
-
-      expect(result).toEqual({
-        chapter_id: 123,
-        chapter_title: 'Intro',
-        chapter_name: 'intro',
-        isPublished: false,
-        chapter_orderIndex: 0,
-        level_id: 10,
-        createdAt: fixedNow,
-        updatedAt: fixedNow,
-      });
+      await expect(service.findOne(123)).resolves.toEqual(toDto(chapter));
     });
   });
 
@@ -371,38 +363,35 @@ describe('ChaptersService', () => {
       expect(result).toEqual([]);
     });
 
-    it('throws BadRequestException when chapter_ids is missing/empty', async () => {
-      chapterRepo.find!.mockResolvedValue([makeChapter({ chapter_id: 1, levelId: 10 })]);
+    it.each([
+      {
+        title: 'throws when chapter_ids is missing/empty',
+        chapters: [makeChapter({ chapter_id: 1, levelId: 10 })],
+        ids: [] as any,
+      },
+      {
+        title: 'throws when chapter_ids length mismatches',
+        chapters: [makeChapter({ chapter_id: 1, levelId: 10 }), makeChapter({ chapter_id: 2, levelId: 10 })],
+        ids: [1],
+      },
+      {
+        title: 'throws when chapter id does not belong to level',
+        chapters: [makeChapter({ chapter_id: 1, levelId: 10 }), makeChapter({ chapter_id: 2, levelId: 10 })],
+        ids: [1, 999],
+      },
+      {
+        title: 'throws when chapter_ids contains duplicates (missing some chapters)',
+        chapters: [
+          makeChapter({ chapter_id: 1, levelId: 10 }),
+          makeChapter({ chapter_id: 2, levelId: 10 }),
+          makeChapter({ chapter_id: 3, levelId: 10 }),
+        ],
+        ids: [1, 1, 2],
+      },
+    ])('$title', async ({ chapters, ids }) => {
+      chapterRepo.find!.mockResolvedValue(chapters as any);
 
-      await expect(service.reorder(10, [] as any)).rejects.toBeInstanceOf(BadRequestException);
-    });
-
-    it('throws BadRequestException when chapter_ids length mismatches', async () => {
-      chapterRepo.find!.mockResolvedValue([
-        makeChapter({ chapter_id: 1, levelId: 10 }),
-        makeChapter({ chapter_id: 2, levelId: 10 }),
-      ]);
-
-      await expect(service.reorder(10, [1])).rejects.toBeInstanceOf(BadRequestException);
-    });
-
-    it('throws BadRequestException when chapter id does not belong to level', async () => {
-      chapterRepo.find!.mockResolvedValue([
-        makeChapter({ chapter_id: 1, levelId: 10 }),
-        makeChapter({ chapter_id: 2, levelId: 10 }),
-      ]);
-
-      await expect(service.reorder(10, [1, 999])).rejects.toBeInstanceOf(BadRequestException);
-    });
-
-    it('throws BadRequestException when chapter_ids contains duplicates (missing some chapters)', async () => {
-      chapterRepo.find!.mockResolvedValue([
-        makeChapter({ chapter_id: 1, levelId: 10 }),
-        makeChapter({ chapter_id: 2, levelId: 10 }),
-        makeChapter({ chapter_id: 3, levelId: 10 }),
-      ]);
-
-      await expect(service.reorder(10, [1, 1, 2])).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.reorder(10, ids as any)).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('updates orderIndex and returns chapters in new order', async () => {
@@ -412,30 +401,12 @@ describe('ChaptersService', () => {
       chapterRepo.find!.mockResolvedValue([ch1, ch2]);
       chapterRepo.save!.mockImplementation(async (c) => c as any);
 
-      const reorderedResult = [
-        {
-          chapter_id: 2,
-          chapter_title: 'Intro',
-          chapter_name: 'intro',
-          isPublished: false,
-          chapter_orderIndex: 0,
-          level_id: 10,
-          createdAt: fixedNow,
-          updatedAt: fixedNow,
-        },
-        {
-          chapter_id: 1,
-          chapter_title: 'Intro',
-          chapter_name: 'intro',
-          isPublished: false,
-          chapter_orderIndex: 1,
-          level_id: 10,
-          createdAt: fixedNow,
-          updatedAt: fixedNow,
-        },
+      const expected = [
+        toDto({ ...ch2, chapter_orderIndex: 0 }),
+        toDto({ ...ch1, chapter_orderIndex: 1 }),
       ];
 
-      jest.spyOn(service, 'findByLevel').mockResolvedValue(reorderedResult);
+      jest.spyOn(service, 'findByLevel').mockResolvedValue(expected);
 
       const result = await service.reorder(10, [2, 1]);
 
@@ -443,7 +414,7 @@ describe('ChaptersService', () => {
       expect(ch1.chapter_orderIndex).toBe(1);
       expect(chapterRepo.save).toHaveBeenCalledTimes(2);
       expect(service.findByLevel).toHaveBeenCalledWith(10);
-      expect(result).toEqual(reorderedResult);
+      expect(result).toEqual(expected);
     });
   });
 });

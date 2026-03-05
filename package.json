@@ -131,6 +131,7 @@
       "<rootDir>/test"
     ],
     "moduleNameMapper": {
+      "^apps/(.*)$": "<rootDir>/apps/$1",
       "^@common/(.*)$": "<rootDir>/libs/common/src/$1",
       "^@config/(.*)$": "<rootDir>/libs/config/src/$1",
       "^@shared/(.*)$": "<rootDir>/libs/shared/src/$1",
