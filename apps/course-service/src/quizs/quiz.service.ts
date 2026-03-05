@@ -6,6 +6,7 @@ import { QuizsCheckpoint } from './entities/checkpoint.entity';
 import { QuizsResult, QuizsResultType, QuizsStatus } from './entities/quizs-result.entity';
 import { CreateQuizsDto, CreateCheckpointDto, UpdateQuizsDto, UpdateCheckpointDto } from './dto';
 import { Lesson, LessonType } from '../lessons/entities/lesson.entity';
+import { Chapter } from '../chapters/entities/chapter.entity';
 import { UserXp } from './entities/user-xp.entity';
 
 @Injectable()
@@ -25,9 +26,19 @@ export class QuizService {
     private readonly resultRepository: Repository<QuizsResult>,
     @InjectRepository(Lesson)
     private readonly lessonRepository: Repository<Lesson>,
+    @InjectRepository(Chapter)
+    private readonly chapterRepository: Repository<Chapter>,
     @InjectRepository(UserXp)
     private readonly userXpRepository: Repository<UserXp>,
   ) { }
+
+  private async syncChapterIsPublishedByChapterId(chapterId: number): Promise<void> {
+    const hasPublishedLesson = await this.lessonRepository.exist({
+      where: { chapter_id: chapterId, isPublished: true },
+    });
+
+    await this.chapterRepository.update(chapterId, { isPublished: hasPublishedLesson });
+  }
 
   async createQuizs(dto: CreateQuizsDto): Promise<Quizs> {
     const existing = await this.quizsRepository.findOne({
@@ -373,6 +384,14 @@ export class QuizService {
     const updatedCheckpoint = await this.updateCheckpoint(checkpoint.checkpointId, dto);
 
     await this.lessonRepository.update(lessonId, { isPublished: true });
+
+    const lesson = await this.lessonRepository.findOne({
+      where: { lesson_id: lessonId },
+    });
+
+    if (lesson) {
+      await this.syncChapterIsPublishedByChapterId(lesson.chapter_id);
+    }
     return updatedCheckpoint;
   }
 
@@ -411,6 +430,13 @@ export class QuizService {
         await this.lessonRepository.save(lesson);
         descCleared = true;
       }
+
+      // Prevent published checkpoint lessons from existing without checkpoint content.
+      if (lesson.lesson_type === LessonType.CHECKPOINT && lesson.isPublished) {
+        await this.lessonRepository.update(lessonId, { isPublished: false });
+      }
+
+      await this.syncChapterIsPublishedByChapterId(lesson.chapter_id);
     }
 
     const msg = descCleared
@@ -462,6 +488,8 @@ export class QuizService {
 
       // อัปเดต lesson ให้ isPublished = true
       await this.lessonRepository.update(dto.lesson_id, { isPublished: true });
+
+      await this.syncChapterIsPublishedByChapterId(lesson.chapter_id);
       return saved;
     }
 
@@ -471,6 +499,8 @@ export class QuizService {
 
     // อัปเดต lesson ให้ isPublished = true
     await this.lessonRepository.update(dto.lesson_id, { isPublished: true });
+
+    await this.syncChapterIsPublishedByChapterId(lesson.chapter_id);
     return saved;
   }
 

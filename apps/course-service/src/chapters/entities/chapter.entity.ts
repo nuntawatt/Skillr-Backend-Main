@@ -14,11 +14,11 @@ export class Chapter {
   @Column({ name: 'chapter_name', type: 'varchar', length: 100 })
   chapter_name: string;
 
-  @Column({ name: 'chapter_description', type: 'text', nullable: true })
-  chapter_description?: string;
-
   @Column({ name: 'order_index', type: 'int', default: 0 })
   chapter_orderIndex: number;
+
+  @Column({ name: 'is_published', type: 'boolean', default: false })
+  isPublished: boolean;
 
   @ManyToOne(() => Level, (level) => level.level_chapters, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'level_id', referencedColumnName: 'level_id' })

@@ -88,6 +88,8 @@ export class LessonsService {
 
     const saved = await this.lessonRepository.save(lesson);
 
+    await this.syncChapterIsPublished(saved.chapter_id);
+
     return this.toResponseDto(saved);
   }
 
@@ -296,6 +298,8 @@ export class LessonsService {
 
     const saved = await this.lessonRepository.save(lesson);
 
+    await this.syncChapterIsPublished(saved.chapter_id);
+
     return this.toResponseDto(saved);
   }
 
@@ -307,7 +311,9 @@ export class LessonsService {
       throw new NotFoundException(`Lesson with ID ${id} not found`);
     }
 
+    const chapterId = lesson.chapter_id;
     await this.lessonRepository.remove(lesson);
+    await this.syncChapterIsPublished(chapterId);
     return { message: `Lesson with ID ${id} deleted successfully` };
   }
 
@@ -411,5 +417,15 @@ export class LessonsService {
     }
 
     return base as LessonResponseDto;
+  }
+
+  private async syncChapterIsPublished(chapterId: number): Promise<void> {
+    const hasPublishedLesson = await this.lessonRepository.exist({
+      where: { chapter_id: chapterId, isPublished: true },
+    });
+
+    await this.chapterRepository.update(chapterId, {
+      isPublished: hasPublishedLesson,
+    });
   }
 }

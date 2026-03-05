@@ -50,8 +50,7 @@ export class ChaptersService {
     });
 
     const saved = await this.chapterRepository.save(chapter);
-    const isPublished = await this.existsPublishedLesson(saved.chapter_id);
-    return this.toResponseDto(saved, isPublished);
+    return this.toResponseDto(saved);
   }
 
   // ค้นหาบททั้งหมดในระดับที่ระบุ
@@ -77,18 +76,16 @@ export class ChaptersService {
     const chapter = await this.chapterRepository.findOne({ where: { chapter_id: id } });
     if (!chapter) throw new NotFoundException(`Chapter with ID ${id} not found`);
 
-    const isPublished = await this.existsPublishedLesson(id);
-    return this.toResponseDto(chapter, isPublished);
+    return this.toResponseDto(chapter);
   }
 
   async findOneStudent(id: number): Promise<ChapterResponseDto> {
     const chapter = await this.chapterRepository.findOne({ where: { chapter_id: id } });
     if (!chapter) throw new NotFoundException(`Chapter with ID ${id} not found`);
 
-    const isPublished = await this.existsPublishedLesson(id);
-    if (!isPublished) throw new NotFoundException(`Chapter with ID ${id} not found`);
+    if (!chapter.isPublished) throw new NotFoundException(`Chapter with ID ${id} not found`);
 
-    return this.toResponseDto(chapter, true);
+    return this.toResponseDto(chapter);
   }
 
   // Update chapter by ID
@@ -116,8 +113,7 @@ export class ChaptersService {
     }
 
     const saved = await this.chapterRepository.save(chapter);
-    const isPublished = await this.existsPublishedLesson(id);
-    return this.toResponseDto(saved, isPublished);
+    return this.toResponseDto(saved);
   }
 
   // Delete chapter by ID
@@ -187,12 +183,12 @@ export class ChaptersService {
   }
 
   // Chapter entity to ChapterResponseDto
-  private toResponseDto(chapter: Chapter, isPublished: boolean): ChapterResponseDto {
+  private toResponseDto(chapter: Chapter): ChapterResponseDto {
     return {
       chapter_id: chapter.chapter_id,
       chapter_title: chapter.chapter_title,
       chapter_name: chapter.chapter_name,
-      isPublished,
+      isPublished: chapter.isPublished,
       chapter_orderIndex: chapter.chapter_orderIndex,
       level_id: chapter.levelId,
       createdAt: chapter.createdAt,
@@ -200,65 +196,30 @@ export class ChaptersService {
     };
   }
 
-  private parseRawBoolean(value: unknown): boolean {
-    return value === true || value === 'true' || value === 't' || value === 1 || value === '1';
-  }
-
-  private existsPublishedLesson(chapterId: number): Promise<boolean> {
-    return this.chapterRepository.manager
-      .createQueryBuilder()
-      .select('1')
-      .from('lessons', 'l')
-      .where('l.chapter_id = :chapterId', { chapterId })
-      .andWhere('l.is_published = true')
-      .limit(1)
-      .getRawOne()
-      .then((row) => !!row);
-  }
-
   private async findByLevelInternal(
     levelId: number,
     opts: { onlyPublished: boolean },
   ): Promise<ChapterResponseDto[]> {
-    const existsSql = `EXISTS (
-      SELECT 1
-      FROM lessons l
-      WHERE l.chapter_id = chapter.chapter_id
-        AND l.is_published = true
-    )`;
+    const where: any = { levelId };
+    if (opts.onlyPublished) where.isPublished = true;
 
-    const qb = this.chapterRepository
-      .createQueryBuilder('chapter')
-      .where('chapter.level_id = :levelId', { levelId })
-      .addSelect(existsSql, 'chapter_is_published')
-      .orderBy('chapter.order_index', 'ASC');
+    const chapters = await this.chapterRepository.find({
+      where,
+      order: { chapter_orderIndex: 'ASC' },
+    });
 
-    if (opts.onlyPublished) {
-      qb.andWhere(existsSql);
-    }
-
-    const { entities, raw } = await qb.getRawAndEntities();
-    return entities.map((c, idx) => this.toResponseDto(c, this.parseRawBoolean(raw[idx]?.chapter_is_published)));
+    return chapters.map((c) => this.toResponseDto(c));
   }
 
   private async findAllInternal(opts: { onlyPublished: boolean }): Promise<ChapterResponseDto[]> {
-    const existsSql = `EXISTS (
-      SELECT 1
-      FROM lessons l
-      WHERE l.chapter_id = chapter.chapter_id
-        AND l.is_published = true
-    )`;
+    const where: any = {};
+    if (opts.onlyPublished) where.isPublished = true;
 
-    const qb = this.chapterRepository
-      .createQueryBuilder('chapter')
-      .addSelect(existsSql, 'chapter_is_published')
-      .orderBy('chapter.order_index', 'ASC');
+    const chapters = await this.chapterRepository.find({
+      where,
+      order: { chapter_orderIndex: 'ASC' },
+    });
 
-    if (opts.onlyPublished) {
-      qb.where(existsSql);
-    }
-
-    const { entities, raw } = await qb.getRawAndEntities();
-    return entities.map((c, idx) => this.toResponseDto(c, this.parseRawBoolean(raw[idx]?.chapter_is_published)));
+    return chapters.map((c) => this.toResponseDto(c));
   }
 }

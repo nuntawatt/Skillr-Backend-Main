@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthLibModule } from '@auth';
 
+import { Chapter } from '../chapters/entities/chapter.entity';
 import { Lesson } from '../lessons/entities/lesson.entity';
 import { QuizService } from './quiz.service';
 
@@ -19,6 +20,7 @@ import { UserXp } from './entities/user-xp.entity';
   imports: [
     AuthLibModule,
     TypeOrmModule.forFeature([
+      Chapter,
       Lesson,
       Quizs,
       QuizsCheckpoint,
