@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -7,7 +7,6 @@ import { CurrentUserId, JwtAuthGuard, Roles, RolesGuard } from '@auth';
 import { UserRole } from '@common/enums';
 import { AssetLibraryService } from './asset-library.service';
 import { CreateAssetVideoDto, UpdateAssetImageDto, UpdateAssetVideoDto } from './dto';
-import { AssetMediaType } from './entities/asset-media.entity';
 
 @ApiTags('Asset Library')
 @ApiBearerAuth()
@@ -77,8 +76,8 @@ export class AssetLibraryController {
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 404, description: 'No assets found' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
-    async getAssetLibraryAll(@Query('type') type?: AssetMediaType) {
-        return this.svc.getAssetLibraryAll(type);
+    async getAssetLibraryAll() {
+        return this.svc.getAssetLibraryAll();
     }
     
     @Get(':id')
