@@ -151,7 +151,7 @@ export class EmailService {
                     <div style="width: 64px; height: 64px; background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); border-radius: 50%; margin: 0 auto 24px auto; display: flex; align-items: center; justify-content: center;">
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0">
                         <tr>
-                          <td style="font-size: 36px; line-height: 64px; color: #ffffff;">✓</td>
+                          <td style="font-size: 36px; line-height: 64px; color: #ffffff;">&check;</td>
                         </tr>
                       </table>
                     </div>
@@ -171,7 +171,7 @@ export class EmailService {
                 <tr>
                   <td style="background-color: #f8f9fa; padding: 24px; text-align: center; border-top: 1px solid #e9ecef;">
                     <p style="margin: 0; color: #999; font-size: 12px;">
-                      © ${new Date().getFullYear()} Skillr Academy
+                      &copy; ${new Date().getFullYear()} Skillr Academy
                     </p>
                   </td>
                 </tr>
@@ -185,6 +185,95 @@ export class EmailService {
     `;
     const text = 'รหัสผ่านของคุณถูกเปลี่ยนเรียบร้อยแล้ว';
     return this.sendEmail(to, subject, html, text);
+  }
+
+  async sendAdminInviteEmail(input: {
+    to: string;
+    inviteUrl: string;
+    temporaryPassword?: string;
+    responsibility?: string;
+  }): Promise<boolean> {
+    const subject = 'คุณได้รับเชิญให้เป็นผู้ดูแลระบบ';
+    const responsibilityLine = input.responsibility ? `<p style="margin: 0 0 12px 0; color: #666; font-size: 14px; line-height: 1.5;">หน้าที่รับผิดชอบ: <strong>${input.responsibility}</strong></p>` : '';
+    const tempPasswordBlock = input.temporaryPassword
+      ? `
+        <div style="background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 12px 16px; border-radius: 8px; margin: 0 0 16px 0;">
+          <p style="margin: 0; color: #1a1a1a; font-size: 14px;">
+            Temporary Password: <strong style="font-family: 'Courier New', monospace;">${input.temporaryPassword}</strong>
+          </p>
+        </div>
+      `
+      : '';
+
+    const inviteUrl = input.inviteUrl || '';
+
+    const html = `
+      <!DOCTYPE html>
+      <html lang="th">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f8f9fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f8f9fa; padding: 40px 20px;">
+          <tr>
+            <td align="center">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+                <tr>
+                  <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 32px; text-align: center;">
+                    <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">
+                      Skillr Academy
+                    </h1>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="padding: 40px 32px;">
+                    <h2 style="margin: 0 0 12px 0; color: #1a1a1a; font-size: 20px; font-weight: 600;">
+                      เชิญเป็นผู้ดูแลระบบ
+                    </h2>
+                    <p style="margin: 0 0 16px 0; color: #666; font-size: 14px; line-height: 1.5;">
+                      คุณได้รับเชิญให้เป็นผู้ดูแลระบบของ Skillr Academy
+                    </p>
+                    ${responsibilityLine}
+                    ${tempPasswordBlock}
+                    <p style="margin: 0 0 24px 0; color: #666; font-size: 14px; line-height: 1.5;">
+                      กรุณากดปุ่มด้านล่างเพื่อยืนยันตัวตนและตั้งรหัสผ่านใหม่
+                    </p>
+
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr>
+                        <td align="center" style="padding: 0 0 24px 0;">
+                          <a href="${inviteUrl}" style="background: #667eea; color: #ffffff; text-decoration: none; padding: 12px 18px; border-radius: 8px; display: inline-block; font-weight: 600;">
+                            ยืนยันการเชิญ
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <p style="margin: 0; color: #999; font-size: 12px; line-height: 1.5;">
+                      หากปุ่มกดไม่ได้ ให้คัดลอกลิงก์นี้ไปเปิดในเบราว์เซอร์: ${inviteUrl}
+                    </p>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="background-color: #f8f9fa; padding: 24px; text-align: center; border-top: 1px solid #e9ecef;">
+                    <p style="margin: 0; color: #999; font-size: 12px;">
+                      &copy; ${new Date().getFullYear()} Skillr Academy
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    const text = `คุณได้รับเชิญให้เป็นผู้ดูแลระบบ\n\nลิงก์ยืนยัน: ${inviteUrl}`;
+    return this.sendEmail(input.to, subject, html, text);
   }
 
   private async sendEmail(to: string, subject: string, html: string, text: string): Promise<boolean> {

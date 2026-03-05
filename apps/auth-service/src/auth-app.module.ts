@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { WebsocketModule } from './gateway/websocket.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { AdminInvitationsModule } from './admin-invitations/admin-invitations.module';
 
 // Import course entities
 import { Course } from 'apps/course-service/src/courses/entities/course.entity';
@@ -73,6 +74,7 @@ import { Reward } from 'apps/reward-service/src/reward/entities/rewards.entity';
     ]),
     AuthModule,
     UsersModule,
+    AdminInvitationsModule,
     AnalyticsModule,
     WebsocketModule,
   ],
