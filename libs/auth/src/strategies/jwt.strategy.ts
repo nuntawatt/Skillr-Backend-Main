@@ -44,7 +44,6 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       UserRole.OWNER,
       UserRole.ADMIN,
       UserRole.STUDENT,
-      UserRole.INSTRUCTOR,
     ]);
 
     const payloadRole = payload.role as UserRole;
