@@ -2,15 +2,12 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { CreateRewardDto } from './dto/create-reward.dto';
 import { UpdateRewardDto } from './dto/update-reward.dto';
 import { Reward } from './entities/rewards.entity';
-import { Any, DataSource, LessThan, MoreThan, QueryRunner, Repository } from 'typeorm';
+import { DataSource, MoreThan, QueryRunner, Repository } from 'typeorm';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { RewardRedemption } from './entities/reward-redemption';
 import { User } from 'apps/auth-service/src/users/entities';
 import { UserXp } from 'apps/course-service/src/quizs/entities/user-xp.entity';
 import { randomUUID } from 'crypto';
-import { log } from 'console';
-import { escape } from 'querystring';
-import { stat } from 'fs';
 
 @Injectable()
 export class RewardService {
@@ -29,13 +26,13 @@ export class RewardService {
 
     @InjectRepository(UserXp, 'course')
     private readonly userxpRepository: Repository<UserXp>,
-  ) {}
+  ) { }
 
   getAllReward() {
     return this.rewardRepository.find();
   }
 
-  async getDetailReward(userId : string ,rewardId: number) {
+  async getDetailReward(userId: string, rewardId: number) {
     const rewardRunner = this.rewardDataSource.createQueryRunner();
     if (!rewardId || rewardId <= 0) {
       throw new BadRequestException('Invalid reward id');
@@ -50,23 +47,25 @@ export class RewardService {
     }
 
     const count = await this.redeemRepository.count({
-      where: {userId,
-        reward: { id: reward.id }}
+      where: {
+        userId,
+        reward: { id: reward.id }
+      }
     })
     let status = true
     if (reward.limit_per_user !== null && count >= reward.limit_per_user) {
-      status =  false
+      status = false
     }
 
-    return { reward: reward , isCanRedeem: status  };
+    return { reward: reward, isCanRedeem: status };
   }
 
-  async getRedeemCount(userId: string){
+  async getRedeemCount(userId: string) {
     const count = await this.redeemRepository.count({
-      where: {userId: userId, isUsed: false, expire_at: MoreThan(new Date())}
+      where: { userId: userId, isUsed: false, expire_at: MoreThan(new Date()) }
     })
-    
-    return { countUserRedeem : count };
+
+    return { countUserRedeem: count };
   }
 
   async getRedeem(userId: string) {
@@ -128,10 +127,10 @@ export class RewardService {
       userXp.xpTotal -= reward.required_points;
       await courseRunner.manager.save(userXp);
 
-      if(reward.total_limit != null && reward.remain != null){
+      if (reward.total_limit != null && reward.remain != null) {
         reward.remain -= 1;
       }
-      
+
       await rewardRunner.manager.save(reward);
       const redemption = rewardRunner.manager.create(
         RewardRedemption,
@@ -200,7 +199,7 @@ export class RewardService {
     });
 
     console.log(user);
-    
+
 
     if (!user) {
       throw new BadRequestException('User not found');
