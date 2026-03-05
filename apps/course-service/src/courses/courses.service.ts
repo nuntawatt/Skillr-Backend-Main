@@ -124,45 +124,6 @@ export class CoursesService {
       (a, b) => a.level_orderIndex - b.level_orderIndex,
     );
 
-    // สร้างโครงสร้างของ Level and Chapter โดยยังไม่รวมข้อมูล checkpoint
-    const levels: LevelStructureDto[] = sortedLevels.map((level) => {
-      const sortedChapters = (level.level_chapters || []).sort(
-        (a, b) => a.chapter_orderIndex - b.chapter_orderIndex,
-      );
-
-      // สร้างโครงสร้างของ Chapter
-      const chapters: ChapterStructureDto[] = sortedChapters.map((chapter) => {
-        const sortedLessons = (chapter.lessons || []).sort(
-          (a, b) => a.orderIndex - b.orderIndex,
-        );
-
-        // สร้างโครงสร้างของ Lesson
-        const lessons: LessonStructureDto[] = sortedLessons.map((lesson) => ({
-          lesson_id: lesson.lesson_id,
-          lesson_title: lesson.lesson_title,
-          lesson_type: lesson.lesson_type,
-          lesson_description: lesson.lesson_description ?? undefined,
-          orderIndex: lesson.orderIndex,
-        }));
-
-        // คืนค่าโครงสร้างของ Chapter พร้อมบทเรียนที่อยู่ภายใน
-        return {
-          chapter_id: chapter.chapter_id,
-          chapter_title: chapter.chapter_title,
-          orderIndex: chapter.chapter_orderIndex,
-          lessons,
-        };
-      });
-
-      // คืนค่าโครงสร้างของ Level พร้อมบทที่อยู่ภายใน
-      return {
-        level_id: level.level_id,
-        level_title: level.level_title,
-        orderIndex: level.level_orderIndex,
-        chapters,
-      };
-    });
-
     // รวม lesson_id ของบทเรียนทั้งหมดในคอร์สเพื่อใช้ในการดึงข้อมูล checkpoint ในขั้นตอนถัดไป
     const lessonIds: number[] = [];
     for (const lvl of sortedLevels) {
@@ -185,42 +146,54 @@ export class CoursesService {
     }
 
     // สร้างโครงสร้างของคอร์สที่มีข้อมูล checkpoint ผนวกกับบทเรียนที่เป็นประเภท checkpoint
-    const finalLevels: LevelStructureDto[] = sortedLevels.map((level) => {
-      const chapters: ChapterStructureDto[] = (level.level_chapters || []).map((chapter) => {
-        
-        // สำหรับบทเรียนที่เป็นประเภท checkpoint ให้ผนวกข้อมูล checkpoint จาก checkpointMap เข้าไปในโครงสร้างของบทเรียน
-        const lessons: LessonStructureDto[] = (chapter.lessons || [])
-          .filter((lesson) => {
-            if (!lesson.isPublished) return false;
-            return true;
-          })
-          .sort((a, b) => a.orderIndex - b.orderIndex)
-          .map((lesson) => {
+    const finalLevels: LevelStructureDto[] = sortedLevels
+      .map((level) => {
+        const chapters: ChapterStructureDto[] = (level.level_chapters || [])
+          .sort((a, b) => a.chapter_orderIndex - b.chapter_orderIndex)
+          .map((chapter) => {
+            const lessons: LessonStructureDto[] = (chapter.lessons || [])
+              .filter((lesson) => lesson?.isPublished === true)
+              .sort((a, b) => a.orderIndex - b.orderIndex)
+              .map((lesson) => {
+                const dto: LessonStructureDto = {
+                  lesson_id: lesson.lesson_id,
+                  lesson_title: lesson.lesson_title,
+                  lesson_type: lesson.lesson_type,
+                  lesson_description: lesson.lesson_description ?? undefined,
+                  orderIndex: lesson.orderIndex,
+                  isPublished: lesson.isPublished,
+                };
+
+                if (lesson.lesson_type === LessonType.CHECKPOINT) {
+                  const checkpoint = checkpointMap.get(lesson.lesson_id);
+                  if (checkpoint) dto.checkpoint = checkpoint;
+                }
+
+                return dto;
+              });
+
+            if (!lessons.length) return null;
+
             return {
-              lesson_id: lesson.lesson_id,
-              lesson_title: lesson.lesson_title,
-              lesson_type: lesson.lesson_type,
-              lesson_description: lesson.lesson_description ?? undefined,
-              orderIndex: lesson.orderIndex,
-              isPublished: lesson.isPublished,
-            } as LessonStructureDto;
-          });
+              chapter_id: chapter.chapter_id,
+              chapter_title: chapter.chapter_title,
+              orderIndex: chapter.chapter_orderIndex,
+              isPublished: true,
+              lessons,
+            } as ChapterStructureDto;
+          })
+          .filter((c): c is ChapterStructureDto => c !== null);
+
+        if (!chapters.length) return null;
 
         return {
-          chapter_id: chapter.chapter_id,
-          chapter_title: chapter.chapter_title,
-          orderIndex: chapter.chapter_orderIndex,
-          lessons,
-        };
-      });
-
-      return {
-        level_id: level.level_id,
-        level_title: level.level_title,
-        orderIndex: level.level_orderIndex,
-        chapters,
-      };
-    });
+          level_id: level.level_id,
+          level_title: level.level_title,
+          orderIndex: level.level_orderIndex,
+          chapters,
+        } as LevelStructureDto;
+      })
+      .filter((l): l is LevelStructureDto => l !== null);
 
     return {
       course_id: course.course_id,

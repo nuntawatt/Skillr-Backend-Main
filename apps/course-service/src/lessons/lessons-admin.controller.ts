@@ -108,7 +108,7 @@ export class LessonsAdminController {
   @ApiResponse({ status: 404, description: 'Lesson not found' })
   @ApiResponse({ status: 500, description: 'Internal Server Error' })
   findOne(@Param('id', ParseIntPipe) id: number): Promise<LessonResponseDto> {
-    return this.lessonsService.findOne(id);
+    return this.lessonsService.findOneAdmin(id);
   }
 
   @Patch(':id')

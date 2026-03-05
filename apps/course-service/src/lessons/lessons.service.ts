@@ -70,6 +70,11 @@ export class LessonsService {
       }
     }
 
+    const isCheckpointLesson = createLessonDto.lesson_type === LessonType.CHECKPOINT;
+    const isPublished = isCheckpointLesson
+      ? false
+      : (createLessonDto.isPublished ?? false);
+
     const lesson = this.lessonRepository.create({
       lesson_title: createLessonDto.lesson_title,
       lesson_description: createLessonDto.lesson_description,
@@ -78,7 +83,7 @@ export class LessonsService {
       orderIndex: orderIndex,
       lesson_ImageUrl: createLessonDto.lesson_ImageUrl,
       lesson_videoUrl: createLessonDto.lesson_videoUrl,
-      isPublished: createLessonDto.isPublished ?? false, // เริ่มต้นเป็น unpublished ถ้าไม่ระบุมา
+      isPublished,
     });
 
     const saved = await this.lessonRepository.save(lesson);
@@ -95,8 +100,26 @@ export class LessonsService {
     return Promise.all(lessons.map((l) => this.toResponseDto(l)));
   }
 
+  async findPublishedByChapter(chapterId: number): Promise<LessonResponseDto[]> {
+    const lessons = await this.lessonRepository.find({
+      where: { chapter_id: chapterId, isPublished: true },
+      order: { orderIndex: 'ASC' },
+    });
+
+    return Promise.all(lessons.map((l) => this.toResponseDto(l)));
+  }
+
   async findAll(): Promise<LessonResponseDto[]> {
     const lessons = await this.lessonRepository.find({
+      order: { orderIndex: 'ASC' },
+    });
+
+    return Promise.all(lessons.map((l) => this.toResponseDto(l)));
+  }
+
+  async findAllPublished(): Promise<LessonResponseDto[]> {
+    const lessons = await this.lessonRepository.find({
+      where: { isPublished: true },
       order: { orderIndex: 'ASC' },
     });
 
@@ -154,6 +177,28 @@ export class LessonsService {
     return this.toResponseDto(lesson);
   }
 
+  async findOnePublished(id: number): Promise<LessonResponseDto> {
+    const lesson = await this.lessonRepository.findOne({
+      where: { lesson_id: id, isPublished: true },
+    });
+
+    if (!lesson) {
+      throw new NotFoundException(`Lesson with ID ${id} not found`);
+    }
+
+    return this.toResponseDto(lesson);
+  }
+
+  async findOneAdmin(id: number): Promise<LessonResponseDto> {
+    const lesson = await this.lessonRepository.findOne({ where: { lesson_id: id } });
+
+    if (!lesson) {
+      throw new NotFoundException(`Lesson with ID ${id} not found`);
+    }
+
+    return this.toResponseDto(lesson);
+  }
+
   // Update lesson by ID
   async update(id: number, updateLessonDto: UpdateLessonDto): Promise<LessonResponseDto> {
     const lesson = await this.lessonRepository.findOne({ where: { lesson_id: id } });
@@ -181,8 +226,25 @@ export class LessonsService {
       lesson.lesson_videoUrl = updateLessonDto.lesson_videoUrl;
     }
 
-    // บังคับ publish ทุกครั้งที่ update  
-    lesson.isPublished = true;
+    const nextLessonType = updateLessonDto.lesson_type ?? lesson.lesson_type;
+    const isChangingToCheckpoint =
+      updateLessonDto.lesson_type !== undefined &&
+      updateLessonDto.lesson_type === LessonType.CHECKPOINT &&
+      updateLessonDto.lesson_type !== originalType;
+
+    // Default publish behavior:
+    // - Non-checkpoint: keep existing behavior (auto-publish on update)
+    // - Checkpoint: do NOT auto-publish; require explicit isPublished=true and ensure content exists
+    if (updateLessonDto.isPublished !== undefined) {
+      lesson.isPublished = updateLessonDto.isPublished;
+    } else {
+      lesson.isPublished = nextLessonType === LessonType.CHECKPOINT ? lesson.isPublished : true;
+    }
+
+    // If converting to checkpoint, force draft to avoid publishing without checkpoint content
+    if (isChangingToCheckpoint) {
+      lesson.isPublished = false;
+    }
 
     // ถ้าเปลี่ยน type ตรวจสอบและจัดการความสัมพันธ์ของ content ตาม type ใหม่
     if (
@@ -213,9 +275,16 @@ export class LessonsService {
       lesson.lesson_type = updateLessonDto.lesson_type;
     }
 
-    // ถ้าเป็น checkpoint กันไม่ให้เปลี่ยน orderIndex
-    if (updateLessonDto.isPublished !== undefined) {
-      lesson.isPublished = updateLessonDto.isPublished;
+    // If publishing a checkpoint lesson, ensure checkpoint content exists
+    if (lesson.isPublished && lesson.lesson_type === LessonType.CHECKPOINT) {
+      const checkpointExists = await this.checkpointRepository.exist({
+        where: { lessonId: lesson.lesson_id },
+      });
+      if (!checkpointExists) {
+        throw new BadRequestException(
+          `Cannot publish checkpoint lesson ${lesson.lesson_id} without checkpoint content. Create it via POST /admin/checkpoint first.`,
+        );
+      }
     }
 
     // ถ้า update orderIndex ให้ตรวจสอบว่าไม่ใช่ checkpoint และไม่ให้ไปอยู่กลาง chapter

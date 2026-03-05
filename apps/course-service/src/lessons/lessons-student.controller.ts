@@ -22,7 +22,7 @@ export class LessonsStudentController {
     @ApiResponse({ status: 404, description: 'Chapter not found' })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     findByChapter(@Query('chapterId', ParseIntPipe) chapterId: number): Promise<LessonResponseDto[]> {
-        return this.lessonsService.findByChapter(chapterId);
+        return this.lessonsService.findPublishedByChapter(chapterId);
     }
 
     @Get('all')
@@ -33,7 +33,7 @@ export class LessonsStudentController {
     @ApiResponse({ status: 404, description: 'Lessons not found' })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     findAll(): Promise<LessonResponseDto[]> {
-        return this.lessonsService.findAll();
+        return this.lessonsService.findAllPublished();
     }
 
     @Get(':id')
@@ -45,6 +45,6 @@ export class LessonsStudentController {
     @ApiResponse({ status: 404, description: 'Lesson not found' })
     @ApiResponse({ status: 500, description: 'Internal Server Error' })
     findOne(@Param('id', ParseIntPipe) id: number): Promise<LessonResponseDto> {
-        return this.lessonsService.findOne(id);
+        return this.lessonsService.findOnePublished(id);
     }
 }

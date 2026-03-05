@@ -11,11 +11,6 @@ export class UpdateChapterDto {
     @IsOptional()
     chapter_name?: string;
 
-    @IsString()
-    @IsOptional()
-    @MaxLength(255)
-    chapter_description?: string;
-
     @ApiPropertyOptional({ description: 'Order index within the level', example: 0 })
     @IsOptional()
     @IsNumber()

@@ -22,7 +22,7 @@ export class ChaptersStudentController {
     @ApiResponse({ status: 404, description: 'Level not found' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     findByLevel(@Query('level_id', ParseIntPipe) levelId: number): Promise<ChapterResponseDto[]> {
-        return this.chaptersService.findByLevel(levelId);
+        return this.chaptersService.findByLevelStudent(levelId);
     }
 
     @Get('all')
@@ -32,7 +32,7 @@ export class ChaptersStudentController {
     @ApiResponse({ status: 401, description: 'Unauthorized' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     findAll(): Promise<ChapterResponseDto[]> {
-        return this.chaptersService.findAll();
+        return this.chaptersService.findAllStudent();
     }
 
     @Get(':id')
@@ -44,6 +44,6 @@ export class ChaptersStudentController {
     @ApiResponse({ status: 404, description: 'Chapter not found' })
     @ApiResponse({ status: 500, description: 'Internal server error' })
     findOne(@Param('id', ParseIntPipe) id: number): Promise<ChapterResponseDto> {
-        return this.chaptersService.findOne(id);
+        return this.chaptersService.findOneStudent(id);
     }
 }

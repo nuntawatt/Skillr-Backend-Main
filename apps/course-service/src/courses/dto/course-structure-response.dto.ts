@@ -35,6 +35,9 @@ export class ChapterStructureDto {
   @ApiProperty({ description: 'Order index in level' })
   orderIndex: number;
 
+  @ApiProperty({ description: 'Whether this chapter has at least one published lesson', required: false })
+  isPublished?: boolean;
+
   @ApiProperty({ description: 'Lessons in this chapter', type: [LessonStructureDto] })
   lessons: LessonStructureDto[];
 }
