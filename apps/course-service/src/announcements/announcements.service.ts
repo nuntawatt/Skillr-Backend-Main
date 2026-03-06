@@ -56,7 +56,8 @@ export class AnnouncementsService {
   // function ตรวจสอบและอัปเดตสถานะของป้ายประกาศตามวันที่และเวลาปัจจุบัน
   @Cron(CronExpression.EVERY_MINUTE)
   async syncAnnouncementStatusByDate(): Promise<void> {
-    const nowExpr = "(NOW() AT TIME ZONE 'UTC')";
+    // start_date/end_date เก็บเป็น timestamp (ไม่มี timezone) ใช้เวลา Bangkok (UTC+7)
+    const nowExpr = "(NOW() AT TIME ZONE 'Asia/Bangkok')";
 
     // เปิดประกาศที่ถึงเวลาเปิดและยังไม่หมดอายุ
     const activatedResult = await this.announcementRepository
@@ -73,8 +74,8 @@ export class AnnouncementsService {
       )
       .execute();
 
-    // ถ้ามีการเปลี่ยนแปลงสถานะ (เปิดหรือปิด) อย่างน้อยหนึ่งป้ายประกาศ ให้ return ออกจากฟังก์ชันเพื่อหยุดการตรวจสอบเพิ่มเติม
     if (activatedResult.affected && activatedResult.affected > 0) {
+      console.log(`✅ Activated ${activatedResult.affected} announcement(s)`);
       return;
     }
 
@@ -92,14 +93,8 @@ export class AnnouncementsService {
       )
       .execute();
 
-    // ถ้ามีการเปลี่ยนแปลงสถานะ (เปิดหรือปิด) อย่างน้อยหนึ่งป้ายประกาศ ให้ return ออกจากฟังก์ชันเพื่อหยุดการตรวจสอบเพิ่มเติม
     if (deactivatedResult.affected && deactivatedResult.affected > 0) {
-      return;
-    }
-
-    // ถ้าไม่มีการเปลี่ยนแปลงสถานะของป้ายประกาศใดๆ ให้ return ออกจากฟังก์ชัน
-    if ((!activatedResult.affected || activatedResult.affected === 0) &&
-      (!deactivatedResult.affected || deactivatedResult.affected === 0)) {
+      console.log(`❌ Deactivated ${deactivatedResult.affected} announcement(s)`);
       return;
     }
   }
@@ -114,7 +109,7 @@ export class AnnouncementsService {
 
   // ดึงป้ายประกาศที่ active และอยู่ในช่วงเวลาที่กำหนด พร้อม placeholder image ถ้าไม่มีรูปภาพ
   async findActive(): Promise<AnnouncementResponseDto[]> {
-    const nowExpr = "(NOW() AT TIME ZONE 'UTC')";
+    const nowExpr = "(NOW() AT TIME ZONE 'Asia/Bangkok')";
 
     const list = await this.announcementRepository
       .createQueryBuilder('a')
