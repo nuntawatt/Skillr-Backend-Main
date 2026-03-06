@@ -26,16 +26,6 @@ export class AiQuizGeneration {
     @Column({ name: 'model_name', type: 'varchar', length: 100 })
     model_name: string;
 
-    // token usage
-    @Column({ name: 'prompt_tokens', type: 'int', nullable: true })
-    prompt_tokens?: number;
-
-    @Column({ name: 'completion_tokens', type: 'int', nullable: true })
-    completion_tokens?: number;
-
-    @Column({ name: 'total_tokens', type: 'int', nullable: true })
-    total_tokens?: number;
-
     // สถานะ moderation
     @Column({
         name: 'status',

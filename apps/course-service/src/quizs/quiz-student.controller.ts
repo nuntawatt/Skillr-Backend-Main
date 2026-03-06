@@ -39,7 +39,6 @@ export class QuizStudentController {
     return this.quizService.getQuizWithStatus(lessonId, userId);
   }
 
-
   @Post(':lessonId/check')
   @ApiOperation({ summary: 'ตรวจคำตอบ quiz และบันทึกผล' })
   @ApiBody({

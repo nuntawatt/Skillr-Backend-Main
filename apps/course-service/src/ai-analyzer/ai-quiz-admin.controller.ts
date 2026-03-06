@@ -17,7 +17,20 @@ export class AiQuizAdminController {
   @Post(':lessonId/generate')
   @ApiOperation({ summary: 'Generate AI quiz from lesson content' })
   @ApiParam({ name: 'lessonId', type: Number })
-  @ApiBody({ type: GenerateAiQuizDto, required: false })
+  @ApiBody({
+    type: GenerateAiQuizDto,
+    description: 'Optional parameters to influence quiz generation',
+    examples: {
+      example1: {
+        summary: 'Generate a quiz in Thai with medium difficulty and specific instructions',
+        value: {
+          language: 'th',
+          difficulty: 'medium',
+          admin: 'Please create a quiz based on the lesson content.'
+        }
+      }
+    }
+  })
   @ApiResponse({ status: 201, description: 'AI quiz generation created' })
   @ApiResponse({ status: 400, description: 'Invalid lesson ID' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })

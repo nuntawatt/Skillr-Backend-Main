@@ -1,13 +1,14 @@
 import {
     BadRequestException,
+    BadGatewayException,
     HttpException,
-    HttpStatus,
     Injectable,
     NotFoundException,
     ServiceUnavailableException,
+    UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import OpenAI from 'openai';
+import axios from 'axios';
 import { Repository } from 'typeorm';
 
 import { Lesson } from '../lessons/entities/lesson.entity';
@@ -28,7 +29,8 @@ type AiQuizResponse = {
 
 @Injectable()
 export class AiQuizService {
-    private readonly modelName = 'gpt-4o-mini';
+    private readonly modelName =
+        process.env.HUGGINGFACE_MODEL ?? 'mistralai/Mistral-7B-Instruct-v0.2';
 
     constructor(
         @InjectRepository(AiQuizGeneration)
@@ -41,16 +43,157 @@ export class AiQuizService {
         private readonly quizRepo: Repository<Quizs>,
     ) { }
 
-    private getOpenAIClient(): OpenAI {
-        const apiKey = process.env.OPENAI_API_KEY;
+    private async callHuggingFace(prompt: string) {
+        const apiKey = process.env.HUGGINGFACE_API_KEY;
+
         if (!apiKey) {
-            throw new ServiceUnavailableException('OPENAI_API_KEY is not configured');
+            throw new ServiceUnavailableException(
+                'HUGGINGFACE_API_KEY is not configured',
+            );
         }
 
-        return new OpenAI({ apiKey });
+        const response = await axios.post(
+            'https://router.huggingface.co/v1/chat/completions',
+            {
+                model: this.modelName,
+                messages: [
+                    {
+                        role: 'system',
+                        content:
+                            'You are an expert educational quiz generator. Return ONLY JSON.',
+                    },
+                    {
+                        role: 'user',
+                        content: prompt,
+                    },
+                ],
+                temperature: 0.4,
+                max_tokens: 500,
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json',
+                },
+                timeout: 30_000,
+            },
+        );
+
+        return response.data;
     }
 
-    async generateQuizFromLesson(lessonId: number, options?: GenerateAiQuizDto) {
+    private rethrowHuggingFaceAxiosError(
+        error: unknown,
+        message: string,
+    ): never {
+        if (!axios.isAxiosError(error)) {
+            throw new ServiceUnavailableException(
+                `HuggingFace request failed: ${message}`,
+            );
+        }
+
+        const status = error.response?.status;
+        const data = error.response?.data as any;
+
+        if (status === 400) {
+            const hfCode = data?.code ?? data?.error?.code;
+            if (hfCode === 'model_not_supported') {
+                throw new BadRequestException(
+                    `HuggingFace rejected request: ${message}. Hint: set HUGGINGFACE_MODEL to a model supported by your enabled HuggingFace Inference Provider(s), or enable a provider for this model in your HuggingFace account settings.`,
+                );
+            }
+
+            throw new BadRequestException(`HuggingFace rejected request: ${message}`);
+        }
+
+        if (status === 401 || status === 403) {
+            throw new UnauthorizedException(
+                `HuggingFace authentication/permission failed: ${message}`,
+            );
+        }
+
+        if (status === 429) {
+            throw new HttpException(
+                `HuggingFace rate limited: ${message}`,
+                429,
+            );
+        }
+
+        if (typeof status === 'number' && status >= 400 && status < 500) {
+            throw new BadGatewayException(`HuggingFace client error: ${message}`);
+        }
+
+        throw new ServiceUnavailableException(
+            `HuggingFace request failed: ${message}`,
+        );
+    }
+
+    private safeStringify(value: unknown) {
+        if (typeof value === 'string') {
+            return value;
+        }
+
+        try {
+            return JSON.stringify(value);
+        } catch {
+            return String(value);
+        }
+    }
+
+    private truncate(value: string, maxLength = 2_000) {
+        if (value.length <= maxLength) {
+            return value;
+        }
+
+        return `${value.slice(0, maxLength)}…`;
+    }
+
+    private formatHttpException(error: HttpException) {
+        const response = error.getResponse();
+
+        if (typeof response === 'string') {
+            return response;
+        }
+
+        const message = (response as any)?.message;
+
+        if (Array.isArray(message)) {
+            return message.join('; ');
+        }
+
+        if (typeof message === 'string') {
+            return message;
+        }
+
+        return this.truncate(this.safeStringify(response));
+    }
+
+    private formatHuggingFaceError(error: unknown) {
+        if (!axios.isAxiosError(error)) {
+            const message = (error as any)?.message;
+            return typeof message === 'string' ? message : this.safeStringify(error);
+        }
+
+        const status = error.response?.status;
+        const statusText = error.response?.statusText;
+        const data = error.response?.data;
+
+        const upstreamError = (data as any)?.error ?? data;
+        const upstreamText = this.truncate(this.safeStringify(upstreamError));
+
+        if (status) {
+            return statusText
+                ? `HTTP ${status} ${statusText}: ${upstreamText}`
+                : `HTTP ${status}: ${upstreamText}`;
+        }
+
+        return upstreamText || error.message;
+    }
+
+    async generateQuizFromLesson(
+        lessonId: number,
+        options?: GenerateAiQuizDto,
+    ) {
         const lesson = await this.lessonRepo.findOne({
             where: { lesson_id: lessonId },
         });
@@ -60,6 +203,7 @@ export class AiQuizService {
         }
 
         const description = lesson.lesson_description;
+
         if (typeof description !== 'string' || !description.trim()) {
             throw new BadRequestException('Lesson description is empty');
         }
@@ -67,24 +211,12 @@ export class AiQuizService {
         const prompt = this.buildPrompt(description, options);
 
         try {
-            const openai = this.getOpenAIClient();
-            const response = await openai.chat.completions.create({
-                model: this.modelName,
-                temperature: 0.4,
-                response_format: { type: 'json_object' },
-                messages: [
-                    {
-                        role: 'system',
-                        content:
-                            'You are an expert educational quiz generator. Only use the provided lesson content. Return ONLY valid JSON.',
-                    },
-                    { role: 'user', content: prompt },
-                ],
-            });
+            const response = await this.callHuggingFace(prompt);
 
-            const content = response.choices?.[0]?.message?.content;
+            const content = response?.choices?.[0]?.message?.content;
+
             if (!content) {
-                throw new BadRequestException('AI returned an empty response');
+                throw new BadRequestException('AI returned empty response');
             }
 
             const parsed = this.parseAndValidateQuizJson(content);
@@ -94,19 +226,15 @@ export class AiQuizService {
                 prompt_used: prompt,
                 ai_response: parsed,
                 model_name: this.modelName,
-                prompt_tokens: response.usage?.prompt_tokens,
-                completion_tokens: response.usage?.completion_tokens,
-                total_tokens: response.usage?.total_tokens,
                 status: 'PENDING',
             });
 
             return await this.aiRepo.save(saved);
-        } catch (error: any) {
-            const status = error?.status;
-            const code = error?.code;
-            const type = error?.type;
+        } catch (error: unknown) {
             const message =
-                error?.error?.message ?? error?.message ?? 'Unknown OpenAI error';
+                error instanceof HttpException
+                    ? this.formatHttpException(error)
+                    : this.formatHuggingFaceError(error);
 
             const failed = this.aiRepo.create({
                 lessonId,
@@ -119,32 +247,11 @@ export class AiQuizService {
 
             await this.aiRepo.save(failed);
 
-            if (
-                status === 429 ||
-                code === 'insufficient_quota' ||
-                type === 'insufficient_quota'
-            ) {
-                throw new HttpException(
-                    {
-                        message: 'OpenAI quota exceeded (insufficient_quota). Please check billing/quota and try again.',
-                    },
-                    HttpStatus.TOO_MANY_REQUESTS,
-                );
+            if (error instanceof HttpException) {
+                throw error;
             }
 
-            if (status === 401 || status === 403) {
-                throw new ServiceUnavailableException(
-                    'OpenAI authentication failed (check OPENAI_API_KEY and permissions).',
-                );
-            }
-
-            if (typeof status === 'number' && status >= 400) {
-                throw new ServiceUnavailableException(
-                    `OpenAI request failed (${status}): ${message}`,
-                );
-            }
-
-            throw error;
+            this.rethrowHuggingFaceAxiosError(error, message);
         }
     }
 
@@ -163,6 +270,7 @@ export class AiQuizService {
 
         const validated = this.validateAiQuizResponse(ai.ai_response);
         const question = validated.questions[0];
+
         const correctChoice = question.choices[question.answerIndex];
 
         const quizData: Partial<Quizs> = {
@@ -170,8 +278,6 @@ export class AiQuizService {
             quizsType: 'multiple_choice',
             quizsQuestions: question.question,
             quizsOption: question.choices,
-
-            // เก็บเป็นข้อความคำตอบที่ถูก เพื่อให้เข้ากับ flow เดิม (frontend ส่งเป็น string)
             quizsAnswer: correctChoice,
             quizsExplanation: question.explanation,
         };
@@ -194,6 +300,7 @@ export class AiQuizService {
 
     private parseAndValidateQuizJson(content: string): AiQuizResponse {
         let parsed: unknown;
+
         try {
             parsed = JSON.parse(content);
         } catch {
@@ -205,7 +312,7 @@ export class AiQuizService {
 
     private validateAiQuizResponse(data: unknown): AiQuizResponse {
         if (!data || typeof data !== 'object') {
-            throw new BadRequestException('AI response must be a JSON object');
+            throw new BadRequestException('AI response must be JSON object');
         }
 
         const obj = data as Record<string, unknown>;
@@ -218,7 +325,7 @@ export class AiQuizService {
         const first = questions[0] as any;
 
         if (!first || typeof first !== 'object') {
-            throw new BadRequestException('AI response questions[0] must be an object');
+            throw new BadRequestException('AI response questions[0] invalid');
         }
 
         const question = first.question;
@@ -227,7 +334,7 @@ export class AiQuizService {
         const explanation = first.explanation;
 
         if (typeof question !== 'string' || !question.trim()) {
-            throw new BadRequestException('AI response question must be a non-empty string');
+            throw new BadRequestException('Invalid question');
         }
 
         if (
@@ -235,20 +342,19 @@ export class AiQuizService {
             choices.length !== 4 ||
             choices.some((c) => typeof c !== 'string')
         ) {
-            throw new BadRequestException('AI response choices must be an array of 4 strings');
+            throw new BadRequestException('choices must be 4 strings');
         }
 
         if (
             typeof answerIndex !== 'number' ||
-            !Number.isInteger(answerIndex) ||
             answerIndex < 0 ||
             answerIndex > 3
         ) {
-            throw new BadRequestException('AI response answerIndex must be an integer 0-3');
+            throw new BadRequestException('answerIndex must be 0-3');
         }
 
         if (typeof explanation !== 'string') {
-            throw new BadRequestException('AI response explanation must be a string');
+            throw new BadRequestException('explanation must be string');
         }
 
         return {
@@ -264,42 +370,51 @@ export class AiQuizService {
     }
 
     private buildPrompt(content: string, options?: GenerateAiQuizDto) {
-        const languageLine = options?.language?.trim()
-            ? `Language: ${options.language.trim()}`
+        const languageLine = options?.language
+            ? `Language: ${options.language}`
             : '';
 
         const difficultyLine = options?.difficulty
             ? `Difficulty: ${options.difficulty}`
             : '';
 
-        const meta = [languageLine, difficultyLine].filter(Boolean).join('\n');
+        const admin = options?.admin ?? options?.prompt;
 
-        return `Generate 1 multiple choice quiz from the lesson below.
+        const promptLine = admin?.trim()
+            ? `admin: ${admin.trim()}`
+            : '';
 
-        ${meta ? `Constraints:\n${meta}\n` : ''}
+        const meta = [languageLine, difficultyLine, promptLine]
+            .filter(Boolean)
+            .join('\n');
 
-        Rules:
-            - 4 choices
-            - Only 1 correct answer
-            - Wrong answers must be realistic
-            - Question must test understanding
-            - Return JSON format
+        return `
+Generate 1 multiple choice quiz from the lesson below.
 
-        Return:
+${meta ? `Constraints:\n${meta}\n` : ''}
 
-        {
-        "questions": [
-            {
-            "question": "",
-            "choices": ["", "", "", ""],
-            "answerIndex": 0,
-            "explanation": ""
-            }
-        ]
-        }
+Rules:
+- 4 choices
+- Only 1 correct answer
+- Wrong answers must be realistic
+- Question must test understanding
+- Return ONLY JSON
 
-        Lesson Content:
-        ${content}
-    `;
+Return format:
+
+{
+ "questions": [
+  {
+   "question": "",
+   "choices": ["", "", "", ""],
+   "answerIndex": 0,
+   "explanation": ""
+  }
+ ]
+}
+
+Lesson Content:
+${content}
+`;
     }
 }
