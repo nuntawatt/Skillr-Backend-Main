@@ -66,10 +66,11 @@ export class AdminInvitationsService {
 
     const existing = await this.usersService.findByEmail(email);
     if (existing && existing.role !== UserRole.ADMIN) {
-      throw new ConflictException('Email already exists');
+      // Allow upgrading non-admin users to admin role
+      console.log(`Upgrading user from ${existing.role} to ADMIN`);
     }
 
-    if (existing && String(existing.status ?? '').toLowerCase() === 'active') {
+    if (existing && String(existing.status ?? '').toLowerCase() === 'active' && existing.role === UserRole.ADMIN) {
       throw new ConflictException('Admin already active');
     }
 
@@ -77,6 +78,8 @@ export class AdminInvitationsService {
       ? await this.usersService.update(existing.id, {
         firstName: input.firstName ?? existing.firstName,
         lastName: input.lastName ?? existing.lastName,
+        role: UserRole.ADMIN,  // 👉 เปลี่ยน role เป็น ADMIN
+        status: 'invited',     // 👉 เปลี่ยน status เป็น invited
       } as any)
       : await this.usersService.create({
         email,

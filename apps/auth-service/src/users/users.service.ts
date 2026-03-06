@@ -220,15 +220,21 @@ export class UsersService {
 
   // อัปเดตรหัสผ่าน (ใช้เมื่อผู้ใช้เปลี่ยนรหัสผ่านในโปรไฟล์)
   async updatePassword(id: string, newPassword: string) {
-    const account = await this.authRepo.findOne({
+    let account = await this.authRepo.findOne({
       where: { userId: id, provider: AuthProvider.LOCAL },
     });
 
     if (!account) {
-      throw new NotFoundException('Local account not found');
+      // สร้าง local auth account ถ้าไม่มี
+      account = this.authRepo.create({
+        userId: id,
+        provider: AuthProvider.LOCAL,
+        passwordHash: await argon2.hash(newPassword),
+      });
+    } else {
+      account.passwordHash = await argon2.hash(newPassword);
     }
 
-    account.passwordHash = await argon2.hash(newPassword);
     await this.authRepo.save(account);
   }
 
