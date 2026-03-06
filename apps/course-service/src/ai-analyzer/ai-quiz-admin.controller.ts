@@ -21,15 +21,25 @@ export class AiQuizAdminController {
     type: GenerateAiQuizDto,
     description: 'Optional parameters to influence quiz generation',
     examples: {
-      example1: {
-        summary: 'Generate a quiz in Thai with medium difficulty and specific instructions',
+      multiple_choice: {
+        summary: 'ตัวอย่าง: สร้าง Quiz แบบเลือกตอบ (TH, medium)',
         value: {
           language: 'th',
           difficulty: 'medium',
-          admin: 'Please create a quiz based on the lesson content.'
-        }
-      }
-    }
+          quiz_type: 'multiple_choice',
+          admin: 'ช่วยสร้างข้อสอบแบบเลือกตอบ 4 ตัวเลือก เน้นความเข้าใจจากเนื้อหา',
+        },
+      },
+      true_false: {
+        summary: 'ตัวอย่าง: สร้าง Quiz แบบถูก/ผิด (TH, easy)',
+        value: {
+          language: 'th',
+          difficulty: 'easy',
+          quiz_type: 'true_false',
+          admin: 'ช่วยสร้างข้อสอบแบบถูก/ผิด โดยให้ตัวเลือกเป็น True/False',
+        },
+      },
+    },
   })
   @ApiResponse({ status: 201, description: 'AI quiz generation created' })
   @ApiResponse({ status: 400, description: 'Invalid lesson ID' })

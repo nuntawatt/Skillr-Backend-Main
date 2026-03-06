@@ -16,12 +16,23 @@ import { AiQuizGeneration } from './entities/ai-analyzer-entity';
 import { Quizs } from '../quizs/entities/quizs.entity';
 import type { GenerateAiQuizDto } from './dto/generate-ai-quiz.dto';
 
-type AiQuizQuestion = {
-    question: string;
-    choices: string[];
-    answerIndex: number;
-    explanation: string;
-};
+type AiQuizType = 'multiple_choice' | 'true_false';
+
+type AiQuizQuestion =
+    | {
+        type: 'multiple_choice';
+        question: string;
+        choices: string[];
+        answerIndex: number;
+        explanation: string;
+    }
+    | {
+        type: 'true_false';
+        question: string;
+        choices: string[];
+        answerIndex: number;
+        explanation: string;
+    };
 
 type AiQuizResponse = {
     questions: AiQuizQuestion[];
@@ -29,7 +40,8 @@ type AiQuizResponse = {
 
 @Injectable()
 export class AiQuizService {
-    private readonly modelName = process.env.HUGGINGFACE_MODEL;
+    private readonly modelName =
+        process.env.HUGGINGFACE_MODEL ?? 'mistralai/Mistral-7B-Instruct-v0.2';
 
     constructor(
         @InjectRepository(AiQuizGeneration)
@@ -274,7 +286,7 @@ export class AiQuizService {
 
         const quizData: Partial<Quizs> = {
             lessonId: ai.lessonId,
-            quizsType: 'multiple_choice',
+            quizsType: question.type,
             quizsQuestions: question.question,
             quizsOption: question.choices,
             quizsAnswer: correctChoice,
@@ -327,29 +339,51 @@ export class AiQuizService {
             throw new BadRequestException('AI response questions[0] invalid');
         }
 
+        const typeRaw = first.type;
         const question = first.question;
         const choices = first.choices;
         const answerIndex = first.answerIndex;
         const explanation = first.explanation;
 
+        const inferredType: AiQuizType =
+            typeRaw === 'multiple_choice' || typeRaw === 'true_false'
+                ? typeRaw
+                : Array.isArray(choices) && choices.length === 2
+                    ? 'true_false'
+                    : 'multiple_choice';
+
         if (typeof question !== 'string' || !question.trim()) {
             throw new BadRequestException('Invalid question');
         }
 
-        if (
-            !Array.isArray(choices) ||
-            choices.length !== 4 ||
-            choices.some((c) => typeof c !== 'string')
-        ) {
-            throw new BadRequestException('choices must be 4 strings');
+        if (!Array.isArray(choices) || choices.some((c) => typeof c !== 'string')) {
+            throw new BadRequestException('choices must be array of strings');
         }
 
-        if (
-            typeof answerIndex !== 'number' ||
-            answerIndex < 0 ||
-            answerIndex > 3
-        ) {
-            throw new BadRequestException('answerIndex must be 0-3');
+        if (inferredType === 'multiple_choice') {
+            if (choices.length !== 4) {
+                throw new BadRequestException('multiple_choice choices must be 4 strings');
+            }
+
+            if (
+                typeof answerIndex !== 'number' ||
+                answerIndex < 0 ||
+                answerIndex > 3
+            ) {
+                throw new BadRequestException('multiple_choice answerIndex must be 0-3');
+            }
+        } else {
+            if (choices.length !== 2) {
+                throw new BadRequestException('true_false choices must be 2 strings');
+            }
+
+            if (
+                typeof answerIndex !== 'number' ||
+                answerIndex < 0 ||
+                answerIndex > 1
+            ) {
+                throw new BadRequestException('true_false answerIndex must be 0-1');
+            }
         }
 
         if (typeof explanation !== 'string') {
@@ -359,6 +393,7 @@ export class AiQuizService {
         return {
             questions: [
                 {
+                    type: inferredType,
                     question,
                     choices,
                     answerIndex,
@@ -377,33 +412,37 @@ export class AiQuizService {
             ? `Difficulty: ${options.difficulty}`
             : '';
 
+        const quizTypeLine = options?.quiz_type
+            ? `Quiz Type: ${options.quiz_type}`
+            : '';
+
         const admin = options?.admin ?? options?.prompt;
 
-        const promptLine = admin?.trim()
+        const instructionLine = admin?.trim()
             ? `admin: ${admin.trim()}`
             : '';
 
-        const meta = [languageLine, difficultyLine, promptLine]
+        const meta = [languageLine, difficultyLine, quizTypeLine, instructionLine]
             .filter(Boolean)
             .join('\n');
 
         return `
-Generate 1 multiple choice quiz from the lesson below.
+Generate 1 quiz question from the lesson below.
 
 ${meta ? `Constraints:\n${meta}\n` : ''}
 
 Rules:
-- 4 choices
-- Only 1 correct answer
-- Wrong answers must be realistic
+- Return ONLY JSON (no markdown, no extra text)
 - Question must test understanding
-- Return ONLY JSON
+- Provide realistic wrong answers (for multiple_choice)
+- For true_false, choices must be ["True", "False"]
 
 Return format:
 
 {
  "questions": [
   {
+   "type": "multiple_choice" | "true_false",
    "question": "",
    "choices": ["", "", "", ""],
    "answerIndex": 0,

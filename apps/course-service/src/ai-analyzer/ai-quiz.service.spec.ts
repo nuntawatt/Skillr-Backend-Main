@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import axios from 'axios';
 import { Repository } from 'typeorm';
 
 import { AiQuizService } from './ai-quiz.service';
@@ -13,23 +14,13 @@ import { AiQuizGeneration } from './entities/ai-analyzer-entity';
 import { Lesson } from '../lessons/entities/lesson.entity';
 import { Quizs } from '../quizs/entities/quizs.entity';
 
-jest.mock('openai', () => {
-  const openAiCreateMock = jest.fn();
-  const OpenAIMock = jest.fn().mockImplementation(() => ({
-    chat: {
-      completions: {
-        create: openAiCreateMock,
-      },
-    },
-  }));
+jest.mock('axios', () => {
+  const post = jest.fn();
+  const isAxiosError = (err: any) => err?.isAxiosError === true;
 
   return {
     __esModule: true,
-    default: OpenAIMock,
-    __mock: {
-      OpenAIMock,
-      openAiCreateMock,
-    },
+    default: { post, isAxiosError },
   };
 });
 
@@ -38,17 +29,14 @@ describe('AiQuizService', () => {
   let aiRepo: jest.Mocked<Partial<Repository<AiQuizGeneration>>>;
   let lessonRepo: jest.Mocked<Partial<Repository<Lesson>>>;
   let quizRepo: jest.Mocked<Partial<Repository<Quizs>>>;
-  let openAiCreateMock: jest.Mock;
-  let OpenAIMock: jest.Mock;
+  let axiosPostMock: jest.Mock;
 
   const envBackup = { ...process.env };
 
   beforeEach(async () => {
     process.env = { ...envBackup };
 
-    const openaiModule = jest.requireMock('openai') as any;
-    openAiCreateMock = openaiModule.__mock.openAiCreateMock;
-    OpenAIMock = openaiModule.__mock.OpenAIMock;
+    axiosPostMock = (axios as any).post as jest.Mock;
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -84,8 +72,7 @@ describe('AiQuizService', () => {
     quizRepo = module.get(getRepositoryToken(Quizs));
 
     jest.clearAllMocks();
-    openAiCreateMock.mockReset();
-    OpenAIMock.mockClear();
+    axiosPostMock.mockReset();
   });
 
   afterAll(() => {
@@ -103,38 +90,37 @@ describe('AiQuizService', () => {
       await expect(service.generateQuizFromLesson(1)).rejects.toBeInstanceOf(BadRequestException);
     });
 
-    it('throws ServiceUnavailableException when OPENAI_API_KEY missing', async () => {
-      delete process.env.OPENAI_API_KEY;
+    it('throws ServiceUnavailableException when HUGGINGFACE_API_KEY missing', async () => {
+      delete process.env.HUGGINGFACE_API_KEY;
       (lessonRepo.findOne as jest.Mock).mockResolvedValue({ lesson_id: 1, lesson_description: 'content' } as any);
 
       await expect(service.generateQuizFromLesson(1)).rejects.toBeInstanceOf(ServiceUnavailableException);
     });
 
     it('saves PENDING generation when AI returns valid JSON', async () => {
-      process.env.OPENAI_API_KEY = 'k';
+      process.env.HUGGINGFACE_API_KEY = 'k';
+      process.env.HUGGINGFACE_MODEL = 'meta-llama/Meta-Llama-3-8B-Instruct';
       (lessonRepo.findOne as jest.Mock).mockResolvedValue({ lesson_id: 1, lesson_description: 'content' } as any);
 
-      openAiCreateMock.mockResolvedValue({
-        choices: [
-          {
-            message: {
-              content: JSON.stringify({
-                questions: [
-                  {
-                    question: 'q',
-                    choices: ['a', 'b', 'c', 'd'],
-                    answerIndex: 1,
-                    explanation: 'e',
-                  },
-                ],
-              }),
+      axiosPostMock.mockResolvedValue({
+        data: {
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  questions: [
+                    {
+                      type: 'multiple_choice',
+                      question: 'q',
+                      choices: ['a', 'b', 'c', 'd'],
+                      answerIndex: 1,
+                      explanation: 'e',
+                    },
+                  ],
+                }),
+              },
             },
-          },
-        ],
-        usage: {
-          prompt_tokens: 1,
-          completion_tokens: 2,
-          total_tokens: 3,
+          ],
         },
       });
 
@@ -143,17 +129,25 @@ describe('AiQuizService', () => {
 
       const res = await service.generateQuizFromLesson(1, { language: 'TH', difficulty: 'easy' } as any);
 
-      expect(OpenAIMock).toHaveBeenCalled();
       expect(res.status).toBe('PENDING');
       expect(res.lessonId).toBe(1);
       expect(res.ai_response?.questions?.[0]?.question).toBe('q');
     });
 
     it('persists REJECTED and maps quota errors to HttpException(429)', async () => {
-      process.env.OPENAI_API_KEY = 'k';
+      process.env.HUGGINGFACE_API_KEY = 'k';
+      process.env.HUGGINGFACE_MODEL = 'meta-llama/Meta-Llama-3-8B-Instruct';
       (lessonRepo.findOne as jest.Mock).mockResolvedValue({ lesson_id: 1, lesson_description: 'content' } as any);
 
-      openAiCreateMock.mockRejectedValue({ status: 429, code: 'insufficient_quota', message: 'quota' });
+      axiosPostMock.mockRejectedValue({
+        isAxiosError: true,
+        response: {
+          status: 429,
+          statusText: 'Too Many Requests',
+          data: { error: { message: 'quota' } },
+        },
+        message: 'quota',
+      });
 
       (aiRepo.create as jest.Mock).mockImplementation((x: any) => x);
       (aiRepo.save as jest.Mock).mockImplementation(async (x) => x as any);

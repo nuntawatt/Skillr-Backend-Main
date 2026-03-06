@@ -1,6 +1,9 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
 
+const QuizType = ['multiple_choice', 'true_false'] as const;
+type QuizType = typeof QuizType[number];
+
 export class GenerateAiQuizDto {
   @ApiPropertyOptional({
     description: 'Language the quiz should be written in (e.g. th, en).',
@@ -21,6 +24,15 @@ export class GenerateAiQuizDto {
   difficulty?: 'easy' | 'medium' | 'hard';
 
   @ApiPropertyOptional({
+    description: 'Quiz type to generate.',
+    enum: QuizType,
+    example: 'multiple_choice',
+  })
+  @IsOptional()
+  @IsIn(QuizType)
+  quiz_type?: QuizType;
+
+  @ApiPropertyOptional({
     description:
       'Additional instructions to influence quiz generation (the service will still enforce JSON-only output format).',
     example: 'ช่วยทำข้อสอบที่เน้นการใช้งานจริง หลีกเลี่ยงคำถามหลอก',
@@ -33,7 +45,7 @@ export class GenerateAiQuizDto {
   @ApiPropertyOptional({
     deprecated: true,
     description:
-      'Deprecated: use `instructions` instead. Additional prompt/instructions to influence quiz generation.',
+      'Deprecated: use `admin` instead. Additional prompt/instructions to influence quiz generation.',
     example: 'Generate questions that focus on real-world usage; avoid tricky wording.',
   })
   @IsOptional()
