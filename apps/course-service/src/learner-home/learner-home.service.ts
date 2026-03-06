@@ -135,7 +135,7 @@ export class LearnerHomeService {
 
   // ดึงข้อมูลบทเรียนล่าสุดที่ผู้ใช้กำลังเรียนอยู่ (ยังไม่จบ) เพื่อแสดงในส่วน Continue Learning ของหน้าแรก โดยเรียงลำดับจากบทเรียนที่มีการอัปเดตล่าสุด
   private async getContinueLearning(userId: string) {
-    const latest = await this.lessonProgressRepository
+    const progressList = await this.lessonProgressRepository
       .createQueryBuilder('lp')
       .leftJoinAndSelect('lp.lesson', 'lesson')
       .leftJoinAndSelect('lesson.chapter', 'chapter')
@@ -143,7 +143,9 @@ export class LearnerHomeService {
       .leftJoinAndSelect('level.course', 'course')
       .where('lp.userId = :userId', { userId })
       .orderBy('lp.lastViewedAt', 'DESC')
-      .getOne();
+      .getMany();
+
+    const latest = progressList.find((progress) => this.hasStartedLearning(progress));
 
     // ถ้าไม่มีบทเรียนที่กำลังเรียนอยู่เลย หรือข้อมูลไม่ครบถ้วน ให้คืนค่า null เพื่อให้ frontend แสดงผลแบบไม่มีบทเรียนที่กำลังเรียนอยู่
     if (!latest?.lesson?.chapter?.level?.course) return null;
@@ -174,14 +176,16 @@ export class LearnerHomeService {
       .where('lp.userId = :userId', { userId })
       .getMany();
 
+    const startedProgressList = progressList.filter((progress) => this.hasStartedLearning(progress));
+
     // ถ้าไม่มีบทเรียนที่กำลังเรียนอยู่เลย หรือข้อมูลไม่ครบถ้วน ให้คืนค่าเป็น array ว่างเพื่อให้ frontend แสดงผลแบบไม่มีคอร์สที่กำลังเรียนอยู่
-    if (!progressList.length) return [];
+    if (!startedProgressList.length) return [];
 
     // map ข้อมูลบทเรียนที่กำลังเรียนอยู่ทั้งหมดมาเป็นข้อมูลคอร์สที่กำลังเรียนอยู่ 
     const courseMap = new Map<number, { total: number; completed: number; title: string }>();
 
     // loop ผ่าน progressList เพื่อคำนวณความคืบหน้าของแต่ละคอร์ส โดยใช้ Map เก็บข้อมูลเพื่อรวมบทเรียนที่อยู่ในคอร์สเดียวกันไว้ด้วยกัน
-    for (const progress of progressList) {
+    for (const progress of startedProgressList) {
       const course = progress.lesson?.chapter?.level?.course;
       if (!course) continue;
 
@@ -215,6 +219,14 @@ export class LearnerHomeService {
             ? Math.round((data.completed / data.total) * 100)
             : 0,
       }),
+    );
+  }
+
+  private hasStartedLearning(progress: LessonProgress) {
+    return (
+      Number(progress.progressPercent ?? 0) > 0 ||
+      progress.status === 'COMPLETED' ||
+      progress.status === 'SKIPPED'
     );
   }
 

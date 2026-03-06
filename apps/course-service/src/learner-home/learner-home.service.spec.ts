@@ -124,21 +124,24 @@ describe('LearnerHomeService', () => {
       leftJoinAndSelect: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
-      getOne: jest.fn().mockResolvedValue({
-        progressPercent: 40,
-        lesson: {
-          chapter: {
-            chapter_title: 'Ch1',
-            level: {
-              level_title: 'L1',
-              course: {
-                course_id: 10,
-                course_title: 'C1',
+      getMany: jest.fn().mockResolvedValue([
+        {
+          status: 'IN_PROGRESS',
+          progressPercent: 40,
+          lesson: {
+            chapter: {
+              chapter_title: 'Ch1',
+              level: {
+                level_title: 'L1',
+                course: {
+                  course_id: 10,
+                  course_title: 'C1',
+                },
               },
             },
           },
         },
-      }),
+      ]),
     };
 
     const myCoursesQb: any = {
@@ -156,7 +159,8 @@ describe('LearnerHomeService', () => {
           },
         },
         {
-          status: 'STARTED',
+          status: 'IN_PROGRESS',
+          progressPercent: 40,
           lesson: {
             chapter: {
               level: {
@@ -212,7 +216,7 @@ describe('LearnerHomeService', () => {
       leftJoinAndSelect: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
-      getOne: jest.fn().mockResolvedValue(null),
+      getMany: jest.fn().mockResolvedValue([]),
     };
     const myCoursesQb: any = {
       leftJoinAndSelect: jest.fn().mockReturnThis(),
@@ -256,7 +260,7 @@ describe('LearnerHomeService', () => {
       leftJoinAndSelect: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
-      getOne: jest.fn().mockResolvedValue(null),
+      getMany: jest.fn().mockResolvedValue([]),
     };
     const myCoursesQb: any = {
       leftJoinAndSelect: jest.fn().mockReturnThis(),
@@ -288,6 +292,71 @@ describe('LearnerHomeService', () => {
         course_totalChapter: 6,
       },
     ]);
+  });
+
+  it('ignores view-only progress records with zero percent on learner home', async () => {
+    (streakService.getStreak as jest.Mock).mockResolvedValue({ streak: { currentStreak: 0 } });
+    (notificationsService.getUnreadCount as jest.Mock).mockResolvedValue(0);
+
+    const userXpQb: any = {
+      select: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      getRawOne: jest.fn().mockResolvedValue({ total: '0' }),
+    };
+    userXpRepo.createQueryBuilder!.mockReturnValue(userXpQb);
+
+    const continueLearningQb: any = {
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([
+        {
+          status: 'IN_PROGRESS',
+          progressPercent: 0,
+          lesson: {
+            chapter: {
+              chapter_title: 'Preview Chapter',
+              level: {
+                level_title: 'L1',
+                course: { course_id: 22, course_title: 'Preview Course' },
+              },
+            },
+          },
+        },
+      ]),
+    };
+    const myCoursesQb: any = {
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([
+        {
+          status: 'IN_PROGRESS',
+          progressPercent: 0,
+          lesson: {
+            chapter: {
+              level: {
+                course: { course_id: 22, course_title: 'Preview Course' },
+              },
+            },
+          },
+        },
+      ]),
+    };
+    (lessonProgressRepo.createQueryBuilder as jest.Mock)
+      .mockReturnValueOnce(continueLearningQb)
+      .mockReturnValueOnce(myCoursesQb);
+
+    courseRepo.find!.mockResolvedValue([]);
+
+    const res = await service.getHome('u3', 'Bearer x', 'true');
+
+    expect(res.continueLearning).toBeNull();
+    expect(res.myCourses).toEqual([]);
+    expect(courseRepo.find).toHaveBeenCalledWith({
+      where: { isPublished: true },
+      order: { createdAt: 'DESC' },
+      take: 3,
+    });
   });
 
   it('falls back to defaults when subcalls throw', async () => {
