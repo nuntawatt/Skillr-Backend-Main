@@ -188,6 +188,11 @@ describe('LearnerHomeService', () => {
     expect(res.myCourses).toEqual([{ course_id: 10, title: 'C1', progressPercent: 50 }]);
     expect(res.notifications.unreadCount).toBe(2);
     expect(res.recommendations.courses).toHaveLength(2);
+    expect(courseRepo.find).toHaveBeenCalledWith({
+      where: { isPublished: true },
+      order: { updatedAt: 'DESC' },
+      take: 3,
+    });
 
     expect(httpService.axiosRef.get).not.toHaveBeenCalled();
   });
@@ -229,6 +234,60 @@ describe('LearnerHomeService', () => {
       headers: { Authorization: 'Bearer x', 'X-Internal-Call': 'true' },
     });
     expect(res.header.avatarUrl).toBe('ava');
+    expect(courseRepo.find).toHaveBeenCalledWith({
+      where: { isPublished: true },
+      order: { createdAt: 'DESC' },
+      take: 3,
+    });
+  });
+
+  it('returns latest created courses for new users', async () => {
+    (streakService.getStreak as jest.Mock).mockResolvedValue({ streak: { currentStreak: 0 } });
+    (notificationsService.getUnreadCount as jest.Mock).mockResolvedValue(0);
+
+    const userXpQb: any = {
+      select: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      getRawOne: jest.fn().mockResolvedValue({ total: '0' }),
+    };
+    userXpRepo.createQueryBuilder!.mockReturnValue(userXpQb);
+
+    const continueLearningQb: any = {
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      getOne: jest.fn().mockResolvedValue(null),
+    };
+    const myCoursesQb: any = {
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([]),
+    };
+    (lessonProgressRepo.createQueryBuilder as jest.Mock)
+      .mockReturnValueOnce(continueLearningQb)
+      .mockReturnValueOnce(myCoursesQb);
+
+    courseRepo.find!.mockResolvedValue([
+      { course_id: 99, course_title: 'Newest', course_imageUrl: null } as any,
+    ]);
+
+    const res = await service.getHome('u2', 'Bearer x', 'true');
+
+    expect(courseRepo.find).toHaveBeenCalledWith({
+      where: { isPublished: true },
+      order: { createdAt: 'DESC' },
+      take: 3,
+    });
+    expect(res.recommendations.courses).toEqual([
+      {
+        course_id: 99,
+        course_title: 'Newest',
+        reason: 'คอร์สใหม่ล่าสุด',
+        course_imageUrl: null,
+        level_name: 'ระดับพื้นฐาน',
+        course_totalChapter: 6,
+      },
+    ]);
   });
 
   it('falls back to defaults when subcalls throw', async () => {

@@ -55,7 +55,6 @@ export class LearnerHomeService {
       continueLearning,
       myCourses,
       notifications,
-      recommendations,
       userProfile,
     ] = await Promise.all([
       this.getStreak(userId).catch(() => ({ currentStreak: 0 })),
@@ -63,9 +62,14 @@ export class LearnerHomeService {
       this.getContinueLearning(userId).catch(() => null),
       this.getMyCourses(userId).catch(() => []),
       this.getNotifications(userId).catch(() => ({ unreadCount: 0 })),
-      this.getRecommendations().catch(() => ({ courses: [] })),
       !shouldSkipProfile ? this.getUserProfileFromAuth(authorization).catch(() => null) : null,
     ]);
+
+    const isNewUser = continueLearning === null && myCourses.length === 0;
+
+    const recommendations = await this.getRecommendations(isNewUser).catch(
+      () => ({ courses: [] }),
+    );
 
     // return ข้อมูลทั้งหมดในรูปแบบที่ API ต้องการ โดยมีการจัดรูปแบบและ fallback ค่าเริ่มต้นสำหรับข้อมูลที่อาจจะดึงมาไม่ได้
     return {
@@ -222,19 +226,19 @@ export class LearnerHomeService {
   }
 
   // ดึงข้อมูล Course Recommendations เพื่อแสดงในส่วนแนะนำคอร์สของหน้าแรก
-  private async getRecommendations() {
+  private async getRecommendations(isNewUser = false) {
     const take = 3; // default จำนวนคอร์สที่จะแนะนำ
 
     const recommendedCourses = await this.courseRepository.find({
       where: { isPublished: true },
-      order: { updatedAt: 'DESC' },
+      order: isNewUser ? { createdAt: 'DESC' } : { updatedAt: 'DESC' },
       take,
     });
 
     const courses = recommendedCourses.map((course) => ({
       course_id: course.course_id,
       course_title: course.course_title,
-      reason: 'คอร์สยอดนิยม',
+      reason: isNewUser ? 'คอร์สใหม่ล่าสุด' : 'คอร์สยอดนิยม',
       course_imageUrl: course.course_imageUrl ?? null,
       level_name: 'ระดับพื้นฐาน',
       course_totalChapter: 6,
