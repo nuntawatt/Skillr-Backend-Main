@@ -85,8 +85,8 @@ describe('AiQuizService', () => {
       await expect(service.generateQuizFromLesson(1)).rejects.toBeInstanceOf(NotFoundException);
     });
 
-    it('throws when description empty', async () => {
-      (lessonRepo.findOne as jest.Mock).mockResolvedValue({ lesson_id: 1, lesson_description: '   ' } as any);
+    it('throws when lesson content empty (no description and no title)', async () => {
+      (lessonRepo.findOne as jest.Mock).mockResolvedValue({ lesson_id: 1, lesson_title: '   ', lesson_description: '   ' } as any);
       await expect(service.generateQuizFromLesson(1)).rejects.toBeInstanceOf(BadRequestException);
     });
 

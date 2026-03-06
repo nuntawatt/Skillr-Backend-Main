@@ -201,6 +201,17 @@ export class AiQuizService {
         return upstreamText || error.message;
     }
 
+    private redactLessonContentForStorage(prompt: string) {
+        const marker = '\nLesson Content:\n';
+        const index = prompt.indexOf(marker);
+
+        if (index === -1) {
+            return this.truncate(prompt);
+        }
+
+        return `${prompt.slice(0, index + marker.length)}[REDACTED]`;
+    }
+
     async generateQuizFromLesson(
         lessonId: number,
         options?: GenerateAiQuizDto,
@@ -213,13 +224,19 @@ export class AiQuizService {
             throw new NotFoundException('Lesson not found');
         }
 
-        const description = lesson.lesson_description;
+        const description =
+            typeof lesson.lesson_description === 'string'
+                ? lesson.lesson_description
+                : '';
 
-        if (typeof description !== 'string' || !description.trim()) {
-            throw new BadRequestException('Lesson description is empty');
+        const content = description.trim() ? description : (lesson.lesson_title ?? '').trim();
+
+        if (!content) {
+            throw new BadRequestException('Lesson content is empty');
         }
 
-        const prompt = this.buildPrompt(description, options);
+        const prompt = this.buildPrompt(content, options);
+        const promptForStorage = this.redactLessonContentForStorage(prompt);
 
         try {
             const response = await this.callHuggingFace(prompt);
@@ -234,7 +251,7 @@ export class AiQuizService {
 
             const saved = this.aiRepo.create({
                 lessonId,
-                prompt_used: prompt,
+                prompt_used: promptForStorage,
                 ai_response: parsed,
                 model_name: this.modelName,
                 status: 'PENDING',
@@ -249,7 +266,7 @@ export class AiQuizService {
 
             const failed = this.aiRepo.create({
                 lessonId,
-                prompt_used: prompt,
+                prompt_used: promptForStorage,
                 ai_response: {},
                 model_name: this.modelName,
                 status: 'REJECTED',
