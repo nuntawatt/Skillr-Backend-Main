@@ -391,28 +391,6 @@ export class LessonsService {
       createdAt: lesson.createdAt,
     };
 
-    if (lesson.lesson_type === LessonType.CHECKPOINT) {
-      try {
-        const chk = await this.checkpointRepository.findOne({ where: { lessonId: lesson.lesson_id } });
-
-        // ถ้าเจอ checkpoint ให้เติมข้อมูล checkpoint ลงใน response ด้วย
-        if (chk) {
-          base.checkpoint = {
-            checkpoint_id: chk.checkpointId,
-            checkpoint_score: chk.checkpointScore,
-            checkpoint_type: chk.checkpointType,
-            checkpoint_questions: chk.checkpointQuestions,
-            checkpoint_option: chk.checkpointOption,
-            checkpoint_explanation: chk.checkpointExplanation ?? null,
-            createdAt: chk.createdAt,
-            updatedAt: chk.updatedAt,
-          };
-        }
-      } catch (err) {
-        // ถ้า error จะไม่เติมข้อมูล checkpoint ลงใน response แต่จะไม่ทำให้การดึง lesson ล้มเหลว
-      }
-    }
-
     return base as LessonResponseDto;
   }
 
