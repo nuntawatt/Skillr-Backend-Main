@@ -29,8 +29,7 @@ type AiQuizResponse = {
 
 @Injectable()
 export class AiQuizService {
-    private readonly modelName =
-        process.env.HUGGINGFACE_MODEL ?? 'mistralai/Mistral-7B-Instruct-v0.2';
+    private readonly modelName = process.env.HUGGINGFACE_MODEL;
 
     constructor(
         @InjectRepository(AiQuizGeneration)
