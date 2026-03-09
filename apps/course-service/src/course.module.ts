@@ -38,6 +38,7 @@ import { LearnerHomeModule } from './learner-home/learner-home.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { QuizsModule } from './quizs/quizs.module';
 import { AiQuizModule } from './ai-analyzer/ai-quiz.module';
+import { AppRedisCacheModule } from './cache/app-redis-cache.module';
 
 // Entities
 import { Course } from './courses/entities/course.entity';
@@ -60,6 +61,7 @@ const isTest = process.env.NODE_ENV === 'test';
       isGlobal: true,
       envFilePath: ['apps/course-service/.env', '.env'],
     }),
+    AppRedisCacheModule,
     ScheduleModule.forRoot(),
 
     ...(isTest

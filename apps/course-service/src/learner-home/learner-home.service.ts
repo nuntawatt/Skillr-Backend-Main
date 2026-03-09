@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Optional, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { HttpService } from '@nestjs/axios';
@@ -10,6 +10,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { LessonProgress } from '../progress/entities/progress.entity';
 import { UserXp } from '../quizs/entities/user-xp.entity';
 import { Course } from '../courses/entities/course.entity';
+import { RedisCacheService } from '../cache/redis-cache.service';
 
 import { LearnerHomeResponseDto } from './dto/learner-home-response.dto';
 
@@ -20,6 +21,9 @@ interface UserProfile {
 
 @Injectable()
 export class LearnerHomeService {
+  private static readonly HOME_TTL_SECONDS = 60;
+  private static readonly RECOMMENDATIONS_TTL_SECONDS = 300;
+
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
@@ -34,6 +38,9 @@ export class LearnerHomeService {
 
     @InjectRepository(Course)
     private readonly courseRepository: Repository<Course>,
+
+    @Optional()
+    private readonly redisCacheService?: RedisCacheService,
   ) { }
 
   async getHome(
@@ -45,45 +52,14 @@ export class LearnerHomeService {
       throw new UnauthorizedException('User not authenticated');
     }
 
-    // ถ้าเป็น internal call ให้ข้ามการเรียก Auth Service เพื่อกันการวนเรียกซ้ำ (infinite loop)
     const shouldSkipProfile = internalCall === 'true';
+    const cacheKey = `learner-home:user:${userId}:profile:${shouldSkipProfile ? 'off' : 'on'}`;
 
-    // ดึงข้อมูลต่างๆ ที่จำเป็นสำหรับหน้าแรกของผู้เรียนพร้อมกันทีเดียว (parallel) โดยมี fallback เป็นค่าเริ่มต้นหากการดึงข้อมูลใดล้มเหลว
-    const [
-      streak,
-      totalXp,
-      continueLearning,
-      myCourses,
-      notifications,
-      userProfile,
-    ] = await Promise.all([
-      this.getStreak(userId).catch(() => ({ currentStreak: 0 })),
-      this.getTotalXp(userId).catch(() => 0),
-      this.getContinueLearning(userId).catch(() => null),
-      this.getMyCourses(userId).catch(() => []),
-      this.getNotifications(userId).catch(() => ({ unreadCount: 0 })),
-      !shouldSkipProfile ? this.getUserProfileFromAuth(authorization).catch(() => null) : null,
-    ]);
-
-    const isNewUser = continueLearning === null && myCourses.length === 0;
-
-    const recommendations = await this.getRecommendations(isNewUser).catch(
-      () => ({ courses: [] }),
-    );
-
-    // return ข้อมูลทั้งหมดในรูปแบบที่ API ต้องการ โดยมีการจัดรูปแบบและ fallback ค่าเริ่มต้นสำหรับข้อมูลที่อาจจะดึงมาไม่ได้
-    return {
-      header: {
-        userId,
-        avatarUrl: userProfile?.avatarUrl ?? null,
-        xp: totalXp,
-        streakDays: streak.currentStreak,
-      },
-      continueLearning,
-      myCourses,
-      notifications,
-      recommendations,
-    };
+    return this.redisCacheService?.wrap(
+      cacheKey,
+      LearnerHomeService.HOME_TTL_SECONDS,
+      async () => this.buildHomeResponse(userId, authorization, shouldSkipProfile),
+    ) ?? this.buildHomeResponse(userId, authorization, shouldSkipProfile);
   }
 
   // ดึง profile ผ่าน Auth Service แบบ internal call (ส่ง X-Internal-Call header กัน loop)
@@ -239,7 +215,57 @@ export class LearnerHomeService {
 
   // ดึงข้อมูล Course Recommendations เพื่อแสดงในส่วนแนะนำคอร์สของหน้าแรก
   private async getRecommendations(isNewUser = false) {
-    const take = 3; // default จำนวนคอร์สที่จะแนะนำ
+    const cacheKey = `learner-home:recommendations:${isNewUser ? 'new' : 'active'}`;
+
+    return this.redisCacheService?.wrap(
+      cacheKey,
+      LearnerHomeService.RECOMMENDATIONS_TTL_SECONDS,
+      async () => this.getRecommendationsWithoutCache(isNewUser),
+    ) ?? this.getRecommendationsWithoutCache(isNewUser);
+  }
+
+  private async buildHomeResponse(
+    userId: string,
+    authorization: string | undefined,
+    shouldSkipProfile: boolean,
+  ): Promise<LearnerHomeResponseDto> {
+    const [
+      streak,
+      totalXp,
+      continueLearning,
+      myCourses,
+      notifications,
+      userProfile,
+    ] = await Promise.all([
+      this.getStreak(userId).catch(() => ({ currentStreak: 0 })),
+      this.getTotalXp(userId).catch(() => 0),
+      this.getContinueLearning(userId).catch(() => null),
+      this.getMyCourses(userId).catch(() => []),
+      this.getNotifications(userId).catch(() => ({ unreadCount: 0 })),
+      !shouldSkipProfile ? this.getUserProfileFromAuth(authorization).catch(() => null) : null,
+    ]);
+
+    const isNewUser = continueLearning === null && myCourses.length === 0;
+    const recommendations = await this.getRecommendations(isNewUser).catch(
+      () => ({ courses: [] }),
+    );
+
+    return {
+      header: {
+        userId,
+        avatarUrl: userProfile?.avatarUrl ?? null,
+        xp: totalXp,
+        streakDays: streak.currentStreak,
+      },
+      continueLearning,
+      myCourses,
+      notifications,
+      recommendations,
+    };
+  }
+
+  private async getRecommendationsWithoutCache(isNewUser: boolean) {
+    const take = 3;
 
     const recommendedCourses = await this.courseRepository.find({
       where: { isPublished: true },

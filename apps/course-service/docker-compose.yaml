@@ -15,13 +15,25 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: skillr_course_redis
+    command: redis-server --appendonly yes
+    environment:
+      TZ: Asia/Bangkok
+    ports:
+      - "6379:6379"
+    volumes:
+      - course_redis_data:/data
+    restart: unless-stopped
+
   course:
     container_name: skillr_course_api
     build:
       context: ../..
       dockerfile: apps/course-service/dockerfile.course
     env_file:
-      - .env.docker
+      - .env
     environment:
       TZ: Asia/Bangkok
     ports:
@@ -29,8 +41,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
     restart: unless-stopped
 
 volumes:
   course_pg_data:
+  course_redis_data:
   course_minio_data:

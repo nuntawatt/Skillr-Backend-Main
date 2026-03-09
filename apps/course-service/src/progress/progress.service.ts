@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, LessThan, MoreThan, Repository } from 'typeorm';
 
@@ -11,6 +11,7 @@ import { ChapterProgressDto } from './dto/chapter-progress.dto';
 import { ChapterRoadmapDto, ItemStatusDto } from './dto/chapter-roadmap.dto';
 import { StreakService } from '../streaks/streak.service';
 import { QuizService } from '../quizs/quiz.service';
+import { RedisCacheService } from '../cache/redis-cache.service';
 
 @Injectable()
 export class ProgressService {
@@ -23,6 +24,8 @@ export class ProgressService {
     private readonly chapterRepository: Repository<Chapter>,
     private readonly streakService: StreakService,
     private readonly quizService: QuizService,
+    @Optional()
+    private readonly redisCacheService?: RedisCacheService,
   ) { }
 
   async getAllLessonProgress(
@@ -300,6 +303,8 @@ export class ProgressService {
       where: { chapter_id: lesson.chapter_id },
     });
 
+    await this.invalidateLearnerHomeCache(userId);
+
     return this.toResponse(saved, {
       chapterId: lesson.chapter_id,
       levelId: chapter?.levelId ?? null,
@@ -388,6 +393,7 @@ export class ProgressService {
       // ตรวจสอบว่า chapter ปัจจุบันถูกทำครบจริงก่อน (ถ้ายังไม่ครบ ห้ามปลดล็อก chapter ถัดไป)
       const chapterCompleted = await this.isChapterCompletedForUser(userId, currentLesson.chapter_id);
       if (!chapterCompleted) {
+        await this.invalidateLearnerHomeCache(userId);
         return {
           skipped: this.toResponse(savedCurrent, {
             chapterId: currentLesson.chapter_id,
@@ -451,6 +457,7 @@ export class ProgressService {
       }
 
       // ส่งกลับข้อมูลความคืบหน้า
+      await this.invalidateLearnerHomeCache(userId);
       return {
         skipped: this.toResponse(savedCurrent, {
           chapterId: currentLesson.chapter_id,
@@ -504,6 +511,7 @@ export class ProgressService {
     const nextLevelId = nextChapter?.levelId ?? null;
 
     // ส่งกลับข้อมูลความคืบหน้า
+    await this.invalidateLearnerHomeCache(userId);
     return {
       skipped: this.toResponse(savedCurrent, {
         chapterId: currentLesson.chapter_id,
@@ -514,6 +522,14 @@ export class ProgressService {
         levelId: nextLevelId,
       }),
     };
+  }
+
+  private async invalidateLearnerHomeCache(userId: string): Promise<void> {
+    if (!this.redisCacheService) {
+      return;
+    }
+
+    await this.redisCacheService.deleteByPrefix(`learner-home:user:${userId}:`);
   }
 
   // ดึงความคืบหน้าของบทเรียนทั้งหมดในบทเดียว
