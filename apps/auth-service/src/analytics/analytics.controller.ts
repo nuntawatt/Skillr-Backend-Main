@@ -12,7 +12,7 @@ import { UserRole } from '@common/enums';
 import type { AuthUser } from '@auth';
 
 import { AnalyticsService } from './analytics.service';
-import { AdminDashboardAnalyticsDto } from './dto/admin-dashboard-analytics.dto';
+import { AdminDashboardAnalyticsDto, DashboardUsersResponseDto } from './dto/admin-dashboard-analytics.dto';
 
 /**
  * Admin Dashboard Analytics Controller
@@ -75,10 +75,20 @@ export class AnalyticsController {
       "    \"totalUsers\": 120,\n" +
       "    \"usersByMonth\": [\n" +
       "      { \"month\": \"2026-01\", \"count\": 10 },\n" +
-      "      { \"month\": \"2026-02\", \"count\": 15 }\n" +
+      "      { \"month\": \"2026-02\", \"count\": 15 },\n" +
+      "      { \"month\": \"2026-03\", \"count\": 8 },\n" +
+      "      { \"month\": \"2026-04\", \"count\": 0 },\n" +
+      "      { \"month\": \"2026-05\", \"count\": 0 },\n" +
+      "      { \"month\": \"2026-06\", \"count\": 0 },\n" +
+      "      { \"month\": \"2026-07\", \"count\": 0 },\n" +
+      "      { \"month\": \"2026-08\", \"count\": 0 },\n" +
+      "      { \"month\": \"2026-09\", \"count\": 0 },\n" +
+      "      { \"month\": \"2026-10\", \"count\": 0 },\n" +
+      "      { \"month\": \"2026-11\", \"count\": 0 },\n" +
+      "      { \"month\": \"2026-12\", \"count\": 0 }\n" +
       "    ],\n" +
       "    \"admins\": { \"total\": 3, \"active\": 2, \"invited\": 1 },\n" +
-      "    \"rewards\": { \"redemptionCount\": 45, \"usedXp\": 1250 }\n" +
+      "    \"totalCourses\": 12\n" +
       "  }\n" +
       "}",
   })
@@ -135,10 +145,7 @@ export class AnalyticsController {
                   active: 2,
                   invited: 1,
                 },
-                rewards: {
-                  redemptionCount: 45,
-                  usedXp: 1250,
-                },
+                totalCourses: 12,
               },
             },
           },
@@ -153,9 +160,22 @@ export class AnalyticsController {
     @Query('timeRange') timeRange?: string,
   ): Promise<AdminDashboardAnalyticsDto> {
     // Log สำหรับ debug: บันทึก userId, role และ timeRange ที่เรียก
-    this.logger.log(`Analytics request from user: ${user.userId} with role: ${user.role}, timeRange: ${timeRange || 'last12Months'}`);
+    this.logger.log(
+      `Analytics request from user: ${user.userId} with role: ${user.role}, timeRange: ${timeRange || 'last12Months'}`,
+    );
     
     // ส่งข้อมูล user และ timeRange ให้ Service ประมวลผลต่อ
     return this.analyticsService.getDashboardAnalytics(user, timeRange);
+  }
+
+  @Get('analytics/users')
+  @Roles(UserRole.OWNER)
+  @ApiOperation({ summary: 'ดึงรายชื่อผู้ใช้ใน Admin Dashboard (OWNER เท่านั้น)' })
+  @ApiResponse({ status: 200, type: DashboardUsersResponseDto, description: 'Dashboard users retrieved successfully.' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  async getDashboardUsers(): Promise<DashboardUsersResponseDto> {
+    const users = await this.analyticsService.getDashboardUsers();
+    return { users };
   }
 }

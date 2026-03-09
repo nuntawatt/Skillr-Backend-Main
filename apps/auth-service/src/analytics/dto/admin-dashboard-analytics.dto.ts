@@ -55,6 +55,59 @@ export class RewardOverviewDto {
 }
 
 /**
+ * คอร์สยอดนิยมสำหรับแสดงใน Owner Dashboard
+ */
+export class PopularCourseDto {
+  @ApiProperty({ description: 'Course ID' })
+  courseId: number;
+
+  @ApiProperty({ description: 'Course title' })
+  title: string;
+
+  @ApiProperty({ description: 'Number of active learners in this course' })
+  learnerCount: number;
+}
+
+/**
+ * ข้อมูลผู้ใช้สำหรับแสดงใน Owner Dashboard
+ * ใช้สำหรับ endpoint analytics/users
+ */
+export class DashboardUserDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiPropertyOptional({ nullable: true })
+  email: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  username: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  avatar: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  firstName: string | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  lastName: string | null;
+
+  @ApiProperty()
+  role: string;
+
+  @ApiProperty()
+  isVerified: boolean;
+
+  @ApiProperty({ description: "Current presence status derived from socket connection ('online' | 'offline')" })
+  status: string;
+
+  @ApiProperty()
+  createdAt: Date;
+
+  @ApiProperty()
+  updatedAt: Date;
+}
+
+/**
  * ข้อมูลภาพรวมสำหรับ OWNER - เฉพาะ OWNER เห็นข้อมูลนี้เท่านั้น
  * รวมข้อมูลธุรกิจ การเติบโต และการจัดการทีมงาน
  */
@@ -71,12 +124,16 @@ export class OwnerOverviewDto {
   @ApiProperty({ type: () => AdminStatusSummaryDto, description: 'Admin accounts summary (ADMIN + OWNER)' })
   admins: AdminStatusSummaryDto;
 
-  @ApiPropertyOptional({
-    type: () => RewardOverviewDto,
-    nullable: true,
-    description: 'Reward redemptions summary (null when REWARD_ENABLED is not true)',
-  })
-  rewards: RewardOverviewDto | null;
+  @ApiProperty({ description: 'Total courses count' })
+  totalCourses: number;
+}
+
+/**
+ * Response สำหรับดึงรายชื่อผู้ใช้ใน Admin Dashboard (OWNER เท่านั้น)
+ */
+export class DashboardUsersResponseDto {
+  @ApiProperty({ type: () => [DashboardUserDto] })
+  users: DashboardUserDto[];
 }
 
 /**

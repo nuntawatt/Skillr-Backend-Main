@@ -10,12 +10,16 @@ import type { AuthUser } from '@auth';
 import { User } from '../users/entities/user.entity';
 import { LessonProgress } from '../../../../apps/course-service/src/progress/entities/progress.entity';
 import { RewardRedemption } from '../../../../apps/reward-service/src/reward/entities/reward-redemption';
+import { WebsocketGateway } from '../gateway/websocket.gateway';
+import { Course } from '../../../../apps/course-service/src/courses/entities/course.entity';
 
 // DTOs
 import {
   AdminDashboardAnalyticsDto,
+  DashboardUserDto,
   LearningOverviewDto,
   OwnerOverviewDto,
+  PopularCourseDto,
   UsersByMonthPointDto,
   AdminStatusSummaryDto,
   RewardOverviewDto,
@@ -45,12 +49,18 @@ export class AnalyticsService {
     @InjectRepository(LessonProgress, 'course')
     private readonly lessonProgressRepo: Repository<LessonProgress>,
 
+    // Course DB Repository - สำหรับข้อมูลคอร์สเรียน
+    @InjectRepository(Course, 'course')
+    private readonly courseRepo: Repository<Course>,
+
     // Reward DB Repository - สำหรับข้อมูลการแลกรางวัล
     @InjectRepository(RewardRedemption, 'reward')
     private readonly rewardRedemptionRepo: Repository<RewardRedemption>,
 
     // Config Service - สำหรับอ่าน environment variables
     private readonly config: ConfigService,
+
+    private readonly websocketGateway: WebsocketGateway,
   ) {}
 
   /**
@@ -113,20 +123,55 @@ export class AnalyticsService {
       totalUsers,
       usersByMonth,
       adminStatusSummary,
-      rewards,
+      totalCourses,
     ] = await Promise.all([
       this.userRepo.count(),                    // นับ users ทั้งหมด
       this.getUsersByTimeRange(timeRange),      // ข้อมูลผู้ใช้รายเดือน
       this.getAdminStatusSummary(),             // สรุป admin accounts
-      this.getRewardOverview(),                 // ข้อมูลรางวัล
+      this.courseRepo.count(),                  // นับจำนวนคอร์สทั้งหมด
     ]);
 
     return {
       totalUsers,
       usersByMonth,
       admins: adminStatusSummary,
-      rewards,
+      totalCourses,
     };
+  }
+
+  /**
+   * ดึงรายชื่อผู้ใช้ทั้งหมดสำหรับ OWNER dashboard (optional)
+   * จำกัดเฉพาะ field ที่จำเป็นต่อการแสดงผล
+   * 
+   * @param limit จำนวนผู้ใช้สูงสุดที่ต้องการ (default: 100)
+   * @returns DashboardUserDto[] รายชื่อผู้ใช้
+   */
+  async getDashboardUsers(): Promise<DashboardUserDto[]> {
+    const users = await this.userRepo.find({
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        avatar: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        isVerified: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      order: {
+        createdAt: 'DESC',
+      },
+    });
+
+    const onlineUserIds = this.websocketGateway.getOnlineUserIds();
+
+    return users.map((user) => ({
+      ...user,
+      status: onlineUserIds.has(user.id) ? 'online' : 'offline',
+    }));
   }
 
   /**
@@ -201,6 +246,32 @@ export class AnalyticsService {
     }
 
     return { completed, inProgress };
+  }
+
+  /**
+   * คอร์สยอดนิยม (Top 3) - อิงจำนวนผู้เรียนที่มี progress ต่อคอร์ส
+   */
+  private async getPopularCourses(): Promise<PopularCourseDto[]> {
+    const rows = await this.lessonProgressRepo
+      .createQueryBuilder('lp')
+      .leftJoin('lp.lesson', 'l')
+      .leftJoin('l.chapter', 'ch')
+      .leftJoin('ch.level', 'lvl')
+      .leftJoin('lvl.course', 'c')
+      .select('c.course_id', 'courseId')
+      .addSelect('c.course_title', 'title')
+      .addSelect('COUNT(DISTINCT lp.userId)', 'learnerCount')
+      .groupBy('c.course_id')
+      .addGroupBy('c.course_title')
+      .orderBy('COUNT(DISTINCT lp.userId)', 'DESC')
+      .limit(3)
+      .getRawMany<{ courseId: string; title: string; learnerCount: string }>();
+
+    return rows.map((row) => ({
+      courseId: Number(row.courseId),
+      title: row.title,
+      learnerCount: Number(row.learnerCount),
+    }));
   }
 
   /**
