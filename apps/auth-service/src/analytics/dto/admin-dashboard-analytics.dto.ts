@@ -124,18 +124,8 @@ export class OwnerOverviewDto {
   @ApiProperty({ type: () => AdminStatusSummaryDto, description: 'Admin accounts summary (ADMIN + OWNER)' })
   admins: AdminStatusSummaryDto;
 
-  @ApiPropertyOptional({
-    type: () => RewardOverviewDto,
-    nullable: true,
-    description: 'Reward redemptions summary (null when REWARD_ENABLED is not true)',
-  })
-  rewards: RewardOverviewDto | null;
-
   @ApiProperty({ description: 'Total courses count' })
   totalCourses: number;
-
-  @ApiProperty({ type: () => [PopularCourseDto], description: 'Top popular courses by active learners' })
-  popularCourses: PopularCourseDto[];
 }
 
 /**
@@ -144,15 +134,6 @@ export class OwnerOverviewDto {
 export class DashboardUsersResponseDto {
   @ApiProperty({ type: () => [DashboardUserDto] })
   users: DashboardUserDto[];
-
-  @ApiProperty({ description: 'Current page number (1-based)' })
-  page: number;
-
-  @ApiProperty({ description: 'Items per page' })
-  limit: number;
-
-  @ApiProperty({ description: 'Total users count' })
-  total: number;
 }
 
 /**

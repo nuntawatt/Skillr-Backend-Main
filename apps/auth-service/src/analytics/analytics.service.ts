@@ -123,25 +123,19 @@ export class AnalyticsService {
       totalUsers,
       usersByMonth,
       adminStatusSummary,
-      rewards,
       totalCourses,
-      popularCourses,
     ] = await Promise.all([
       this.userRepo.count(),                    // นับ users ทั้งหมด
       this.getUsersByTimeRange(timeRange),      // ข้อมูลผู้ใช้รายเดือน
       this.getAdminStatusSummary(),             // สรุป admin accounts
-      this.getRewardOverview(),                 // ข้อมูลรางวัล
       this.courseRepo.count(),                  // นับจำนวนคอร์สทั้งหมด
-      this.getPopularCourses(),                 // คอร์สยอดนิยม
     ]);
 
     return {
       totalUsers,
       usersByMonth,
       admins: adminStatusSummary,
-      rewards,
       totalCourses,
-      popularCourses,
     };
   }
 
@@ -152,13 +146,8 @@ export class AnalyticsService {
    * @param limit จำนวนผู้ใช้สูงสุดที่ต้องการ (default: 100)
    * @returns DashboardUserDto[] รายชื่อผู้ใช้
    */
-  async getDashboardUsers(
-    page = 1,
-    limit = 20,
-  ): Promise<{ users: DashboardUserDto[]; total: number }> {
-    const skip = (page - 1) * limit;
-
-    const [users, total] = await this.userRepo.findAndCount({
+  async getDashboardUsers(): Promise<DashboardUserDto[]> {
+    const users = await this.userRepo.find({
       select: {
         id: true,
         email: true,
@@ -172,8 +161,6 @@ export class AnalyticsService {
         createdAt: true,
         updatedAt: true,
       },
-      skip,
-      take: limit,
       order: {
         createdAt: 'DESC',
       },
@@ -181,12 +168,10 @@ export class AnalyticsService {
 
     const onlineUserIds = this.websocketGateway.getOnlineUserIds();
 
-    const mappedUsers = users.map((user) => ({
+    return users.map((user) => ({
       ...user,
       status: onlineUserIds.has(user.id) ? 'online' : 'offline',
     }));
-
-    return { users: mappedUsers, total };
   }
 
   /**

@@ -88,13 +88,7 @@ export class AnalyticsController {
       "      { \"month\": \"2026-12\", \"count\": 0 }\n" +
       "    ],\n" +
       "    \"admins\": { \"total\": 3, \"active\": 2, \"invited\": 1 },\n" +
-      "    \"rewards\": { \"redemptionCount\": 45, \"usedXp\": 1250 },\n" +
-      "    \"totalCourses\": 12,\n" +
-      "    \"popularCourses\": [\n" +
-      "      { \"courseId\": 1, \"title\": \"Intro JS\", \"learnerCount\": 53 },\n" +
-      "      { \"courseId\": 2, \"title\": \"NestJS\", \"learnerCount\": 41 },\n" +
-      "      { \"courseId\": 3, \"title\": \"React\", \"learnerCount\": 22 }\n" +
-      "    ]\n" +
+      "    \"totalCourses\": 12\n" +
       "  }\n" +
       "}",
   })
@@ -151,16 +145,7 @@ export class AnalyticsController {
                   active: 2,
                   invited: 1,
                 },
-                rewards: {
-                  redemptionCount: 45,
-                  usedXp: 1250,
-                },
                 totalCourses: 12,
-                popularCourses: [
-                  { courseId: 1, title: 'Intro JS', learnerCount: 53 },
-                  { courseId: 2, title: 'NestJS', learnerCount: 41 },
-                  { courseId: 3, title: 'React', learnerCount: 22 },
-                ],
               },
             },
           },
@@ -186,20 +171,11 @@ export class AnalyticsController {
   @Get('analytics/users')
   @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'ดึงรายชื่อผู้ใช้ใน Admin Dashboard (OWNER เท่านั้น)' })
-  @ApiQuery({ name: 'page', required: false, example: 1, description: 'Page number (1-based)' })
-  @ApiQuery({ name: 'limit', required: false, example: 20, description: 'Items per page' })
   @ApiResponse({ status: 200, type: DashboardUsersResponseDto, description: 'Dashboard users retrieved successfully.' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
-  async getDashboardUsers(
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-  ): Promise<DashboardUsersResponseDto> {
-    const pageNumber = Number(page) || 1;
-    const limitNumber = Number(limit) || 20;
-
-    const { users, total } = await this.analyticsService.getDashboardUsers(pageNumber, limitNumber);
-
-    return { users, total, page: pageNumber, limit: limitNumber };
+  async getDashboardUsers(): Promise<DashboardUsersResponseDto> {
+    const users = await this.analyticsService.getDashboardUsers();
+    return { users };
   }
 }
