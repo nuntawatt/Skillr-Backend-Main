@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Level } from './entities/level.entity';
 import { Course } from '../courses/entities/course.entity';
 import { CreateLevelDto, UpdateLevelDto, LevelResponseDto } from './dto';
+import { CoursesService } from '../courses/courses.service';
 
 @Injectable()
 export class LevelsService {
@@ -12,6 +13,7 @@ export class LevelsService {
     private readonly levelRepository: Repository<Level>,
     @InjectRepository(Course)
     private readonly courseRepository: Repository<Course>,
+    private readonly coursesService: CoursesService,
   ) {}
 
   async create(createLevelDto: CreateLevelDto): Promise<LevelResponseDto> {
@@ -41,6 +43,7 @@ export class LevelsService {
     });
 
     const saved = await this.levelRepository.save(level);
+    await this.coursesService.invalidateCourseCaches(createLevelDto.course_id);
     return this.toResponseDto(saved);
   }
 
@@ -87,6 +90,7 @@ export class LevelsService {
     }
 
     const saved = await this.levelRepository.save(level);
+    await this.coursesService.invalidateCourseCaches(level.course_id);
     return this.toResponseDto(saved);
   }
 
@@ -98,6 +102,7 @@ export class LevelsService {
     }
 
     await this.levelRepository.remove(level);
+    await this.coursesService.invalidateCourseCaches(level.course_id);
     return { message: `Level with ID ${id} deleted successfully` };
   }
 
@@ -149,6 +154,7 @@ export class LevelsService {
       }
     }
 
+    await this.coursesService.invalidateCourseCaches(courseId);
     return this.findByCourse(courseId);
   }
 

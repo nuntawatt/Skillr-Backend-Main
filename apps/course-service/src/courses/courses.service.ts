@@ -273,7 +273,8 @@ export class CoursesService {
                 return dto;
               });
 
-            if (!lessons.length) {
+            // Admin view: แสดง chapter ว่างด้วย | Student view: ซ่อน chapter ที่ไม่มี lesson
+            if (!lessons.length && !includeUnpublishedLessons) {
               return null;
             }
 
@@ -281,13 +282,14 @@ export class CoursesService {
               chapter_id: chapter.chapter_id,
               chapter_title: chapter.chapter_title,
               orderIndex: chapter.chapter_orderIndex,
-              isPublished: true,
+              isPublished: chapter.isPublished ?? true,
               lessons,
             } as ChapterStructureDto;
           })
           .filter((chapter): chapter is ChapterStructureDto => chapter !== null);
 
-        if (!chapters.length) {
+        // Admin view: แสดง level ว่างด้วย | Student view: ซ่อน level ที่ไม่มี chapter
+        if (!chapters.length && !includeUnpublishedLessons) {
           return null;
         }
 
@@ -328,7 +330,7 @@ export class CoursesService {
     return `course:list:${JSON.stringify(normalized)}`;
   }
 
-  private async invalidateCourseCaches(courseId: number): Promise<void> {
+  async invalidateCourseCaches(courseId: number): Promise<void> {
     if (!this.redisCacheService) {
       return;
     }

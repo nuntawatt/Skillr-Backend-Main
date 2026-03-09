@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Chapter } from './entities/chapter.entity';
 import { Level } from '../levels/entities/level.entity';
 import { CreateChapterDto, UpdateChapterDto, ChapterResponseDto } from './dto';
+import { CoursesService } from '../courses/courses.service';
 
 @Injectable()
 export class ChaptersService {
@@ -12,6 +13,7 @@ export class ChaptersService {
     private readonly chapterRepository: Repository<Chapter>,
     @InjectRepository(Level)
     private readonly levelRepository: Repository<Level>,
+    private readonly coursesService: CoursesService,
   ) { }
 
   // Create a new chapter
@@ -50,6 +52,7 @@ export class ChaptersService {
     });
 
     const saved = await this.chapterRepository.save(chapter);
+    await this.coursesService.invalidateCourseCaches(level.course_id);
     return this.toResponseDto(saved);
   }
 
@@ -113,6 +116,11 @@ export class ChaptersService {
     }
 
     const saved = await this.chapterRepository.save(chapter);
+    // ล้าง cache โครงสร้างคอร์ส
+    const level = await this.levelRepository.findOne({ where: { level_id: chapter.levelId } });
+    if (level) {
+      await this.coursesService.invalidateCourseCaches(level.course_id);
+    }
     return this.toResponseDto(saved);
   }
 
@@ -126,7 +134,13 @@ export class ChaptersService {
       throw new NotFoundException(`Chapter with ID ${id} not found`);
     }
 
+    const levelId = chapter.levelId;
     await this.chapterRepository.remove(chapter);
+    // ล้าง cache โครงสร้างคอร์ส
+    const level = await this.levelRepository.findOne({ where: { level_id: levelId } });
+    if (level) {
+      await this.coursesService.invalidateCourseCaches(level.course_id);
+    }
     return { message: `Chapter with ID ${id} deleted successfully` };
   }
 
@@ -177,6 +191,12 @@ export class ChaptersService {
         chapter.chapter_orderIndex = i;
         await this.chapterRepository.save(chapter);
       }
+    }
+
+    // ล้าง cache โครงสร้างคอร์ส
+    const level = await this.levelRepository.findOne({ where: { level_id: levelId } });
+    if (level) {
+      await this.coursesService.invalidateCourseCaches(level.course_id);
     }
 
     return this.findByLevel(levelId);

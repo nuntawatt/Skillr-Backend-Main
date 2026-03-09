@@ -8,6 +8,8 @@ import { Quizs } from '../quizs/entities/quizs.entity';
 import { QuizsCheckpoint } from '../quizs/entities/checkpoint.entity';
 import { VideoAsset } from '../media-videos/entities/video.entity';
 import { CreateLessonDto, UpdateLessonDto, LessonResponseDto } from './dto/lesson';
+import { Level } from '../levels/entities/level.entity';
+import { CoursesService } from '../courses/courses.service';
 
 @Injectable()
 export class LessonsService {
@@ -24,6 +26,9 @@ export class LessonsService {
     private readonly checkpointRepository: Repository<QuizsCheckpoint>,
     @InjectRepository(VideoAsset)
     private readonly videoRepo: Repository<VideoAsset>,
+    @InjectRepository(Level)
+    private readonly levelRepository: Repository<Level>,
+    private readonly coursesService: CoursesService,
   ) { }
 
   async create(createLessonDto: CreateLessonDto): Promise<LessonResponseDto> {
@@ -89,6 +94,7 @@ export class LessonsService {
     const saved = await this.lessonRepository.save(lesson);
 
     await this.syncChapterIsPublished(saved.chapter_id);
+    await this.invalidateCourseCache(saved.chapter_id);
 
     return this.toResponseDto(saved);
   }
@@ -296,6 +302,7 @@ export class LessonsService {
     const saved = await this.lessonRepository.save(lesson);
 
     await this.syncChapterIsPublished(saved.chapter_id);
+    await this.invalidateCourseCache(saved.chapter_id);
 
     return this.toResponseDto(saved);
   }
@@ -311,6 +318,7 @@ export class LessonsService {
     const chapterId = lesson.chapter_id;
     await this.lessonRepository.remove(lesson);
     await this.syncChapterIsPublished(chapterId);
+    await this.invalidateCourseCache(chapterId);
     return { message: `Lesson with ID ${id} deleted successfully` };
   }
 
@@ -372,6 +380,7 @@ export class LessonsService {
     }
 
     await this.lessonRepository.save(updatedLessons);
+    await this.invalidateCourseCache(chapterId);
 
     return await this.findByChapter(chapterId);
   }
@@ -402,5 +411,14 @@ export class LessonsService {
     await this.chapterRepository.update(chapterId, {
       isPublished: hasPublishedLesson,
     });
+  }
+
+  // ล้าง cache โครงสร้างคอร์สเมื่อ lesson เปลี่ยน
+  private async invalidateCourseCache(chapterId: number): Promise<void> {
+    const chapter = await this.chapterRepository.findOne({ where: { chapter_id: chapterId } });
+    if (!chapter) return;
+    const level = await this.levelRepository.findOne({ where: { level_id: chapter.levelId } });
+    if (!level) return;
+    await this.coursesService.invalidateCourseCaches(level.course_id);
   }
 }
