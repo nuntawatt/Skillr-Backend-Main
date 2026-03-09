@@ -55,6 +55,20 @@ export class RewardOverviewDto {
 }
 
 /**
+ * คอร์สยอดนิยมสำหรับแสดงใน Owner Dashboard
+ */
+export class PopularCourseDto {
+  @ApiProperty({ description: 'Course ID' })
+  courseId: number;
+
+  @ApiProperty({ description: 'Course title' })
+  title: string;
+
+  @ApiProperty({ description: 'Number of active learners in this course' })
+  learnerCount: number;
+}
+
+/**
  * ข้อมูลผู้ใช้สำหรับแสดงใน Owner Dashboard
  * ใช้สำหรับ endpoint analytics/users
  */
@@ -116,6 +130,12 @@ export class OwnerOverviewDto {
     description: 'Reward redemptions summary (null when REWARD_ENABLED is not true)',
   })
   rewards: RewardOverviewDto | null;
+
+  @ApiProperty({ description: 'Total courses count' })
+  totalCourses: number;
+
+  @ApiProperty({ type: () => [PopularCourseDto], description: 'Top popular courses by active learners' })
+  popularCourses: PopularCourseDto[];
 }
 
 /**
@@ -124,6 +144,15 @@ export class OwnerOverviewDto {
 export class DashboardUsersResponseDto {
   @ApiProperty({ type: () => [DashboardUserDto] })
   users: DashboardUserDto[];
+
+  @ApiProperty({ description: 'Current page number (1-based)' })
+  page: number;
+
+  @ApiProperty({ description: 'Items per page' })
+  limit: number;
+
+  @ApiProperty({ description: 'Total users count' })
+  total: number;
 }
 
 /**

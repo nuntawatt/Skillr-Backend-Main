@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../users/entities/user.entity';
 import { LessonProgress } from 'apps/course-service/src/progress/entities/progress.entity';
 import { RewardRedemption } from 'apps/reward-service/src/reward/entities/reward-redemption';
+import { Course } from 'apps/course-service/src/courses/entities/course.entity';
 import { WebsocketModule } from '../gateway/websocket.module';
 
 import { AnalyticsController } from './analytics.controller';
@@ -12,7 +13,7 @@ import { AnalyticsService } from './analytics.service';
 @Module({
   imports: [
     TypeOrmModule.forFeature([User], 'auth'),
-    TypeOrmModule.forFeature([LessonProgress], 'course'),
+    TypeOrmModule.forFeature([LessonProgress, Course], 'course'),
     TypeOrmModule.forFeature([RewardRedemption], 'reward'),
     WebsocketModule,
   ],

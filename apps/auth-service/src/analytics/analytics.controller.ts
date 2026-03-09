@@ -164,11 +164,20 @@ export class AnalyticsController {
   @Get('analytics/users')
   @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'ดึงรายชื่อผู้ใช้ใน Admin Dashboard (OWNER เท่านั้น)' })
+  @ApiQuery({ name: 'page', required: false, example: 1, description: 'Page number (1-based)' })
+  @ApiQuery({ name: 'limit', required: false, example: 20, description: 'Items per page' })
   @ApiResponse({ status: 200, type: DashboardUsersResponseDto, description: 'Dashboard users retrieved successfully.' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden' })
-  async getDashboardUsers(): Promise<DashboardUsersResponseDto> {
-    const users = await this.analyticsService.getDashboardUsers();
-    return { users };
+  async getDashboardUsers(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ): Promise<DashboardUsersResponseDto> {
+    const pageNumber = Number(page) || 1;
+    const limitNumber = Number(limit) || 20;
+
+    const { users, total } = await this.analyticsService.getDashboardUsers(pageNumber, limitNumber);
+
+    return { users, total, page: pageNumber, limit: limitNumber };
   }
 }

@@ -11,6 +11,7 @@ import { User } from '../users/entities/user.entity';
 import { LessonProgress } from '../../../../apps/course-service/src/progress/entities/progress.entity';
 import { RewardRedemption } from '../../../../apps/reward-service/src/reward/entities/reward-redemption';
 import { WebsocketGateway } from '../gateway/websocket.gateway';
+import { Course } from '../../../../apps/course-service/src/courses/entities/course.entity';
 
 // DTOs
 import {
@@ -18,6 +19,7 @@ import {
   DashboardUserDto,
   LearningOverviewDto,
   OwnerOverviewDto,
+  PopularCourseDto,
   UsersByMonthPointDto,
   AdminStatusSummaryDto,
   RewardOverviewDto,
@@ -46,6 +48,10 @@ export class AnalyticsService {
     // Course DB Repository - สำหรับข้อมูลความคืบหน้าการเรียน
     @InjectRepository(LessonProgress, 'course')
     private readonly lessonProgressRepo: Repository<LessonProgress>,
+
+    // Course DB Repository - สำหรับข้อมูลคอร์สเรียน
+    @InjectRepository(Course, 'course')
+    private readonly courseRepo: Repository<Course>,
 
     // Reward DB Repository - สำหรับข้อมูลการแลกรางวัล
     @InjectRepository(RewardRedemption, 'reward')
@@ -118,11 +124,15 @@ export class AnalyticsService {
       usersByMonth,
       adminStatusSummary,
       rewards,
+      totalCourses,
+      popularCourses,
     ] = await Promise.all([
       this.userRepo.count(),                    // นับ users ทั้งหมด
       this.getUsersByTimeRange(timeRange),      // ข้อมูลผู้ใช้รายเดือน
       this.getAdminStatusSummary(),             // สรุป admin accounts
       this.getRewardOverview(),                 // ข้อมูลรางวัล
+      this.courseRepo.count(),                  // นับจำนวนคอร์สทั้งหมด
+      this.getPopularCourses(),                 // คอร์สยอดนิยม
     ]);
 
     return {
@@ -130,6 +140,8 @@ export class AnalyticsService {
       usersByMonth,
       admins: adminStatusSummary,
       rewards,
+      totalCourses,
+      popularCourses,
     };
   }
 
@@ -140,8 +152,13 @@ export class AnalyticsService {
    * @param limit จำนวนผู้ใช้สูงสุดที่ต้องการ (default: 100)
    * @returns DashboardUserDto[] รายชื่อผู้ใช้
    */
-  async getDashboardUsers(limit = 20): Promise<DashboardUserDto[]> {
-    const users = await this.userRepo.find({
+  async getDashboardUsers(
+    page = 1,
+    limit = 20,
+  ): Promise<{ users: DashboardUserDto[]; total: number }> {
+    const skip = (page - 1) * limit;
+
+    const [users, total] = await this.userRepo.findAndCount({
       select: {
         id: true,
         email: true,
@@ -155,6 +172,7 @@ export class AnalyticsService {
         createdAt: true,
         updatedAt: true,
       },
+      skip,
       take: limit,
       order: {
         createdAt: 'DESC',
@@ -163,10 +181,12 @@ export class AnalyticsService {
 
     const onlineUserIds = this.websocketGateway.getOnlineUserIds();
 
-    return users.map((user) => ({
+    const mappedUsers = users.map((user) => ({
       ...user,
       status: onlineUserIds.has(user.id) ? 'online' : 'offline',
     }));
+
+    return { users: mappedUsers, total };
   }
 
   /**
@@ -241,6 +261,32 @@ export class AnalyticsService {
     }
 
     return { completed, inProgress };
+  }
+
+  /**
+   * คอร์สยอดนิยม (Top 3) - อิงจำนวนผู้เรียนที่มี progress ต่อคอร์ส
+   */
+  private async getPopularCourses(): Promise<PopularCourseDto[]> {
+    const rows = await this.lessonProgressRepo
+      .createQueryBuilder('lp')
+      .leftJoin('lp.lesson', 'l')
+      .leftJoin('l.chapter', 'ch')
+      .leftJoin('ch.level', 'lvl')
+      .leftJoin('lvl.course', 'c')
+      .select('c.course_id', 'courseId')
+      .addSelect('c.course_title', 'title')
+      .addSelect('COUNT(DISTINCT lp.userId)', 'learnerCount')
+      .groupBy('c.course_id')
+      .addGroupBy('c.course_title')
+      .orderBy('COUNT(DISTINCT lp.userId)', 'DESC')
+      .limit(3)
+      .getRawMany<{ courseId: string; title: string; learnerCount: string }>();
+
+    return rows.map((row) => ({
+      courseId: Number(row.courseId),
+      title: row.title,
+      learnerCount: Number(row.learnerCount),
+    }));
   }
 
   /**
