@@ -10,10 +10,12 @@ import type { AuthUser } from '@auth';
 import { User } from '../users/entities/user.entity';
 import { LessonProgress } from '../../../../apps/course-service/src/progress/entities/progress.entity';
 import { RewardRedemption } from '../../../../apps/reward-service/src/reward/entities/reward-redemption';
+import { WebsocketGateway } from '../gateway/websocket.gateway';
 
 // DTOs
 import {
   AdminDashboardAnalyticsDto,
+  DashboardUserDto,
   LearningOverviewDto,
   OwnerOverviewDto,
   UsersByMonthPointDto,
@@ -51,6 +53,8 @@ export class AnalyticsService {
 
     // Config Service - สำหรับอ่าน environment variables
     private readonly config: ConfigService,
+
+    private readonly websocketGateway: WebsocketGateway,
   ) {}
 
   /**
@@ -127,6 +131,42 @@ export class AnalyticsService {
       admins: adminStatusSummary,
       rewards,
     };
+  }
+
+  /**
+   * ดึงรายชื่อผู้ใช้ทั้งหมดสำหรับ OWNER dashboard (optional)
+   * จำกัดเฉพาะ field ที่จำเป็นต่อการแสดงผล
+   * 
+   * @param limit จำนวนผู้ใช้สูงสุดที่ต้องการ (default: 100)
+   * @returns DashboardUserDto[] รายชื่อผู้ใช้
+   */
+  async getDashboardUsers(limit = 20): Promise<DashboardUserDto[]> {
+    const users = await this.userRepo.find({
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        avatar: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        isVerified: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      take: limit,
+      order: {
+        createdAt: 'DESC',
+      },
+    });
+
+    const onlineUserIds = this.websocketGateway.getOnlineUserIds();
+
+    return users.map((user) => ({
+      ...user,
+      status: onlineUserIds.has(user.id) ? 'online' : 'offline',
+    }));
   }
 
   /**

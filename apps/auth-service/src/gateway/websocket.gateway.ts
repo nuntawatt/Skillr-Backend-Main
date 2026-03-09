@@ -82,4 +82,8 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
         this.logger.log(`User disconnected: ${userId}`);
         this.server.emit('user_offline', userId);
     }
+
+    getOnlineUserIds(): Set<string> {
+        return new Set(this.userToSocket.keys());
+    }
 }
