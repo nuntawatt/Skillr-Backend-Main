@@ -75,10 +75,26 @@ export class AnalyticsController {
       "    \"totalUsers\": 120,\n" +
       "    \"usersByMonth\": [\n" +
       "      { \"month\": \"2026-01\", \"count\": 10 },\n" +
-      "      { \"month\": \"2026-02\", \"count\": 15 }\n" +
+      "      { \"month\": \"2026-02\", \"count\": 15 },\n" +
+      "      { \"month\": \"2026-03\", \"count\": 8 },\n" +
+      "      { \"month\": \"2026-04\", \"count\": 0 },\n" +
+      "      { \"month\": \"2026-05\", \"count\": 0 },\n" +
+      "      { \"month\": \"2026-06\", \"count\": 0 },\n" +
+      "      { \"month\": \"2026-07\", \"count\": 0 },\n" +
+      "      { \"month\": \"2026-08\", \"count\": 0 },\n" +
+      "      { \"month\": \"2026-09\", \"count\": 0 },\n" +
+      "      { \"month\": \"2026-10\", \"count\": 0 },\n" +
+      "      { \"month\": \"2026-11\", \"count\": 0 },\n" +
+      "      { \"month\": \"2026-12\", \"count\": 0 }\n" +
       "    ],\n" +
       "    \"admins\": { \"total\": 3, \"active\": 2, \"invited\": 1 },\n" +
-      "    \"rewards\": { \"redemptionCount\": 45, \"usedXp\": 1250 }\n" +
+      "    \"rewards\": { \"redemptionCount\": 45, \"usedXp\": 1250 },\n" +
+      "    \"totalCourses\": 12,\n" +
+      "    \"popularCourses\": [\n" +
+      "      { \"courseId\": 1, \"title\": \"Intro JS\", \"learnerCount\": 53 },\n" +
+      "      { \"courseId\": 2, \"title\": \"NestJS\", \"learnerCount\": 41 },\n" +
+      "      { \"courseId\": 3, \"title\": \"React\", \"learnerCount\": 22 }\n" +
+      "    ]\n" +
       "  }\n" +
       "}",
   })
@@ -139,6 +155,12 @@ export class AnalyticsController {
                   redemptionCount: 45,
                   usedXp: 1250,
                 },
+                totalCourses: 12,
+                popularCourses: [
+                  { courseId: 1, title: 'Intro JS', learnerCount: 53 },
+                  { courseId: 2, title: 'NestJS', learnerCount: 41 },
+                  { courseId: 3, title: 'React', learnerCount: 22 },
+                ],
               },
             },
           },
