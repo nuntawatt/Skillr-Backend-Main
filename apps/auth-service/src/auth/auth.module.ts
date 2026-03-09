@@ -31,6 +31,6 @@ import { getJwtConfig } from '@config/jwt.config';
   ],
   controllers: [AuthController],
   providers: [AuthService, GoogleStrategy, LoginAttemptsService, EmailService],
-  exports: [AuthService, JwtModule],
+  exports: [AuthService, JwtModule, EmailService],
 })
 export class AuthModule {}
