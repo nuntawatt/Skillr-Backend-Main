@@ -21,7 +21,7 @@ interface UserProfile {
 
 @Injectable()
 export class LearnerHomeService {
-  private static readonly HOME_TTL_SECONDS = 60;
+  private static readonly HOME_TTL_SECONDS = 120;
   private static readonly RECOMMENDATIONS_TTL_SECONDS = 300;
 
   constructor(

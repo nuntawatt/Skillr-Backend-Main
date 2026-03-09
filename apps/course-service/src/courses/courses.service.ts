@@ -342,7 +342,7 @@ export class CoursesService {
         `course:structure:student:${courseId}`,
         `course:structure:admin:${courseId}`,
       ]),
-      this.redisCacheService.deleteByPrefix('learner-home:'),
+      this.redisCacheService.deleteByPrefix('learner-home:recommendations:'),
     ]);
   }
 

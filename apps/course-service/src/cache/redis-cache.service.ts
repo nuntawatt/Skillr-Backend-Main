@@ -7,8 +7,13 @@ export class RedisCacheService implements OnModuleDestroy {
   private readonly logger = new Logger(RedisCacheService.name);
   private client: Redis | null = null;
   private initializingClient: Promise<Redis | null> | null = null;
+  private readonly pendingWraps = new Map<string, Promise<unknown>>();
   private hasLoggedUnavailable = false;
   private hasLoggedMissingConfig = false;
+
+  private static readonly DELETE_BY_PREFIX_BATCH_SIZE = 200;
+  private static readonly RECONNECT_COOLDOWN_MS = 30_000;
+  private lastFailedConnectAt = 0;
 
   constructor(private readonly configService: ConfigService) {}
 
@@ -17,8 +22,11 @@ export class RedisCacheService implements OnModuleDestroy {
       return;
     }
 
-    await this.client.quit().catch(() => {
-      this.client?.disconnect();
+    const client = this.client;
+    this.client = null;
+
+    await client.quit().catch(() => {
+      client.disconnect();
     });
   }
 
@@ -49,9 +57,11 @@ export class RedisCacheService implements OnModuleDestroy {
       return;
     }
 
+    const ttl = Math.max(1, ttlSeconds);
+
     try {
-      await client.set(key, JSON.stringify(value), 'EX', Math.max(1, ttlSeconds));
-      this.logDebug(`STORE ${key} ttl=${Math.max(1, ttlSeconds)}s`);
+      await client.set(key, JSON.stringify(value), 'EX', ttl);
+      this.logDebug(`STORE ${key} ttl=${ttl}s`);
     } catch (error) {
       this.logUnavailableOnce(error);
     }
@@ -83,13 +93,20 @@ export class RedisCacheService implements OnModuleDestroy {
 
     try {
       let cursor = '0';
+      const pattern = `${prefix}*`;
 
       do {
-        const [nextCursor, keys] = await client.scan(cursor, 'MATCH', `${prefix}*`, 'COUNT', 100);
+        const [nextCursor, keys] = await client.scan(
+          cursor,
+          'MATCH',
+          pattern,
+          'COUNT',
+          RedisCacheService.DELETE_BY_PREFIX_BATCH_SIZE,
+        );
         cursor = nextCursor;
 
-        if (keys.length) {
-          await client.del(...keys);
+        if (keys.length > 0) {
+          await client.unlink(...keys);
         }
       } while (cursor !== '0');
     } catch (error) {
@@ -103,14 +120,45 @@ export class RedisCacheService implements OnModuleDestroy {
       return cached;
     }
 
-    const value = await factory();
-    await this.set(key, value, ttlSeconds);
-    return value;
+    const pending = this.pendingWraps.get(key) as Promise<T> | undefined;
+    if (pending) {
+      return pending;
+    }
+
+    const pendingValue = (async () => {
+      const value = await factory();
+      await this.set(key, value, ttlSeconds);
+      return value;
+    })();
+
+    this.pendingWraps.set(key, pendingValue);
+
+    try {
+      return await pendingValue;
+    } finally {
+      this.pendingWraps.delete(key);
+    }
   }
 
   private async getClient(): Promise<Redis | null> {
-    if (this.client?.status === 'ready') {
-      return this.client;
+    if (this.client) {
+      if (this.client.status === 'ready') {
+        return this.client;
+      }
+
+      if (this.isReconnectInProgress(this.client)) {
+        return null;
+      }
+
+      this.client.disconnect();
+      this.client = null;
+    }
+
+    if (this.lastFailedConnectAt > 0) {
+      const elapsed = Date.now() - this.lastFailedConnectAt;
+      if (elapsed < RedisCacheService.RECONNECT_COOLDOWN_MS) {
+        return null;
+      }
     }
 
     if (this.initializingClient) {
@@ -118,9 +166,12 @@ export class RedisCacheService implements OnModuleDestroy {
     }
 
     this.initializingClient = this.initializeClient();
-    const client = await this.initializingClient;
-    this.initializingClient = null;
-    return client;
+
+    try {
+      return await this.initializingClient;
+    } finally {
+      this.initializingClient = null;
+    }
   }
 
   private async initializeClient(): Promise<Redis | null> {
@@ -141,24 +192,48 @@ export class RedisCacheService implements OnModuleDestroy {
       maxRetriesPerRequest: 1,
       enableOfflineQueue: false,
       connectTimeout: 1000,
+      retryStrategy: () => null,
     });
 
     client.on('error', (error) => {
+      this.markClientUnavailable(client);
       this.logUnavailableOnce(error);
+    });
+
+    client.on('close', () => {
+      this.markClientUnavailable(client);
+    });
+
+    client.on('end', () => {
+      this.markClientUnavailable(client);
     });
 
     try {
       await client.connect();
       this.client = client;
+      this.lastFailedConnectAt = 0;
       this.hasLoggedUnavailable = false;
       this.hasLoggedMissingConfig = false;
       this.logger.log('Redis cache connected');
       return client;
     } catch (error) {
+      this.markClientUnavailable(client);
       client.disconnect();
       this.logUnavailableOnce(error);
       return null;
     }
+  }
+
+  private isReconnectInProgress(client: Redis): boolean {
+    return ['connect', 'connecting', 'reconnecting'].includes(client.status);
+  }
+
+  private markClientUnavailable(client: Redis): void {
+    if (this.client === client) {
+      this.client = null;
+    }
+
+    this.lastFailedConnectAt = Date.now();
   }
 
   private logUnavailableOnce(error: unknown): void {
