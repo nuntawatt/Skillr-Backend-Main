@@ -33,6 +33,11 @@ export class RolesGuard implements CanActivate {
       throw new UnauthorizedException('Missing authentication');
     }
 
+    // OWNER มีสิทธิ์เทียบเท่า ADMIN ทุกอย่าง — ผ่าน guard ทุกกรณี
+    if (user.role === UserRole.OWNER) {
+      return true;
+    }
+
     const hasPermission = requiredRoles.some(
       (role) => user.role === role,
     );
