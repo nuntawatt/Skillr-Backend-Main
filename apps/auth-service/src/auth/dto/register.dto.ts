@@ -27,7 +27,7 @@ export class RegisterDto {
     required: false,
   })
   @IsString()
-  @Matches(/^[\p{L} '\-]+$/u, { message: "First name may contain letters (all languages), spaces, hyphens and apostrophes only" })
+  @Matches(/^[\p{L}\p{M} '\-]+$/u, { message: "First name may contain letters (all languages), spaces, hyphens and apostrophes only" })
   @MinLength(1)
   @MaxLength(64)
   firstName: string;
@@ -38,7 +38,7 @@ export class RegisterDto {
     required: false,
   })
   @IsString()
-  @Matches(/^[\p{L} '\-]+$/u, { message: "Last name may contain letters (all languages), spaces, hyphens and apostrophes only" })
+  @Matches(/^[\p{L}\p{M} '\-]+$/u, { message: "Last name may contain letters (all languages), spaces, hyphens and apostrophes only" })
   @MinLength(1)
   @MaxLength(64)
   lastName: string;
