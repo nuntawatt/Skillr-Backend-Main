@@ -261,11 +261,11 @@ describe('AnalyticsService', () => {
         select: jest.fn().mockReturnThis(),
         addSelect: jest.fn().mockReturnThis(),
         getRawOne: jest.fn().mockResolvedValue({
-          bucket1: '100',
-          bucket10: '50',
-          bucket30: '25',
-          bucket100: '10',
-          bucket300: '5',
+          bucket1_9: '150',
+          bucket10_29: '25',
+          bucket30_99: '10',
+          bucket100_199: '5',
+          bucket200_plus: '2',
         }),
       };
 
@@ -274,8 +274,8 @@ describe('AnalyticsService', () => {
       const result = await service['getStreaksOverview']();
 
       expect(result.buckets).toHaveLength(5);
-      expect(result.buckets[0]).toEqual({ label: '1 วัน', count: 100 });
-      expect(result.buckets[4]).toEqual({ label: '300 วัน', count: 5 });
+      expect(result.buckets[0]).toEqual({ label: '1-9 วัน', count: 150 });
+      expect(result.buckets[4]).toEqual({ label: '200+ วัน', count: 2 });
     });
   });
 });
