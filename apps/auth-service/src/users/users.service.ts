@@ -14,6 +14,7 @@ import { UserXp } from 'apps/course-service/src/quizs/entities/user-xp.entity';
 import { UserStreak } from 'apps/course-service/src/streaks/entities/user-streak.entity';
 import { LessonProgress } from 'apps/course-service/src/progress/entities/progress.entity';
 import { Course } from 'apps/course-service/src/courses/entities/course.entity';
+import { WebsocketGateway } from '../gateway/websocket.gateway';
 
 @Injectable()
 export class UsersService {
@@ -59,6 +60,7 @@ export class UsersService {
     @InjectRepository(LessonProgress, 'course')
     private readonly completeCourseRepo: Repository<LessonProgress>,
 
+    private readonly websocketGateway: WebsocketGateway,
 
     private readonly config: ConfigService,
 
@@ -103,7 +105,7 @@ export class UsersService {
   // Get all users (สำหรับ admin ดูรายชื่อผู้ใช้ทั้งหมด)
   async findAll() {
     const users = await this.userRepo.find();
-
+    const onlineUsers = this.websocketGateway.getOnlineUserIds();
     const userIds = users.map((u) => u.id);
 
     const streaks = await this.userStreakRepo.find({
@@ -122,7 +124,7 @@ export class UsersService {
       lastName: user.lastName,
       role: user.role,
       streak: streakMap.get(user.id) ?? 0,
-      status: user.isVerified,
+      status: onlineUsers.has(user.id),
     }));
   }
 
@@ -361,7 +363,7 @@ export class UsersService {
       email: user.email,
       firstName: user.firstName || null,
       lastName: user.lastName || null,
-      avatarUrl: user.avatar || null,
+      avatarUrl: user.avatar || this.defaultAvatar,
       xp: userXp?.xpTotal || 0,
       streak: streak?.currentStreak || 0,
     };

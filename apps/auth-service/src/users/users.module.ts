@@ -19,6 +19,8 @@ import { LessonProgress } from 'apps/course-service/src/progress/entities/progre
 import { UserStreak } from 'apps/course-service/src/streaks/entities/user-streak.entity';
 import { UserXp } from 'apps/course-service/src/quizs/entities/user-xp.entity';
 
+import { WebsocketModule } from '../gateway/websocket.module';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, AuthAccount], 'auth'),
@@ -26,6 +28,7 @@ import { UserXp } from 'apps/course-service/src/quizs/entities/user-xp.entity';
     HttpModule,
     ConfigModule,
     forwardRef(() => AuthModule),
+    WebsocketModule,
   ],
   controllers: [UsersController, UsersAdminController],
   providers: [UsersService],
