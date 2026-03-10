@@ -282,32 +282,38 @@ export class AnalyticsService {
       .createQueryBuilder('us')
       .select(
         "SUM(CASE WHEN us.currentStreak >= 1 AND us.currentStreak < 10 THEN 1 ELSE 0 END)",
-        'bucket1',
+        'bucket1_9',
       )
       .addSelect(
         "SUM(CASE WHEN us.currentStreak >= 10 AND us.currentStreak < 30 THEN 1 ELSE 0 END)",
-        'bucket10',
+        'bucket10_29',
       )
       .addSelect(
         "SUM(CASE WHEN us.currentStreak >= 30 AND us.currentStreak < 100 THEN 1 ELSE 0 END)",
-        'bucket30',
+        'bucket30_99',
       )
       .addSelect(
-        "SUM(CASE WHEN us.currentStreak >= 100 AND us.currentStreak < 300 THEN 1 ELSE 0 END)",
-        'bucket100',
+        "SUM(CASE WHEN us.currentStreak >= 100 AND us.currentStreak < 200 THEN 1 ELSE 0 END)",
+        'bucket100_199',
       )
       .addSelect(
-        "SUM(CASE WHEN us.currentStreak >= 300 THEN 1 ELSE 0 END)",
-        'bucket300',
+        "SUM(CASE WHEN us.currentStreak >= 200 THEN 1 ELSE 0 END)",
+        'bucket200_plus',
       )
-      .getRawOne<{ bucket1: string; bucket10: string; bucket30: string; bucket100: string; bucket300: string }>();
+      .getRawOne<{
+        bucket1_9: string;
+        bucket10_29: string;
+        bucket30_99: string;
+        bucket100_199: string;
+        bucket200_plus: string;
+      }>();
 
     const buckets = [
-      { label: '1 วัน', count: Number(row?.bucket1 ?? 0) },
-      { label: '10 วัน', count: Number(row?.bucket10 ?? 0) },
-      { label: '30 วัน', count: Number(row?.bucket30 ?? 0) },
-      { label: '100 วัน', count: Number(row?.bucket100 ?? 0) },
-      { label: '300 วัน', count: Number(row?.bucket300 ?? 0) },
+      { label: '1-9 วัน', count: Number(row?.bucket1_9 ?? 0) },
+      { label: '10-29 วัน', count: Number(row?.bucket10_29 ?? 0) },
+      { label: '30-99 วัน', count: Number(row?.bucket30_99 ?? 0) },
+      { label: '100-199 วัน', count: Number(row?.bucket100_199 ?? 0) },
+      { label: '200+ วัน', count: Number(row?.bucket200_plus ?? 0) },
     ];
 
     return { buckets };
