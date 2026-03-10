@@ -33,12 +33,6 @@ Skllr backend is a NestJS monorepo with multiple services and shared libraries.
 ![Jest](https://img.shields.io/badge/Jest-test-C21325?logo=jest&logoColor=white)
 ![ESLint](https://img.shields.io/badge/ESLint-lint-4B32C3?logo=eslint&logoColor=white)
 
-## Setup
-
-```bash
-pnpm install
-```
-
 ## Project Layout
 
 ```
@@ -57,9 +51,10 @@ skillr/
 
 ## Roles
 
-This project uses 2 roles:
+This project uses 3 roles:
 - `ADMIN`
 - `STUDENT`
+- `OWNER`
 
 ## Build Project
 
