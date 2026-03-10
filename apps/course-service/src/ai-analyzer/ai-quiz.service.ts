@@ -1,18 +1,11 @@
-import {
-    BadRequestException,
-    BadGatewayException,
-    HttpException,
-    Injectable,
-    NotFoundException,
-    ServiceUnavailableException,
-    UnauthorizedException,
-} from '@nestjs/common';
+import { BadRequestException, BadGatewayException, HttpException, Injectable, NotFoundException, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import axios from 'axios';
 import { Repository } from 'typeorm';
 
 import { Lesson } from '../lessons/entities/lesson.entity';
 import { AiQuizGeneration } from './entities/ai-analyzer-entity';
+import { Article } from '../articles/entities/article.entity';
 import { Quizs } from '../quizs/entities/quizs.entity';
 import type { GenerateAiQuizDto } from './dto/generate-ai-quiz.dto';
 
@@ -40,8 +33,7 @@ type AiQuizResponse = {
 
 @Injectable()
 export class AiQuizService {
-    private readonly modelName =
-        process.env.HUGGINGFACE_MODEL ?? 'mistralai/Mistral-7B-Instruct-v0.2';
+    private readonly modelName = process.env.HUGGINGFACE_MODEL;
 
     constructor(
         @InjectRepository(AiQuizGeneration)
@@ -52,6 +44,10 @@ export class AiQuizService {
 
         @InjectRepository(Quizs)
         private readonly quizRepo: Repository<Quizs>,
+
+        @InjectRepository(Article)
+        private readonly articleRepo: Repository<Article>,
+
     ) { }
 
     private async callHuggingFace(prompt: string) {
@@ -93,10 +89,7 @@ export class AiQuizService {
         return response.data;
     }
 
-    private rethrowHuggingFaceAxiosError(
-        error: unknown,
-        message: string,
-    ): never {
+    private rethrowHuggingFaceAxiosError(error: unknown, message: string): never {
         if (!axios.isAxiosError(error)) {
             throw new ServiceUnavailableException(
                 `HuggingFace request failed: ${message}`,
@@ -212,10 +205,7 @@ export class AiQuizService {
         return `${prompt.slice(0, index + marker.length)}[REDACTED]`;
     }
 
-    async generateQuizFromLesson(
-        lessonId: number,
-        options?: GenerateAiQuizDto,
-    ) {
+    async generateQuizFromLesson(lessonId: number, options?: GenerateAiQuizDto) {
         const lesson = await this.lessonRepo.findOne({
             where: { lesson_id: lessonId },
         });
@@ -224,16 +214,53 @@ export class AiQuizService {
             throw new NotFoundException('Lesson not found');
         }
 
-        const description =
-            typeof lesson.lesson_description === 'string'
+        // โหลดเฉพาะ article ของ lesson นี้
+        const article = await this.articleRepo
+            .createQueryBuilder('article')
+            .select(['article.article_content'])
+            .where('article.lesson_id = :lessonId', { lessonId })
+            .orderBy('article.updatedAt', 'DESC')
+            .limit(1)
+            .getOne();
+
+        // extract text จาก article_content
+        let content = '';
+
+        if (Array.isArray(article?.article_content)) {
+            content = article.article_content
+                .map((block: any) => {
+                    if (typeof block === 'string') return block;
+
+                    if (block?.article) return block.article;
+                    if (block?.text) return block.text;
+                    if (block?.content) return block.content;
+
+                    return '';
+                })
+                .join('\n')
+                .trim();
+        }
+
+        // fallback ไปใช้ lesson description
+        if (!content) {
+            const description = typeof lesson.lesson_description === 'string'
                 ? lesson.lesson_description
                 : '';
 
-        const content = description.trim() ? description : (lesson.lesson_title ?? '').trim();
+            content = description.trim()
+                ? description
+                : (lesson.lesson_title ?? '').trim();
+        }
 
         if (!content) {
             throw new BadRequestException('Lesson content is empty');
         }
+
+        // limit length to avoid hitting HuggingFace max input tokens
+        const MAX_ARTICLE_LENGTH = 4000;
+        content = content.slice(0, MAX_ARTICLE_LENGTH);
+
+        // console.log(`content sent to ai : `, content);
 
         const prompt = this.buildPrompt(content, options);
         const promptForStorage = this.redactLessonContentForStorage(prompt);
@@ -241,13 +268,13 @@ export class AiQuizService {
         try {
             const response = await this.callHuggingFace(prompt);
 
-            const content = response?.choices?.[0]?.message?.content;
+            const aiContent = response?.choices?.[0]?.message?.content;
 
-            if (!content) {
+            if (!aiContent) {
                 throw new BadRequestException('AI returned empty response');
             }
 
-            const parsed = this.parseAndValidateQuizJson(content);
+            const parsed = this.parseAndValidateQuizJson(aiContent);
 
             const saved = this.aiRepo.create({
                 lessonId,
@@ -259,10 +286,9 @@ export class AiQuizService {
 
             return await this.aiRepo.save(saved);
         } catch (error: unknown) {
-            const message =
-                error instanceof HttpException
-                    ? this.formatHttpException(error)
-                    : this.formatHuggingFaceError(error);
+            const message = error instanceof HttpException
+                ? this.formatHttpException(error)
+                : this.formatHuggingFaceError(error);
 
             const failed = this.aiRepo.create({
                 lessonId,
@@ -362,12 +388,11 @@ export class AiQuizService {
         const answerIndex = first.answerIndex;
         const explanation = first.explanation;
 
-        const inferredType: AiQuizType =
-            typeRaw === 'multiple_choice' || typeRaw === 'true_false'
-                ? typeRaw
-                : Array.isArray(choices) && choices.length === 2
-                    ? 'true_false'
-                    : 'multiple_choice';
+        const inferredType: AiQuizType = typeRaw === 'multiple_choice' || typeRaw === 'true_false'
+            ? typeRaw
+            : Array.isArray(choices) && choices.length === 2
+                ? 'true_false'
+                : 'multiple_choice';
 
         if (typeof question !== 'string' || !question.trim()) {
             throw new BadRequestException('Invalid question');
@@ -444,32 +469,33 @@ export class AiQuizService {
             .join('\n');
 
         return `
-Generate 1 quiz question from the lesson below.
+                Generate 1 quiz question from the lesson below.
 
-${meta ? `Constraints:\n${meta}\n` : ''}
+                ${meta ? `Constraints:\n${meta}\n` : ''}
 
-Rules:
-- Return ONLY JSON (no markdown, no extra text)
-- Question must test understanding
-- Provide realistic wrong answers (for multiple_choice)
-- For true_false, choices must be ["True", "False"]
+                Rules:
+                - Return ONLY JSON (no markdown, no extra text)
+                - Question must be based ONLY on the Lesson Content
+                - Do NOT invent information outside the Lesson Content
+                - Use facts from the Lesson Content
+                - Provide realistic wrong answers
 
-Return format:
+                Return format:
 
-{
- "questions": [
-  {
-   "type": "multiple_choice" | "true_false",
-   "question": "",
-   "choices": ["", "", "", ""],
-   "answerIndex": 0,
-   "explanation": ""
-  }
- ]
-}
+                {
+                "questions": [
+                {
+                "type": "multiple_choice" | "true_false",
+                "question": "",
+                "choices": ["", "", "", ""],
+                "answerIndex": 0,
+                "explanation": ""
+                }
+                ]
+                }
 
-Lesson Content:
-${content}
-`;
+                Lesson Content:
+                ${content}
+                `;
     }
 }
