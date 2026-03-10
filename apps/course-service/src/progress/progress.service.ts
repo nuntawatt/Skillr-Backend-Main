@@ -312,10 +312,7 @@ export class ProgressService {
   }
 
 
-  async skipLessonAndUnlockNext(
-    userId: string,
-    lessonId: number,
-  ): Promise<{
+  async skipLessonAndUnlockNext(userId: string, lessonId: number): Promise<{
     skipped: LessonProgressResponseDto;
     unlockedNext: LessonProgressResponseDto | null;
   }> {
@@ -533,10 +530,7 @@ export class ProgressService {
   }
 
   // ดึงความคืบหน้าของบทเรียนทั้งหมดในบทเดียว
-  async getChapterProgress(
-    userId: string,
-    chapterId: number,
-  ): Promise<ChapterProgressDto> {
+  async getChapterProgress(userId: string, chapterId: number): Promise<ChapterProgressDto> {
     const chapter = await this.chapterRepository.findOne({
       where: { chapter_id: chapterId },
     });
@@ -663,12 +657,9 @@ export class ProgressService {
   }
 
   // ดึง roadmap ของบทเรียนทั้งหมดในบทเดียว พร้อมสถานะของแต่ละบทเรียน
-  async getChapterRoadmap(
-    userId: string,
-    chapterId: number,
-  ): Promise<ChapterRoadmapDto> {
+  async getChapterRoadmap(userId: string, chapterId: number): Promise<ChapterRoadmapDto> {
     const chapter = await this.chapterRepository.findOne({
-      where: { chapter_id: chapterId },
+      where: { chapter_id: chapterId }
     });
 
     if (!chapter) {
@@ -678,7 +669,7 @@ export class ProgressService {
     // ดึงบทเรียนทั้งหมดในบทนั้น
     const lessons = await this.lessonRepository.find({
       where: { chapter_id: chapterId },
-      order: { orderIndex: 'ASC' },
+      order: { orderIndex: 'ASC' }
     });
 
     // ถ้าไม่มีบทเรียนเลย ให้คืนค่า roadmap ว่าง
@@ -708,6 +699,7 @@ export class ProgressService {
         lessonId: lesson.lesson_id,
         lessonTitle: lesson.lesson_title,
         lessonType: lesson.lesson_type,
+        isPublished: lesson.isPublished,
         status: LessonProgressStatus.LOCKED,
         progressPercent: 0,
         positionSeconds: null,
@@ -790,15 +782,14 @@ export class ProgressService {
         lessonId: lesson.lesson_id,
         lessonTitle: lesson.lesson_title,
         lessonType: lesson.lesson_type,
+        isPublished: lesson.isPublished,
         status,
-        progressPercent:
-          status === LessonProgressStatus.COMPLETED ||
-          status === LessonProgressStatus.SKIPPED
-            ? 100
-            : (progress?.progressPercent != null &&
-                !Number.isNaN(Number(progress.progressPercent))
-                ? Math.round(Number(progress.progressPercent))
-                : 0),
+        progressPercent: status === LessonProgressStatus.COMPLETED || status === LessonProgressStatus.SKIPPED
+          ? 100
+          : (progress?.progressPercent != null &&
+            !Number.isNaN(Number(progress.progressPercent))
+            ? Math.round(Number(progress.progressPercent))
+            : 0),
         positionSeconds: progress?.positionSeconds ?? null,
         durationSeconds: progress?.durationSeconds ?? null,
         completedAt: progress?.completedAt ?? null,
@@ -861,9 +852,9 @@ export class ProgressService {
         isDone
           ? 100
           : (row.progressPercent != null &&
-              !Number.isNaN(Number(row.progressPercent))
-              ? Math.round(Number(row.progressPercent))
-              : null),
+            !Number.isNaN(Number(row.progressPercent))
+            ? Math.round(Number(row.progressPercent))
+            : null),
       positionSeconds: row.positionSeconds ?? null,
       durationSeconds: row.durationSeconds ?? null,
       lastViewedAt: row.lastViewedAt ?? null,
