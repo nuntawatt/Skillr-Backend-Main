@@ -7,6 +7,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { getDataSourceToken, getRepositoryToken } from "@nestjs/typeorm";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { RewardStatusService } from "./reward-status.service";
+import { serializeReward } from "./reward-response.util";
 
 describe('RewardService', () => {
   let service: RewardService;
@@ -90,13 +91,16 @@ describe('RewardService', () => {
 
   describe('getAllReward', () => {
     it('should return all rewards', async () => {
-      const rewards = [{ id: 1 }, { id: 2 }] as Reward[];
+      const rewards = [
+        { id: 1, required_points: 10, remain: 5, is_active: true },
+        { id: 2, required_points: 20, remain: 10, is_active: false },
+      ] as Reward[];
       jest.spyOn(rewardRepo, 'find').mockResolvedValue(rewards);
 
       const result = await service.getAllReward();
 
       expect(mockRewardStatusService.syncExpiredRewards).toHaveBeenCalled();
-      expect(result).toEqual(rewards);
+      expect(result).toEqual(rewards.map(serializeReward));
     });
   });
 
@@ -116,7 +120,13 @@ describe('RewardService', () => {
     });
 
     it('should return reward with isCanRedeem true', async () => {
-      const reward = { id: 1, limit_per_user: 2 } as Reward;
+      const reward = {
+        id: 1,
+        limit_per_user: 2,
+        required_points: 10,
+        remain: 5,
+        is_active: true,
+      } as Reward;
 
       jest.spyOn(rewardRepo, 'findOne').mockResolvedValue(reward);
       jest.spyOn(redeemRepo, 'count').mockResolvedValue(1);
@@ -125,7 +135,7 @@ describe('RewardService', () => {
 
       expect(mockRewardStatusService.syncExpiredRewards).toHaveBeenCalled();
       expect(result).toEqual({
-        reward,
+        reward: serializeReward(reward),
         isCanRedeem: true,
       });
     });

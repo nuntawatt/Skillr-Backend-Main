@@ -7,6 +7,7 @@ import { Reward } from '../reward/entities/rewards.entity';
 import { randomUUID } from 'crypto';
 import { AwsS3StorageService } from 'apps/course-service/src/storage/aws.service';
 import { RewardStatusService } from '../reward/reward-status.service';
+import { serializeReward } from '../reward/reward-response.util';
 
 @Injectable()
 export class RewardAdminService {
@@ -19,7 +20,9 @@ export class RewardAdminService {
 
   async getAllReward() {
     await this.rewardStatusService.syncExpiredRewards();
-    return this.rewardRepo.find();
+
+    const rewards = await this.rewardRepo.find();
+    return rewards.map(serializeReward);
   }
 
   async getRewardDetail(id: number) {
@@ -31,7 +34,7 @@ export class RewardAdminService {
       throw new NotFoundException('Reward not found');
     }
 
-    return reward;
+    return serializeReward(reward);
   }
 
   async createReward(createRewardDto: CreateRewardAdminDto, imageUrl: string) {
@@ -49,7 +52,8 @@ export class RewardAdminService {
       ),
     });
 
-    return await this.rewardRepo.save(rewardCreated);
+    const savedReward = await this.rewardRepo.save(rewardCreated);
+    return serializeReward(savedReward);
   }
 
   async updateReward(id: number, dto: UpdateRewardAdminDto, file?: Express.Multer.File) {
@@ -95,7 +99,8 @@ export class RewardAdminService {
       nextRedeemEndDate,
     );
 
-    return await this.rewardRepo.save(reward);
+    const savedReward = await this.rewardRepo.save(reward);
+    return serializeReward(savedReward);
   }
 
   async removeRewardById(id: number) {

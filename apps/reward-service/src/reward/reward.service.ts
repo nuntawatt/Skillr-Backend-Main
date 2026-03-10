@@ -9,6 +9,7 @@ import { User } from 'apps/auth-service/src/users/entities';
 import { UserXp } from 'apps/course-service/src/quizs/entities/user-xp.entity';
 import { randomUUID } from 'crypto';
 import { RewardStatusService } from './reward-status.service';
+import { serializeReward, serializeRewardRedemption } from './reward-response.util';
 
 @Injectable()
 export class RewardService {
@@ -33,7 +34,9 @@ export class RewardService {
 
   async getAllReward() {
     await this.rewardStatusService.syncExpiredRewards();
-    return this.rewardRepository.find();
+
+    const rewards = await this.rewardRepository.find();
+    return rewards.map(serializeReward);
   }
 
   async getDetailReward(userId: string, rewardId: number) {
@@ -64,7 +67,7 @@ export class RewardService {
       status = false;
     }
 
-    return { reward: reward, isCanRedeem: status };
+    return { reward: serializeReward(reward), isCanRedeem: status };
   }
 
   async getRedeemCount(userId: string) {
@@ -87,7 +90,7 @@ export class RewardService {
       throw new NotFoundException('Redemption not found');
     }
 
-    return redeems;
+    return redeems.map(serializeRewardRedemption);
   }
 
   async getUserTotalXp(userId: string): Promise<number> {
@@ -156,7 +159,7 @@ export class RewardService {
       await rewardRunner.commitTransaction();
       return {
         message: 'Redeem success',
-        data: redemption,
+        data: serializeRewardRedemption(redemption),
       };
     } catch (error) {
       await courseRunner.rollbackTransaction();
