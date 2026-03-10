@@ -33,6 +33,7 @@ describe('LearnerHomeService', () => {
   };
 
   type CourseRepoMock = {
+    createQueryBuilder: jest.Mock;
     find: jest.Mock;
   };
 
@@ -87,6 +88,7 @@ describe('LearnerHomeService', () => {
         {
           provide: getRepositoryToken(Course),
           useValue: {
+            createQueryBuilder: jest.fn(),
             find: jest.fn(),
           },
         },
@@ -176,6 +178,27 @@ describe('LearnerHomeService', () => {
       .mockReturnValueOnce(continueLearningQb)
       .mockReturnValueOnce(myCoursesQb);
 
+    const courseStructureQb: any = {
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([
+        {
+          course_id: 10,
+          course_title: 'C1',
+          course_levels: [
+            {
+              level_chapters: [
+                { lessons: [{ lesson_id: 101 }, { lesson_id: 102 }] },
+              ],
+            },
+          ],
+        },
+      ]),
+    };
+    (courseRepo.createQueryBuilder as jest.Mock)
+      .mockReturnValueOnce(courseStructureQb)
+      .mockReturnValueOnce(courseStructureQb);
+
     courseRepo.find!.mockResolvedValue([
       { course_id: 1, course_title: 'R1', course_imageUrl: null } as any,
       { course_id: 2, course_title: 'R2', course_imageUrl: 'img2' } as any,
@@ -189,6 +212,7 @@ describe('LearnerHomeService', () => {
     expect(res.header.streakDays).toBe(5);
 
     expect(res.continueLearning?.course_id).toBe(10);
+    expect(res.continueLearning?.progressPercent).toBe(50);
     expect(res.myCourses).toEqual([{ course_id: 10, title: 'C1', progressPercent: 50 }]);
     expect(res.notifications.unreadCount).toBe(2);
     expect(res.recommendations.courses).toHaveLength(2);
@@ -226,6 +250,12 @@ describe('LearnerHomeService', () => {
     (lessonProgressRepo.createQueryBuilder as jest.Mock)
       .mockReturnValueOnce(continueLearningQb)
       .mockReturnValueOnce(myCoursesQb);
+
+    (courseRepo.createQueryBuilder as jest.Mock).mockReturnValue({
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([]),
+    });
 
     courseRepo.find!.mockResolvedValue([]);
 
@@ -270,6 +300,12 @@ describe('LearnerHomeService', () => {
     (lessonProgressRepo.createQueryBuilder as jest.Mock)
       .mockReturnValueOnce(continueLearningQb)
       .mockReturnValueOnce(myCoursesQb);
+
+    (courseRepo.createQueryBuilder as jest.Mock).mockReturnValue({
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([]),
+    });
 
     courseRepo.find!.mockResolvedValue([
       { course_id: 99, course_title: 'Newest', course_imageUrl: null } as any,
@@ -346,6 +382,12 @@ describe('LearnerHomeService', () => {
       .mockReturnValueOnce(continueLearningQb)
       .mockReturnValueOnce(myCoursesQb);
 
+    (courseRepo.createQueryBuilder as jest.Mock).mockReturnValue({
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([]),
+    });
+
     courseRepo.find!.mockResolvedValue([]);
 
     const res = await service.getHome('u3', 'Bearer x', 'true');
@@ -368,6 +410,10 @@ describe('LearnerHomeService', () => {
     });
 
     (lessonProgressRepo.createQueryBuilder as jest.Mock).mockImplementation(() => {
+      throw new Error('boom');
+    });
+
+    (courseRepo.createQueryBuilder as jest.Mock).mockImplementation(() => {
       throw new Error('boom');
     });
 

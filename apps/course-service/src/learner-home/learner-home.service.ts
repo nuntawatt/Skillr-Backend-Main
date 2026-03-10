@@ -132,17 +132,29 @@ export class LearnerHomeService {
     const level = chapter.level;
     const course = level.course;
 
+    // คำนวณ progress ของ chapter ปัจจุบัน
+    const chapterProgress = await this.getChapterProgress(chapter.chapter_id, progressList);
+
+    // ถ้า chapter ยังไม่ 100% ให้ progressPercent = 0
+    // ถ้า chapter 100% แล้ว ให้คำนวณจากทั้งคอร์ส
+    let progressPercent = 0;
+    if (chapterProgress >= 100) {
+      const courseProgressMap = await this.getCourseProgressMap([latest], progressList);
+      progressPercent = courseProgressMap.get(course.course_id)?.progressPercent ?? 0;
+    }
+
     return {
       course_id: course.course_id,
       course_title: course.course_title,
       chapter_title: chapter.chapter_title,
       level_name: level.level_title,
-      progressPercent: latest.progressPercent ?? 0,
+      progressPercent,
     };
   }
 
   // ดึงข้อมูลคอร์สที่ผู้ใช้กำลังเรียนอยู่ทั้งหมดพร้อมกับความคืบหน้าของแต่ละคอร์ส โดยเรียงลำดับจากคอร์สที่มีการอัปเดตล่าสุด
   private async getMyCourses(userId: string) {
+    // ดึงข้อมูล progress ทั้งหมดของ user
     const progressList = await this.lessonProgressRepository
       .createQueryBuilder('lp')
       .leftJoinAndSelect('lp.lesson', 'lesson')
@@ -157,45 +169,89 @@ export class LearnerHomeService {
     // ถ้าไม่มีบทเรียนที่กำลังเรียนอยู่เลย หรือข้อมูลไม่ครบถ้วน ให้คืนค่าเป็น array ว่างเพื่อให้ frontend แสดงผลแบบไม่มีคอร์สที่กำลังเรียนอยู่
     if (!startedProgressList.length) return [];
 
-    // map ข้อมูลบทเรียนที่กำลังเรียนอยู่ทั้งหมดมาเป็นข้อมูลคอร์สที่กำลังเรียนอยู่ 
-    const courseMap = new Map<number, { total: number; completed: number; title: string }>();
+    const courseProgressMap = await this.getCourseProgressMap(startedProgressList, progressList);
 
-    // loop ผ่าน progressList เพื่อคำนวณความคืบหน้าของแต่ละคอร์ส โดยใช้ Map เก็บข้อมูลเพื่อรวมบทเรียนที่อยู่ในคอร์สเดียวกันไว้ด้วยกัน
-    for (const progress of startedProgressList) {
-      const course = progress.lesson?.chapter?.level?.course;
-      if (!course) continue;
+    return Array.from(courseProgressMap.entries()).map(([courseId, data]) => ({
+      course_id: courseId,
+      title: data.title,
+      progressPercent: data.progressPercent,
+    }));
+  }
 
-      if (!courseMap.has(course.course_id)) {
-        courseMap.set(course.course_id, {
-          total: 0,
-          completed: 0,
-          title: course.course_title,
-        });
+  private async getCourseProgressMap(
+    relevantProgressList: LessonProgress[],
+    progressSourceList: LessonProgress[],
+  ) {
+    const courseIds = [
+      ...new Set(
+        relevantProgressList
+          .map((progress) => progress.lesson?.chapter?.level?.course?.course_id)
+          .filter((courseId): courseId is number => typeof courseId === 'number'),
+      ),
+    ];
+
+    if (!courseIds.length) return new Map<number, { title: string; progressPercent: number }>();
+
+    const courses = await this.courseRepository
+      .createQueryBuilder('course')
+      .leftJoinAndSelect('course.course_levels', 'level')
+      .leftJoinAndSelect('level.level_chapters', 'chapter')
+      .leftJoinAndSelect('chapter.lessons', 'lesson')
+      .where('course.course_id IN (:...courseIds)', { courseIds })
+      .getMany();
+
+    const progressMap = new Map<string, LessonProgress>();
+    progressSourceList.forEach((progress) => {
+      if (progress.lessonId) {
+        progressMap.set(progress.lessonId.toString(), progress);
+      }
+    });
+
+    const courseProgressMap = new Map<number, { title: string; progressPercent: number }>();
+
+    for (const course of courses) {
+      let totalLessons = 0;
+      let completedLessons = 0;
+
+      for (const level of course.course_levels || []) {
+        for (const chapter of level.level_chapters || []) {
+          for (const lesson of chapter.lessons || []) {
+            totalLessons++;
+
+            const progress = progressMap.get(lesson.lesson_id.toString());
+            if (progress && (progress.status === 'COMPLETED' || progress.status === 'SKIPPED')) {
+              completedLessons++;
+            }
+          }
+        }
       }
 
-      // เพิ่มจำนวนบทเรียนทั้งหมดในคอร์สนี้ และถ้าบทเรียนนี้มีสถานะเป็น COMPLETED หรือ SKIPPED ให้เพิ่มจำนวนบทเรียนที่จบแล้วด้วย
-      const entry = courseMap.get(course.course_id)!;
-      entry.total++;
-
-      if (
-        progress.status === 'COMPLETED' ||
-        progress.status === 'SKIPPED'
-      ) {
-        entry.completed++;
+      if (totalLessons > 0) {
+        courseProgressMap.set(course.course_id, {
+          title: course.course_title,
+          progressPercent: Math.round((completedLessons / totalLessons) * 100),
+        });
       }
     }
 
-    // แปลง Map เป็น array พร้อมคำนวณ % ความคืบหน้า
-    return Array.from(courseMap.entries()).map(
-      ([courseId, data]) => ({
-        course_id: courseId,
-        title: data.title,
-        progressPercent:
-          data.total > 0
-            ? Math.round((data.completed / data.total) * 100)
-            : 0,
-      }),
+    return courseProgressMap;
+  }
+
+  private async getChapterProgress(chapterId: number, progressList: LessonProgress[]) {
+    // หา progress records ทั้งหมดใน chapter นี้
+    const chapterProgressRecords = progressList.filter(
+      (progress) => progress.lesson?.chapter?.chapter_id === chapterId
     );
+
+    if (!chapterProgressRecords.length) return 0;
+
+    // นับ completed/skipped lessons ใน chapter
+    const completedLessons = chapterProgressRecords.filter(
+      (progress) => progress.status === 'COMPLETED' || progress.status === 'SKIPPED'
+    ).length;
+
+    // คำนวณ percent ของ chapter
+    return Math.round((completedLessons / chapterProgressRecords.length) * 100);
   }
 
   private hasStartedLearning(progress: LessonProgress) {

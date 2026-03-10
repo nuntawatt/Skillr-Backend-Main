@@ -122,20 +122,21 @@ export class AnalyticsService {
       usersByMonth,
       adminStatusSummary,
       totalCourses,
-      activeUsers,
       streaks,
     ] = await Promise.all([
       this.userRepo.count(),                    // นับ users ทั้งหมด
       this.getUsersByTimeRange(timeRange),      // ข้อมูลผู้ใช้รายเดือน
       this.getAdminStatusSummary(),             // สรุป admin accounts
       this.courseRepo.count(),                  // นับจำนวนคอร์สทั้งหมด
-      this.userRepo.count({ where: { status: 'active' } }), // ผู้ใช้ที่ active
       this.getStreaksOverview(),                // สรุป streaks
     ]);
 
+    // User Activity Active = มีการเข้ามาใช้งาน, Inactive = ไม่ได้ใช้งาน
+    const activeUsers = await this.getActiveLearnerCount(); // คนที่มี lesson progress
+    
     const userActivity: UserActivitySummaryDto = {
-      active: activeUsers,
-      inactive: Math.max(totalUsers - activeUsers, 0),
+      active: activeUsers,                    // เคยเข้ามาใช้งานในระบบ
+      inactive: Math.max(totalUsers - activeUsers, 0),  // ไม่เคยเข้ามาใช้งาน
     };
 
     return {
