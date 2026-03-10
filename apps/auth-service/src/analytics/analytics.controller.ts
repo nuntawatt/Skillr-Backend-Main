@@ -60,6 +60,7 @@ export class AnalyticsController {
       "{\n" +
       "  \"learningOverview\": {\n" +
       "    \"activeLearners\": 12,\n" +
+      "    \"dailyActiveLearners\": 5,\n" +
       "    \"completedCourses\": 3,\n" +
       "    \"inProgressCourses\": 24\n" +
       "  }\n" +
@@ -68,6 +69,7 @@ export class AnalyticsController {
       "{\n" +
       "  \"learningOverview\": {\n" +
       "    \"activeLearners\": 12,\n" +
+      "    \"dailyActiveLearners\": 5,\n" +
       "    \"completedCourses\": 3,\n" +
       "    \"inProgressCourses\": 24\n" +
       "  },\n" +
@@ -88,7 +90,17 @@ export class AnalyticsController {
       "      { \"month\": \"2026-12\", \"count\": 0 }\n" +
       "    ],\n" +
       "    \"admins\": { \"total\": 3, \"active\": 2, \"invited\": 1 },\n" +
-      "    \"totalCourses\": 12\n" +
+      "    \"totalCourses\": 12,\n" +
+      "    \"userActivity\": { \"active\": 800, \"inactive\": 200 },\n" +
+      "    \"streaks\": {\n" +
+      "      \"buckets\": [\n" +
+      "        { \"label\": \"1 วัน\", \"count\": 420 },\n" +
+      "        { \"label\": \"10 วัน\", \"count\": 300 },\n" +
+      "        { \"label\": \"30 วัน\", \"count\": 160 },\n" +
+      "        { \"label\": \"100 วัน\", \"count\": 80 },\n" +
+      "        { \"label\": \"300 วัน\", \"count\": 40 }\n" +
+      "      ]\n" +
+      "    }\n" +
       "  }\n" +
       "}",
   })
@@ -111,6 +123,7 @@ export class AnalyticsController {
             value: {
               learningOverview: {
                 activeLearners: 10,
+                dailyActiveLearners: 4,
                 completedCourses: 2,
                 inProgressCourses: 5,
               },
@@ -121,6 +134,7 @@ export class AnalyticsController {
             value: {
               learningOverview: {
                 activeLearners: 12,
+                dailyActiveLearners: 5,
                 completedCourses: 3,
                 inProgressCourses: 24,
               },
@@ -146,6 +160,19 @@ export class AnalyticsController {
                   invited: 1,
                 },
                 totalCourses: 12,
+                userActivity: {
+                  active: 800,
+                  inactive: 200,
+                },
+                streaks: {
+                  buckets: [
+                    { label: '1 วัน', count: 420 },
+                    { label: '10 วัน', count: 300 },
+                    { label: '30 วัน', count: 160 },
+                    { label: '100 วัน', count: 80 },
+                    { label: '300 วัน', count: 40 },
+                  ],
+                },
               },
             },
           },

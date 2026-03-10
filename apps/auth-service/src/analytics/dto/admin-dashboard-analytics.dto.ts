@@ -20,6 +20,9 @@ export class LearningOverviewDto {
   @ApiProperty({ description: 'Active learners (unique users who have started learning and are not only in LOCKED state)' })
   activeLearners: number;
 
+  @ApiProperty({ description: 'Daily attendance count (distinct users with progress today)' })
+  dailyActiveLearners: number;
+
   @ApiProperty({ description: 'Number of user-course pairs where all lessons in the course are completed/skipped' })
   completedCourses: number;
 
@@ -43,29 +46,33 @@ export class AdminStatusSummaryDto {
 }
 
 /**
- * สรุปข้อมูลรางวัล - เฉพาะ OWNER เห็นข้อมูลนี้ (ถ้า REWARD_ENABLED=true)
- * ใช้สำหรับติดตามการใช้งานระบบรางวัล
+ * สรุปการใช้งานของผู้ใช้ (active/inactive)
  */
-export class RewardOverviewDto {
-  @ApiProperty({ description: 'Total reward redemption transactions count' })
-  redemptionCount: number;
+export class UserActivitySummaryDto {
+  @ApiProperty({ description: 'Active users within the recent activity window' })
+  active: number;
 
-  @ApiProperty({ description: 'Total XP/points used across all redemptions' })
-  usedXp: number;
+  @ApiProperty({ description: 'Inactive users within the recent activity window' })
+  inactive: number;
 }
 
 /**
- * คอร์สยอดนิยมสำหรับแสดงใน Owner Dashboard
+ * Bucket ของ Streak สำหรับแสดงกราฟ
  */
-export class PopularCourseDto {
-  @ApiProperty({ description: 'Course ID' })
-  courseId: number;
+export class StreakBucketDto {
+  @ApiProperty({ description: 'Bucket label' })
+  label: string;
 
-  @ApiProperty({ description: 'Course title' })
-  title: string;
+  @ApiProperty({ description: 'User count in this bucket' })
+  count: number;
+}
 
-  @ApiProperty({ description: 'Number of active learners in this course' })
-  learnerCount: number;
+/**
+ * สรุป Streaks สำหรับกราฟ
+ */
+export class StreaksOverviewDto {
+  @ApiProperty({ type: () => [StreakBucketDto] })
+  buckets: StreakBucketDto[];
 }
 
 /**
@@ -126,6 +133,12 @@ export class OwnerOverviewDto {
 
   @ApiProperty({ description: 'Total courses count' })
   totalCourses: number;
+
+  @ApiProperty({ type: () => UserActivitySummaryDto, description: 'Active vs inactive users summary' })
+  userActivity: UserActivitySummaryDto;
+
+  @ApiProperty({ type: () => StreaksOverviewDto, description: 'Streak distribution summary' })
+  streaks: StreaksOverviewDto;
 }
 
 /**
@@ -152,6 +165,7 @@ export class AdminDashboardAnalyticsDto {
     example: {
       learningOverview: {
         activeLearners: 12,
+        dailyActiveLearners: 5,
         completedCourses: 3,
         inProgressCourses: 24,
       },
@@ -176,9 +190,19 @@ export class AdminDashboardAnalyticsDto {
           active: 2,
           invited: 1,
         },
-        rewards: {
-          redemptionCount: 45,
-          usedXp: 1250,
+        totalCourses: 12,
+        userActivity: {
+          active: 800,
+          inactive: 200,
+        },
+        streaks: {
+          buckets: [
+            { label: '1 วัน', count: 420 },
+            { label: '10 วัน', count: 300 },
+            { label: '30 วัน', count: 160 },
+            { label: '100 วัน', count: 80 },
+            { label: '300 วัน', count: 40 },
+          ],
         },
       },
     },
