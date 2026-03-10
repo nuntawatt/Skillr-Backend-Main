@@ -81,32 +81,32 @@ export class AdminInvitationsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.OWNER)
   @Get('admins')
-  @ApiOperation({ summary: 'List admins with status (OWNER only)' })
-  @ApiResponse({ status: 200, description: 'Admins list retrieved.' })
-  @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @ApiResponse({ status: 403, description: 'Forbidden. OWNER role required.' })
-  async listAdmins() {
-    // ตัวอย่างการเรียกใช้:
-    // GET /api/admin-invitations/admins
-    // Headers: Authorization: Bearer <OWNER_JWT_TOKEN>
-    // Response: [
-    //   {
-    //     "id": "123e4567-e89b-12d3-a456-426614174000",
-    //     "email": "admin@example.com",
-    //     "firstName": "สมชาย",
-    //     "lastName": "ใจดี",
-    //     "role": "ADMIN",
-    //     "status": "invited",
-    //     "responsibility": "จัดการคอร์สและผู้ใช้",
-    //     "invitedBy": {
-    //       "id": "456e7890-e89b-12d3-a456-426614174111",
-    //       "email": "owner@example.com"
-    //     },
-    //     "createdAt": "2025-03-05T10:00:00Z"
-    //   }
-    // ]
-    return this.adminInvitationsService.listAdmins();
-  }
+  // @ApiOperation({ summary: 'List admins with status (OWNER only)' })
+  // @ApiResponse({ status: 200, description: 'Admins list retrieved.' })
+  // @ApiResponse({ status: 401, description: 'Unauthorized.' })
+  // @ApiResponse({ status: 403, description: 'Forbidden. OWNER role required.' })
+  // async listAdmins() {
+  //   // ตัวอย่างการเรียกใช้:
+  //   // GET /api/admin-invitations/admins
+  //   // Headers: Authorization: Bearer <OWNER_JWT_TOKEN>
+  //   // Response: [
+  //   //   {
+  //   //     "id": "123e4567-e89b-12d3-a456-426614174000",
+  //   //     "email": "admin@example.com",
+  //   //     "firstName": "สมชาย",
+  //   //     "lastName": "ใจดี",
+  //   //     "role": "ADMIN",
+  //   //     "status": "invited",
+  //   //     "responsibility": "จัดการคอร์สและผู้ใช้",
+  //   //     "invitedBy": {
+  //   //       "id": "456e7890-e89b-12d3-a456-426614174111",
+  //   //       "email": "owner@example.com"
+  //   //     },
+  //   //     "createdAt": "2025-03-05T10:00:00Z"
+  //   //   }
+  //   // ]
+  //   return this.adminInvitationsService.listAdmins();
+  // }
 
   @Post('accept')
   @ApiOperation({ summary: 'Accept admin invitation' })

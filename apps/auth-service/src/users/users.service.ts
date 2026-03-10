@@ -3,8 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import * as argon2 from 'argon2';
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
 
 import { User } from './entities/user.entity';
@@ -15,9 +14,6 @@ import { UserXp } from 'apps/course-service/src/quizs/entities/user-xp.entity';
 import { UserStreak } from 'apps/course-service/src/streaks/entities/user-streak.entity';
 import { LessonProgress } from 'apps/course-service/src/progress/entities/progress.entity';
 import { Course } from 'apps/course-service/src/courses/entities/course.entity';
-import { Chapter } from 'apps/course-service/src/chapters/entities/chapter.entity';
-import { Level } from 'apps/course-service/src/levels/entities/level.entity';
-import { count } from 'console';
 
 @Injectable()
 export class UsersService {
@@ -42,6 +38,8 @@ export class UsersService {
     'https://cdn.skllracademy.com/images/a9462080-9d1b-43a1-9910-1a9bef7e3568',
   ] as const;
 
+  private readonly defaultAvatar = 'https://cdn.skllracademy.com/images/55de2f89-ee38-449e-8a43-22e6c9146887';
+
   constructor(
     @InjectRepository(User, 'auth')
     private readonly userRepo: Repository<User>,
@@ -61,11 +59,6 @@ export class UsersService {
     @InjectRepository(LessonProgress, 'course')
     private readonly completeCourseRepo: Repository<LessonProgress>,
 
-    @InjectRepository(Chapter, 'course')
-    private readonly chapterRepo: Repository<Chapter>,
-
-    @InjectRepository(Level, 'course')
-    private readonly levelRepo: Repository<Level>,
 
     private readonly config: ConfigService,
 
@@ -108,8 +101,28 @@ export class UsersService {
   }
 
   // Get all users (สำหรับ admin ดูรายชื่อผู้ใช้ทั้งหมด)
-  async findAll(): Promise<User[]> {
-    return this.userRepo.find();
+  async findAll() {
+    const users = await this.userRepo.find();
+
+    const userIds = users.map((u) => u.id);
+
+    const streaks = await this.userStreakRepo.find({
+      where: { userId: In(userIds) },
+    });
+
+    const streakMap = new Map(
+      streaks.map((s) => [s.userId, s.currentStreak]),
+    );
+
+    return users.map((user) => ({
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      avatar: user.avatar || this.defaultAvatar,
+      role: user.role,
+      streak: streakMap.get(user.id) ?? 0,
+    }));
   }
 
   async update(id: string, dto: UpdateUserDto): Promise<User> {
@@ -200,7 +213,7 @@ export class UsersService {
         email: profile.email,
         firstName: profile.firstName,
         lastName: profile.lastName,
-        avatar: profile.avatar,
+        avatar: profile.avatar || this.defaultAvatar,
         isVerified: true,
       } as any);
     }
