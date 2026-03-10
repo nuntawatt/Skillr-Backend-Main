@@ -699,7 +699,7 @@ export class ProgressService {
         lessonId: lesson.lesson_id,
         lessonTitle: lesson.lesson_title,
         lessonType: lesson.lesson_type,
-        isPublished: lesson.isPublished,
+        // isPublished: lesson.isPublished,
         status: LessonProgressStatus.LOCKED,
         progressPercent: 0,
         positionSeconds: null,
