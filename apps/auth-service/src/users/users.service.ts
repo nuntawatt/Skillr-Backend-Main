@@ -117,11 +117,12 @@ export class UsersService {
     return users.map((user) => ({
       id: user.id,
       email: user.email,
+      avatar: user.avatar || this.defaultAvatar,
       firstName: user.firstName,
       lastName: user.lastName,
-      avatar: user.avatar || this.defaultAvatar,
       role: user.role,
       streak: streakMap.get(user.id) ?? 0,
+      status: user.isVerified,
     }));
   }
 
