@@ -1,16 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import {
-  IsBoolean,
-  IsDateString,
-  IsEnum,
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
-  IsString,
-  Min,
-} from 'class-validator';
-import { RedemptionType } from '../../reward/entities/rewards.entity';
+import { IsBoolean, IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+// import { RedemptionType } from '../../reward/entities/rewards.entity';
 
 export class CreateRewardAdminDto {
   @ApiProperty({ example: 'Starbucks Voucher' })

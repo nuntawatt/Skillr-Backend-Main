@@ -6,12 +6,17 @@ import { UserXp } from "apps/course-service/src/quizs/entities/user-xp.entity";
 import { Test, TestingModule } from "@nestjs/testing";
 import { getDataSourceToken, getRepositoryToken } from "@nestjs/typeorm";
 import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { RewardStatusService } from "./reward-status.service";
 
 describe('RewardService', () => {
   let service: RewardService;
   let rewardRepo: Repository<Reward>;
   let redeemRepo: Repository<RewardRedemption>;
   let userXpRepo: Repository<UserXp>;
+
+  const mockRewardStatusService = {
+    syncExpiredRewards: jest.fn(),
+  };
 
   const mockManager = {
     findOne: jest.fn(),
@@ -55,6 +60,7 @@ describe('RewardService', () => {
         {
           provide: getRepositoryToken(UserXp, 'course'),
           useValue: {
+            findOne: jest.fn(),
             createQueryBuilder: jest.fn(),
           },
         },
@@ -66,6 +72,10 @@ describe('RewardService', () => {
           provide: getDataSourceToken('course'),
           useValue: mockDataSource,
         },
+        {
+          provide: RewardStatusService,
+          useValue: mockRewardStatusService,
+        },
       ],
     }).compile();
 
@@ -75,6 +85,7 @@ describe('RewardService', () => {
     userXpRepo = module.get(getRepositoryToken(UserXp, 'course'));
 
     jest.clearAllMocks();
+    mockRewardStatusService.syncExpiredRewards.mockResolvedValue(0);
   });
 
   describe('getAllReward', () => {
@@ -83,6 +94,8 @@ describe('RewardService', () => {
       jest.spyOn(rewardRepo, 'find').mockResolvedValue(rewards);
 
       const result = await service.getAllReward();
+
+      expect(mockRewardStatusService.syncExpiredRewards).toHaveBeenCalled();
       expect(result).toEqual(rewards);
     });
   });
@@ -110,6 +123,7 @@ describe('RewardService', () => {
 
       const result = await service.getDetailReward('1', 1);
 
+      expect(mockRewardStatusService.syncExpiredRewards).toHaveBeenCalled();
       expect(result).toEqual({
         reward,
         isCanRedeem: true,
@@ -124,6 +138,8 @@ describe('RewardService', () => {
         where: jest.fn().mockReturnThis(),
         getRawOne: jest.fn().mockResolvedValue({ total: '150' }),
       };
+
+      jest.spyOn(userXpRepo, 'findOne').mockResolvedValue(null);
 
       jest
         .spyOn(userXpRepo, 'createQueryBuilder')
@@ -175,6 +191,26 @@ describe('RewardService', () => {
         .rejects
         .toThrow();
 
+      expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalled();
+    });
+
+    it('should deactivate expired reward during redeem validation', async () => {
+      const expiredReward: Partial<Reward> = {
+        id: 1,
+        is_active: true,
+        redeem_start_date: new Date(Date.now() - 60_000),
+        redeem_end_date: new Date(Date.now() - 1_000),
+      };
+
+      (mockManager.findOne as jest.Mock).mockResolvedValueOnce(expiredReward);
+
+      await expect(service.redeemReward('user1', 1))
+        .rejects
+        .toThrow(new BadRequestException('Reward not in redeem period'));
+
+      expect(mockManager.save).toHaveBeenCalledWith(
+        expect.objectContaining({ is_active: false }),
+      );
       expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalled();
     });
   });

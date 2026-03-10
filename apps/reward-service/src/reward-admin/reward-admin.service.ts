@@ -6,20 +6,25 @@ import { Repository } from 'typeorm';
 import { Reward } from '../reward/entities/rewards.entity';
 import { randomUUID } from 'crypto';
 import { AwsS3StorageService } from 'apps/course-service/src/storage/aws.service';
+import { RewardStatusService } from '../reward/reward-status.service';
 
 @Injectable()
 export class RewardAdminService {
   constructor(
     private readonly aws: AwsS3StorageService,
+    private readonly rewardStatusService: RewardStatusService,
     @InjectRepository(Reward, 'reward')
-    private rewardRepo: Repository<Reward>,
+    private readonly rewardRepo: Repository<Reward>,
   ) { }
 
-  getAllReward() {
+  async getAllReward() {
+    await this.rewardStatusService.syncExpiredRewards();
     return this.rewardRepo.find();
   }
 
   async getRewardDetail(id: number) {
+    await this.rewardStatusService.syncExpiredRewards();
+
     const reward = await this.rewardRepo.findOne({ where: { id } });
 
     if (!reward) {
@@ -32,25 +37,24 @@ export class RewardAdminService {
   async createReward(createRewardDto: CreateRewardAdminDto, imageUrl: string) {
     const { redeem_start_date, redeem_end_date } = createRewardDto;
 
-    if (new Date(redeem_end_date) <= new Date(redeem_start_date)) {
-      throw new BadRequestException(
-        'Redeem end date must be greater than start date',
-      );
-    }
+    this.ensureValidRedeemPeriod(redeem_start_date, redeem_end_date);
 
     const rewardCreated = this.rewardRepo.create({
       ...createRewardDto,
       image_url: imageUrl,
       remain: createRewardDto.total_limit,
+      is_active: this.rewardStatusService.resolveActiveStatus(
+        createRewardDto.is_active,
+        redeem_end_date,
+      ),
     });
+
     return await this.rewardRepo.save(rewardCreated);
   }
 
-  async updateReward(
-    id: number,
-    dto: UpdateRewardAdminDto,
-    file?: Express.Multer.File,
-  ) {
+  async updateReward(id: number, dto: UpdateRewardAdminDto, file?: Express.Multer.File) {
+    await this.rewardStatusService.syncExpiredRewards();
+
     const reward = await this.rewardRepo.findOne({ where: { id } });
 
     if (!reward) {
@@ -80,7 +84,16 @@ export class RewardAdminService {
       reward.image_url = imageUrl;
     }
 
+    const nextRedeemStartDate = dto.redeem_start_date ?? reward.redeem_start_date;
+    const nextRedeemEndDate = dto.redeem_end_date ?? reward.redeem_end_date;
+
+    this.ensureValidRedeemPeriod(nextRedeemStartDate, nextRedeemEndDate);
+
     Object.assign(reward, dto);
+    reward.is_active = this.rewardStatusService.resolveActiveStatus(
+      dto.is_active ?? reward.is_active,
+      nextRedeemEndDate,
+    );
 
     return await this.rewardRepo.save(reward);
   }
@@ -101,6 +114,14 @@ export class RewardAdminService {
     return {
       message: 'Deleted reward success',
     };
+  }
+
+  private ensureValidRedeemPeriod(startDate: Date | string, endDate: Date | string) {
+    if (new Date(endDate) <= new Date(startDate)) {
+      throw new BadRequestException(
+        'Redeem end date must be greater than start date',
+      );
+    }
   }
 
   // ตรวจสอบ MIME type ของไฟล์ภาพที่อัพโหลดเข้ามา (รองรับ jpg/jpeg/png/webp)

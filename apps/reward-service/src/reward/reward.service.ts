@@ -8,6 +8,7 @@ import { RewardRedemption } from './entities/reward-redemption';
 import { User } from 'apps/auth-service/src/users/entities';
 import { UserXp } from 'apps/course-service/src/quizs/entities/user-xp.entity';
 import { randomUUID } from 'crypto';
+import { RewardStatusService } from './reward-status.service';
 
 @Injectable()
 export class RewardService {
@@ -26,17 +27,21 @@ export class RewardService {
 
     @InjectRepository(UserXp, 'course')
     private readonly userxpRepository: Repository<UserXp>,
+
+    private readonly rewardStatusService: RewardStatusService,
   ) { }
 
-  getAllReward() {
+  async getAllReward() {
+    await this.rewardStatusService.syncExpiredRewards();
     return this.rewardRepository.find();
   }
 
   async getDetailReward(userId: string, rewardId: number) {
-    const rewardRunner = this.rewardDataSource.createQueryRunner();
     if (!rewardId || rewardId <= 0) {
       throw new BadRequestException('Invalid reward id');
     }
+
+    await this.rewardStatusService.syncExpiredRewards();
 
     const reward = await this.rewardRepository.findOne({
       where: { id: rewardId },
@@ -49,12 +54,14 @@ export class RewardService {
     const count = await this.redeemRepository.count({
       where: {
         userId,
-        reward: { id: reward.id }
-      }
-    })
-    let status = true
+        reward: { id: reward.id },
+      },
+    });
+
+    let status = true;
+
     if (reward.limit_per_user !== null && count >= reward.limit_per_user) {
-      status = false
+      status = false;
     }
 
     return { reward: reward, isCanRedeem: status };
@@ -69,6 +76,8 @@ export class RewardService {
   }
 
   async getRedeem(userId: string) {
+    await this.rewardStatusService.syncExpiredRewards();
+
     const redeems = await this.redeemRepository.find({
       where: { userId },
       relations: ['reward'],
@@ -166,23 +175,30 @@ export class RewardService {
     const now = new Date();
 
     const reward = await runner.manager.findOne(Reward, {
-      where: { id: rewardId, is_active: true },
+      where: { id: rewardId },
       lock: { mode: 'pessimistic_write' },
     });
-
-    if (!reward) {
+    if (!reward || !reward.is_active) {
       throw new BadRequestException('Reward not found');
     }
 
+    if (reward.redeem_end_date && now > reward.redeem_end_date) {
+      reward.is_active = false;
+      await runner.manager.save(reward);
+      throw new BadRequestException('Reward not in redeem period');
+    }
+
     if (
-      (reward.redeem_start_date && now < reward.redeem_start_date) ||
-      (reward.redeem_end_date && now > reward.redeem_end_date)
+      reward.redeem_start_date &&
+      now < reward.redeem_start_date
     ) {
       throw new BadRequestException('Reward not in redeem period');
     }
+
     if (reward.remain <= 0 && reward.remain != null) {
       throw new BadRequestException('Reward out of stock');
     }
+
     return reward;
   }
 
@@ -197,9 +213,6 @@ export class RewardService {
       order: { updatedAt: 'DESC' },
       lock: { mode: 'pessimistic_write' },
     });
-
-    console.log(user);
-
 
     if (!user) {
       throw new BadRequestException('User not found');

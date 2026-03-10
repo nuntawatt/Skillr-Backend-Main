@@ -1,29 +1,6 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  HttpCode,
-  HttpStatus,
-  UseGuards,
-  UploadedFile,
-  UseInterceptors,
-  ParseIntPipe,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, HttpCode, HttpStatus, UseGuards, UploadedFile, UseInterceptors, ParseIntPipe } from '@nestjs/common';
 import { RewardAdminService } from './reward-admin.service';
-import {
-  ApiBearerAuth,
-  ApiBody,
-  ApiConsumes,
-  ApiCreatedResponse,
-  ApiOperation,
-  ApiParam,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiCreatedResponse, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CreateRewardAdminResponseDto } from './dto/create-reward-response-admin.dto';
 import { JwtAuthGuard, Roles, RolesGuard } from '@auth';
 import { UserRole } from '@common/enums';
@@ -38,7 +15,7 @@ import { UpdateRewardAdminDto } from './dto/update-reward-admin.dto';
 @Roles(UserRole.ADMIN)
 @Controller('admin')
 export class AdminController {
-  constructor(private readonly RewardAdminService: RewardAdminService) {}
+  constructor(private readonly RewardAdminService: RewardAdminService) { }
 
   @Get('/reward/getAllAdminReward')
   @ApiOperation({ summary: 'Get reward admin ทั้งหมด' })

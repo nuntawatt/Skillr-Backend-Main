@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthLibModule } from '@auth/auth-lib.module';
 import { RewardModule } from './reward/reward.module';
 import * as path from 'path';
+import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { getDatabaseConfig } from '@config/database.config';
 import { AdminModule } from './reward-admin/reward-admin.module';
@@ -17,6 +18,7 @@ import { UserXp } from 'apps/course-service/src/quizs/entities/user-xp.entity';
         path.resolve(process.cwd(), '.env'),
       ],
     }),
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({
       name: 'reward',
       inject: [ConfigService],
