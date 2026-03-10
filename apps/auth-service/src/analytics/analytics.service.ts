@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ConfigService } from '@nestjs/config';
 
 import { UserRole } from '@common/enums';
 import type { AuthUser } from '@auth';
@@ -9,9 +8,9 @@ import type { AuthUser } from '@auth';
 // Entities from different databases
 import { User } from '../users/entities/user.entity';
 import { LessonProgress } from '../../../../apps/course-service/src/progress/entities/progress.entity';
-import { RewardRedemption } from '../../../../apps/reward-service/src/reward/entities/reward-redemption';
 import { WebsocketGateway } from '../gateway/websocket.gateway';
 import { Course } from '../../../../apps/course-service/src/courses/entities/course.entity';
+import { UserStreak } from '../../../../apps/course-service/src/streaks/entities/user-streak.entity';
 
 // DTOs
 import {
@@ -19,10 +18,10 @@ import {
   DashboardUserDto,
   LearningOverviewDto,
   OwnerOverviewDto,
-  PopularCourseDto,
+  StreaksOverviewDto,
+  UserActivitySummaryDto,
   UsersByMonthPointDto,
   AdminStatusSummaryDto,
-  RewardOverviewDto,
 } from './dto/admin-dashboard-analytics.dto';
 
 /**
@@ -32,7 +31,7 @@ import {
  * ใช้งานกับหลาย Database connections:
  * - Auth DB: users, admin accounts
  * - Course DB: lesson progress, course data
- * - Reward DB: reward redemptions (ถ้าเปิดใช้)
+ * - Reward DB: reward redemptions (unused)
  * 
  * แบ่งข้อมูลตามสิทธิ์ผู้ใช้ (ADMIN vs OWNER)
  */
@@ -53,12 +52,9 @@ export class AnalyticsService {
     @InjectRepository(Course, 'course')
     private readonly courseRepo: Repository<Course>,
 
-    // Reward DB Repository - สำหรับข้อมูลการแลกรางวัล
-    @InjectRepository(RewardRedemption, 'reward')
-    private readonly rewardRedemptionRepo: Repository<RewardRedemption>,
-
-    // Config Service - สำหรับอ่าน environment variables
-    private readonly config: ConfigService,
+    // Course DB Repository - สำหรับข้อมูล streak
+    @InjectRepository(UserStreak, 'course')
+    private readonly userStreakRepo: Repository<UserStreak>,
 
     private readonly websocketGateway: WebsocketGateway,
   ) {}
@@ -102,10 +98,12 @@ export class AnalyticsService {
    */
   private async getLearningOverview(): Promise<LearningOverviewDto> {
     const activeLearners = await this.getActiveLearnerCount();
+    const dailyActiveLearners = await this.getDailyActiveLearnerCount();
     const courseProgress = await this.getCourseProgressSummary();
 
     return {
       activeLearners,
+      dailyActiveLearners,
       completedCourses: courseProgress.completed,
       inProgressCourses: courseProgress.inProgress,
     };
@@ -124,18 +122,29 @@ export class AnalyticsService {
       usersByMonth,
       adminStatusSummary,
       totalCourses,
+      activeUsers,
+      streaks,
     ] = await Promise.all([
       this.userRepo.count(),                    // นับ users ทั้งหมด
       this.getUsersByTimeRange(timeRange),      // ข้อมูลผู้ใช้รายเดือน
       this.getAdminStatusSummary(),             // สรุป admin accounts
       this.courseRepo.count(),                  // นับจำนวนคอร์สทั้งหมด
+      this.userRepo.count({ where: { status: 'active' } }), // ผู้ใช้ที่ active
+      this.getStreaksOverview(),                // สรุป streaks
     ]);
+
+    const userActivity: UserActivitySummaryDto = {
+      active: activeUsers,
+      inactive: Math.max(totalUsers - activeUsers, 0),
+    };
 
     return {
       totalUsers,
       usersByMonth,
       admins: adminStatusSummary,
       totalCourses,
+      userActivity,
+      streaks,
     };
   }
 
@@ -188,6 +197,22 @@ export class AnalyticsService {
       .createQueryBuilder('lp')
       .select('COUNT(DISTINCT lp.userId)', 'count')
       .where('lp.status != :status', { status: 'LOCKED' })
+      .getRawOne<{ count: string }>();
+
+    return Number(result?.count ?? 0);
+  }
+
+  /**
+   * จำนวนผู้เข้าเรียนรายวัน (distinct users ที่มี progress วันนี้)
+   */
+  private async getDailyActiveLearnerCount(): Promise<number> {
+    const { start, end } = this.getBangkokDayRange();
+
+    const result = await this.lessonProgressRepo
+      .createQueryBuilder('lp')
+      .select('COUNT(DISTINCT lp.userId)', 'count')
+      .where('lp.updatedAt >= :startDate', { startDate: start.toISOString() })
+      .andWhere('lp.updatedAt < :endDate', { endDate: end.toISOString() })
       .getRawOne<{ count: string }>();
 
     return Number(result?.count ?? 0);
@@ -249,29 +274,55 @@ export class AnalyticsService {
   }
 
   /**
-   * คอร์สยอดนิยม (Top 3) - อิงจำนวนผู้เรียนที่มี progress ต่อคอร์ส
+   * สรุป streaks เพื่อใช้ในกราฟ (bucket)
    */
-  private async getPopularCourses(): Promise<PopularCourseDto[]> {
-    const rows = await this.lessonProgressRepo
-      .createQueryBuilder('lp')
-      .leftJoin('lp.lesson', 'l')
-      .leftJoin('l.chapter', 'ch')
-      .leftJoin('ch.level', 'lvl')
-      .leftJoin('lvl.course', 'c')
-      .select('c.course_id', 'courseId')
-      .addSelect('c.course_title', 'title')
-      .addSelect('COUNT(DISTINCT lp.userId)', 'learnerCount')
-      .groupBy('c.course_id')
-      .addGroupBy('c.course_title')
-      .orderBy('COUNT(DISTINCT lp.userId)', 'DESC')
-      .limit(3)
-      .getRawMany<{ courseId: string; title: string; learnerCount: string }>();
+  private async getStreaksOverview(): Promise<StreaksOverviewDto> {
+    const row = await this.userStreakRepo
+      .createQueryBuilder('us')
+      .select(
+        "SUM(CASE WHEN us.currentStreak >= 1 AND us.currentStreak < 10 THEN 1 ELSE 0 END)",
+        'bucket1',
+      )
+      .addSelect(
+        "SUM(CASE WHEN us.currentStreak >= 10 AND us.currentStreak < 30 THEN 1 ELSE 0 END)",
+        'bucket10',
+      )
+      .addSelect(
+        "SUM(CASE WHEN us.currentStreak >= 30 AND us.currentStreak < 100 THEN 1 ELSE 0 END)",
+        'bucket30',
+      )
+      .addSelect(
+        "SUM(CASE WHEN us.currentStreak >= 100 AND us.currentStreak < 300 THEN 1 ELSE 0 END)",
+        'bucket100',
+      )
+      .addSelect(
+        "SUM(CASE WHEN us.currentStreak >= 300 THEN 1 ELSE 0 END)",
+        'bucket300',
+      )
+      .getRawOne<{ bucket1: string; bucket10: string; bucket30: string; bucket100: string; bucket300: string }>();
 
-    return rows.map((row) => ({
-      courseId: Number(row.courseId),
-      title: row.title,
-      learnerCount: Number(row.learnerCount),
-    }));
+    const buckets = [
+      { label: '1 วัน', count: Number(row?.bucket1 ?? 0) },
+      { label: '10 วัน', count: Number(row?.bucket10 ?? 0) },
+      { label: '30 วัน', count: Number(row?.bucket30 ?? 0) },
+      { label: '100 วัน', count: Number(row?.bucket100 ?? 0) },
+      { label: '300 วัน', count: Number(row?.bucket300 ?? 0) },
+    ];
+
+    return { buckets };
+  }
+
+  private getBangkokDayRange(): { start: Date; end: Date } {
+    const offsetMs = 7 * 60 * 60 * 1000;
+    const now = new Date();
+    const bangkokTime = new Date(now.getTime() + offsetMs);
+    const start = new Date(Date.UTC(
+      bangkokTime.getUTCFullYear(),
+      bangkokTime.getUTCMonth(),
+      bangkokTime.getUTCDate(),
+    ));
+    const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+    return { start, end };
   }
 
   /**
@@ -426,39 +477,4 @@ export class AnalyticsService {
     return { total, active, invited };
   }
 
-  /**
-   * สรุปข้อมูลรางวัล (ถ้า REWARD_ENABLED=true)
-   * 
-   * Logic:
-   * 1. ตรวจสอบ REWARD_ENABLED environment variable
-   * 2. ถ้าเปิด → นับการแลกรางวัลและ XP ที่ใช้ไป
-   * 3. ถ้าปิด → คืน null
-   * 
-   * @returns RewardOverviewDto | null ข้อมูลรางวัลหรือ null
-   */
-  private async getRewardOverview(): Promise<RewardOverviewDto | null> {
-    // ตรวจสอบว่าเปิดระบบรางวัลหรือไม่
-    if (this.config.get<string>('REWARD_ENABLED') !== 'true') {
-      return null;
-    }
-
-    try {
-      const result = await this.rewardRedemptionRepo
-        .createQueryBuilder('rr')
-        .select('COUNT(*)', 'redemptionCount')
-        .addSelect('SUM(rr.used_points)', 'usedXp')
-        .getRawOne<{
-          redemptionCount: string;
-          usedXp: string;
-        }>();
-
-      return {
-        redemptionCount: Number(result?.redemptionCount ?? 0),
-        usedXp: Number(result?.usedXp ?? 0),
-      };
-    } catch (error) {
-      this.logger.error('Failed to fetch reward overview', error);
-      return null;
-    }
-  }
 }
