@@ -43,7 +43,7 @@ Optional (Google OAuth):
 ```dotenv
 GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
-GOOGLE_CALLBACK_URL=http://localhost:3001/api/auth/google/callback
+GOOGLE_CALLBACK_URL=http://localhost:<PORT>/api/auth/google/callback
 ```
 
 ## Tools
@@ -54,11 +54,13 @@ GOOGLE_CALLBACK_URL=http://localhost:3001/api/auth/google/callback
 ![Node.js](https://img.shields.io/badge/Node.js-22.x-339933?logo=node.js&logoColor=white)
 ![TypeORM](https://img.shields.io/badge/TypeORM-0.3-262627?logo=typeorm&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-5.x-DC382D?logo=redis&logoColor=white)
+![Socket.io](https://img.shields.io/badge/Socket.io-4.x-010101?logo=socket.io&logoColor=white)
+![AWS](https://img.shields.io/badge/AWS-SDK-232F3E?logo=amazon-aws&logoColor=white)
 ![JWT](https://img.shields.io/badge/JWT-auth-000000?logo=jsonwebtokens&logoColor=white)
 ![Passport](https://img.shields.io/badge/Passport-auth-34E27A?logo=passport&logoColor=white)
 ![Jest](https://img.shields.io/badge/Jest-test-C21325?logo=jest&logoColor=white)
 ![ESLint](https://img.shields.io/badge/ESLint-lint-4B32C3?logo=eslint&logoColor=white)
-![Prettier](https://img.shields.io/badge/Prettier-format-F7B93E?logo=prettier&logoColor=black)
 
 ## Project Layout
 
@@ -188,20 +190,23 @@ All services set `GlobalPrefix = /api` and expose Swagger at `/docs`.
 
 ## Migrations
 
-Run migrations:
+### Run Migrations
 
 ```bash
-pnpm run migration:run:auth
-pnpm run migration:run:course
-pnpm run migration:run:reward
+pnpm run migration:run:auth     
+pnpm run migration:run:course   
+pnpm run migration:run:reward  
 ```
 
-Generate migration (course service):
+### Generate Migrations (สร้างไฟล์ Migration ใหม่)
+เมื่อมีการแก้ไข/สร้าง Entity เเละต้องการที่จะ update ไปยัง Database ให้ทำการ Create Migration File 
+
+*ระบุชื่อ Migration ที่ต้องการใน `<MigrationName>` (ห้ามเว้นวรรค)*
 
 ```bash
-pnpm run migration:generate:auth
-pnpm run migration:generate:course
-pnpm run migration:generate:reward
+pnpm typeorm:auth migration:generate apps/auth-service/migrations/<MigrationName>
+pnpm typeorm:course migration:generate apps/course-service/migrations/<MigrationName>
+pnpm typeorm:reward migration:generate apps/reward-service/migrations/<MigrationName>
 ```
 
 ## Common Commands
